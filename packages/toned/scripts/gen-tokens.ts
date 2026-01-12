@@ -6,7 +6,7 @@ import { parseArgs } from 'node:util'
 
 import type { Tokens } from '@toned/core/types'
 
-const { values, positionals } = parseArgs({
+const { positionals } = parseArgs({
   strict: true,
   allowPositionals: true,
 })

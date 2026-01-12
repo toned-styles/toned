@@ -11,6 +11,7 @@ customGlobal[SYMBOL_CONFIG] ??= {
 
   useClassName: false,
   useMedia: false,
+  debug: false,
 
   // TODO
   getProps() {

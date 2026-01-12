@@ -2,9 +2,9 @@ import { getConfig } from './config.ts'
 
 import { createStylesheet } from './StyleSheet/StyleSheet.ts'
 import {
-  SYMBOL_REF,
   type StylesheetInput,
   type StylesheetType,
+  SYMBOL_REF,
   type TokenConfig,
   type TokenSystem,
   type Tokens,
@@ -80,8 +80,9 @@ export function defineSystem<
   const S extends Record<string, TokenConfig<any, any>>,
   const C extends { breakpoints?: Breakpoints<any> },
 >(system: S, config?: C): TokenSystem<S & C, C> {
-  const ref: TokenSystem<S, C> = {
-    system: { ...system, ...config },
+  // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
+  const ref: TokenSystem<S & C, C> = {
+    system: { ...system, ...config } as S & C,
     config,
     t: (...values) => {
       const value = values.reduce(
@@ -116,8 +117,9 @@ export function defineSystem<
       // biome-ignore lint/suspicious/noExplicitAny: ignore
       return result as any
     },
+    // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
     stylesheet: (<T extends StylesheetInput<S & C, T>>(rules: T) => {
-      return createStylesheet(ref, rules)
+      return createStylesheet(ref as any, rules)
     }) as StylesheetType<S & C>,
     exec: (config, tokenStyle) => {
       return Object.entries(tokenStyle).reduce<{
@@ -164,5 +166,5 @@ export function defineSystem<
     },
   }
 
-  return ref as TokenSystem<S & C, C>
+  return ref
 }

@@ -1,25 +1,26 @@
 import { describe, expect, test } from 'vitest'
-import { createStylesheet, Base } from './StyleSheet.ts'
 import { StyleMatcher } from '../StyleMatcher/StyleMatcher.ts'
-import type { TokenSystem, Config, TokenStyleDeclaration } from '../types.ts'
+import type { Config, TokenStyleDeclaration, TokenSystem } from '../types.ts'
+import { Base, createStylesheet } from './StyleSheet.ts'
 
 // Mock TokenSystem for testing
-const mockTokenSystem: TokenSystem<TokenStyleDeclaration> = {
+const mockTokenSystem = {
   system: {},
   config: undefined,
-  t: (() => ({})) as TokenSystem<TokenStyleDeclaration>['t'],
-  stylesheet: (() => ({})) as TokenSystem<TokenStyleDeclaration>['stylesheet'],
-  exec: (_config, tokenStyle) => ({
+  t: () => ({}),
+  stylesheet: () => ({}),
+  exec: (_config: unknown, tokenStyle: unknown) => ({
     style: tokenStyle as object,
     className: '',
   }),
-}
+} as unknown as TokenSystem<TokenStyleDeclaration>
 
 // Mock Config
 const mockConfig: Config = {
   getTokens: () => ({}),
   useClassName: false,
   useMedia: false,
+  debug: false,
   getProps: function (this: Base, elementKey: string) {
     return { style: this.getCurrentStyle(elementKey).style }
   },
@@ -87,6 +88,51 @@ describe('createStylesheet', () => {
 
       expect(v2).toBeDefined()
       expect(v2).toHaveProperty('variants')
+    })
+  })
+
+  describe('extend method', () => {
+    test('extend method returns new stylesheet', () => {
+      const rules = { container: { bgColor: 'blue' } }
+      const stylesheet = createStylesheet(mockTokenSystem, rules)
+
+      const extended = stylesheet.extend({
+        container: { borderRadius: 'medium' },
+      })
+
+      expect(extended).toBeDefined()
+      expect(extended).not.toBe(stylesheet)
+    })
+
+    test('extend deep merges element styles', () => {
+      const rules = {
+        container: { bgColor: 'blue', paddingX: 2 },
+      }
+      const stylesheet = createStylesheet(mockTokenSystem, rules)
+
+      const extended = stylesheet.extend({
+        container: { bgColor: 'red', borderRadius: 'medium' },
+      })
+
+      expect(extended).toBeDefined()
+      expect(extended).toHaveProperty('extend')
+      expect(extended).toHaveProperty('variants')
+    })
+
+    test('extend can be chained with variants', () => {
+      const baseRules = { container: { borderRadius: 'medium' } }
+      const stylesheet = createStylesheet(mockTokenSystem, baseRules)
+
+      const extended = stylesheet
+        .extend({
+          container: { bgColor: 'blue' },
+          label: { textColor: 'white' },
+        })
+        .variants({
+          '[size=sm]': { container: { paddingX: 2 } },
+        })
+
+      expect(extended).toBeDefined()
     })
   })
 

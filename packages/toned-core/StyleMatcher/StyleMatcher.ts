@@ -3,6 +3,7 @@ type StyleObject = Record<string, StyleValue>
 type StyleRules = Record<string, StyleObject>
 
 interface NestedStyleRules {
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic nested style structure
   [selector: string]: any
 }
 
@@ -20,7 +21,8 @@ type SchemeConfig = {
 
 type RulesList = {
   [key: string]: {
-    rule: any // The actual rule object
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic rule structure
+    rule: any
   }
 }
 
@@ -44,6 +46,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     bitMask: number
     bitValue: number
     original: string
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic rule structure
     rule: any
   }> = []
 
@@ -56,6 +59,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
   bits: Array<[string, PropertyMap[string]]>
 
+  // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
   cache = new Map<number, any>()
 
   constructor(rules: NestedStyleRules) {
@@ -77,6 +81,29 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     this.bits = Object.entries(this.propertyBits)
   }
 
+  /**
+   * Check if a key looks like an element name (not a selector)
+   */
+  private isElementKey(key: string): boolean {
+    return (
+      key[0] !== '[' &&
+      key[0] !== '@' &&
+      key[0] !== ':' &&
+      key[0] !== '$' &&
+      !key.includes(':') &&
+      key !== 'prototype'
+    )
+  }
+
+  /**
+   * Check if a key is a cross-element selector like 'container:hover'
+   */
+  private isCrossElementSelector(key: string): boolean {
+    return (
+      key.includes(':') && key[0] !== '[' && key[0] !== '@' && key[0] !== ':'
+    )
+  }
+
   private flattenRules(rules: NestedStyleRules) {
     const elementSet = new Set<string>()
     const interactions: InteractionList = {}
@@ -86,6 +113,37 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     const modIndex = new Map<string, number>()
 
     type Selector = Map<string, string>
+
+    // First pass: collect all element names
+    for (const key in rules) {
+      if (this.isElementKey(key)) {
+        elementSet.add(key)
+      } else if (this.isCrossElementSelector(key)) {
+        // Extract element from cross-element selector like 'container:hover'
+        const elementName = key.split(':')[0]
+        if (elementName) elementSet.add(elementName)
+        // Also add target elements from the element map
+        const elementMap = rules[key]
+        if (elementMap) {
+          for (const targetKey in elementMap) {
+            if (this.isElementKey(targetKey)) {
+              elementSet.add(targetKey)
+            }
+          }
+        }
+      } else if (key[0] === '[') {
+        // Variant selector - collect elements from element map
+        const elementMap = rules[key]
+        if (elementMap) {
+          for (const targetKey in elementMap) {
+            const actualKey = targetKey.replace(/^\$/, '')
+            if (this.isElementKey(actualKey)) {
+              elementSet.add(actualKey)
+            }
+          }
+        }
+      }
+    }
 
     const traverseMod = (
       selector: Selector,
@@ -103,14 +161,22 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
       traverse(nextMap, rule, propPrefix)
     }
 
+    /**
+     * Process element rule, handling both $element and plain element references
+     */
     const processElementRule = (elementKey: string, rule: NestedStyleRules) => {
       const currentRule: NestedStyleRules = {}
 
       for (const ruleKey in rule) {
         if (ruleKey[0] === '$') {
-          const elementKey = ruleKey.replace(/^\$/, '')
-          currentRule[elementKey] = rule[ruleKey]
+          // $element reference
+          const targetElement = ruleKey.slice(1)
+          currentRule[targetElement] = rule[ruleKey]
+        } else if (elementSet.has(ruleKey)) {
+          // Plain element reference (new API)
+          currentRule[ruleKey] = rule[ruleKey]
         } else {
+          // Style property - add to current element
           currentRule[elementKey] ??= {}
           currentRule[elementKey][ruleKey] = rule[ruleKey]
         }
@@ -131,6 +197,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
       Object.keys(elementRule).forEach((key) => {
         if (key[0] === ':') {
+          // Pseudo class (e.g., ':hover')
           const mod = `${elementKey}${key}`
           const modValue = 'true'
 
@@ -141,12 +208,14 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
           traverseMod(selector, mod, modValue, currentRule)
         } else if (key[0] === '[') {
+          // Variant selector inside element
           const [mod, modValue] = this.parseSelector(key)
 
           const currentRule = processElementRule(elementKey, elementRule[key])
 
           traverseMod(selector, mod, modValue, currentRule)
         } else if (key[0] === '@') {
+          // Breakpoint selector
           const [mod, modValue] = this.parseAtSelector(key)
 
           const currentRule = processElementRule(elementKey, elementRule[key])
@@ -159,6 +228,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
             this.useAtPrefix ? `${mod}_${modValue}_` : undefined,
           )
         } else {
+          // Regular style property
           result[propPrefix + key] = elementRule[key]
         }
       })
@@ -190,16 +260,33 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
       Object.keys(node).forEach((key) => {
         if (key[0] === '[') {
-          // Handle combined selectors like '[size=sm][variant=accent]'
+          // Variant selector like '[size=sm]' or '[disabled]'
           const mods = this.parseCombinedSelector(key)
 
-          if (mods.length === 1) {
+          if (mods.length === 1 && mods[0]) {
             // Single selector
-            const [mod, modValue] = mods[0]!
-            traverseMod(selector, mod, modValue, node[key])
+            const [mod, modValue] = mods[0]
+            // Check if node[key] contains element references (new API)
+            const nodeValue = node[key]
+            const transformedRule: NestedStyleRules = {}
+
+            for (const targetKey in nodeValue) {
+              if (targetKey[0] === '$') {
+                // Already in internal format
+                transformedRule[targetKey.slice(1)] = nodeValue[targetKey]
+              } else if (elementSet.has(targetKey)) {
+                // New API: plain element reference
+                transformedRule[targetKey] = nodeValue[targetKey]
+              } else {
+                // Style property (shouldn't happen at root variant level)
+                transformedRule[targetKey] = nodeValue[targetKey]
+              }
+            }
+
+            traverseMod(selector, mod, modValue, transformedRule)
           } else {
             // Combined selector - apply all mods at once
-            let currentSelector = new Map(selector)
+            const currentSelector = new Map(selector)
             for (const [mod, modValue] of mods) {
               scheme[mod] ??= new Set()
               scheme[mod].add(modValue)
@@ -209,13 +296,72 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
                 modIndex.set(mod, modIndex.size)
               }
             }
-            traverse(currentSelector, node[key], propPrefix)
+
+            // Transform element references
+            const nodeValue = node[key]
+            const transformedRule: NestedStyleRules = {}
+
+            for (const targetKey in nodeValue) {
+              if (targetKey[0] === '$') {
+                transformedRule[targetKey.slice(1)] = nodeValue[targetKey]
+              } else if (elementSet.has(targetKey)) {
+                transformedRule[targetKey] = nodeValue[targetKey]
+              } else {
+                transformedRule[targetKey] = nodeValue[targetKey]
+              }
+            }
+
+            traverse(currentSelector, transformedRule, propPrefix)
           }
         } else if (key[0] === '@') {
           const [mod, modValue] = this.parseAtSelector(key)
 
           traverseMod(selector, mod, modValue, node[key])
+        } else if (this.isCrossElementSelector(key)) {
+          // Cross-element selector like 'container:hover'
+          const parts = key.split(':')
+          const elementName = parts[0]
+          if (!elementName) return
+          const pseudoClasses = parts.slice(1).map((p) => `:${p}`)
+
+          if (!elementSet.has(elementName)) return
+
+          const elementMap = node[key]
+          if (!elementMap) return
+
+          // Register interactions
+          interactions[elementName] ??= {}
+          for (const pseudo of pseudoClasses) {
+            interactions[elementName][pseudo] = true
+          }
+
+          // Build the modifier chain
+          const crossSelector = new Map(selector)
+          for (const pseudo of pseudoClasses) {
+            const mod = `${elementName}${pseudo}`
+            const modValue = 'true'
+            scheme[mod] ??= new Set()
+            scheme[mod].add(modValue)
+            crossSelector.set(mod, modValue)
+
+            if (!modIndex.has(mod)) {
+              modIndex.set(mod, modIndex.size)
+            }
+          }
+
+          // Process target elements
+          const transformedRule: NestedStyleRules = {}
+          for (const targetKey in elementMap) {
+            if (targetKey[0] === '$') {
+              transformedRule[targetKey.slice(1)] = elementMap[targetKey]
+            } else if (elementSet.has(targetKey)) {
+              transformedRule[targetKey] = elementMap[targetKey]
+            }
+          }
+
+          traverse(crossSelector, transformedRule, propPrefix)
         } else {
+          // Element definition
           const elementKey = key.replace(/^\$/, '')
           const elementRule = traverseElement(
             selector,
@@ -234,23 +380,35 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   }
 
   private parseSelector(selector: string): [string, string] {
-    const [name, value = '*'] = selector.slice(1, -1).split('=')
-    return [name!, value]
+    const inner = selector.slice(1, -1)
+    // Check if it's a boolean variant (no '=' sign)
+    if (!inner.includes('=')) {
+      return [inner, 'true']
+    }
+    const parts = inner.split('=')
+    const name = parts[0] || inner
+    const value = parts[1] ?? '*'
+    return [name, value]
   }
 
   /**
-   * Parse combined selectors like '[size=sm][variant=accent]'
+   * Parse combined selectors like '[size=sm][variant=accent]' or '[disabled][size=sm]'
    * Returns array of [mod, value] pairs
+   * Supports both key=value and boolean (key only) formats
    */
-  private parseCombinedSelector(
-    selector: string,
-  ): Array<[string, string]> {
+  private parseCombinedSelector(selector: string): Array<[string, string]> {
     const results: Array<[string, string]> = []
-    const regex = /\[([^\]=]+)=([^\]]+)\]/g
-    let match: RegExpExecArray | null
+    // Match both [key=value] and [key] (boolean) formats
+    const regex = /\[([^\]=\]]+)(?:=([^\]]+))?\]/g
+    let match = regex.exec(selector)
 
-    while ((match = regex.exec(selector)) !== null) {
-      results.push([match[1]!, match[2]!])
+    while (match !== null) {
+      const key = match[1]
+      if (key) {
+        const value = match[2] ?? 'true' // Boolean variant if no value
+        results.push([key, value])
+      }
+      match = regex.exec(selector)
     }
 
     return results
@@ -351,6 +509,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     }
 
     // Match against compiled rules
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic style result structure
     const result: Record<string | symbol, any> = {}
 
     for (const elementKey in this.list['']?.rule) {

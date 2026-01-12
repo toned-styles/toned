@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import type { TokenStyleDeclaration, TokenSystem } from '../types.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 
 describe('style matcher', () => {
@@ -360,8 +361,11 @@ const mockTokenSystem = {
   config: undefined,
   t: () => ({}),
   stylesheet: () => ({}),
-  exec: (_config: any, tokenStyle: any) => ({ style: tokenStyle, className: '' }),
-} as any
+  exec: (_config: unknown, tokenStyle: unknown) => ({
+    style: tokenStyle as object,
+    className: '',
+  }),
+} as unknown as TokenSystem<TokenStyleDeclaration>
 
 describe('new API: stylesheet with variants chain', () => {
   test('creates stylesheet with variants method', () => {
@@ -470,5 +474,49 @@ describe('new API: transformRulesToInternal', () => {
 
     const stylesheet = createStylesheet(mockTokenSystem, rules, variants)
     expect(stylesheet).toBeDefined()
+  })
+})
+
+describe('boolean variants', () => {
+  test('supports boolean variant syntax [disabled]', () => {
+    const rules = {
+      container: { bgColor: 'blue', opacity: 1 },
+      '[disabled]': {
+        container: { opacity: 0.5 },
+      },
+    }
+
+    const matcher = new StyleMatcher(rules)
+
+    // Without disabled
+    const baseStyle = matcher.match({})
+    expect(baseStyle.container.opacity).toBe(1)
+
+    // With disabled=true (boolean variant)
+    const disabledStyle = matcher.match({ disabled: 'true' })
+    expect(disabledStyle.container.opacity).toBe(0.5)
+  })
+
+  test('supports combined boolean and value variants', () => {
+    const rules = {
+      container: { bgColor: 'blue' },
+      '[disabled]': {
+        container: { opacity: 0.5 },
+      },
+      '[size=sm]': {
+        container: { paddingX: 2 },
+      },
+      '[disabled][size=sm]': {
+        container: { borderColor: 'gray' },
+      },
+    }
+
+    const matcher = new StyleMatcher(rules)
+
+    // With both disabled and size=sm
+    const combinedStyle = matcher.match({ disabled: 'true', size: 'sm' })
+    expect(combinedStyle.container.opacity).toBe(0.5)
+    expect(combinedStyle.container.paddingX).toBe(2)
+    expect(combinedStyle.container.borderColor).toBe('gray')
   })
 })

@@ -49,6 +49,7 @@ export type Config = Readonly<{
 
   useClassName: boolean
   useMedia: boolean
+  debug: boolean
 
   //TODO
   getProps(this: any, elementKey: string): {}

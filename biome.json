@@ -8,7 +8,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "experimentalScannerIgnores": [".dist", ".tsc"]
+    "includes": ["**", "!!**/.dist", "!!**/.tsc"]
   },
   "formatter": {
     "enabled": true,

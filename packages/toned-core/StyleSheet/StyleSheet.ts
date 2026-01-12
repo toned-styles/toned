@@ -37,7 +37,7 @@ const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
       for (const key in styleObject.style) {
         const v = styleObject.style[key]
         if (typeof v === 'number' && !unitlessNumbers.has(key)) {
-          result[key] = v + 'px'
+          result[key] = `${v}px`
         } else {
           result[key] = v
         }
@@ -64,117 +64,53 @@ type StyleDecl = Record<ElementKey, ElementStyle>
 type ModState = AnyValue
 
 /**
- * Transform new API format to internal format
- * New: { container: { ':hover': { bgColor: 'red' } }, 'container:hover': { label: { color: 'white' } } }
- * Internal: { container: { ':hover': { $container: { bgColor: 'red' }, $label: { color: 'white' } } } }
+ * Deep merge two objects, with source values overriding target values
  */
-function transformRulesToInternal(
-  baseRules: AnyValue,
-  variantRules?: AnyValue,
-): AnyValue {
-  const result: AnyValue = {}
-  const elementSet = new Set<string>()
+function deepMerge(target: AnyValue, source: AnyValue): AnyValue {
+  if (!source) return target
+  if (!target) return source
 
-  // First pass: collect all element names
-  for (const key in baseRules) {
+  const result = { ...target }
+
+  for (const key in source) {
+    const sourceVal = source[key]
+    const targetVal = target[key]
+
     if (
-      !key.startsWith('[') &&
-      !key.includes(':') &&
-      key !== 'prototype' &&
-      key !== SYMBOL_VARIANTS.toString()
+      sourceVal &&
+      typeof sourceVal === 'object' &&
+      !Array.isArray(sourceVal) &&
+      targetVal &&
+      typeof targetVal === 'object' &&
+      !Array.isArray(targetVal)
     ) {
-      elementSet.add(key)
-    }
-  }
-
-  // Also extract elements from cross-element selectors like 'container:hover'
-  for (const key in baseRules) {
-    if (key.includes(':') && !key.startsWith('[') && !key.startsWith(':')) {
-      const elementName = key.split(':')[0]
-      if (elementName) {
-        elementSet.add(elementName)
-      }
-    }
-  }
-
-  // Second pass: process element definitions
-  for (const elementKey of elementSet) {
-    const elementRule = baseRules[elementKey]
-    if (!elementRule) continue
-
-    result[elementKey] = {}
-
-    for (const ruleKey in elementRule) {
-      if (ruleKey.startsWith(':')) {
-        // Pseudo class on self - transform to internal format
-        // { ':hover': { bgColor: 'red' } } -> { ':hover': { $container: { bgColor: 'red' } } }
-        result[elementKey][ruleKey] = {
-          [`$${elementKey}`]: elementRule[ruleKey],
-        }
-      } else if (ruleKey.startsWith('@')) {
-        // Breakpoint on self - transform to internal format
-        result[elementKey][ruleKey] = elementRule[ruleKey]
-      } else {
-        // Regular token property
-        result[elementKey][ruleKey] = elementRule[ruleKey]
-      }
-    }
-  }
-
-  // Third pass: process cross-element selectors like 'container:hover'
-  for (const key in baseRules) {
-    if (key.includes(':') && !key.startsWith('[') && !key.startsWith(':')) {
-      const parts = key.split(':')
-      const elementName = parts[0]
-      const pseudoClasses = parts.slice(1).map((p) => `:${p}`)
-
-      if (!elementName || !elementSet.has(elementName)) continue
-
-      const elementMap = baseRules[key]
-      if (!elementMap) continue
-
-      // Build nested pseudo structure
-      let current = result[elementName] ??= {}
-
-      for (let i = 0; i < pseudoClasses.length; i++) {
-        const pseudo = pseudoClasses[i]!
-        current[pseudo] ??= {}
-        current = current[pseudo]
-      }
-
-      // Add element references
-      for (const targetElement in elementMap) {
-        current[`$${targetElement}`] = elementMap[targetElement]
-      }
-    }
-  }
-
-  // Fourth pass: process variants
-  if (variantRules) {
-    for (const selector in variantRules) {
-      if (!selector.startsWith('[')) continue
-
-      const elementMap = variantRules[selector]
-      if (!elementMap) continue
-
-      result[selector] = {}
-
-      for (const elementKey in elementMap) {
-        result[selector][`$${elementKey}`] = elementMap[elementKey]
-      }
+      // Recursively merge nested objects
+      result[key] = deepMerge(targetVal, sourceVal)
+    } else {
+      // Override with source value
+      result[key] = sourceVal
     }
   }
 
   return result
 }
 
+/**
+ * Merge base rules with variant rules for StyleMatcher
+ * StyleMatcher now handles both the new API format and internal format directly
+ */
+function mergeRules(baseRules: AnyValue, variantRules?: AnyValue): AnyValue {
+  if (!variantRules) return baseRules
+  return { ...baseRules, ...variantRules }
+}
+
 export function createStylesheet<
   S extends TokenStyleDeclaration,
-  Mods extends ModType,
+  _Mods extends ModType,
   T,
 >(ref: TokenSystem<S>, rules: T, variantRules?: AnyValue) {
-  // Transform rules to internal format
-  const internalRules = transformRulesToInternal(rules, variantRules)
+  // Merge base rules with variants - StyleMatcher handles the format directly
+  const mergedRules = mergeRules(rules, variantRules)
 
   class LocalBase extends Base {}
 
@@ -202,7 +138,7 @@ export function createStylesheet<
       return new LocalBase({
         // TODO: fix types
         ref: ref as AnyValue,
-        rules: internalRules,
+        rules: mergedRules,
         config,
         modsState,
       })
@@ -210,6 +146,16 @@ export function createStylesheet<
     // Add variants method for chaining
     variants: <M extends ModType>(newVariantRules: AnyValue) => {
       return createStylesheet<S, M, T>(ref, rules, newVariantRules)
+    },
+    // Add extend method for composition
+    extend: (extensionRules: AnyValue) => {
+      // Deep merge base rules with extension rules
+      const extendedRules = deepMerge(rules as AnyValue, extensionRules)
+      return createStylesheet<S, never, AnyValue>(
+        ref,
+        extendedRules,
+        variantRules,
+      )
     },
   })
 
@@ -303,6 +249,13 @@ export class Base {
   matchStyles() {
     this.modsStylePrev = this.modsStyle
     this.modsStyle = this.matcher.match(this.modsState)
+
+    if (this.config.debug) {
+      console.log('[toned:debug] matchStyles', {
+        modsState: this.modsState,
+        modsStyle: this.modsStyle,
+      })
+    }
   }
 
   getCurrentStyle(key: ElementKey) {
@@ -331,6 +284,13 @@ export class Base {
   }
 
   applyState(modsState: ModState) {
+    if (this.config.debug) {
+      console.log('[toned:debug] applyState', {
+        prevState: { ...this.modsState },
+        newState: modsState,
+      })
+    }
+
     Object.assign(this.modsState, modsState)
 
     this.matchStyles()
