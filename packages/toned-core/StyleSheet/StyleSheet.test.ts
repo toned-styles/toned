@@ -1,25 +1,26 @@
-import { describe, expect, test, beforeEach } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { createStylesheet, Base } from './StyleSheet.ts'
 import { StyleMatcher } from '../StyleMatcher/StyleMatcher.ts'
+import type { TokenSystem, Config, TokenStyleDeclaration } from '../types.ts'
 
 // Mock TokenSystem for testing
-const mockTokenSystem = {
+const mockTokenSystem: TokenSystem<TokenStyleDeclaration> = {
   system: {},
   config: undefined,
-  t: () => ({}),
-  stylesheet: () => ({}),
-  exec: (_config: any, tokenStyle: any) => ({
-    style: tokenStyle,
+  t: (() => ({})) as TokenSystem<TokenStyleDeclaration>['t'],
+  stylesheet: (() => ({})) as TokenSystem<TokenStyleDeclaration>['stylesheet'],
+  exec: (_config, tokenStyle) => ({
+    style: tokenStyle as object,
     className: '',
   }),
-} as any
+}
 
 // Mock Config
-const mockConfig = {
+const mockConfig: Config = {
   getTokens: () => ({}),
   useClassName: false,
   useMedia: false,
-  getProps: function (this: any, elementKey: string) {
+  getProps: function (this: Base, elementKey: string) {
     return { style: this.getCurrentStyle(elementKey).style }
   },
   initRef: () => {},

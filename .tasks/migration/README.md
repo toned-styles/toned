@@ -19,7 +19,7 @@ If you need to install `cli` or any tool to achieve what you need - do it, you'r
 
 ## Todo List
 
-- [ ] ./TASK_1.md
-- [ ] ./TASK_2.md
-- [ ] ./TASK_3.md
-- [ ] ./TASK_4.md
+- [x] ./TASK_1.md
+- [x] ./TASK_2.md
+- [x] ./TASK_3.md
+- [x] ./TASK_4.md

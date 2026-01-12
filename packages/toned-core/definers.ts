@@ -15,6 +15,19 @@ export const SYMBOL_ACCESS = Symbol()
 
 export type { TokenSystem }
 
+/**
+ * Define a token with its possible values and resolution function.
+ *
+ * @example
+ * ```ts
+ * const bgColor = defineToken({
+ *   values: ['primary', 'secondary', 'danger'] as const,
+ *   resolve: (value, tokens) => ({
+ *     backgroundColor: tokens.colors[value]
+ *   })
+ * })
+ * ```
+ */
 export function defineToken<
   // biome-ignore lint/suspicious/noExplicitAny: ignore
   const Values extends readonly any[],
@@ -24,6 +37,16 @@ export function defineToken<
   return config
 }
 
+/**
+ * Define a unit resolver for custom value transformations.
+ *
+ * @example
+ * ```ts
+ * const spacing = defineUnit((value: number, tokens) =>
+ *   value * tokens.baseSpacing
+ * )
+ * ```
+ */
 export function defineUnit<T>(
   resolver: (value: T, tokens: Tokens) => number | string | undefined,
 ) {
@@ -32,13 +55,32 @@ export function defineUnit<T>(
 
 type Breakpoints<O> = { __breakpoints: O }
 
+/**
+ * Define a complete token system with all tokens and optional configuration.
+ *
+ * Returns an object with:
+ * - `system` - The token definitions
+ * - `t` - Function for inline token styles
+ * - `stylesheet` - Function to create stylesheets with variants support
+ * - `exec` - Function to resolve tokens to CSS styles
+ *
+ * @example
+ * ```ts
+ * const { stylesheet, t } = defineSystem({
+ *   bgColor,
+ *   textColor,
+ *   padding,
+ * }, {
+ *   breakpoints: { __breakpoints: { sm: 640, md: 768, lg: 1024 } }
+ * })
+ * ```
+ */
 export function defineSystem<
   // biome-ignore lint/suspicious/noExplicitAny: ignore
   const S extends Record<string, TokenConfig<any, any>>,
   const C extends { breakpoints?: Breakpoints<any> },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S, C> = {
-    // TODO: separate system from config
     system: { ...system, ...config },
     config,
     t: (...values) => {
@@ -99,7 +141,6 @@ export function defineSystem<
             return acc
           }
 
-          // TODO: should be a classname key?
           if (k === 'className') {
             acc.className ??= ''
             acc.className += ` ${v}`
