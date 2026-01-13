@@ -31,6 +31,7 @@ export const initMedia = <S extends TokenStyleDeclaration>({
   return mediaEmitter
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: generic emitter requires flexible value types
 class Emitter<T extends Record<string, any>> {
   private listeners = new Set<(data: Partial<T>) => void>()
 

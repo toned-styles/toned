@@ -62,8 +62,10 @@ export function generate<const s extends TokenStyleDeclaration>({
   for (const key in system) {
     const token = system[key]
 
-    if (!token) continue
+    // Skip non-token entries (like breakpoints)
+    if (!token || !('values' in token) || !('resolve' in token)) continue
 
+    // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
     token.values.forEach((value: any) => {
       if (value instanceof Number || value instanceof String) {
         // TODO: support dynamic placeholders
@@ -95,6 +97,7 @@ export function inject<
   const S extends
     | TokenStyleDeclaration
     | {
+        // biome-ignore lint/suspicious/noExplicitAny: breakpoint config uses generic parameter
         breakpoints?: Breakpoints<any>
       },
 >(system: S) {

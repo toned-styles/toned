@@ -1,42 +1,62 @@
 import { getConfig } from '@toned/core/config.js'
-import {
-  type ModType,
-  type Stylesheet,
-  SYMBOL_INIT,
-  type TokenStyle,
-  type TokenStyleDeclaration,
-} from '@toned/core/types.js'
+import { SYMBOL_INIT } from '@toned/core/types.js'
 
 import { useRef } from 'react'
 
-type UseStylesResult<
-  S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
-> = {
-  [k in keyof T]: Record<never, never>
+// biome-ignore lint/suspicious/noExplicitAny: dynamic props type from config
+type ElementProps = Record<string, any>
+
+/**
+ * Base type for stylesheets that can be used with useStyles.
+ * Uses structural typing to accept any object with SYMBOL_INIT.
+ */
+type StylesheetLike = {
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic function signature
+  [SYMBOL_INIT]: (...args: any[]) => any
 }
 
-export function useStyles<
-  S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
-  M extends ModType = never,
->(stylesheet: Stylesheet<S, T, M>): UseStylesResult<S, T>
+/**
+ * Extract element keys from a stylesheet (excluding internal symbols and methods)
+ */
+type StylesheetElements<T> = Exclude<keyof T, symbol | 'variants' | 'extend'>
 
-export function useStyles<
-  S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
-  M extends ModType,
->(stylesheet: Stylesheet<S, T, M>, state: NoInfer<M>): UseStylesResult<S, T>
+/**
+ * Result type for useStyles - provides element props for each element in the stylesheet
+ */
+type UseStylesResult<T> = {
+  [K in StylesheetElements<T>]: ElementProps
+}
 
-export function useStyles<
-  S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
-  M extends ModType,
->(stylesheet: Stylesheet<S, T, M>, state?: M) {
+/**
+ * Hook to use a stylesheet in a React component.
+ *
+ * @param stylesheet - The stylesheet created with `stylesheet()` or `stylesheet().variants()`
+ * @param state - Optional state object for variant selection
+ * @returns An object with element keys that can be spread onto React elements
+ *
+ * @example
+ * ```tsx
+ * const s = useStyles(styles, { size: 'm', variant: 'accent' })
+ * return <button {...s.container}><span {...s.label}>Click</span></button>
+ * ```
+ */
+export function useStyles<T extends StylesheetLike>(
+  stylesheet: T,
+): UseStylesResult<T>
+
+export function useStyles<T extends StylesheetLike, M extends object>(
+  stylesheet: T,
+  state: M,
+): UseStylesResult<T>
+
+export function useStyles<T extends StylesheetLike>(
+  stylesheet: T,
+  state?: object,
+) {
   const ref = useRef<{
-    stylesheet: Stylesheet<S, T, M>
-    state?: M
-    result: UseStylesResult<S, T>
+    stylesheet: T
+    state?: object
+    result: UseStylesResult<T>
   }>(null)
 
   if (ref.current?.stylesheet !== stylesheet) {

@@ -6,6 +6,7 @@ import {
   type StylesheetType,
   SYMBOL_REF,
   type TokenConfig,
+  type TokenStyle,
   type TokenSystem,
   type Tokens,
 } from './types.ts'
@@ -76,19 +77,20 @@ type Breakpoints<O> = { __breakpoints: O }
  * ```
  */
 export function defineSystem<
-  // biome-ignore lint/suspicious/noExplicitAny: ignore
+  // biome-ignore lint/suspicious/noExplicitAny: generic token system requires flexible types
   const S extends Record<string, TokenConfig<any, any>>,
+  // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
   const C extends { breakpoints?: Breakpoints<any> },
 >(system: S, config?: C): TokenSystem<S & C, C> {
-  // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
   const ref: TokenSystem<S & C, C> = {
     system: { ...system, ...config } as S & C,
     config,
     t: (...values) => {
-      const value = values.reduce(
-        (acc, v) => Object.assign(acc, SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v),
-        {},
-      )
+      // Using Object.assign in loop for better performance than spread accumulator
+      const value: Record<string, unknown> = {}
+      for (const v of values) {
+        Object.assign(value, SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v)
+      }
 
       if (SYMBOL_REF in value) {
         return value
@@ -102,23 +104,27 @@ export function defineSystem<
           const config = getConfig()
           const tokens = config.getTokens()
 
-          return ref.exec({ tokens, useClassName: config.useClassName }, value)
-            .style
+          return ref.exec(
+            { tokens, useClassName: config.useClassName },
+            value as TokenStyle<S & C>,
+          ).style
         },
         get className() {
           const config = getConfig()
           const tokens = config.getTokens()
 
-          return ref.exec({ tokens, useClassName: config.useClassName }, value)
-            .className
+          return ref.exec(
+            { tokens, useClassName: config.useClassName },
+            value as TokenStyle<S & C>,
+          ).className
         },
       }
 
       // biome-ignore lint/suspicious/noExplicitAny: ignore
       return result as any
     },
-    // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
     stylesheet: (<T extends StylesheetInput<S & C, T>>(rules: T) => {
+      // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
       return createStylesheet(ref as any, rules)
     }) as StylesheetType<S & C>,
     exec: (config, tokenStyle) => {

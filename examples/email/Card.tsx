@@ -12,7 +12,7 @@ function Card() {
       <Button label={String(Math.random())} />
 
       <span {...t({ textColor: 'status_info' })}>
-        Edit <span {...s.code}>src/App.tsx</span> and save to test HMR
+        Edit <span {...s['code']}>src/App.tsx</span> and save to test HMR
       </span>
     </div>
   )

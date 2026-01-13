@@ -3,12 +3,12 @@ import '@expo/match-media'
 import '@toned/themes/shadcn/config.css'
 import './toned.config.ts'
 
-import {defineContext, TokensContext} from '@toned/react/ctx'
+import { defineContext, TokensContext } from '@toned/react/ctx'
 import shadcn from '@toned/themes/shadcn/config'
 import * as ScreenOrientation from 'expo-screen-orientation'
-import {StatusBar} from 'expo-status-bar'
-import {useEffect} from 'react'
-import {StyleSheet, View} from 'react-native'
+import { StatusBar } from 'expo-status-bar'
+import { useEffect } from 'react'
+import { StyleSheet, View } from 'react-native'
 import Card from './Card'
 
 const ctx = defineContext(shadcn)

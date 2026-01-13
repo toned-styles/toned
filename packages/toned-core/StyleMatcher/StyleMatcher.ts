@@ -536,6 +536,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     return result
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: style objects have dynamic structure with internal hash
   isEqual(elementKey: string, style1: any, style2: any) {
     return (
       style1?.[this.#elementHash]?.[elementKey] ===

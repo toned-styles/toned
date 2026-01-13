@@ -6,7 +6,9 @@ const defineBreakpoints = <O extends Record<string, number>>(
   return { __breakpoints: obj }
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: placeholder declaration
 declare const defineSelectors: any
+// biome-ignore lint/suspicious/noExplicitAny: placeholder declaration
 declare const defineRules: any
 
 export const breakpoints = defineBreakpoints({

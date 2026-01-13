@@ -18,3 +18,7 @@ catalog:
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - esbuild
+
+supportedArchitectures:
+  cpu: [arm64]
+  os: [darwin, linux, current]

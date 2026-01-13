@@ -4,6 +4,7 @@ export const SYMBOL_REF = sym('SYMBOL_REF')
 export const SYMBOL_INIT = sym('SYMBOL_INIT')
 export const SYMBOL_VARIANTS = sym('SYMBOL_VARIANTS')
 
+// biome-ignore lint/suspicious/noExplicitAny: tokens store dynamically typed values
 export type Tokens = Record<string, any>
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
@@ -18,16 +19,27 @@ type InferBreakpoints<R> = R extends { breakpoints?: Breakpoints<infer X> }
   ? X
   : never
 
-// biome-ignore lint/suspicious/noExplicitAny: ignore
-export type TokenStyleDeclaration = Record<string, TokenConfig<any, any>> & {
+/**
+ * Token style declaration - a record of token names to their configs.
+ * The breakpoints property is handled separately as it's not a TokenConfig.
+ */
+export type TokenStyleDeclaration = {
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic token config types
+  [key: string]: TokenConfig<any, any> | Breakpoints<any> | undefined
+  // biome-ignore lint/suspicious/noExplicitAny: breakpoint type uses generic parameter
   breakpoints?: Breakpoints<any>
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
 type InlineStyle = any
 
+// Helper to filter out breakpoints key from token style
+type TokenKeys<S> = Exclude<keyof S, 'breakpoints'>
+
 export type TokenStyle<S extends TokenStyleDeclaration> = Partial<{
-  [key in keyof S]: S[key]['values'][number]
+  [key in TokenKeys<S>]: S[key] extends TokenConfig<infer V, unknown>
+    ? V[number]
+    : never
 }> & { style?: InlineStyle }
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
@@ -51,7 +63,8 @@ export type Config = Readonly<{
   useMedia: boolean
   debug: boolean
 
-  //TODO
+  // TODO
+  // biome-ignore lint/suspicious/noExplicitAny lint/complexity/noBannedTypes: dynamic context and return type
   getProps(this: any, elementKey: string): {}
 
   initRef: () => void
@@ -222,7 +235,9 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
 
 export type TokenSystem<
   S extends TokenStyleDeclaration,
+  // biome-ignore lint/suspicious/noExplicitAny: breakpoint config uses generic parameter
   Config extends { breakpoints?: Breakpoints<any> } = {
+    // biome-ignore lint/suspicious/noExplicitAny: breakpoint config uses generic parameter
     breakpoints?: Breakpoints<any>
   },
 > = {
