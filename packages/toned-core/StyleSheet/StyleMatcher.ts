@@ -259,7 +259,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
       }
 
       list[listKey] ??= { rule: selectorRule }
-      Object.assign(list[listKey].rule, selectorRule)
+      // biome-ignore lint/style/noNonNullAssertion: guaranteed by ??= above
+      Object.assign(list[listKey]!.rule, selectorRule)
 
       for (const key in node) {
         if (key[0] === '[') {
@@ -427,7 +428,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
     for (const property in config.scheme) {
       this.propertyBits[property] = {}
-      const values = config.scheme[property]
+      // biome-ignore lint/style/noNonNullAssertion: for...in guarantees property exists
+      const values = config.scheme[property]!
       for (const value of values) {
         this.propertyBits[property][value] = 1 << bitPosition
         bitPosition++
@@ -436,7 +438,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
     // Then compile each rule into its bitmask
     for (const ruleStr in config.list) {
-      const ruleData = config.list[ruleStr]
+      // biome-ignore lint/style/noNonNullAssertion: for...in guarantees ruleStr exists
+      const ruleData = config.list[ruleStr]!
       if (ruleStr === '') continue // Skip empty rule
 
       let bitMask = 0
@@ -468,7 +471,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
         bitMask,
         bitValue,
         original: ruleStr,
-        rule: ruleData.rule,
+        // biome-ignore lint/style/noNonNullAssertion: ruleData assigned above
+        rule: ruleData!.rule,
       })
     }
   }
@@ -476,7 +480,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   private getMask(valuesMap: PropertyMap[string]): number {
     let mask = 0
     for (const key in valuesMap) {
-      mask |= valuesMap[key]
+      // biome-ignore lint/style/noNonNullAssertion: for...in guarantees key exists
+      mask |= valuesMap[key]!
     }
     return mask
   }
@@ -486,7 +491,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     const bitsLen = this.bits.length
 
     for (let i = 0; i < bitsLen; i++) {
-      const entry = this.bits[i]
+      // biome-ignore lint/style/noNonNullAssertion: bounds checked by bitsLen
+      const entry = this.bits[i]!
       const prop = entry[0]
       const values = entry[1]
       const value = props[prop]

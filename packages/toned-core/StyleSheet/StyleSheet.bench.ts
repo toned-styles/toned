@@ -86,13 +86,11 @@ describe('StyleSheet Performance', () => {
 
   bench('SYMBOL_INIT (Base creation)', () => {
     const sym = Symbol.for('@toned/core/SYMBOL_INIT')
-    // @ts-expect-error accessing internal symbol
     stylesheet[sym](mockConfig, { size: 'sm', variant: 'primary' })
   })
 
   // Create an instance for element access benchmarks
   const sym = Symbol.for('@toned/core/SYMBOL_INIT')
-  // @ts-expect-error accessing internal symbol
   const instance = stylesheet[sym](mockConfig, {})
 
   bench('element access - container', () => {
