@@ -3,8 +3,17 @@ import { SYMBOL_INIT } from '@toned/core/types.js'
 
 import { useRef } from 'react'
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamic props type from config
-type ElementProps = Record<string, any>
+/**
+ * Props returned for each element in a stylesheet.
+ * Includes known properties (style, className) plus dynamic attributes.
+ */
+type ElementProps = {
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic style object
+  style?: Record<string, any>
+  className?: string
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic element attributes
+  [key: string]: any
+}
 
 /**
  * Base type for stylesheets that can be used with useStyles.

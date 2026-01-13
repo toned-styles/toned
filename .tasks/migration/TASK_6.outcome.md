@@ -94,7 +94,19 @@ This is necessary because:
 
 - Added `@examples/shared` dependency to `examples/email/package.json`
 - Added ts-expect-error comments in email app for React version compatibility
-- Disabled `useLiteralKeys` rule in biome.json (was causing issues with bracket notation)
+
+### 6. ElementProps Type Fix (Fixed)
+
+Updated `ElementProps` in `packages/toned-react/index.ts` to declare known properties explicitly:
+```typescript
+type ElementProps = {
+  style?: Record<string, any>
+  className?: string
+  [key: string]: any
+}
+```
+
+This allows dot notation for `style` and `className` while maintaining flexibility for other dynamic props. Previously `Record<string, any>` required bracket notation due to TypeScript's `noPropertyAccessFromIndexSignature`.
 
 ## Final Verification
 

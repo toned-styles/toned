@@ -19,8 +19,7 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noForEach": "off",
-        "useLiteralKeys": "off"
+        "noForEach": "off"
       },
       "a11y": {
         "useSemanticElements": "off"
