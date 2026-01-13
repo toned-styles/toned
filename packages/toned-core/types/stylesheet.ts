@@ -122,26 +122,78 @@ export type StylesheetInput<
   [K in CrossElementSelector<Elements>]?: ElementMap<S, Elements>
 }
 
-/** Single variant selector (e.g., '[size=sm]') */
-type SingleVariantSelector<Mods extends ModType> = {
-  [K in keyof Mods]: `[${K & string}=${Exclude<Mods[K], undefined> & string}]`
+// =============================================================================
+// Variant Selector Types
+// =============================================================================
+
+/**
+ * A single selector segment for a key-value pair.
+ * For booleans: generates [key], [key=true], [key=false]
+ * For strings/numbers: generates [key=value]
+ */
+type SingleSelector<K extends string, V> = V extends boolean
+  ? `[${K}]` | `[${K}=true]` | `[${K}=false]`
+  : V extends string | number
+    ? `[${K}=${V}]`
+    : never
+
+/**
+ * Union of all valid single selectors for a Mods type.
+ */
+type AllSingleSelectors<Mods extends ModType> = {
+  [K in keyof Mods]: K extends string
+    ? SingleSelector<K, Exclude<Mods[K], undefined>>
+    : never
 }[keyof Mods]
 
-/** Variant selector type */
-type VariantSelector<Mods extends ModType> = SingleVariantSelector<Mods>
+/**
+ * All valid 2-segment selectors (all permutations).
+ */
+type TwoSegmentSelector<Mods extends ModType> = {
+  [K1 in keyof Mods]: K1 extends string
+    ? {
+        [K2 in Exclude<keyof Mods, K1>]: K2 extends string
+          ? `${SingleSelector<K1, Exclude<Mods[K1], undefined>>}${SingleSelector<K2, Exclude<Mods[K2], undefined>>}`
+          : never
+      }[Exclude<keyof Mods, K1>]
+    : never
+}[keyof Mods]
+
+/**
+ * All valid 3-segment selectors (all permutations).
+ */
+type ThreeSegmentSelector<Mods extends ModType> = {
+  [K1 in keyof Mods]: K1 extends string
+    ? {
+        [K2 in Exclude<keyof Mods, K1>]: K2 extends string
+          ? {
+              [K3 in Exclude<keyof Mods, K1 | K2>]: K3 extends string
+                ? `${SingleSelector<K1, Exclude<Mods[K1], undefined>>}${SingleSelector<K2, Exclude<Mods[K2], undefined>>}${SingleSelector<K3, Exclude<Mods[K3], undefined>>}`
+                : never
+            }[Exclude<keyof Mods, K1 | K2>]
+          : never
+      }[Exclude<keyof Mods, K1>]
+    : never
+}[keyof Mods]
+
+/**
+ * Union of all valid variant selectors (1, 2, or 3 segments).
+ */
+type AllVariantSelectors<Mods extends ModType> =
+  | AllSingleSelectors<Mods>
+  | TwoSegmentSelector<Mods>
+  | ThreeSegmentSelector<Mods>
 
 /**
  * Variants input - maps variant selectors to element styles.
+ * Full enumeration of all valid selectors for autocomplete and validation.
  */
 export type VariantsInput<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Mods extends ModType,
 > = {
-  [K in VariantSelector<Mods>]?: ElementMap<S, Elements>
-} & {
-  // Allow combined selectors like '[size=sm][variant=accent]'
-  [key: `[${string}]`]: ElementMap<S, Elements> | undefined
+  [K in AllVariantSelectors<Mods>]?: ElementMap<S, Elements>
 }
 
 /**
