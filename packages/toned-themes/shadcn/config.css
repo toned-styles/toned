@@ -106,8 +106,8 @@
   --shadow_xlarge:
     0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow_focus:
-    0 0 0 2px var(--colors_outline_focus_center),
-    0 0 0 4px var(--colors_outline_focus_edge);
+    0 0 0 2px var(--colors_outline_focus_center), 0 0 0 4px
+    var(--colors_outline_focus_edge);
   --typo_font_sans:
     ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
     "Segoe UI Symbol", "Noto Color Emoji";

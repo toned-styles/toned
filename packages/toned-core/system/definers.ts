@@ -1,18 +1,21 @@
+/**
+ * System definition functions.
+ *
+ * @module system/definers
+ */
+
+import { createStylesheet } from '../stylesheet/StyleSheet.ts'
+import type {
+  Breakpoints,
+  StylesheetInput,
+  StylesheetType,
+  TokenConfig,
+  TokenStyle,
+  TokenSystem,
+  Tokens,
+} from '../types/index.ts'
+import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { getConfig } from './config.ts'
-
-import { createStylesheet } from './StyleSheet/StyleSheet.ts'
-import {
-  type StylesheetInput,
-  type StylesheetType,
-  SYMBOL_REF,
-  type TokenConfig,
-  type TokenStyle,
-  type TokenSystem,
-  type Tokens,
-} from './types.ts'
-
-export const SYMBOL_STYLE = Symbol()
-export const SYMBOL_ACCESS = Symbol()
 
 export type { TokenSystem }
 
@@ -30,9 +33,9 @@ export type { TokenSystem }
  * ```
  */
 export function defineToken<
-  // biome-ignore lint/suspicious/noExplicitAny: ignore
+  // biome-ignore lint/suspicious/noExplicitAny: Values must accept any const array for token definitions
   const Values extends readonly any[],
-  // TODO: think about the result type (like, CSSProperties)
+  // Result type is intentionally loose - could be CSSProperties but allows custom token styles
   Result extends {},
 >(config: TokenConfig<Values, Result>) {
   return config
@@ -53,8 +56,6 @@ export function defineUnit<T>(
 ) {
   return resolver
 }
-
-type Breakpoints<O> = { __breakpoints: O }
 
 /**
  * Define a complete token system with all tokens and optional configuration.
@@ -120,7 +121,7 @@ export function defineSystem<
         },
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: ignore
+      // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on S & C intersection
       return result as any
     },
     stylesheet: (<T extends StylesheetInput<S & C, T>>(rules: T) => {

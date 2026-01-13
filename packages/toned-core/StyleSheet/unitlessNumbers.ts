@@ -45,8 +45,8 @@ export const unitlessNumbers = new Set([
   'strokeMiterlimit',
   'strokeOpacity',
   'strokeWidth',
-  'MozAnimationIterationCount', // Known Prefixed Properties
-  'MozBoxFlex', // TODO: Remove these since they shouldn't be used in modern code
+  'MozAnimationIterationCount', // Known Prefixed Properties - kept for legacy browser support
+  'MozBoxFlex',
   'MozBoxFlexGroup',
   'MozLineClamp',
   'msAnimationIterationCount',

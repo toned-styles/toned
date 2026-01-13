@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { StyleMatcher } from '../StyleMatcher/StyleMatcher.ts'
-import type { Config, TokenStyleDeclaration, TokenSystem } from '../types.ts'
+import type {
+  Config,
+  TokenStyleDeclaration,
+  TokenSystem,
+} from '../types/index.ts'
+import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
 
 // Mock TokenSystem for testing

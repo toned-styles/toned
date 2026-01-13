@@ -195,7 +195,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
       elementSet.add(elementKey)
 
-      Object.keys(elementRule).forEach((key) => {
+      for (const key in elementRule) {
         if (key[0] === ':') {
           // Pseudo class (e.g., ':hover')
           const mod = `${elementKey}${key}`
@@ -231,7 +231,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
           // Regular style property
           result[propPrefix + key] = elementRule[key]
         }
-      })
+      }
 
       return result
     }
@@ -243,22 +243,25 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     ) => {
       const selectorRule: NestedStyleRules = Object.create(null)
 
-      selector.forEach((_value, key) => {
+      for (const [key] of selector) {
         if (!modIndex.has(key)) {
           modIndex.set(key, modIndex.size)
         }
-      })
+      }
 
-      const listKey = Array.from(modIndex.keys())
-        .map((key) => {
-          return `${key}=${selector.get(key) || WILDCARD}`
-        })
-        .join('|')
+      // Build listKey using modIndex order
+      let listKey = ''
+      let first = true
+      for (const key of modIndex.keys()) {
+        if (!first) listKey += '|'
+        first = false
+        listKey += `${key}=${selector.get(key) || WILDCARD}`
+      }
 
       list[listKey] ??= { rule: selectorRule }
       Object.assign(list[listKey].rule, selectorRule)
 
-      Object.keys(node).forEach((key) => {
+      for (const key in node) {
         if (key[0] === '[') {
           // Variant selector like '[size=sm]' or '[disabled]'
           const mods = this.parseCombinedSelector(key)
@@ -371,7 +374,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
           )
           selectorRule[elementKey] = elementRule
         }
-      })
+      }
     }
 
     traverse(new Map(), rules)
@@ -422,8 +425,9 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     // First, create a mapping of each property:value to a unique bit position
     let bitPosition = 0
 
-    for (const [property, values] of Object.entries(config.scheme)) {
+    for (const property in config.scheme) {
       this.propertyBits[property] = {}
+      const values = config.scheme[property]
       for (const value of values) {
         this.propertyBits[property][value] = 1 << bitPosition
         bitPosition++
@@ -431,7 +435,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     }
 
     // Then compile each rule into its bitmask
-    for (const [ruleStr, ruleData] of Object.entries(config.list)) {
+    for (const ruleStr in config.list) {
+      const ruleData = config.list[ruleStr]
       if (ruleStr === '') continue // Skip empty rule
 
       let bitMask = 0
@@ -443,7 +448,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
         if (value === WILDCARD) continue
 
-        // TODO: improve unknown properties handling
+        // Skip unknown properties - this handles dynamic or undefined variant values gracefully
         if (
           !(
             property &&
@@ -470,24 +475,27 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
   private getMask(valuesMap: PropertyMap[string]): number {
     let mask = 0
-    for (const value of Object.values(valuesMap)) {
-      mask |= value
+    for (const key in valuesMap) {
+      mask |= valuesMap[key]
     }
     return mask
   }
 
   getPropsBits(props: Partial<Schema>) {
     let bits = 0
+    const bitsLen = this.bits.length
 
-    this.bits.forEach((x) => {
-      const prop = x[0]
+    for (let i = 0; i < bitsLen; i++) {
+      const entry = this.bits[i]
+      const prop = entry[0]
+      const values = entry[1]
       const value = props[prop]
 
-      // TODO: improve unknown properties handling
-      if (!value || x[1][value] === undefined) return
+      // Skip undefined values or unknown property values - allows partial state matching
+      if (value === undefined || values[value] === undefined) continue
 
-      bits |= x[1][value]
-    })
+      bits |= values[value]
+    }
 
     return bits
   }

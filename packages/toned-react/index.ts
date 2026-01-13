@@ -1,5 +1,4 @@
-import { getConfig } from '@toned/core/config.js'
-import { SYMBOL_INIT } from '@toned/core/types.js'
+import { getConfig, SYMBOL_INIT } from '@toned/core'
 
 import { useRef } from 'react'
 

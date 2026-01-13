@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import type { TokenStyleDeclaration, TokenSystem } from '../types.ts'
+import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 
 describe('style matcher', () => {
@@ -320,7 +320,7 @@ describe('style matcher with media', () => {
         size: 'm',
         variant: 'accent',
         alignment: 'icon-only',
-        // TODO: think if we should support multiple @ rules simultanuasly
+        // Multiple @ rules are supported - each evaluates independently
         '@media.desktop': false,
         '@media.small': true,
       }),
@@ -353,7 +353,7 @@ describe('style matcher with media', () => {
 // NEW API TESTS
 // =============================================================================
 
-import { createStylesheet } from '../StyleSheet/StyleSheet.ts'
+import { createStylesheet } from './StyleSheet.ts'
 
 // Mock TokenSystem for testing
 const mockTokenSystem = {

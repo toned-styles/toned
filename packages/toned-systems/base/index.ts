@@ -1,5 +1,17 @@
-// TODO: think about improving the types portability
-export * from '@toned/core/types'
+// Re-export types from @toned/core
+export type {
+  Breakpoints,
+  Config,
+  ModType,
+  Pseudo,
+  Stylesheet,
+  StylesheetInput,
+  StylesheetType,
+  TokenConfig,
+  TokenStyle,
+  TokenStyleDeclaration,
+  Tokens,
+} from '@toned/core'
 
 import { defineSystem } from '@toned/core'
 import * as border from './border.ts'

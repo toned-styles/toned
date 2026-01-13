@@ -1,20 +1,11 @@
-import type { Breakpoints, TokenStyleDeclaration } from './types.ts'
-import { camelToKebab } from './utils.ts'
+/**
+ * CSS generation utilities.
+ *
+ * @module dom/generate
+ */
 
-export function getStyleNodeById(id: string): HTMLStyleElement | null {
-  if (typeof document === 'undefined') {
-    // support virtual stylesheet
-    return null
-  }
-
-  let node = document.getElementById(id) as HTMLStyleElement
-  if (!node) {
-    node = document.createElement('style')
-    node.id = id
-    document.head.appendChild(node)
-  }
-  return node
-}
+import type { TokenStyleDeclaration } from '../types/index.ts'
+import { camelToKebab } from '../utils/css.ts'
 
 const tokens = new Proxy(
   {},
@@ -25,10 +16,13 @@ const tokens = new Proxy(
   },
 )
 
-export function generate<const s extends TokenStyleDeclaration>({
+/**
+ * Generate CSS from a token style declaration.
+ */
+export function generate<const S extends TokenStyleDeclaration>({
   breakpoints,
   ...system
-}: s) {
+}: S) {
   let styles = ''
 
   if (breakpoints) {
@@ -68,7 +62,8 @@ export function generate<const s extends TokenStyleDeclaration>({
     // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
     token.values.forEach((value: any) => {
       if (value instanceof Number || value instanceof String) {
-        // TODO: support dynamic placeholders
+        // Skip boxed primitives - these represent dynamic/runtime values
+        // that cannot be statically generated into CSS
         return
       }
 
@@ -91,23 +86,4 @@ export function generate<const s extends TokenStyleDeclaration>({
   }
 
   return styles
-}
-
-export function inject<
-  const S extends
-    | TokenStyleDeclaration
-    | {
-        // biome-ignore lint/suspicious/noExplicitAny: breakpoint config uses generic parameter
-        breakpoints?: Breakpoints<any>
-      },
->(system: S) {
-  const sheet = getStyleNodeById('toned/main')
-
-  if (!sheet) {
-    return
-  }
-
-  const styles = generate(system as TokenStyleDeclaration)
-
-  sheet.innerHTML = styles
 }

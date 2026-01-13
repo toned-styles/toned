@@ -1,6 +1,7 @@
-// TODO: move to configuration
+// Note: Media handling could be made configurable for SSR/custom implementations
+// Currently uses window.matchMedia directly which works for web and expo-media
 
-import type { TokenStyleDeclaration, TokenSystem } from '../types.ts'
+import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
 export const initMedia = <S extends TokenStyleDeclaration>({
   config,

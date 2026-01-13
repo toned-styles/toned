@@ -4,6 +4,14 @@
   "author": "Kenzhaev Artur",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./dom": "./dom/index.ts",
+    "./types": "./types/index.ts",
+    "./stylesheet": "./stylesheet/index.ts",
+    "./system": "./system/index.ts",
+    "./utils": "./utils/index.ts"
+  },
   "publishConfig": {
     "access": "public",
     "directory": ".dist",

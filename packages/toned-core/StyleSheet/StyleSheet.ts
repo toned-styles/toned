@@ -1,21 +1,19 @@
-import { getConfig } from '../config.ts'
-import { StyleMatcher } from '../StyleMatcher/StyleMatcher.ts'
-import {
-  type Config,
-  type ModType,
-  SYMBOL_INIT,
-  SYMBOL_REF,
-  SYMBOL_VARIANTS,
-  type TokenStyleDeclaration,
-  type TokenSystem,
-  type Tokens,
-} from '../types.ts'
-import { initMedia } from './initMedia.ts'
+import { getConfig } from '../system/config.ts'
+import type {
+  Config,
+  ModType,
+  TokenStyleDeclaration,
+  TokenSystem,
+  Tokens,
+} from '../types/index.ts'
+import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
+import { initMedia } from './media.ts'
+import { StyleMatcher } from './StyleMatcher.ts'
 import { unitlessNumbers } from './unitlessNumbers.ts'
 
 type PseudoState = ':hover' | ':focus' | ':active'
 
-// biome-ignore lint/suspicious/noExplicitAny: ignore
+// biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
 type AnyValue = any
 
 type Ref = AnyValue
@@ -24,9 +22,10 @@ type RefStyle = AnyValue
 const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
   if (!curr) return
 
-  // TODO: move to config
+  // React Native path - uses setNativeProps for direct style updates
+  // Note: Could be abstracted to config.applyStyles for platform-specific handling
   if (curr.setNativeProps) {
-    // TODO: how to merge with existing styles?
+    // Note: Currently replaces all styles; merging would require tracking previous toned styles
     curr.setNativeProps({ style: styleObject.style })
   } else {
     if (styleObject.style) {
@@ -45,7 +44,8 @@ const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
       Object.assign(curr.style, result)
     }
     if (styleObject.className) {
-      // TODO: handle existing classnames (not from toned)
+      // Note: This replaces all classNames; preserving non-toned classes would require
+      // tracking which classes were added by toned vs external sources
       curr.className = styleObject.className
     }
   }
@@ -60,7 +60,8 @@ type AppliedStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
 
-// TODO: make it type safe
+// ModState represents the current state of modifiers (variants, media queries, pseudo-states)
+// Kept as AnyValue because keys are dynamic: variant names, breakpoint keys, and element:pseudo combinations
 type ModState = AnyValue
 
 /**
@@ -114,16 +115,17 @@ export function createStylesheet<
 
   class LocalBase extends Base {}
 
-  // Get element keys (excluding selectors)
-  const elementKeys = Object.keys(rules as object).filter(
-    (k) =>
-      !k.startsWith('[') &&
-      !k.includes(':') &&
-      k !== 'prototype' &&
-      k !== SYMBOL_VARIANTS.toString(),
-  )
-
-  for (const elementKey of elementKeys) {
+  // Get element keys (excluding selectors) - inline filter for performance
+  const variantSymbolStr = SYMBOL_VARIANTS.toString()
+  for (const elementKey in rules as object) {
+    // Skip selectors and internal properties
+    if (
+      elementKey[0] === '[' ||
+      elementKey.includes(':') ||
+      elementKey === 'prototype' ||
+      elementKey === variantSymbolStr
+    )
+      continue
     Object.defineProperty(LocalBase.prototype, elementKey, {
       get(this: LocalBase) {
         const result = this.config.getProps.call(this, elementKey)
@@ -136,7 +138,7 @@ export function createStylesheet<
     [SYMBOL_REF]: ref,
     [SYMBOL_INIT]: (config: Config, modsState: ModState) => {
       return new LocalBase({
-        // TODO: fix types
+        // Cast needed: TokenSystem generic S doesn't match BaseRef's TokenStyleDeclaration
         ref: ref as AnyValue,
         rules: mergedRules,
         config,
@@ -209,7 +211,8 @@ export class Base {
 
     const mediaEmitter = initMedia(this.ref)
 
-    // TODO: think about perf improvements
+    // Merge initial mods state with current media query state
+    // Note: Object spread is O(n) but n is small (few variants + breakpoints)
     this.modsState = {
       ...modsState,
       ...mediaEmitter.data,
@@ -272,15 +275,15 @@ export class Base {
   }
 
   applyElementStyles() {
-    this.matcher.elementSet.forEach((elementKey) => {
+    for (const elementKey of this.matcher.elementSet) {
       if (
         this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)
       ) {
-        return
+        continue
       }
 
       setStyles(this.refs[elementKey], this.getCurrentStyle(elementKey))
-    })
+    }
   }
 
   applyState(modsState: ModState) {

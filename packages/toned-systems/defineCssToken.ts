@@ -1,5 +1,5 @@
+import type { TokenConfig, Tokens } from '@toned/core'
 import { defineToken as defineTokenCore } from '@toned/core'
-import type { TokenConfig, Tokens } from '@toned/core/types.ts'
 import type { CSSProperties } from 'react'
 
 export const defineToken = defineTokenCore as <

@@ -1,5 +1,5 @@
 import { defineConfig } from '@toned/core'
-import type { Base } from '@toned/core/StyleSheet/StyleSheet.ts'
+import type { Base } from '@toned/core/stylesheet'
 import reactConfig from './config.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
