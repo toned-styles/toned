@@ -34,13 +34,13 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "${configDir}/.dist",
+    "outDir": "${configDir}/.tsc",
 
     "incremental": true
   },
-  "include": ["${configDir}/**/*", "./**/*"],
+  "include": ["${configDir}/**/*"],
   "exclude": [
-    "**/node_modules/**",
+    "${configDir}/node_modules",
     "${configDir}/.build",
     "${configDir}/.dist",
     "${configDir}/.tsc",
