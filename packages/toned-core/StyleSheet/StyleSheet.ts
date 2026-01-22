@@ -6,6 +6,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import { deepMerge } from '../utils/deepMerge.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { initMedia } from './media.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
@@ -63,38 +64,6 @@ type StyleDecl = Record<ElementKey, ElementStyle>
 // ModState represents the current state of modifiers (variants, media queries, pseudo-states)
 // Kept as AnyValue because keys are dynamic: variant names, breakpoint keys, and element:pseudo combinations
 type ModState = AnyValue
-
-/**
- * Deep merge two objects, with source values overriding target values
- */
-function deepMerge(target: AnyValue, source: AnyValue): AnyValue {
-  if (!source) return target
-  if (!target) return source
-
-  const result = { ...target }
-
-  for (const key in source) {
-    const sourceVal = source[key]
-    const targetVal = target[key]
-
-    if (
-      sourceVal &&
-      typeof sourceVal === 'object' &&
-      !Array.isArray(sourceVal) &&
-      targetVal &&
-      typeof targetVal === 'object' &&
-      !Array.isArray(targetVal)
-    ) {
-      // Recursively merge nested objects
-      result[key] = deepMerge(targetVal, sourceVal)
-    } else {
-      // Override with source value
-      result[key] = sourceVal
-    }
-  }
-
-  return result
-}
 
 /**
  * Merge base rules with variant rules for StyleMatcher
