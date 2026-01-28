@@ -26,13 +26,14 @@ type StylesheetLike = {
 /**
  * Extract element keys from a stylesheet (excluding internal symbols and methods)
  */
-type StylesheetElements<T> = Exclude<keyof T, symbol | 'variants' | 'extend'>
+// type StylesheetElements<T> = Exclude<keyof T, symbol | 'variants' | 'extend'>
 
+// TODO: think how we can omit symbols and internal keys. at the moment it breaks the inference
 /**
  * Result type for useStyles - provides element props for each element in the stylesheet
  */
 type UseStylesResult<T> = {
-  [K in StylesheetElements<T>]: ElementProps
+  [K in keyof T]: ElementProps
 }
 
 /**
@@ -48,11 +49,9 @@ type UseStylesResult<T> = {
  * return <button {...s.container}><span {...s.label}>Click</span></button>
  * ```
  */
-export function useStyles<T extends StylesheetLike>(
-  stylesheet: T,
-): UseStylesResult<T>
+export function useStyles<T>(stylesheet: T): UseStylesResult<T>
 
-export function useStyles<T extends StylesheetLike, M extends object>(
+export function useStyles<T, M extends object>(
   stylesheet: T,
   state: M,
 ): UseStylesResult<T>
