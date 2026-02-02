@@ -6,6 +6,11 @@ import type {
 } from '../types/index.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
+import {
+  createVariantSelector,
+  isNamedStyleKey,
+  getNamedStyleName,
+} from './variantSelector.ts'
 
 // Mock TokenSystem for testing
 const mockTokenSystem = {
@@ -379,5 +384,95 @@ describe('integration: new API with StyleMatcher', () => {
     expect(combinedStyle.container.paddingX).toBe(2)
     expect(combinedStyle.container.bgColor).toBe('yellow')
     expect(combinedStyle.container.borderColor).toBe('orange')
+  })
+})
+
+describe('variantSelector', () => {
+  test('creates named style keys', () => {
+    const $ = createVariantSelector<{ size: 'sm' | 'md' }>(['size'])
+
+    const key = $('my_style')
+    expect(key).toBe('$named$_my_style')
+    expect(isNamedStyleKey(key)).toBe(true)
+    expect(getNamedStyleName(key)).toBe('my_style')
+  })
+
+  test('creates single variant selectors', () => {
+    const $ = createVariantSelector<{ size: 'sm' | 'md' }>(['size'])
+
+    const key = String($.size('sm'))
+    expect(key).toBe('[size=sm]')
+  })
+
+  test('creates compound variant selectors in stable order', () => {
+    const $ = createVariantSelector<{
+      size: 'sm' | 'md'
+      variant: 'accent' | 'danger'
+    }>(['size', 'variant'])
+
+    // Order of calls doesn't matter - key is always in definition order
+    const key1 = String($.size('sm').variant('accent'))
+    const key2 = String($.variant('accent').size('sm'))
+
+    expect(key1).toBe('[size=sm][variant=accent]')
+    expect(key2).toBe('[size=sm][variant=accent]')
+  })
+
+  test('uses wildcard for unspecified variants', () => {
+    const $ = createVariantSelector<{
+      size: 'sm' | 'md'
+      variant: 'accent' | 'danger'
+    }>(['size', 'variant'])
+
+    const key = String($.size('sm'))
+    expect(key).toBe('[size=sm][variant=*]')
+  })
+
+  test('handles multi-value selectors', () => {
+    const $ = createVariantSelector<{
+      alignment: 'icon-only' | 'icon-left' | 'icon-right'
+    }>(['alignment'])
+
+    const key = String($.alignment('icon-only', 'icon-left'))
+    // Values are sorted for stability
+    expect(key).toBe('[alignment=icon-left][alignment=icon-only]')
+  })
+})
+
+describe('callback-based variants API', () => {
+  test('callback-based variants work with StyleMatcher', () => {
+    // Test that * values are treated as wildcards
+    const rules = {
+      container: { bgColor: 'blue' },
+      label: { textColor: 'white' },
+      // Simulating what the callback API generates
+      '[size=sm][variant=*]': { container: { paddingX: 2 } },
+      '[size=*][variant=accent]': {
+        container: { bgColor: 'yellow' },
+        label: { textColor: 'black' },
+      },
+    }
+
+    const matcher = new StyleMatcher(rules)
+
+    // With size=sm and variant=accent, both rules should match
+    const style = matcher.match({ size: 'sm', variant: 'accent' })
+
+    expect(style.container.paddingX).toBe(2)
+    expect(style.container.bgColor).toBe('yellow')
+    expect(style.label.textColor).toBe('black')
+  })
+
+  test('wildcard matches when variant not specified', () => {
+    const rules = {
+      container: { bgColor: 'blue' },
+      '[size=sm][variant=*]': { container: { paddingX: 2 } },
+    }
+
+    const matcher = new StyleMatcher(rules)
+
+    // Without variant specified, should still match
+    const style = matcher.match({ size: 'sm' })
+    expect(style.container.paddingX).toBe(2)
   })
 })

@@ -449,6 +449,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
       for (const condition of conditions) {
         const [property, value = '*'] = condition.split('=')
 
+        // Skip wildcards (unspecified optional variants use * too)
         if (value === WILDCARD) continue
 
         // Skip unknown properties - this handles dynamic or undefined variant values gracefully
