@@ -26,13 +26,13 @@ type StylesheetLike = {
 /**
  * Extract element keys from a stylesheet (excluding internal symbols and methods)
  */
-type StylesheetElements<T> = Exclude<keyof T, symbol | 'variants' | 'extend'>
+// type StylesheetElements<T> = Exclude<keyof T, symbol | 'variants' | 'extend'>
 
 /**
  * Result type for useStyles - provides element props for each element in the stylesheet
  */
 type UseStylesResult<T> = {
-  [K in StylesheetElements<T>]: ElementProps
+  [K in keyof T]: ElementProps
 }
 
 /**
