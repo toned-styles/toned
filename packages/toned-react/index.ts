@@ -1,4 +1,5 @@
 import { getConfig, SYMBOL_INIT } from '@toned/core'
+import type { SYMBOL_REF } from '@toned/core/utils'
 
 import { useRef } from 'react'
 
@@ -32,7 +33,9 @@ type StylesheetLike = {
  * Result type for useStyles - provides element props for each element in the stylesheet
  */
 type UseStylesResult<T> = {
-  [K in keyof T]: ElementProps
+  [K in keyof T as K extends typeof SYMBOL_INIT | typeof SYMBOL_REF
+    ? never
+    : K]: ElementProps
 }
 
 /**
