@@ -1,4 +1,4 @@
-import { stylesheet } from '@toned/systems/base'
+import {stylesheet} from '@toned/systems/base'
 
 export const styles = stylesheet({
   container: {
@@ -31,8 +31,7 @@ export const styles = stylesheet({
 
   [$.size('m')]: {
     container: {
-      paddingX: 2,
-      paddingY: 1,
+      paddingX: 3,
     },
   },
 
@@ -57,3 +56,4 @@ export const styles = stylesheet({
     },
   },
 }))
+

@@ -15,11 +15,6 @@ const NONE_VALUE = '*' as const
 type NoneValue = typeof NONE_VALUE
 
 /**
- * Branded type for variant keys to ensure type safety
- */
-export type VariantKey = string & { readonly __variantKey?: unique symbol }
-
-/**
  * Named style key type
  */
 export type NamedStyleKey<Name extends string> = `$named$_${Name}`
@@ -32,42 +27,48 @@ export type ExtractNamedStyles<R> = {
 }[keyof R]
 
 /**
- * Keys that have been accumulated in a builder
+ * Variant key type - for backwards compatibility
  */
-type AccumulatedKeys = Record<string, unknown>
+export type VariantKey = string
 
 /**
- * Builder methods for chaining variant selections
+ * Keys that have been accumulated in a builder
  */
-type VariantBuilderMethods<
+type AccumulatedKeys = Record<string, string>
+
+/**
+ * Concatenate existing key with new segment
+ */
+type AppendKey<
+  Existing extends string,
+  K extends string,
+  V extends string,
+> = `${Existing}[${K}=${V}]`
+
+/**
+ * Variant builder - returned after each variant selection.
+ * The Key type parameter is the accumulated key string as a template literal.
+ *
+ * @template Mods - The full modifier type
+ * @template Acc - Record of accumulated key-value selections
+ * @template Key - The accumulated key string (template literal)
+ */
+export type VariantBuilder<
   Mods extends ModType,
   Acc extends AccumulatedKeys = {},
-> = {
+  Key extends string = '',
+> = Key & {
   /**
    * Select a variant value (or multiple values for OR semantics)
    */
   [K in Exclude<keyof Mods, keyof Acc> as K extends string
     ? K
     : never]: K extends string
-    ? <const V extends Exclude<Mods[K], undefined>>(
+    ? <const V extends Exclude<Mods[K], undefined> & string>(
         ...values: [V, ...V[]]
-      ) => VariantBuilder<Mods, Acc & Record<K, V>>
+      ) => VariantBuilder<Mods, Acc & Record<K, V>, AppendKey<Key, K, V>>
     : never
 }
-
-/**
- * Variant builder - returned after each variant selection
- * Allows chaining additional variant selections
- *
- * Intersected with `string` so it can be used as a computed property key.
- *
- * @template Mods - The full modifier type
- * @template Acc - Keys that have already been accumulated
- */
-export type VariantBuilder<
-  Mods extends ModType,
-  Acc extends AccumulatedKeys = {},
-> = string & VariantBuilderMethods<Mods, Acc>
 
 /**
  * Variant selector - the `$` parameter in variants callback
@@ -84,9 +85,9 @@ export type VariantSelector<Mods extends ModType> = {
    * @example $.size("m") or $.alignment("icon-only", "icon-left")
    */
   [K in keyof Mods as K extends string ? K : never]: K extends string
-    ? <const V extends Exclude<Mods[K], undefined>>(
+    ? <const V extends Exclude<Mods[K], undefined> & string>(
         ...values: [V, ...V[]]
-      ) => VariantBuilder<Mods, Record<K, V>>
+      ) => VariantBuilder<Mods, { [P in K]: V }, `[${K}=${V}]`>
     : never
 }
 
