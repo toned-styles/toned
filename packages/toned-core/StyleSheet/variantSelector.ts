@@ -37,13 +37,9 @@ export type ExtractNamedStyles<R> = {
 type AccumulatedKeys = Record<string, unknown>
 
 /**
- * Variant builder - returned after each variant selection
- * Allows chaining additional variant selections
- *
- * @template Mods - The full modifier type
- * @template Acc - Keys that have already been accumulated
+ * Builder methods for chaining variant selections
  */
-export type VariantBuilder<
+type VariantBuilderMethods<
   Mods extends ModType,
   Acc extends AccumulatedKeys = {},
 > = {
@@ -57,13 +53,21 @@ export type VariantBuilder<
         ...values: [V, ...V[]]
       ) => VariantBuilder<Mods, Acc & Record<K, V>>
     : never
-} & {
-  /**
-   * Convert to string key for use as object property
-   */
-  toString(): VariantKey
-  [Symbol.toPrimitive](hint: string): VariantKey
 }
+
+/**
+ * Variant builder - returned after each variant selection
+ * Allows chaining additional variant selections
+ *
+ * Intersected with `string` so it can be used as a computed property key.
+ *
+ * @template Mods - The full modifier type
+ * @template Acc - Keys that have already been accumulated
+ */
+export type VariantBuilder<
+  Mods extends ModType,
+  Acc extends AccumulatedKeys = {},
+> = string & VariantBuilderMethods<Mods, Acc>
 
 /**
  * Variant selector - the `$` parameter in variants callback
