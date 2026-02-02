@@ -19,8 +19,8 @@ export const styles = stylesheet({
   size: 'm' | 's'
   variant: 'accent' | 'danger'
   alignment?: 'icon-only' | 'icon-left' | 'icon-right'
-}>({
-  '[variant=accent]': {
+}>(($) => ({
+  [$.variant('accent')]: {
     container: {
       bgColor: 'action',
     },
@@ -29,31 +29,31 @@ export const styles = stylesheet({
     },
   },
 
-  '[size=m]': {
+  [$.size('m')]: {
     container: {
       paddingX: 2,
       paddingY: 1,
     },
   },
 
-  '[size=m][alignment=icon-only]': {
+  [$.size('m').alignment('icon-only')]: {
     container: {
       paddingX: 2,
       paddingY: 2,
     },
   },
 
-  '[size=s]': {
+  [$.size('s')]: {
     container: {
       paddingX: 2,
       paddingY: 1,
     },
   },
 
-  '[size=s][alignment=icon-only]': {
+  [$.size('s').alignment('icon-only')]: {
     container: {
       paddingX: 1,
       paddingY: 2,
     },
   },
-})
+}))
