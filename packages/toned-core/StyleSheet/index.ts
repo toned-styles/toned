@@ -8,3 +8,14 @@ export { initMedia } from './media.ts'
 export { StyleMatcher } from './StyleMatcher.ts'
 export { Base, createStylesheet } from './StyleSheet.ts'
 export { unitlessNumbers } from './unitlessNumbers.ts'
+export {
+  createVariantSelector,
+  isNamedStyleKey,
+  getNamedStyleName,
+  isNoneValue,
+  type VariantKey,
+  type NamedStyleKey,
+  type VariantSelector,
+  type VariantBuilder,
+  type ExtractNamedStyles,
+} from './variantSelector.ts'

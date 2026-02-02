@@ -13,7 +13,10 @@ export type { Config } from './config.ts'
 export type {
   ElementMap,
   ElementStyleNew,
+  ExtractNamedStyles,
   ModType,
+  NamedStyleDef,
+  NamedStyleKey,
   PickString,
   PreVariantsStylesheet,
   Pseudo,
@@ -22,7 +25,12 @@ export type {
   StylesheetType,
   StylesheetWithVariants,
   TFun,
+  VariantElementStyle,
+  VariantKey,
+  VariantsCallback,
   VariantsInput,
+  VariantSelector,
+  VariantStyleDef,
 } from './stylesheet.ts'
 // System types
 export type { TokenSystem } from './system.ts'

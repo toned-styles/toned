@@ -126,6 +126,15 @@ export type StylesheetInput<
 // Variant Selector Types
 // =============================================================================
 
+import type {
+  ExtractNamedStyles,
+  NamedStyleKey,
+  VariantKey,
+  VariantSelector,
+} from '../stylesheet/variantSelector.ts'
+
+export type { VariantSelector, VariantKey, NamedStyleKey, ExtractNamedStyles }
+
 /**
  * A single selector segment for a key-value pair.
  * For booleans: generates [key], [key=true], [key=false]
@@ -185,8 +194,8 @@ type AllVariantSelectors<Mods extends ModType> =
   | ThreeSegmentSelector<Mods>
 
 /**
- * Variants input - maps variant selectors to element styles.
- * Full enumeration of all valid selectors for autocomplete and validation.
+ * Legacy variants input - maps variant selectors to element styles.
+ * @deprecated Use callback-based variants API instead
  */
 export type VariantsInput<
   S extends TokenStyleDeclaration,
@@ -196,6 +205,71 @@ export type VariantsInput<
   [K in AllVariantSelectors<Mods>]?: ElementMap<S, Elements>
 }
 
+// =============================================================================
+// New Callback-based Variants API
+// =============================================================================
+
+/**
+ * Style definition for an element within a variant, with compose support
+ */
+export type VariantElementStyle<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+> = TokenStyle<S> & {
+  /** Compose styles from other elements */
+  $compose?: Elements | Elements[]
+}
+
+/**
+ * Named style definition - can only contain element styles
+ */
+export type NamedStyleDef<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+> = {
+  [E in Elements]?: TokenStyle<S>
+}
+
+/**
+ * Variant style definition - can compose named styles and define element styles
+ */
+export type VariantStyleDef<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+  Named extends string,
+> = {
+  /** Compose styles from named style definitions */
+  $compose?: Named | Named[]
+} & {
+  [E in Elements]?: VariantElementStyle<S, Elements>
+}
+
+/**
+ * Infer the result type of a variants callback
+ */
+export type VariantsCallbackResult<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+  R,
+> = {
+  [K in keyof R]: K extends NamedStyleKey<string>
+    ? NamedStyleDef<S, Elements>
+    : VariantStyleDef<S, Elements, ExtractNamedStyles<R>>
+}
+
+/**
+ * Callback function type for the new variants API
+ */
+export type VariantsCallback<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+  Mods extends ModType,
+> = ($: VariantSelector<Mods>) => Record<
+  string,
+  | NamedStyleDef<S, Elements>
+  | VariantStyleDef<S, Elements, string>
+>
+
 /**
  * Stylesheet with variants() method for adding conditional styles.
  */
@@ -203,6 +277,33 @@ export type StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
 > = {
+  /**
+   * Define variants using a callback with type-safe selector proxy
+   *
+   * @example
+   * ```ts
+   * stylesheet.variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>(($) => ({
+   *   [$("base_style")]: {
+   *     container: { padding: 2 },
+   *   },
+   *   [$.size("m")]: {
+   *     $compose: "base_style",
+   *     container: { paddingX: 4 },
+   *   },
+   *   [$.size("m").variant("accent")]: {
+   *     container: { bgColor: "action" },
+   *   },
+   * }))
+   * ```
+   */
+  variants<Mods extends ModType>(
+    callback: VariantsCallback<S, Elements, Mods>,
+  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods>
+
+  /**
+   * Define variants using an object (legacy API)
+   * @deprecated Use callback-based API for better type safety
+   */
   variants<Mods extends ModType>(
     variants: VariantsInput<S, Elements, Mods>,
   ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods>

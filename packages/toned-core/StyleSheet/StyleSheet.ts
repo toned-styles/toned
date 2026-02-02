@@ -10,6 +10,11 @@ import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { initMedia } from './media.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { unitlessNumbers } from './unitlessNumbers.ts'
+import {
+  createVariantSelector,
+  isNamedStyleKey,
+  getNamedStyleName,
+} from './variantSelector.ts'
 
 type PseudoState = ':hover' | ':focus' | ':active'
 
@@ -97,6 +102,127 @@ function deepMerge(target: AnyValue, source: AnyValue): AnyValue {
 }
 
 /**
+ * Extract ordered keys from a ModType for stable key generation
+ * Note: TypeScript preserves key order for interface/type definitions
+ */
+function extractOrderedKeys<Mods extends ModType>(
+  // We need at least one variant call to infer the keys
+  variantRules: AnyValue,
+): string[] {
+  const keys = new Set<string>()
+
+  // Parse keys from variant selectors like "[size=m][variant=accent]"
+  for (const selector in variantRules) {
+    if (selector.startsWith('$named$_')) continue
+
+    const matches = selector.matchAll(/\[([^=\]]+)(?:=[^\]]+)?\]/g)
+    for (const match of matches) {
+      if (match[1] && match[1] !== '$NONE$') {
+        keys.add(match[1])
+      }
+    }
+  }
+
+  return Array.from(keys)
+}
+
+/**
+ * Process variant rules from callback result
+ * - Resolves $compose for named styles
+ * - Resolves $compose for elements
+ */
+function processVariantRules(
+  variantRules: AnyValue,
+  baseElements: Set<string>,
+): AnyValue {
+  const result: AnyValue = {}
+  const namedStyles: Record<string, AnyValue> = {}
+
+  // First pass: collect named styles
+  for (const key in variantRules) {
+    if (isNamedStyleKey(key)) {
+      const name = getNamedStyleName(key as `$named$_${string}`)
+      namedStyles[name] = variantRules[key]
+    }
+  }
+
+  // Second pass: process all rules
+  for (const key in variantRules) {
+    if (isNamedStyleKey(key)) {
+      // Named styles are only used for composition, not applied directly
+      continue
+    }
+
+    const rule = variantRules[key]
+    const processedRule: AnyValue = {}
+
+    // Handle variant-level $compose
+    if (rule.$compose) {
+      const composeNames = Array.isArray(rule.$compose)
+        ? rule.$compose
+        : [rule.$compose]
+
+      for (const name of composeNames) {
+        const namedStyle = namedStyles[name]
+        if (namedStyle) {
+          // Merge named style into this rule
+          for (const elementKey in namedStyle) {
+            processedRule[elementKey] = deepMerge(
+              processedRule[elementKey],
+              namedStyle[elementKey],
+            )
+          }
+        }
+      }
+    }
+
+    // Process element rules
+    for (const elementKey in rule) {
+      if (elementKey === '$compose') continue
+
+      const elementRule = rule[elementKey]
+
+      // Handle element-level $compose
+      if (elementRule.$compose) {
+        const composeElements = Array.isArray(elementRule.$compose)
+          ? elementRule.$compose
+          : [elementRule.$compose]
+
+        let composedStyle: AnyValue = {}
+
+        for (const composeElement of composeElements) {
+          // Look up the element in base rules or in this rule
+          if (baseElements.has(composeElement)) {
+            // Will be resolved by StyleMatcher from base rules
+            // For now, we just note that composition is needed
+          }
+          // Also check if element is defined in this variant rule
+          if (rule[composeElement]) {
+            const { $compose: _, ...elementStyle } = rule[composeElement]
+            composedStyle = deepMerge(composedStyle, elementStyle)
+          }
+        }
+
+        const { $compose: _, ...restElementRule } = elementRule
+        processedRule[elementKey] = deepMerge(
+          deepMerge(processedRule[elementKey], composedStyle),
+          restElementRule,
+        )
+      } else {
+        processedRule[elementKey] = deepMerge(
+          processedRule[elementKey],
+          elementRule,
+        )
+      }
+    }
+
+    result[key] = processedRule
+  }
+
+  return result
+}
+
+/**
  * Merge base rules with variant rules for StyleMatcher
  * StyleMatcher now handles both the new API format and internal format directly
  */
@@ -146,7 +272,44 @@ export function createStylesheet<
       })
     },
     // Add variants method for chaining
-    variants: <M extends ModType>(newVariantRules: AnyValue) => {
+    variants: <M extends ModType>(
+      variantsArg: AnyValue | (($: AnyValue) => AnyValue),
+    ) => {
+      let newVariantRules: AnyValue
+
+      if (typeof variantsArg === 'function') {
+        // Callback-based API
+        // First, we need to call the callback to get the rules
+        // We'll use a preliminary call to extract keys, then create the real selector
+        const preliminaryRules = variantsArg(
+          createVariantSelector<M>([] as (keyof M)[]),
+        )
+        const orderedKeys = extractOrderedKeys<M>(preliminaryRules)
+
+        // Now create the real selector with ordered keys and call again
+        const $ = createVariantSelector<M>(orderedKeys as (keyof M)[])
+        const rawRules = variantsArg($)
+
+        // Collect base element names
+        const baseElements = new Set<string>()
+        for (const key in rules as object) {
+          if (
+            key[0] !== '[' &&
+            !key.includes(':') &&
+            key !== 'prototype' &&
+            key !== SYMBOL_VARIANTS.toString()
+          ) {
+            baseElements.add(key)
+          }
+        }
+
+        // Process $compose
+        newVariantRules = processVariantRules(rawRules, baseElements)
+      } else {
+        // Legacy object-based API
+        newVariantRules = variantsArg
+      }
+
       return createStylesheet<S, M, T>(ref, rules, newVariantRules)
     },
     // Add extend method for composition
