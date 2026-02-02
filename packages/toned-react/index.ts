@@ -1,4 +1,11 @@
-import { getConfig, SYMBOL_INIT } from '@toned/core'
+import {
+  getConfig,
+  type ModType,
+  type Stylesheet,
+  SYMBOL_INIT,
+  type TokenStyle,
+  type TokenStyleDeclaration,
+} from '@toned/core'
 import type { SYMBOL_REF } from '@toned/core/utils'
 
 import { useRef } from 'react'
@@ -55,10 +62,11 @@ export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
 ): UseStylesResult<T>
 
-export function useStyles<T extends StylesheetLike, M extends object>(
-  stylesheet: T,
-  state: M,
-): UseStylesResult<T>
+export function useStyles<
+  S extends TokenStyleDeclaration,
+  T extends Record<string, TokenStyle<S>>,
+  M extends ModType,
+>(stylesheet: Stylesheet<S, T, M>, state: M): UseStylesResult<T>
 
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
