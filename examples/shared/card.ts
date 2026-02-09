@@ -8,4 +8,9 @@ export const styles = stylesheet({
     flexLayout: 'column',
   },
   code: { textColor: 'destructive' },
+  'code:hover': {
+    code: {
+      textColor: 'default',
+    },
+  },
 })
