@@ -1,4 +1,4 @@
-import {stylesheet} from '@toned/systems/base'
+import { stylesheet } from '@toned/systems/base'
 
 export const styles = stylesheet({
   container: {
@@ -26,6 +26,15 @@ export const styles = stylesheet({
     },
     label: {
       textColor: 'on_action',
+    },
+
+    'container:hover': {
+      container: {
+        bgColor: 'action_secondary',
+      },
+      label: {
+        textColor: 'on_action_secondary',
+      },
     },
   },
 
@@ -56,4 +65,3 @@ export const styles = stylesheet({
     },
   },
 }))
-
