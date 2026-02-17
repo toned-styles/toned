@@ -1,14 +1,14 @@
 import '../toned.config.ts'
 
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { hydrateRoot } from 'react-dom/client'
-import { routeTree } from './routeTree.gen'
+import { createRoot, hydrateRoot } from 'react-dom/client'
+import { routeTree } from './routeTree.gen.ts'
 
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
+  defaultNotFoundComponent: () => <p>Not Found</p>,
 })
 
 declare module '@tanstack/react-router' {
