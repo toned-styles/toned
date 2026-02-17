@@ -142,7 +142,7 @@ export function defineSystem<
       }
 
       for (const [k, v] of Object.entries(tokenStyle)) {
-        if (!v) continue
+        if (v == null) continue
 
         if (k[0] === ':' || k[0] === '$') continue
 
