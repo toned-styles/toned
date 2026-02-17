@@ -105,6 +105,7 @@ interface BuilderRuntime {
 function createBuilder(runtime: BuilderRuntime): VariantBuilder<ModType, {}> {
   const generateKey = (): string => {
     const segments: string[] = []
+    const orderedKeysSet = new Set(runtime.orderedKeys)
 
     for (const key of runtime.orderedKeys) {
       const value = runtime.accumulated[key]
@@ -114,6 +115,22 @@ function createBuilder(runtime: BuilderRuntime): VariantBuilder<ModType, {}> {
         segments.push(`[${key}=${NONE_VALUE}]`)
       } else if (Array.isArray(value)) {
         // Multiple values - sort for stability, create separate segments
+        const sorted = [...value].sort()
+        for (const v of sorted) {
+          segments.push(`[${key}=${v}]`)
+        }
+      } else {
+        segments.push(`[${key}=${value}]`)
+      }
+    }
+
+    // Include accumulated keys not in orderedKeys (needed for first pass
+    // where orderedKeys is empty, so extractOrderedKeys can find them)
+    for (const key of Object.keys(runtime.accumulated)) {
+      if (orderedKeysSet.has(key)) continue
+      const value = runtime.accumulated[key]
+      if (value === undefined) continue
+      if (Array.isArray(value)) {
         const sorted = [...value].sort()
         for (const v of sorted) {
           segments.push(`[${key}=${v}]`)

@@ -206,6 +206,15 @@ export const marginRight = defineCssToken(
   SpaceUnit,
 )
 
+// Sizing
+const sizeValues = [new String()] as const
+export const width = defineCssToken('width', sizeValues)
+export const height = defineCssToken('height', sizeValues)
+export const minWidth = defineCssToken('minWidth', sizeValues)
+export const minHeight = defineCssToken('minHeight', sizeValues)
+export const maxWidth = defineCssToken('maxWidth', sizeValues)
+export const maxHeight = defineCssToken('maxHeight', sizeValues)
+
 // Display & positioning
 export const display = defineCssToken('display', [
   'block',
