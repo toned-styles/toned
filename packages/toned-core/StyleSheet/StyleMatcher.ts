@@ -51,6 +51,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   }> = []
 
   useAtPrefix: boolean
+  cssMediaMode: boolean
 
   scheme: MatcherScheme
   list: MatcherList
@@ -62,7 +63,9 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
   cache = new Map<number, any>()
 
-  constructor(rules: NestedStyleRules) {
+  constructor(rules: NestedStyleRules, options?: { cssMediaMode?: boolean }) {
+    this.cssMediaMode = options?.cssMediaMode ?? false
+
     const { scheme, list, interactions, elementSet } = this.flattenRules(rules)
 
     this.elementSet = elementSet
@@ -73,8 +76,6 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     this.list = list
 
     this.useAtPrefix = false
-
-    // console.dir(list, { depth: null })
 
     this.compile({ scheme, list })
 
@@ -215,18 +216,31 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
           traverseMod(selector, mod, modValue, currentRule)
         } else if (key[0] === '@') {
-          // Breakpoint selector
-          const [mod, modValue] = this.parseAtSelector(key)
+          if (this.cssMediaMode) {
+            // CSS mode: flatten breakpoint styles with prefixed keys
+            // e.g. @sm { bgColor: 'red' } → { '@sm_bgColor': 'red' }
+            const breakpointRule = elementRule[key]
+            for (const prop in breakpointRule) {
+              if (prop[0] === '$' || elementSet.has(prop)) {
+                // Element reference inside breakpoint — not supported in CSS mode flat output
+                continue
+              }
+              result[`${propPrefix}${key}_${prop}`] = breakpointRule[prop]
+            }
+          } else {
+            // Runtime mode: create mod selector for bitwise matching
+            const [mod, modValue] = this.parseAtSelector(key)
 
-          const currentRule = processElementRule(elementKey, elementRule[key])
+            const currentRule = processElementRule(elementKey, elementRule[key])
 
-          traverseMod(
-            selector,
-            mod,
-            modValue,
-            currentRule,
-            this.useAtPrefix ? `${mod}_${modValue}_` : undefined,
-          )
+            traverseMod(
+              selector,
+              mod,
+              modValue,
+              currentRule,
+              this.useAtPrefix ? `${mod}_${modValue}_` : undefined,
+            )
+          }
         } else {
           // Regular style property
           result[propPrefix + key] = elementRule[key]

@@ -16,16 +16,21 @@ export const initMedia = <S extends TokenStyleDeclaration>({
 
   const mediaEmitter = new Emitter<Partial<Record<string, boolean>>>(
     Object.fromEntries(
-      Object.entries(medias).map(([key, value]) => [key, value?.matches]),
+      Object.entries(medias).map(([key, value]) => [
+        // Add @ prefix for runtime matching against @-prefixed selectors in StyleMatcher
+        key.startsWith('@') ? key : `@${key}`,
+        value?.matches,
+      ]),
     ),
   )
 
   // NOTE: have to use `addListener` for expo-media compat
 
   Object.entries(medias).forEach(([key, value]) => {
+    const emitterKey = key.startsWith('@') ? key : `@${key}`
     // has to use deprecated `addListener` for expo compat
     value?.addListener((e) => {
-      mediaEmitter.emit({ [key]: e.matches })
+      mediaEmitter.emit({ [emitterKey]: e.matches })
     })
   })
 

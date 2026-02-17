@@ -19,6 +19,14 @@ export type Config = Readonly<{
   /** Whether to use media query matching for breakpoints */
   useMedia: boolean
 
+  /**
+   * Media query handling mode:
+   * - 'runtime': JS-based matchMedia listeners (default, works everywhere)
+   * - 'css': CSS custom property space-toggle (precompiled, web only)
+   * - false: disable media queries entirely
+   */
+  mediaMode: 'runtime' | 'css' | false
+
   /** Enable debug logging */
   debug: boolean
 
