@@ -10,7 +10,8 @@
     "./types": "./types/index.ts",
     "./stylesheet": "./stylesheet/index.ts",
     "./system": "./system/index.ts",
-    "./utils": "./utils/index.ts"
+    "./utils": "./utils/index.ts",
+    "./vite": "./vite/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -26,8 +27,17 @@
     "prepublishOnly": "bun run build",
     "build": "bun --bun -e 'import(`@config/build`)'"
   },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*"
+    "@config/typescript": "workspace:*",
+    "vite": "^6.3.5"
   }
 }

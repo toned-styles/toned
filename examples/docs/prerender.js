@@ -23,18 +23,12 @@ const routes = [
 
 async function prerender() {
   const template = fs.readFileSync(resolve('dist/client/index.html'), 'utf-8')
-  const { render, generateCss } = await import('./dist/server/entry-server.js')
-
-  // Generate toned CSS (same for all pages)
-  const tonedCss = generateCss()
-  const headTag = `<style id="toned/main">${tonedCss}</style>`
+  const { render } = await import('./dist/server/entry-server.js')
 
   for (const url of routes) {
     const appHtml = await render(url)
 
-    const html = template
-      .replace('<!--app-head-->', headTag)
-      .replace('<!--app-html-->', appHtml)
+    const html = template.replace('<!--app-html-->', appHtml)
 
     const filePath =
       url === '/'

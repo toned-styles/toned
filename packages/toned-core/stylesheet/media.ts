@@ -41,7 +41,10 @@ export const initMedia = <S extends TokenStyleDeclaration>({
 class Emitter<T extends Record<string, any>> {
   private listeners = new Set<(data: Partial<T>) => void>()
 
-  constructor(public data: T) {}
+  data: T
+  constructor(data: T) {
+    this.data = data
+  }
 
   emit(data: Partial<T>) {
     Object.assign(this.data, data)
