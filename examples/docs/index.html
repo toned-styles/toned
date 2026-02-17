@@ -10,6 +10,9 @@
       body { margin: 0; }
       /* CSS-only mobile menu toggle (works without JS) */
       @media (max-width: 767px) {
+        #menu-toggle:checked ~ [role="button"] {
+          display: none !important;
+        }
         #menu-toggle:checked ~ nav {
           display: block !important;
           position: fixed !important;

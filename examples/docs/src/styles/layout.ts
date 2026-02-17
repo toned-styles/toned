@@ -17,7 +17,9 @@ export const layoutStyles = stylesheet({
     width: '280px',
     height: '100vh',
     overflowY: 'auto',
-    paddingY: 2,
+    // Mobile: extra top padding to clear hamburger button
+    paddingTop: 14,
+    paddingBottom: 2,
     paddingX: 1.5,
     // Mobile: fixed overlay, hidden by default
     position: 'fixed',
@@ -35,16 +37,19 @@ export const layoutStyles = stylesheet({
       display: 'block',
       position: 'sticky',
       alignSelf: 'flex-start',
+      paddingTop: 2,
     },
   },
   content: {
     flexGrow: '1',
-    paddingTop: 5,
+    // Mobile: extra top padding to clear hamburger button
+    paddingTop: 14,
     paddingBottom: 8,
     paddingX: 2.5,
     minWidth: '0',
     '@md': {
       paddingX: 6,
+      paddingTop: 5,
     },
     maxWidth: '48rem',
   },
