@@ -6,6 +6,7 @@ import type {
 } from '../types/index.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
+import { SYMBOL_INIT } from '../utils/symbols.ts'
 import {
   createVariantSelector,
   getNamedStyleName,
@@ -475,5 +476,48 @@ describe('callback-based variants API', () => {
     // Without variant specified, should still match
     const style = matcher.match({ size: 'sm' })
     expect(style.container.paddingX).toBe(2)
+  })
+
+  test('callback-based variants generate correct selector keys', () => {
+    const rules = {
+      container: { bgColor: 'blue' },
+      sidebar: { bgColor: 'muted' },
+    }
+
+    const stylesheet = createStylesheet(mockTokenSystem, rules)
+    // biome-ignore lint/suspicious/noExplicitAny: test callback variants
+    const withVariants = (stylesheet as any).variants(($: any) => ({
+      [$.menuOpen('true')]: {
+        sidebar: { bgColor: 'yellow' },
+      },
+    }))
+
+    expect(withVariants).toBeDefined()
+
+    // Initialize and verify variant applies via matched style
+    const base = withVariants[SYMBOL_INIT](mockConfig, { menuOpen: 'true' })
+    expect(base.modsStyle.sidebar.bgColor).toBe('yellow')
+  })
+
+  test('callback-based variants with single variant key work correctly', () => {
+    const rules = {
+      container: { bgColor: 'blue' },
+    }
+
+    const stylesheet = createStylesheet(mockTokenSystem, rules)
+    // biome-ignore lint/suspicious/noExplicitAny: test callback variants
+    const withVariants = (stylesheet as any).variants(($: any) => ({
+      [$.active('true')]: {
+        container: { bgColor: 'red' },
+      },
+    }))
+
+    // Without variant — base style applies
+    const baseInstance = withVariants[SYMBOL_INIT](mockConfig, {})
+    expect(baseInstance.modsStyle.container.bgColor).toBe('blue')
+
+    // With variant — overridden style applies
+    const activeInstance = withVariants[SYMBOL_INIT](mockConfig, { active: 'true' })
+    expect(activeInstance.modsStyle.container.bgColor).toBe('red')
   })
 })

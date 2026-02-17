@@ -15,22 +15,19 @@ export const layoutStyles = stylesheet({
   sidebar: {
     bgColor: 'muted',
     width: '280px',
-    paddingY: 3,
-    paddingX: 2,
-    borderColor: 'subtle',
-    borderWidth: 'thin',
+    height: '100vh',
     overflowY: 'auto',
+    paddingY: 2,
+    paddingX: 1.5,
     // Mobile: fixed overlay, hidden by default
     position: 'fixed',
     top: 0,
     left: 0,
-    height: '100vh',
     zIndex: 40,
     display: 'none',
     style: {
-      borderTop: 'none',
-      borderBottom: 'none',
-      borderLeft: 'none',
+      borderRight: '1px solid var(--border)',
+      flexShrink: 0,
     },
     // Desktop: visible sticky sidebar
     '@md': {
@@ -40,28 +37,29 @@ export const layoutStyles = stylesheet({
   },
   content: {
     flexGrow: '1',
-    paddingTop: 6,
+    paddingTop: 5,
     paddingBottom: 8,
     paddingX: 2.5,
-    minWidth: 0,
+    minWidth: '0',
     '@md': {
       paddingX: 6,
     },
-    style: {
-      maxWidth: '48rem',
-    },
+    maxWidth: '48rem',
   },
   hamburger: {
     position: 'fixed',
     top: '12px',
     left: '12px',
     zIndex: 50,
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '36px',
+    height: '36px',
     bgColor: 'elevated',
     borderRadius: 'medium',
     borderColor: 'subtle',
     borderWidth: 'thin',
-    padding: 1,
     cursor: 'pointer',
     shadow: 'small',
     '@md': {
@@ -75,9 +73,8 @@ export const layoutStyles = stylesheet({
     width: '100vw',
     height: '100vh',
     zIndex: 30,
-    opacity: 0.5,
     style: {
-      backgroundColor: 'black',
+      backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
   },
 }).variants<{
