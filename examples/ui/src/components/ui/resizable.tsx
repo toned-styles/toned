@@ -2,20 +2,56 @@
 
 import { GripVerticalIcon } from "lucide-react"
 import * as ResizablePrimitive from "react-resizable-panels"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const resizableStyles = stylesheet({
+  group: {
+    display: 'flex',
+    style: {
+      height: '100%',
+      width: '100%',
+    },
+  },
+  handle: {
+    bgColor: 'subtle',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    style: {
+      width: '1px',
+    },
+  },
+  handleGrip: {
+    bgColor: 'subtle',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    borderRadius: 'small',
+    zIndex: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    style: {
+      height: '1rem',
+      width: '0.75rem',
+    },
+  },
+})
 
 function ResizablePanelGroup({
   className,
   ...props
 }: ResizablePrimitive.GroupProps) {
+  const s = useStyles(resizableStyles)
+
   return (
     <ResizablePrimitive.Group
       data-slot="resizable-panel-group"
-      className={cn(
-        "flex h-full w-full aria-[orientation=vertical]:flex-col",
-        className
-      )}
+      className={cn(s.group.className, className)}
+      style={s.group.style}
       {...props}
     />
   )
@@ -32,18 +68,18 @@ function ResizableHandle({
 }: ResizablePrimitive.SeparatorProps & {
   withHandle?: boolean
 }) {
+  const s = useStyles(resizableStyles)
+
   return (
     <ResizablePrimitive.Separator
       data-slot="resizable-handle"
-      className={cn(
-        "bg-border focus-visible:ring-ring relative flex w-px items-center justify-center after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:outline-hidden aria-[orientation=horizontal]:h-px aria-[orientation=horizontal]:w-full aria-[orientation=horizontal]:after:left-0 aria-[orientation=horizontal]:after:h-1 aria-[orientation=horizontal]:after:w-full aria-[orientation=horizontal]:after:translate-x-0 aria-[orientation=horizontal]:after:-translate-y-1/2 [&[aria-orientation=horizontal]>div]:rotate-90",
-        className
-      )}
+      className={cn(s.handle.className, className)}
+      style={s.handle.style}
       {...props}
     >
       {withHandle && (
-        <div className="bg-border z-10 flex h-4 w-3 items-center justify-center rounded-xs border">
-          <GripVerticalIcon className="size-2.5" />
+        <div className={s.handleGrip.className} style={s.handleGrip.style}>
+          <GripVerticalIcon style={{ width: '0.625rem', height: '0.625rem' }} />
         </div>
       )}
     </ResizablePrimitive.Separator>

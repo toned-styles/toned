@@ -1,47 +1,90 @@
 import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 
-const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current",
-  {
-    variants: {
-      variant: {
-        default: "bg-card text-card-foreground",
-        destructive:
-          "text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90",
-      },
+const alertStyles = stylesheet({
+  root: {
+    borderRadius: 'large',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    paddingX: 4,
+    paddingY: 3,
+    typo: 'body_small',
+    position: 'relative',
+    width: '100%',
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '0 1fr',
+      gap: '2px 0',
+      alignItems: 'start',
     },
-    defaultVariants: {
-      variant: "default",
+  },
+  title: {
+    fontWeight: 500,
+    style: {
+      gridColumnStart: 2,
+      minHeight: '1rem',
+      letterSpacing: '-0.01em',
+      display: '-webkit-box',
+      WebkitLineClamp: 1,
+      WebkitBoxOrient: 'vertical' as const,
+      overflow: 'hidden',
     },
-  }
-)
+  },
+  description: {
+    textColor: 'muted',
+    typo: 'body_small',
+    style: {
+      gridColumnStart: 2,
+      display: 'grid',
+      justifyItems: 'start',
+      gap: '4px',
+    },
+  },
+}).variants<{
+  variant: 'default' | 'destructive'
+}>(($) => ({
+  [$.variant('default')]: {
+    root: { bgColor: 'elevated', textColor: 'default' },
+  },
+  [$.variant('destructive')]: {
+    root: { bgColor: 'elevated', textColor: 'destructive' },
+  },
+}))
+
+type AlertVariant = 'default' | 'destructive'
 
 function Alert({
   className,
-  variant,
+  variant = "default",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
+}: React.ComponentProps<"div"> & {
+  variant?: AlertVariant
+}) {
+  const s = useStyles(alertStyles, { variant })
+
   return (
     <div
       data-slot="alert"
+      data-variant={variant}
       role="alert"
-      className={cn(alertVariants({ variant }), className)}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
 }
 
 function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
+  const s = useStyles(alertStyles, { variant: 'default' })
+
   return (
     <div
       data-slot="alert-title"
-      className={cn(
-        "col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight",
-        className
-      )}
+      className={cn(s.title.className, className)}
+      style={s.title.style}
       {...props}
     />
   )
@@ -51,13 +94,13 @@ function AlertDescription({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const s = useStyles(alertStyles, { variant: 'default' })
+
   return (
     <div
       data-slot="alert-description"
-      className={cn(
-        "text-muted-foreground col-start-2 grid justify-items-start gap-1 text-sm [&_p]:leading-relaxed",
-        className
-      )}
+      className={cn(s.description.className, className)}
+      style={s.description.style}
       {...props}
     />
   )

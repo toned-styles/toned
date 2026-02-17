@@ -1,42 +1,102 @@
 import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
-      },
+const buttonStyles = stylesheet({
+  root: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    flexShrink: '0',
+    borderRadius: 'medium',
+    typo: 'label_small',
+    shadow: 'small',
+    style: {
+      whiteSpace: 'nowrap' as const,
+      transition: 'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+  },
+}).variants<{
+  variant: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  size: 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
+}>(($) => ({
+  // Variants
+  [$.variant('default')]: {
+    root: { bgColor: 'action', textColor: 'on_action' },
+  },
+  [$.variant('destructive')]: {
+    root: {
+      bgColor: 'destructive',
+      textColor: 'on_destructive',
+      shadow: 'none',
     },
-  }
-)
+  },
+  [$.variant('outline')]: {
+    root: {
+      bgColor: 'default',
+      borderColor: 'default',
+      borderWidth: 'thin',
+      shadow: 'small',
+    },
+  },
+  [$.variant('secondary')]: {
+    root: {
+      bgColor: 'action_secondary',
+      textColor: 'on_action_secondary',
+      shadow: 'none',
+    },
+  },
+  [$.variant('ghost')]: {
+    root: {
+      shadow: 'none',
+    },
+  },
+  [$.variant('link')]: {
+    root: {
+      textColor: 'action',
+      shadow: 'none',
+      style: { textUnderlineOffset: '4px' },
+    },
+  },
+  // Sizes
+  [$.size('default')]: {
+    root: { height: '2.25rem', paddingX: 4, paddingY: 2 },
+  },
+  [$.size('xs')]: {
+    root: {
+      height: '1.5rem',
+      gap: 1,
+      borderRadius: 'medium',
+      paddingX: 2,
+      fontSize: '0.75rem',
+    },
+  },
+  [$.size('sm')]: {
+    root: { height: '2rem', borderRadius: 'medium', gap: 1.5, paddingX: 3 },
+  },
+  [$.size('lg')]: {
+    root: { height: '2.5rem', borderRadius: 'medium', paddingX: 6 },
+  },
+  [$.size('icon')]: {
+    root: { width: '2.25rem', height: '2.25rem' },
+  },
+  [$.size('icon-xs')]: {
+    root: { width: '1.5rem', height: '1.5rem', borderRadius: 'medium' },
+  },
+  [$.size('icon-sm')]: {
+    root: { width: '2rem', height: '2rem' },
+  },
+  [$.size('icon-lg')]: {
+    root: { width: '2.5rem', height: '2.5rem' },
+  },
+}))
+
+type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+type ButtonSize = 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
 
 function Button({
   className,
@@ -44,21 +104,24 @@ function Button({
   size = "default",
   asChild = false,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+}: React.ComponentProps<"button"> & {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  asChild?: boolean
+}) {
   const Comp = asChild ? Slot.Root : "button"
+  const s = useStyles(buttonStyles, { variant, size })
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
 }
 
-export { Button, buttonVariants }
+export { Button, buttonStyles }

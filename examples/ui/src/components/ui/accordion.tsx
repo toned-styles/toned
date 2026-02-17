@@ -1,8 +1,61 @@
 import * as React from "react"
 import { ChevronDownIcon } from "lucide-react"
 import { Accordion as AccordionPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const accordionStyles = stylesheet({
+  item: {
+    borderColor: 'default',
+    style: {
+      borderBottomWidth: '1px',
+    },
+  },
+  trigger: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    borderRadius: 'medium',
+    typo: 'body_small',
+    fontWeight: 500,
+    style: {
+      flex: 1,
+      justifyContent: 'space-between',
+      gap: '1rem',
+      padding: '1rem 0',
+      textAlign: 'left',
+      transition: 'all 0.15s',
+      outline: 'none',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+    },
+  },
+  triggerIcon: {
+    textColor: 'muted',
+    style: {
+      width: '1rem',
+      height: '1rem',
+      flexShrink: 0,
+      pointerEvents: 'none',
+      transform: 'translateY(2px)',
+      transition: 'transform 0.2s',
+    },
+  },
+  content: {
+    typo: 'body_small',
+    style: {
+      overflow: 'hidden',
+    },
+  },
+  contentInner: {
+    style: {
+      paddingTop: 0,
+      paddingBottom: '1rem',
+    },
+  },
+})
 
 function Accordion({
   ...props
@@ -14,10 +67,13 @@ function AccordionItem({
   className,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Item>) {
+  const s = useStyles(accordionStyles)
+
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("border-b last:border-b-0", className)}
+      className={cn(s.item.className, className)}
+      style={s.item.style}
       {...props}
     />
   )
@@ -28,18 +84,21 @@ function AccordionTrigger({
   children,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
+  const s = useStyles(accordionStyles)
+
   return (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
-        className={cn(
-          "focus-visible:border-ring focus-visible:ring-ring/50 flex flex-1 items-start justify-between gap-4 rounded-md py-4 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
-          className
-        )}
+        className={cn(s.trigger.className, className)}
+        style={s.trigger.style}
         {...props}
       >
         {children}
-        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
+        <ChevronDownIcon
+          className={s.triggerIcon.className}
+          style={s.triggerIcon.style}
+        />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   )
@@ -50,13 +109,21 @@ function AccordionContent({
   children,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Content>) {
+  const s = useStyles(accordionStyles)
+
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm"
+      className={s.content.className}
+      style={s.content.style}
       {...props}
     >
-      <div className={cn("pt-0 pb-4", className)}>{children}</div>
+      <div
+        className={cn(s.contentInner.className, className)}
+        style={s.contentInner.style}
+      >
+        {children}
+      </div>
     </AccordionPrimitive.Content>
   )
 }

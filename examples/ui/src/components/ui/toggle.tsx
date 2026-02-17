@@ -1,47 +1,86 @@
 "use client"
 
 import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
 import { Toggle as TogglePrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 
-const toggleVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium hover:bg-muted hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none transition-[color,box-shadow] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap",
-  {
-    variants: {
-      variant: {
-        default: "bg-transparent",
-        outline:
-          "border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground",
-      },
-      size: {
-        default: "h-9 px-2 min-w-9",
-        sm: "h-8 px-1.5 min-w-8",
-        lg: "h-10 px-2.5 min-w-10",
-      },
+const toggleStyles = stylesheet({
+  root: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    borderRadius: 'medium',
+    typo: 'body_small',
+    fontWeight: 500,
+    style: {
+      whiteSpace: 'nowrap',
+      outline: 'none',
+      transition: 'color 0.15s, box-shadow 0.15s',
+      border: 'none',
+      cursor: 'pointer',
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+  },
+}).variants<{
+  variant: 'default' | 'outline'
+  size: 'default' | 'sm' | 'lg'
+}>(($) => ({
+  [$.variant('default')]: {
+    root: {
+      style: { background: 'transparent' },
     },
-  }
-)
+  },
+  [$.variant('outline')]: {
+    root: {
+      borderColor: 'default',
+      borderWidth: 'thin',
+      shadow: 'small',
+      style: { background: 'transparent' },
+    },
+  },
+  [$.size('default')]: {
+    root: {
+      height: '2.25rem',
+      paddingX: 2,
+      style: { minWidth: '2.25rem' },
+    },
+  },
+  [$.size('sm')]: {
+    root: {
+      height: '2rem',
+      style: { padding: '0 0.375rem', minWidth: '2rem' },
+    },
+  },
+  [$.size('lg')]: {
+    root: {
+      height: '2.5rem',
+      style: { padding: '0 0.625rem', minWidth: '2.5rem' },
+    },
+  },
+}))
 
 function Toggle({
   className,
-  variant,
-  size,
+  variant = "default",
+  size = "default",
   ...props
-}: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
+}: React.ComponentProps<typeof TogglePrimitive.Root> & {
+  variant?: "default" | "outline"
+  size?: "default" | "sm" | "lg"
+}) {
+  const s = useStyles(toggleStyles, { variant, size })
+
   return (
     <TogglePrimitive.Root
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
 }
 
-export { Toggle, toggleVariants }
+export { Toggle, toggleStyles }

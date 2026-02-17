@@ -3,25 +3,52 @@
 import * as React from "react"
 import { CheckIcon } from "lucide-react"
 import { Checkbox as CheckboxPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const checkboxStyles = stylesheet({
+  root: {
+    borderColor: 'input',
+    borderWidth: 'thin',
+    width: '1rem',
+    height: '1rem',
+    flexShrink: '0',
+    borderRadius: 'small',
+    shadow: 'small',
+    style: {
+      outline: 'none',
+      transition: 'box-shadow 0.15s',
+    },
+  },
+  indicator: {
+    display: 'grid',
+    placeContent: 'center',
+    style: {
+      color: 'currentColor',
+      transition: 'none',
+    },
+  },
+})
 
 function Checkbox({
   className,
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+  const s = useStyles(checkboxStyles)
+
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
-      className={cn(
-        "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     >
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none"
+        className={s.indicator.className}
+        style={s.indicator.style}
       >
         <CheckIcon className="size-3.5" />
       </CheckboxPrimitive.Indicator>

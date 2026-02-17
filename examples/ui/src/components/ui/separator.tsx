@@ -1,7 +1,16 @@
 import * as React from "react"
 import { Separator as SeparatorPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const separatorStyles = stylesheet({
+  root: {
+    bgColor: 'subtle',
+    flexShrink: '0',
+  },
+})
 
 function Separator({
   className,
@@ -9,15 +18,15 @@ function Separator({
   decorative = true,
   ...props
 }: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+  const s = useStyles(separatorStyles)
+
   return (
     <SeparatorPrimitive.Root
       data-slot="separator"
       decorative={decorative}
       orientation={orientation}
-      className={cn(
-        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
-        className
-      )}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )

@@ -3,20 +3,149 @@
 import * as React from "react"
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
 import { Menubar as MenubarPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const menubarStyles = stylesheet({
+  root: {
+    bgColor: 'default',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    borderRadius: 'medium',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    padding: 1,
+    shadow: 'small',
+    height: '2.25rem',
+  },
+  trigger: {
+    display: 'flex',
+    alignItems: 'center',
+    borderRadius: 'small',
+    paddingX: 2,
+    paddingY: 1,
+    typo: 'body_small',
+    fontWeight: 500,
+    style: {
+      outline: 'none',
+      userSelect: 'none',
+      cursor: 'default',
+      border: 'none',
+      background: 'none',
+    },
+  },
+  content: {
+    bgColor: 'elevated',
+    textColor: 'default',
+    zIndex: 50,
+    borderRadius: 'medium',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    padding: 1,
+    shadow: 'medium',
+    style: {
+      minWidth: '12rem',
+      overflow: 'hidden',
+      transformOrigin: 'var(--radix-menubar-content-transform-origin)',
+      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
+    },
+  },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    borderRadius: 'small',
+    paddingX: 2,
+    paddingY: 1.5,
+    typo: 'body_small',
+    style: {
+      position: 'relative',
+      cursor: 'default',
+      outline: 'none',
+      userSelect: 'none',
+    },
+  },
+  checkboxItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    borderRadius: 'small',
+    paddingY: 1.5,
+    typo: 'body_small',
+    style: {
+      position: 'relative',
+      cursor: 'default',
+      outline: 'none',
+      userSelect: 'none',
+      paddingRight: '0.5rem',
+      paddingLeft: '2rem',
+    },
+  },
+  indicator: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    style: {
+      left: '0.5rem',
+      width: '0.875rem',
+      height: '0.875rem',
+      pointerEvents: 'none',
+    },
+  },
+  label: {
+    paddingX: 2,
+    paddingY: 1.5,
+    typo: 'body_small',
+    fontWeight: 500,
+  },
+  separator: {
+    bgColor: 'subtle',
+    style: {
+      margin: '0.25rem -0.25rem',
+      height: '1px',
+    },
+  },
+  shortcut: {
+    textColor: 'muted',
+    typo: 'caption',
+    style: {
+      marginLeft: 'auto',
+      letterSpacing: '0.1em',
+    },
+  },
+  subContent: {
+    bgColor: 'elevated',
+    textColor: 'default',
+    zIndex: 50,
+    borderRadius: 'medium',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    padding: 1,
+    shadow: 'large',
+    style: {
+      minWidth: '8rem',
+      overflow: 'hidden',
+      transformOrigin: 'var(--radix-menubar-content-transform-origin)',
+      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
+    },
+  },
+})
 
 function Menubar({
   className,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Root>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.Root
       data-slot="menubar"
-      className={cn(
-        "bg-background flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs",
-        className
-      )}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
@@ -52,13 +181,13 @@ function MenubarTrigger({
   className,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Trigger>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none",
-        className
-      )}
+      className={cn(s.trigger.className, className)}
+      style={s.trigger.style}
       {...props}
     />
   )
@@ -71,6 +200,8 @@ function MenubarContent({
   sideOffset = 8,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Content>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPortal>
       <MenubarPrimitive.Content
@@ -78,10 +209,8 @@ function MenubarContent({
         align={align}
         alignOffset={alignOffset}
         sideOffset={sideOffset}
-        className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[12rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-md",
-          className
-        )}
+        className={cn(s.content.className, className)}
+        style={s.content.style}
         {...props}
       />
     </MenubarPortal>
@@ -97,15 +226,15 @@ function MenubarItem({
   inset?: boolean
   variant?: "default" | "destructive"
 }) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.Item
       data-slot="menubar-item"
       data-inset={inset}
       data-variant={variant}
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(s.item.className, className)}
+      style={s.item.style}
       {...props}
     />
   )
@@ -117,17 +246,17 @@ function MenubarCheckboxItem({
   checked,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.CheckboxItem>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.CheckboxItem
       data-slot="menubar-checkbox-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-xs py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(s.checkboxItem.className, className)}
+      style={s.checkboxItem.style}
       checked={checked}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span className={s.indicator.className} style={s.indicator.style}>
         <MenubarPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
         </MenubarPrimitive.ItemIndicator>
@@ -142,16 +271,16 @@ function MenubarRadioItem({
   children,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.RadioItem>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.RadioItem
       data-slot="menubar-radio-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-xs py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(s.checkboxItem.className, className)}
+      style={s.checkboxItem.style}
       {...props}
     >
-      <span className="pointer-events-none absolute left-2 flex size-3.5 items-center justify-center">
+      <span className={s.indicator.className} style={s.indicator.style}>
         <MenubarPrimitive.ItemIndicator>
           <CircleIcon className="size-2 fill-current" />
         </MenubarPrimitive.ItemIndicator>
@@ -168,14 +297,14 @@ function MenubarLabel({
 }: React.ComponentProps<typeof MenubarPrimitive.Label> & {
   inset?: boolean
 }) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.Label
       data-slot="menubar-label"
       data-inset={inset}
-      className={cn(
-        "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
-        className
-      )}
+      className={cn(s.label.className, className)}
+      style={s.label.style}
       {...props}
     />
   )
@@ -185,10 +314,13 @@ function MenubarSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Separator>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.Separator
       data-slot="menubar-separator"
-      className={cn("bg-border -mx-1 my-1 h-px", className)}
+      className={cn(s.separator.className, className)}
+      style={s.separator.style}
       {...props}
     />
   )
@@ -198,13 +330,13 @@ function MenubarShortcut({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const s = useStyles(menubarStyles)
+
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className
-      )}
+      className={cn(s.shortcut.className, className)}
+      style={s.shortcut.style}
       {...props}
     />
   )
@@ -224,14 +356,14 @@ function MenubarSubTrigger({
 }: React.ComponentProps<typeof MenubarPrimitive.SubTrigger> & {
   inset?: boolean
 }) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.SubTrigger
       data-slot="menubar-sub-trigger"
       data-inset={inset}
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[inset]:pl-8",
-        className
-      )}
+      className={cn(s.item.className, className)}
+      style={s.item.style}
       {...props}
     >
       {children}
@@ -244,13 +376,13 @@ function MenubarSubContent({
   className,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.SubContent>) {
+  const s = useStyles(menubarStyles)
+
   return (
     <MenubarPrimitive.SubContent
       data-slot="menubar-sub-content"
-      className={cn(
-        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg",
-        className
-      )}
+      className={cn(s.subContent.className, className)}
+      style={s.subContent.style}
       {...props}
     />
   )

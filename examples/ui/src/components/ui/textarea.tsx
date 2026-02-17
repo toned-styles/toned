@@ -1,15 +1,41 @@
 import * as React from "react"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 
+const textareaStyles = stylesheet({
+  root: {
+    borderColor: 'input',
+    borderWidth: 'thin',
+    borderRadius: 'medium',
+    width: '100%',
+    minHeight: '4rem',
+    paddingX: 3,
+    paddingY: 2,
+    typo: 'body_medium',
+    shadow: 'small',
+    display: 'flex',
+    style: {
+      backgroundColor: 'transparent',
+      outline: 'none',
+      fieldSizing: 'content',
+      transition: 'color 0.15s, box-shadow 0.15s',
+    },
+    '@md': {
+      typo: 'body_small',
+    },
+  },
+})
+
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  const s = useStyles(textareaStyles)
+
   return (
     <textarea
       data-slot="textarea"
-      className={cn(
-        "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        className
-      )}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )

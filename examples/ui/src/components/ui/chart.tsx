@@ -52,10 +52,14 @@ function ChartContainer({
       <div
         data-slot="chart"
         data-chart={chartId}
-        className={cn(
-          "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border flex aspect-video justify-center text-xs [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-surface]:outline-hidden",
-          className
-        )}
+        className={cn(className)}
+        style={{
+          display: 'flex',
+          aspectRatio: '16 / 9',
+          justifyContent: 'center',
+          fontSize: '0.75rem',
+          lineHeight: '1rem',
+        }}
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
@@ -141,7 +145,7 @@ function ChartTooltipContent({
 
     if (labelFormatter) {
       return (
-        <div className={cn("font-medium", labelClassName)}>
+        <div className={cn(labelClassName)} style={{ fontWeight: 500 }}>
           {labelFormatter(value, payload)}
         </div>
       )
@@ -151,7 +155,7 @@ function ChartTooltipContent({
       return null
     }
 
-    return <div className={cn("font-medium", labelClassName)}>{value}</div>
+    return <div className={cn(labelClassName)} style={{ fontWeight: 500 }}>{value}</div>
   }, [
     label,
     labelFormatter,
@@ -170,13 +174,23 @@ function ChartTooltipContent({
 
   return (
     <div
-      className={cn(
-        "border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
-        className
-      )}
+      className={cn(className)}
+      style={{
+        display: 'grid',
+        minWidth: '8rem',
+        alignItems: 'start',
+        gap: '0.375rem',
+        borderRadius: '0.5rem',
+        border: '1px solid color-mix(in srgb, var(--border) 50%, transparent)',
+        background: 'var(--background)',
+        padding: '0.375rem 0.625rem',
+        fontSize: '0.75rem',
+        lineHeight: '1rem',
+        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+      }}
     >
       {!nestLabel ? tooltipLabel : null}
-      <div className="grid gap-1.5">
+      <div style={{ display: 'grid', gap: '0.375rem' }}>
         {payload
           .filter((item) => item.type !== "none")
           .map((item, index) => {
@@ -187,10 +201,13 @@ function ChartTooltipContent({
             return (
               <div
                 key={item.dataKey}
-                className={cn(
-                  "[&>svg]:text-muted-foreground flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5",
-                  indicator === "dot" && "items-center"
-                )}
+                style={{
+                  display: 'flex',
+                  width: '100%',
+                  flexWrap: 'wrap',
+                  alignItems: indicator === "dot" ? 'center' : 'stretch',
+                  gap: '0.5rem',
+                }}
               >
                 {formatter && item?.value !== undefined && item.name ? (
                   formatter(item.value, item.name, item, index, item.payload)
@@ -201,39 +218,45 @@ function ChartTooltipContent({
                     ) : (
                       !hideIndicator && (
                         <div
-                          className={cn(
-                            "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
-                            {
-                              "h-2.5 w-2.5": indicator === "dot",
-                              "w-1": indicator === "line",
-                              "w-0 border-[1.5px] border-dashed bg-transparent":
-                                indicator === "dashed",
-                              "my-0.5": nestLabel && indicator === "dashed",
-                            }
-                          )}
-                          style={
-                            {
-                              "--color-bg": indicatorColor,
-                              "--color-border": indicatorColor,
-                            } as React.CSSProperties
-                          }
+                          style={{
+                            flexShrink: 0,
+                            borderRadius: '2px',
+                            borderColor: indicatorColor,
+                            backgroundColor: indicator === "dashed" ? 'transparent' : indicatorColor,
+                            ...(indicator === "dot"
+                              ? { width: '0.625rem', height: '0.625rem' }
+                              : indicator === "line"
+                              ? { width: '0.25rem' }
+                              : { width: 0, borderWidth: '1.5px', borderStyle: 'dashed' }),
+                            ...(nestLabel && indicator === "dashed"
+                              ? { marginTop: '0.125rem', marginBottom: '0.125rem' }
+                              : {}),
+                          }}
                         />
                       )
                     )}
                     <div
-                      className={cn(
-                        "flex flex-1 justify-between leading-none",
-                        nestLabel ? "items-end" : "items-center"
-                      )}
+                      style={{
+                        display: 'flex',
+                        flex: 1,
+                        justifyContent: 'space-between',
+                        alignItems: nestLabel ? 'flex-end' : 'center',
+                        lineHeight: 1,
+                      }}
                     >
-                      <div className="grid gap-1.5">
+                      <div style={{ display: 'grid', gap: '0.375rem' }}>
                         {nestLabel ? tooltipLabel : null}
-                        <span className="text-muted-foreground">
+                        <span style={{ color: 'var(--muted-foreground)' }}>
                           {itemConfig?.label || item.name}
                         </span>
                       </div>
                       {item.value && (
-                        <span className="text-foreground font-mono font-medium tabular-nums">
+                        <span style={{
+                          color: 'var(--foreground)',
+                          fontFamily: 'ui-monospace, monospace',
+                          fontWeight: 500,
+                          fontVariantNumeric: 'tabular-nums',
+                        }}>
                           {item.value.toLocaleString()}
                         </span>
                       )}
@@ -269,11 +292,16 @@ function ChartLegendContent({
 
   return (
     <div
-      className={cn(
-        "flex items-center justify-center gap-4",
-        verticalAlign === "top" ? "pb-3" : "pt-3",
-        className
-      )}
+      className={cn(className)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        ...(verticalAlign === "top"
+          ? { paddingBottom: '0.75rem' }
+          : { paddingTop: '0.75rem' }),
+      }}
     >
       {payload
         .filter((item) => item.type !== "none")
@@ -284,16 +312,21 @@ function ChartLegendContent({
           return (
             <div
               key={item.value}
-              className={cn(
-                "[&>svg]:text-muted-foreground flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3"
-              )}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+              }}
             >
               {itemConfig?.icon && !hideIcon ? (
                 <itemConfig.icon />
               ) : (
                 <div
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
                   style={{
+                    height: '0.5rem',
+                    width: '0.5rem',
+                    flexShrink: 0,
+                    borderRadius: '2px',
                     backgroundColor: item.color,
                   }}
                 />

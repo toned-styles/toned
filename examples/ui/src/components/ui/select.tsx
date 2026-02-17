@@ -3,8 +3,88 @@
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { Select as SelectPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const selectStyles = stylesheet({
+  trigger: {
+    borderColor: 'input',
+    borderWidth: 'thin',
+    borderRadius: 'medium',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 2,
+    paddingX: 3,
+    paddingY: 2,
+    typo: 'body_small',
+    shadow: 'small',
+    style: {
+      width: 'fit-content',
+      backgroundColor: 'transparent',
+      whiteSpace: 'nowrap' as const,
+      outline: 'none',
+      transition: 'color 0.15s, box-shadow 0.15s',
+    },
+  },
+  content: {
+    bgColor: 'elevated',
+    textColor: 'default',
+    position: 'relative',
+    zIndex: 50,
+    borderRadius: 'medium',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    shadow: 'medium',
+    overflow: 'hidden',
+    style: {
+      minWidth: '8rem',
+      maxHeight: 'var(--radix-select-content-available-height)',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      transformOrigin: 'var(--radix-select-content-transform-origin)',
+    },
+  },
+  item: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    borderRadius: 'small',
+    paddingY: 1.5,
+    paddingLeft: 2,
+    paddingRight: 8,
+    typo: 'body_small',
+    position: 'relative',
+    width: '100%',
+    cursor: 'default',
+    style: {
+      outline: 'none',
+      userSelect: 'none',
+    },
+  },
+  label: {
+    textColor: 'muted',
+    paddingX: 2,
+    paddingY: 1.5,
+    typo: 'caption',
+  },
+  separator: {
+    bgColor: 'subtle',
+    height: '1px',
+    marginY: 1,
+    marginX: -1,
+    pointerEvents: 'none',
+  },
+  scrollButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingY: 1,
+    cursor: 'default',
+  },
+})
 
 function Select({
   ...props
@@ -32,14 +112,14 @@ function SelectTrigger({
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
 }) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(s.trigger.className, className)}
+      style={s.trigger.style}
       {...props}
     >
       {children}
@@ -57,27 +137,29 @@ function SelectContent({
   align = "center",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         data-slot="select-content"
-        className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
-          position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          className
-        )}
+        className={cn(s.content.className, className)}
+        style={s.content.style}
         position={position}
         align={align}
         {...props}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
-          )}
+          data-slot="select-viewport"
+          style={{
+            padding: '4px',
+            ...(position === "popper" ? {
+              height: 'var(--radix-select-trigger-height)',
+              width: '100%',
+              minWidth: 'var(--radix-select-trigger-width)',
+            } : {}),
+          }}
         >
           {children}
         </SelectPrimitive.Viewport>
@@ -91,10 +173,13 @@ function SelectLabel({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Label>) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn("text-muted-foreground px-2 py-1.5 text-xs", className)}
+      className={cn(s.label.className, className)}
+      style={s.label.style}
       {...props}
     />
   )
@@ -105,18 +190,26 @@ function SelectItem({
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className
-      )}
+      className={cn(s.item.className, className)}
+      style={s.item.style}
       {...props}
     >
       <span
         data-slot="select-item-indicator"
-        className="absolute right-2 flex size-3.5 items-center justify-center"
+        style={{
+          position: 'absolute',
+          right: '8px',
+          display: 'flex',
+          width: '0.875rem',
+          height: '0.875rem',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
@@ -131,10 +224,13 @@ function SelectSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Separator>) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
+      className={cn(s.separator.className, className)}
+      style={s.separator.style}
       {...props}
     />
   )
@@ -144,13 +240,13 @@ function SelectScrollUpButton({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.ScrollUpButton>) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
-      className={cn(
-        "flex cursor-default items-center justify-center py-1",
-        className
-      )}
+      className={cn(s.scrollButton.className, className)}
+      style={s.scrollButton.style}
       {...props}
     >
       <ChevronUpIcon className="size-4" />
@@ -162,13 +258,13 @@ function SelectScrollDownButton({
   className,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.ScrollDownButton>) {
+  const s = useStyles(selectStyles)
+
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
-      className={cn(
-        "flex cursor-default items-center justify-center py-1",
-        className
-      )}
+      className={cn(s.scrollButton.className, className)}
+      style={s.scrollButton.style}
       {...props}
     >
       <ChevronDownIcon className="size-4" />

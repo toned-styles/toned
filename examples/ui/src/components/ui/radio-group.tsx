@@ -1,17 +1,50 @@
 import * as React from "react"
 import { CircleIcon } from "lucide-react"
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const radioGroupStyles = stylesheet({
+  root: {
+    display: 'grid',
+    gap: 3,
+  },
+  item: {
+    borderColor: 'input',
+    borderWidth: 'thin',
+    textColor: 'action',
+    width: '1rem',
+    height: '1rem',
+    flexShrink: '0',
+    borderRadius: 'full',
+    shadow: 'small',
+    style: {
+      aspectRatio: '1',
+      outline: 'none',
+      transition: 'color 0.15s, box-shadow 0.15s',
+    },
+  },
+  indicator: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+})
 
 function RadioGroup({
   className,
   ...props
 }: React.ComponentProps<typeof RadioGroupPrimitive.Root>) {
+  const s = useStyles(radioGroupStyles)
+
   return (
     <RadioGroupPrimitive.Root
       data-slot="radio-group"
-      className={cn("grid gap-3", className)}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
@@ -21,18 +54,19 @@ function RadioGroupItem({
   className,
   ...props
 }: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
+  const s = useStyles(radioGroupStyles)
+
   return (
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
-      className={cn(
-        "border-input text-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 aspect-square size-4 shrink-0 rounded-full border shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
+      className={cn(s.item.className, className)}
+      style={s.item.style}
       {...props}
     >
       <RadioGroupPrimitive.Indicator
         data-slot="radio-group-indicator"
-        className="relative flex items-center justify-center"
+        className={s.indicator.className}
+        style={s.indicator.style}
       >
         <CircleIcon className="fill-primary absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2" />
       </RadioGroupPrimitive.Indicator>
