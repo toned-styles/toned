@@ -8,8 +8,8 @@ import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
 import {
   createVariantSelector,
-  isNamedStyleKey,
   getNamedStyleName,
+  isNamedStyleKey,
 } from './variantSelector.ts'
 
 // Mock TokenSystem for testing
@@ -29,6 +29,7 @@ const mockConfig: Config = {
   getTokens: () => ({}),
   useClassName: false,
   useMedia: false,
+  mediaMode: 'runtime',
   debug: false,
   getProps: function (this: Base, elementKey: string) {
     return { style: this.getCurrentStyle(elementKey).style }

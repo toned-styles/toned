@@ -520,3 +520,105 @@ describe('boolean variants', () => {
     expect(combinedStyle.container.borderColor).toBe('gray')
   })
 })
+
+// =============================================================================
+// CSS MEDIA MODE TESTS
+// =============================================================================
+
+describe('StyleMatcher cssMediaMode', () => {
+  test('flattens breakpoint styles with prefixed keys in CSS mode', () => {
+    const matcher = new StyleMatcher(
+      {
+        container: {
+          bgColor: 'blue',
+          '@sm': { bgColor: 'red' },
+          '@md': { bgColor: 'green' },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    // In CSS mode, breakpoint styles should appear as @bp_prop keys
+    const style = matcher.match({})
+    expect(style.container.bgColor).toBe('blue')
+    expect(style.container['@sm_bgColor']).toBe('red')
+    expect(style.container['@md_bgColor']).toBe('green')
+  })
+
+  test('does not create mod selectors for breakpoints in CSS mode', () => {
+    const matcher = new StyleMatcher(
+      {
+        container: {
+          bgColor: 'blue',
+          '@sm': { bgColor: 'red' },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    // The scheme should NOT contain @sm as a mod
+    expect(matcher.scheme).not.toHaveProperty('@sm')
+  })
+
+  test('still handles variants normally alongside CSS media mode', () => {
+    const matcher = new StyleMatcher(
+      {
+        container: {
+          bgColor: 'blue',
+          '@sm': { bgColor: 'red' },
+        },
+        '[size=sm]': {
+          container: { paddingX: 2 },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    const style = matcher.match({ size: 'sm' })
+    expect(style.container.bgColor).toBe('blue')
+    expect(style.container['@sm_bgColor']).toBe('red')
+    expect(style.container.paddingX).toBe(2)
+  })
+
+  test('runtime mode creates mod selectors for breakpoints', () => {
+    const matcher = new StyleMatcher(
+      {
+        container: {
+          bgColor: 'blue',
+          '@sm': { bgColor: 'red' },
+        },
+      },
+      { cssMediaMode: false },
+    )
+
+    // In runtime mode, @sm IS a mod selector
+    expect(matcher.scheme).toHaveProperty('@sm')
+
+    // Without @sm active, only base style
+    const baseStyle = matcher.match({})
+    expect(baseStyle.container.bgColor).toBe('blue')
+
+    // With @sm active, breakpoint style applies
+    const smStyle = matcher.match({ '@sm': 'true' })
+    expect(smStyle.container.bgColor).toBe('red')
+  })
+
+  test('CSS mode with pseudo-classes still works', () => {
+    const matcher = new StyleMatcher(
+      {
+        container: {
+          bgColor: 'blue',
+          '@sm': { bgColor: 'red' },
+          ':hover': {
+            $container: { bgColor: 'darkblue' },
+          },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    const hoverStyle = matcher.match({ 'container:hover': true })
+    expect(hoverStyle.container.bgColor).toBe('darkblue')
+    expect(hoverStyle.container['@sm_bgColor']).toBe('red')
+  })
+})
