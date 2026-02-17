@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function ApiStylesheet() {
+export const Route = createFileRoute('/api/stylesheet')({
+  component: ApiStylesheet,
+})
+
+function ApiStylesheet() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -40,9 +45,7 @@ const styles = stylesheet({
       </p>
       <p>
         <strong>style</strong> -- An optional escape hatch for raw CSS
-        properties not covered by tokens. Use this for properties like{' '}
-        <code {...s.code}>cursor</code>, <code {...s.code}>position</code>, or{' '}
-        <code {...s.code}>display</code>.
+        properties not covered by tokens.
       </p>
       <p>
         <strong>$$type</strong> -- An optional hint (
@@ -62,15 +65,15 @@ const styles = stylesheet({
     borderColor: 'subtle',
     borderWidth: 'thin',
     shadow: 'small',
-    style: { padding: '24px' },
+    padding: 3,
   },
   title: {
     typo: 'heading_3',
-    style: { marginBottom: '8px' },
+    marginBottom: 1,
   },
   body: {
     textColor: 'subtle',
-    style: { lineHeight: 1.6 },
+    lineHeight: 1.6,
   },
 })`}</CodeBlock>
       <p>
@@ -83,7 +86,7 @@ const styles = stylesheet({
       <h2 {...s.h2}>Chaining with Variants</h2>
       <p>
         Call <code {...s.code}>.variants()</code> on a stylesheet to add
-        conditional styles. See the <a href="#api-variants">Variants</a> page
+        conditional styles. See the <a href="/api/variants">Variants</a> page
         for details.
       </p>
       <CodeBlock>{`const styles = stylesheet({

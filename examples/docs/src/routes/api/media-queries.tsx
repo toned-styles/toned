@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function ApiMediaQueries() {
+export const Route = createFileRoute('/api/media-queries')({
+  component: ApiMediaQueries,
+})
+
+function ApiMediaQueries() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -33,16 +38,11 @@ export const breakpoints = defineBreakpoints({
       <CodeBlock>{`const layoutStyles = stylesheet({
   container: {
     paddingX: 2,
-    style: {
-      display: 'flex',
-      flexDirection: 'column',
-    },
+    flexLayout: 'column',
 
     '@md': {
       paddingX: 4,
-      style: {
-        flexDirection: 'row',
-      },
+      flexLayout: 'row',
     },
 
     '@lg': {

@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function ApiDefineSystem() {
+export const Route = createFileRoute('/api/define-system')({
+  component: ApiDefineSystem,
+})
+
+function ApiDefineSystem() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>

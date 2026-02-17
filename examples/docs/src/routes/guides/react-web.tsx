@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function GuideReactWeb() {
+export const Route = createFileRoute('/guides/react-web')({
+  component: GuideReactWeb,
+})
+
+function GuideReactWeb() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -78,7 +83,7 @@ export const buttonStyles = stylesheet({
     borderWidth: 'none',
     paddingX: 3,
     paddingY: 2,
-    style: { cursor: 'pointer' },
+    cursor: 'pointer',
   },
   label: {
     textColor: 'on_action',

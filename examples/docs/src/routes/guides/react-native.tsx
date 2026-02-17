@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function GuideReactNative() {
+export const Route = createFileRoute('/guides/react-native')({
+  component: GuideReactNative,
+})
+
+function GuideReactNative() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -76,7 +81,7 @@ export const cardStyles = stylesheet({
     borderColor: 'subtle',
     borderWidth: 'thin',
     shadow: 'small',
-    style: { padding: 24 },
+    padding: 3,
   },
   title: {
     textColor: 'primary',

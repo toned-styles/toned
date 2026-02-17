@@ -1,3 +1,4 @@
+import { Link, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { navStyles } from '../styles/nav.ts'
 
@@ -5,50 +6,51 @@ const NAV_SECTIONS = [
   {
     title: 'Overview',
     items: [
-      { id: 'getting-started', label: 'Getting Started' },
-      { id: 'concepts', label: 'Core Concepts' },
+      { to: '/', label: 'Getting Started' },
+      { to: '/concepts', label: 'Core Concepts' },
     ],
   },
   {
     title: 'API Reference',
     items: [
-      { id: 'api-define-system', label: 'defineSystem' },
-      { id: 'api-stylesheet', label: 'stylesheet' },
-      { id: 'api-variants', label: 'variants' },
-      { id: 'api-use-styles', label: 'useStyles' },
-      { id: 'api-media-queries', label: 'Media Queries' },
+      { to: '/api/define-system', label: 'defineSystem' },
+      { to: '/api/stylesheet', label: 'stylesheet' },
+      { to: '/api/variants', label: 'variants' },
+      { to: '/api/use-styles', label: 'useStyles' },
+      { to: '/api/media-queries', label: 'Media Queries' },
     ],
   },
   {
     title: 'Guides',
     items: [
-      { id: 'guide-react-web', label: 'React Web' },
-      { id: 'guide-react-native', label: 'React Native' },
-      { id: 'guide-theming', label: 'Theming' },
-      { id: 'guide-interactive', label: 'Interactive Styles' },
+      { to: '/guides/react-web', label: 'React Web' },
+      { to: '/guides/react-native', label: 'React Native' },
+      { to: '/guides/theming', label: 'Theming' },
+      { to: '/guides/interactive', label: 'Interactive Styles' },
     ],
   },
-]
+] as const
 
 function NavLink({
-  id,
+  to,
   label,
   isActive,
 }: {
-  id: string
+  to: string
   label: string
   isActive: boolean
 }) {
   const s = useStyles(navStyles, { active: isActive ? 'true' : undefined })
   return (
-    <a href={`#${id}`} {...s.link}>
+    <Link to={to} {...s.link}>
       {label}
-    </a>
+    </Link>
   )
 }
 
-export function Sidebar({ currentPage }: { currentPage: string }) {
+export function Sidebar() {
   const s = useStyles(navStyles, {})
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
   return (
     <div>
       <div {...s.logo}>toned-styles</div>
@@ -57,10 +59,10 @@ export function Sidebar({ currentPage }: { currentPage: string }) {
           <div {...s.sectionTitle}>{section.title}</div>
           {section.items.map((item) => (
             <NavLink
-              key={item.id}
-              id={item.id}
+              key={item.to}
+              to={item.to}
               label={item.label}
-              isActive={currentPage === item.id}
+              isActive={pathname === item.to}
             />
           ))}
         </div>

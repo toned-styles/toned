@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../components/CodeBlock.tsx'
 import { proseStyles } from '../styles/prose.ts'
 
-export function GettingStarted() {
+export const Route = createFileRoute('/')({
+  component: GettingStarted,
+})
+
+function GettingStarted() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -67,9 +72,7 @@ export const buttonStyles = stylesheet({
     bgColor: 'action',
     borderRadius: 'medium',
     borderWidth: 'none',
-    style: {
-      cursor: 'pointer',
-    },
+    cursor: 'pointer',
   },
   label: {
     textColor: 'on_action',
@@ -97,10 +100,10 @@ export function Button({ label }: { label: string }) {
 
       <h2 {...s.h2}>Next Steps</h2>
       <p>
-        Read the <a href="#concepts">Core Concepts</a> page to understand how
+        Read the <a href="/concepts">Core Concepts</a> page to understand how
         tokens, stylesheets, and variants fit together. Then explore the{' '}
-        <a href="#guide-react-web">React Web</a> or{' '}
-        <a href="#guide-react-native">React Native</a> guides for
+        <a href="/guides/react-web">React Web</a> or{' '}
+        <a href="/guides/react-native">React Native</a> guides for
         platform-specific setup instructions.
       </p>
     </article>
