@@ -10,12 +10,12 @@ export { Base, createStylesheet } from './StyleSheet.ts'
 export { unitlessNumbers } from './unitlessNumbers.ts'
 export {
   createVariantSelector,
-  isNamedStyleKey,
-  getNamedStyleName,
-  isNoneValue,
-  type VariantKey,
-  type NamedStyleKey,
-  type VariantSelector,
-  type VariantBuilder,
   type ExtractNamedStyles,
+  getNamedStyleName,
+  isNamedStyleKey,
+  isNoneValue,
+  type NamedStyleKey,
+  type VariantBuilder,
+  type VariantKey,
+  type VariantSelector,
 } from './variantSelector.ts'
