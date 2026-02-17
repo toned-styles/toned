@@ -51,16 +51,7 @@ export function Sidebar({ currentPage }: { currentPage: string }) {
   const s = useStyles(navStyles, {})
   return (
     <div>
-      <div
-        style={{
-          fontSize: '18px',
-          fontWeight: 700,
-          padding: '6px 12px',
-          marginBottom: '16px',
-        }}
-      >
-        toned-styles
-      </div>
+      <div {...s.logo}>toned-styles</div>
       {NAV_SECTIONS.map((section) => (
         <div key={section.title} {...s.section}>
           <div {...s.sectionTitle}>{section.title}</div>
