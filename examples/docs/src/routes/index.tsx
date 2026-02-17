@@ -31,23 +31,32 @@ function GettingStarted() {
       </p>
       <CodeBlock>{'npm install @toned/themes'}</CodeBlock>
 
-      <h2 {...s.h2}>Project Setup</h2>
+      <h2 {...s.h2}>Project Setup (Vite)</h2>
       <p>
-        Create a <code {...s.code}>toned.config.ts</code> file at the root of
-        your project. This file initialises the styling system, injects the CSS
-        runtime, and sets the active configuration:
+        Add the toned Vite plugin to your <code {...s.code}>vite.config.ts</code>.
+        It generates all token CSS at build time as a static file:
       </p>
-      <CodeBlock>{`import '@toned/themes/shadcn/config.css'
+      <CodeBlock>{`// vite.config.ts
+import toned from '@toned/core/vite'
+import { system } from '@toned/systems/base'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [toned({ system }), react()],
+})`}</CodeBlock>
+      <p>
+        Then create a <code {...s.code}>toned.config.ts</code> file at the root
+        of your project. This file imports the generated CSS and sets the active
+        configuration:
+      </p>
+      <CodeBlock>{`// toned.config.ts
+import '@toned/themes/shadcn/config.css'
+import 'virtual:toned.css'
 
 import { defineConfig, setConfig } from '@toned/core'
-import { inject } from '@toned/core/dom'
 import reactConfig from '@toned/react/react-web'
-import { system } from '@toned/systems/base'
 
-// Inject CSS rules for every token in the system
-inject(system)
-
-// Activate the configuration
 export default setConfig(
   defineConfig({
     ...reactConfig,
@@ -56,6 +65,12 @@ export default setConfig(
     mediaMode: 'css',
   }),
 )`}</CodeBlock>
+      <p>
+        Not using Vite? You can use{' '}
+        <code {...s.code}>inject(system)</code> from{' '}
+        <code {...s.code}>@toned/core/dom</code> instead to generate CSS at
+        runtime. See the <a href="/guides/ssr">SSR guide</a> for details.
+      </p>
 
       <h2 {...s.h2}>Your First Component</h2>
       <p>

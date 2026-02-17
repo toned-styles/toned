@@ -104,6 +104,133 @@ function ApiVariants() {
   },
 }`}</CodeBlock>
 
+      <h2 {...s.h2}>Responsive Variants</h2>
+      <p>
+        Breakpoints work inside variant blocks, so a variant can define
+        responsive overrides for its elements:
+      </p>
+      <CodeBlock>{`[$.layout('grid')]: {
+  container: {
+    style: { display: 'grid', gridTemplateColumns: '1fr' },
+    '@md': {
+      style: { gridTemplateColumns: '1fr 1fr' },
+    },
+    '@lg': {
+      style: { gridTemplateColumns: '1fr 1fr 1fr' },
+    },
+  },
+}`}</CodeBlock>
+
+      <h2 {...s.h2}>Named Styles ($composes)</h2>
+      <p>
+        When multiple variants share common element overrides, you can extract
+        them into a <strong>named style</strong> and compose them into variants.
+        This avoids duplicating the same token values across variant rules.
+      </p>
+
+      <h3 {...s.h3}>Defining Named Styles</h3>
+      <p>
+        Use <code {...s.code}>$('name')</code> to define a named style block.
+        Named styles are not variant rules — they are reusable fragments that
+        can be composed into actual variants:
+      </p>
+      <CodeBlock>{`const buttonStyles = stylesheet({
+  container: { borderRadius: 'medium' },
+  label: {},
+}).variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>(($) => ({
+  // Named style — shared across variants
+  $('interactive'): {
+    'container:hover': {
+      container: { shadow: 'medium' },
+    },
+  },
+
+  [$.variant('accent')]: {
+    $compose: 'interactive',
+    container: { bgColor: 'action' },
+    label: { textColor: 'on_action' },
+  },
+
+  [$.variant('danger')]: {
+    $compose: 'interactive',
+    container: { bgColor: 'status_error' },
+    label: { textColor: 'on_status_error' },
+  },
+}))`}</CodeBlock>
+      <p>
+        Both <code {...s.code}>accent</code> and{' '}
+        <code {...s.code}>danger</code> inherit the hover shadow from{' '}
+        <code {...s.code}>interactive</code>, without repeating it.
+      </p>
+
+      <h3 {...s.h3}>Element-Level $compose</h3>
+      <p>
+        Inside a single variant rule, you can compose one element from another
+        element defined in the same block. This is useful when several elements
+        within a variant share a base set of tokens:
+      </p>
+      <CodeBlock>{`[$.size('s')]: {
+  base: { paddingX: 2, bgColor: 'muted' },
+  container: {
+    $compose: 'base',
+    borderRadius: 'medium',
+  },
+  sidebar: {
+    $compose: 'base',
+    borderRadius: 'small',
+  },
+}`}</CodeBlock>
+      <p>
+        Here both <code {...s.code}>container</code> and{' '}
+        <code {...s.code}>sidebar</code> inherit{' '}
+        <code {...s.code}>paddingX</code> and <code {...s.code}>bgColor</code>{' '}
+        from <code {...s.code}>base</code>, then add their own overrides. The
+        composed element (<code {...s.code}>base</code>) is not included in the
+        final output — it only serves as a source for composition.
+      </p>
+
+      <h3 {...s.h3}>Composing Multiple Sources</h3>
+      <p>
+        Pass an array to <code {...s.code}>$compose</code> to merge from
+        multiple named styles. They are applied in order, with later sources
+        overriding earlier ones:
+      </p>
+      <CodeBlock>{`$('borders'): {
+  container: { borderWidth: 'thin', borderColor: 'subtle' },
+},
+$('spacing'): {
+  container: { paddingX: 3, paddingY: 2 },
+  label: { paddingX: 2 },
+},
+
+[$.size('m')]: {
+  $compose: ['borders', 'spacing'],
+  container: { bgColor: 'elevated' },
+}`}</CodeBlock>
+      <p>
+        The <code {...s.code}>container</code> in the{' '}
+        <code {...s.code}>m</code> size variant gets border styles, then spacing
+        styles, then the variant's own <code {...s.code}>bgColor</code>. The{' '}
+        <code {...s.code}>label</code> gets <code {...s.code}>paddingX: 2</code>{' '}
+        from the <code {...s.code}>spacing</code> named style.
+      </p>
+
+      <h3 {...s.h3}>Merge Order</h3>
+      <p>
+        Composed styles are merged first, then the variant's own element
+        properties are applied on top. This means a variant can always override
+        anything it composes:
+      </p>
+      <CodeBlock>{`$('shared'): {
+  container: { bgColor: 'muted', paddingX: 2 },
+},
+
+[$.variant('accent')]: {
+  $compose: 'shared',
+  container: { bgColor: 'action' },  // overrides 'muted'
+}
+// Result: { bgColor: 'action', paddingX: 2 }`}</CodeBlock>
+
       <h2 {...s.h2}>Consuming Variants</h2>
       <p>
         Pass variant values as the second argument to{' '}
