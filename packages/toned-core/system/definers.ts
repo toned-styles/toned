@@ -136,6 +136,12 @@ export function defineSystem<
         Array<{ breakpoint: string; tokenKey: string; value: unknown }>
       > = {}
 
+      // Collect :pseudo_prop entries for CSS pseudo mode
+      const pseudoOverrides: Record<
+        string,
+        Array<{ pseudo: string; tokenKey: string; value: unknown }>
+      > = {}
+
       const acc: { style: Record<string, unknown>; className?: string } = {
         style: {},
         className: '_',
@@ -143,6 +149,21 @@ export function defineSystem<
 
       for (const [k, v] of Object.entries(tokenStyle)) {
         if (v == null) continue
+
+        // Handle :pseudo_prop keys from CSS pseudo mode
+        if (k[0] === ':' && k.includes('_')) {
+          const underscoreIdx = k.indexOf('_')
+          const pseudo = k.slice(0, underscoreIdx) // e.g. ':hover'
+          const prop = k.slice(underscoreIdx + 1) // e.g. 'bgColor'
+
+          pseudoOverrides[prop] ??= []
+          pseudoOverrides[prop].push({
+            pseudo,
+            tokenKey: prop,
+            value: v,
+          })
+          continue
+        }
 
         if (k[0] === ':' || k[0] === '$') continue
 
@@ -224,6 +245,65 @@ export function defineSystem<
             }
 
             acc.style[cssProp] = chain
+          }
+        }
+      }
+
+      // Process pseudo-state overrides into CSS variable fallback chains
+      // Priority: :active > :focus > :hover (active outermost in chain)
+      if (Object.keys(pseudoOverrides).length > 0) {
+        const PSEUDO_ORDER = [':hover', ':focus', ':active']
+
+        for (const [prop, overrides] of Object.entries(pseudoOverrides)) {
+          // Resolve base value if it exists
+          const baseTokenValue = tokenStyle[prop]
+          const resolvedBase =
+            baseTokenValue != null
+              ? system[prop]?.resolve(baseTokenValue, execConfig.tokens)
+              : null
+
+          // Get CSS property names from any override's resolution
+          const sampleResolved = system[prop]?.resolve(
+            overrides[0]?.value,
+            execConfig.tokens,
+          )
+          if (!sampleResolved) continue
+
+          for (const cssProp in sampleResolved) {
+            const kebabProp = camelToKebab(cssProp)
+
+            // Generate --toned_pseudo__css-prop custom properties for each override
+            for (const { pseudo, value } of overrides) {
+              const pseudoName = pseudo.slice(1) // remove :
+              const resolved = system[prop]?.resolve(value, execConfig.tokens)
+              if (!resolved?.[cssProp]) continue
+
+              const varName = `--toned_${pseudoName}__${kebabProp}`
+              acc.style[varName] = `var(--toned_${pseudoName}) ${resolved[cssProp]}`
+            }
+
+            // Build fallback chain: use existing value (e.g. breakpoint chain) or base
+            const innerValue =
+              acc.style[cssProp] != null
+                ? String(acc.style[cssProp])
+                : resolvedBase?.[cssProp] != null
+                  ? String(resolvedBase[cssProp])
+                  : null
+
+            let chain = innerValue
+            for (const pseudo of PSEUDO_ORDER) {
+              if (overrides.some((o) => o.pseudo === pseudo)) {
+                const pseudoName = pseudo.slice(1)
+                const varName = `--toned_${pseudoName}__${kebabProp}`
+                chain = chain
+                  ? `var(${varName}, ${chain})`
+                  : `var(${varName})`
+              }
+            }
+
+            if (chain) {
+              acc.style[cssProp] = chain
+            }
           }
         }
       }
