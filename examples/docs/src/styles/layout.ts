@@ -6,10 +6,15 @@ export const layoutStyles = stylesheet({
     minHeight: '100vh',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    textColor: 'default',
+    bgColor: 'default',
+    style: {
+      WebkitFontSmoothing: 'antialiased',
+    },
   },
   sidebar: {
     bgColor: 'muted',
-    width: '260px',
+    width: '280px',
     paddingY: 3,
     paddingX: 2,
     borderColor: 'subtle',
@@ -35,11 +40,15 @@ export const layoutStyles = stylesheet({
   },
   content: {
     flexGrow: '1',
-    paddingY: 4,
-    paddingX: 3,
-    maxWidth: '800px',
+    paddingTop: 6,
+    paddingBottom: 8,
+    paddingX: 2.5,
+    minWidth: 0,
     '@md': {
       paddingX: 6,
+    },
+    style: {
+      maxWidth: '48rem',
     },
   },
   hamburger: {
@@ -54,6 +63,7 @@ export const layoutStyles = stylesheet({
     borderWidth: 'thin',
     padding: 1,
     cursor: 'pointer',
+    shadow: 'small',
     '@md': {
       display: 'none',
     },

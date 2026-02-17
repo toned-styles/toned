@@ -11,26 +11,29 @@ export const navStyles = stylesheet({
     cursor: 'pointer',
     style: {
       color: 'inherit',
+      transition: 'background-color 0.15s ease, color 0.15s ease',
     },
   },
   section: {
-    marginBottom: 2,
+    marginBottom: 2.5,
   },
   sectionTitle: {
-    fontSize: '12px',
+    fontSize: '11px',
     fontWeight: 600,
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
+    letterSpacing: '0.08em',
     paddingY: 0.75,
     paddingX: 1.5,
-    opacity: 0.6,
+    marginBottom: 0.5,
+    textColor: 'muted',
   },
   logo: {
     fontSize: '18px',
     fontWeight: 700,
     paddingY: 0.75,
     paddingX: 1.5,
-    marginBottom: 2,
+    marginBottom: 3,
+    letterSpacing: '-0.02em',
   },
 }).variants<{
   active?: 'true'
