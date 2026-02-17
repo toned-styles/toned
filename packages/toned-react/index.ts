@@ -1,13 +1,4 @@
-import {
-  getConfig,
-  type ModType,
-  type Stylesheet,
-  SYMBOL_INIT,
-  type TokenStyle,
-  type TokenStyleDeclaration,
-} from '@toned/core'
-import type { SYMBOL_REF } from '@toned/core/utils'
-
+import { getConfig, type Stylesheet, SYMBOL_INIT } from '@toned/core'
 import { useRef } from 'react'
 
 /**
@@ -32,18 +23,32 @@ type StylesheetLike = {
 }
 
 /**
- * Extract element keys from a stylesheet (excluding internal symbols and methods)
+ * Extract element types from a Stylesheet generic.
+ * Uses conditional type inference to pull out the element record T
+ * from the Stylesheet<S, T, M> intersection, avoiding index signature pollution.
  */
-// type StylesheetElements<T> = Exclude<keyof T, symbol | 'variants' | 'extend'>
+type InferElements<S> = S extends Stylesheet<
+  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
+  any,
+  infer T,
+  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
+  any
+>
+  ? { [K in keyof T as K extends string ? K : never]: ElementProps }
+  : { [K in keyof S as K extends string ? K : never]: ElementProps }
 
 /**
- * Result type for useStyles - provides element props for each element in the stylesheet
+ * Infer the mods type from a Stylesheet generic.
  */
-type UseStylesResult<T> = {
-  [K in keyof T as K extends typeof SYMBOL_INIT | typeof SYMBOL_REF
-    ? never
-    : K]: ElementProps
-}
+type InferMods<S> = S extends Stylesheet<
+  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
+  any,
+  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
+  any,
+  infer M
+>
+  ? M
+  : never
 
 /**
  * Hook to use a stylesheet in a React component.
@@ -60,13 +65,8 @@ type UseStylesResult<T> = {
  */
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
-): UseStylesResult<T>
-
-export function useStyles<
-  S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
-  M extends ModType,
->(stylesheet: Stylesheet<S, T, M>, state: M): UseStylesResult<T>
+  ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
+): InferElements<T>
 
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
@@ -75,7 +75,8 @@ export function useStyles<T extends StylesheetLike>(
   const ref = useRef<{
     stylesheet: T
     state?: object
-    result: UseStylesResult<T>
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic result type
+    result: any
   }>(null)
 
   if (ref.current?.stylesheet !== stylesheet) {
@@ -88,7 +89,6 @@ export function useStyles<T extends StylesheetLike>(
   }
 
   if (ref.current?.state !== state) {
-    // @ts-expect-error hidden API
     ref.current.result.applyState(state)
   }
 
