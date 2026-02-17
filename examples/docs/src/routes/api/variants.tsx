@@ -192,44 +192,20 @@ function ApiVariants() {
       <h3 {...s.h3}>Composing Multiple Sources</h3>
       <p>
         Pass an array to <code {...s.code}>$compose</code> to merge from
-        multiple named styles. They are applied in order, with later sources
-        overriding earlier ones:
+        multiple named styles. They are applied in order, and the variant's own
+        properties always take priority:
       </p>
       <CodeBlock>{`$('borders'): {
   container: { borderWidth: 'thin', borderColor: 'subtle' },
 },
 $('spacing'): {
   container: { paddingX: 3, paddingY: 2 },
-  label: { paddingX: 2 },
 },
 
 [$.size('m')]: {
   $compose: ['borders', 'spacing'],
-  container: { bgColor: 'elevated' },
+  container: { bgColor: 'elevated' },  // own props override composed ones
 }`}</CodeBlock>
-      <p>
-        The <code {...s.code}>container</code> in the{' '}
-        <code {...s.code}>m</code> size variant gets border styles, then spacing
-        styles, then the variant's own <code {...s.code}>bgColor</code>. The{' '}
-        <code {...s.code}>label</code> gets <code {...s.code}>paddingX: 2</code>{' '}
-        from the <code {...s.code}>spacing</code> named style.
-      </p>
-
-      <h3 {...s.h3}>Merge Order</h3>
-      <p>
-        Composed styles are merged first, then the variant's own element
-        properties are applied on top. This means a variant can always override
-        anything it composes:
-      </p>
-      <CodeBlock>{`$('shared'): {
-  container: { bgColor: 'muted', paddingX: 2 },
-},
-
-[$.variant('accent')]: {
-  $compose: 'shared',
-  container: { bgColor: 'action' },  // overrides 'muted'
-}
-// Result: { bgColor: 'action', paddingX: 2 }`}</CodeBlock>
 
       <h2 {...s.h2}>Consuming Variants</h2>
       <p>
