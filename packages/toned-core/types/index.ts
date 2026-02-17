@@ -27,10 +27,10 @@ export type {
   TFun,
   VariantElementStyle,
   VariantKey,
-  VariantsCallback,
-  VariantsInput,
   VariantSelector,
   VariantStyleDef,
+  VariantsCallback,
+  VariantsInput,
 } from './stylesheet.ts'
 // System types
 export type { TokenSystem } from './system.ts'

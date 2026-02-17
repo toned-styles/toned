@@ -11,5 +11,4 @@ export {
   SYMBOL_REF,
   SYMBOL_STYLE,
   SYMBOL_VARIANTS,
-  sym,
 } from './symbols.ts'

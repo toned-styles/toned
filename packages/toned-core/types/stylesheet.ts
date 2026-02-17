@@ -264,10 +264,11 @@ export type VariantsCallback<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Mods extends ModType,
-> = ($: VariantSelector<Mods>) => Record<
+> = (
+  $: VariantSelector<Mods>,
+) => Record<
   string,
-  | NamedStyleDef<S, Elements>
-  | VariantStyleDef<S, Elements, string>
+  NamedStyleDef<S, Elements> | VariantStyleDef<S, Elements, string>
 >
 
 /**
@@ -350,7 +351,7 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   style: T,
 ) => PreVariantsStylesheet<
   S,
-  Record<PickString<ExtractElements<T>>, TokenStyle<S>>,
+  { [K in PickString<ExtractElements<T>>]: TokenStyle<S> },
   PickString<ExtractElements<T>>
 >
 
