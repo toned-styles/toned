@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function ApiVariants() {
+export const Route = createFileRoute('/api/variants')({
+  component: ApiVariants,
+})
+
+function ApiVariants() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -32,7 +37,7 @@ export function ApiVariants() {
   container: {
     borderRadius: 'medium',
     borderWidth: 'none',
-    style: { cursor: 'pointer' },
+    cursor: 'pointer',
   },
   label: {},
 }).variants<{

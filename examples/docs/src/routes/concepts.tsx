@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../components/CodeBlock.tsx'
 import { proseStyles } from '../styles/prose.ts'
 
-export function Concepts() {
+export const Route = createFileRoute('/concepts')({
+  component: Concepts,
+})
+
+function Concepts() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -73,9 +78,7 @@ export const { system, stylesheet, t } = defineSystem(
     borderColor: 'subtle',
     borderWidth: 'thin',
     shadow: 'small',
-    style: {
-      padding: '24px',
-    },
+    padding: 3,
   },
 })`}</CodeBlock>
       <p>

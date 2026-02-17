@@ -1,8 +1,13 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export function GuideInteractive() {
+export const Route = createFileRoute('/guides/interactive')({
+  component: GuideInteractive,
+})
+
+function GuideInteractive() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
@@ -23,7 +28,7 @@ export function GuideInteractive() {
   container: {
     bgColor: 'action',
     borderRadius: 'medium',
-    style: { cursor: 'pointer' },
+    cursor: 'pointer',
   },
   label: {
     textColor: 'on_action',

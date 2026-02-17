@@ -9,15 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-router": "^1.160.2",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
-    "@toned/themes": "workspace:*",
     "@toned/systems": "workspace:*",
+    "@toned/themes": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
   "devDependencies": {
     "@mdx-js/rollup": "^3.1.0",
+    "@tanstack/router-plugin": "^1.160.2",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
