@@ -18,6 +18,7 @@ const routes = [
   '/guides/react-native',
   '/guides/theming',
   '/guides/interactive',
+  '/guides/ssr',
 ]
 
 async function prerender() {

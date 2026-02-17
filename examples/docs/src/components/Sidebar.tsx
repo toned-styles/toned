@@ -27,6 +27,7 @@ const NAV_SECTIONS = [
       { to: '/guides/react-native', label: 'React Native' },
       { to: '/guides/theming', label: 'Theming' },
       { to: '/guides/interactive', label: 'Interactive Styles' },
+      { to: '/guides/ssr', label: 'SSR & SSG' },
     ],
   },
 ] as const
