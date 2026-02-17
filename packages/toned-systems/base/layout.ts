@@ -176,3 +176,73 @@ export const placeSelf = defineCssToken('placeSelf', [
   'center',
   'stretch',
 ])
+
+// Margin tokens (same scale as padding)
+export const margin = defineCssToken(
+  ['marginLeft', 'marginTop', 'marginBottom', 'marginRight'],
+  paddingValues,
+  SpaceUnit,
+)
+export const marginX = defineCssToken(
+  ['marginLeft', 'marginRight'],
+  paddingValues,
+  SpaceUnit,
+)
+export const marginY = defineCssToken(
+  ['marginTop', 'marginBottom'],
+  paddingValues,
+  SpaceUnit,
+)
+export const marginTop = defineCssToken('marginTop', paddingValues, SpaceUnit)
+export const marginBottom = defineCssToken(
+  'marginBottom',
+  paddingValues,
+  SpaceUnit,
+)
+export const marginLeft = defineCssToken('marginLeft', paddingValues, SpaceUnit)
+export const marginRight = defineCssToken(
+  'marginRight',
+  paddingValues,
+  SpaceUnit,
+)
+
+// Display & positioning
+export const display = defineCssToken('display', [
+  'block',
+  'inline',
+  'inline-block',
+  'flex',
+  'inline-flex',
+  'grid',
+  'none',
+])
+export const position = defineCssToken('position', [
+  'static',
+  'relative',
+  'absolute',
+  'fixed',
+  'sticky',
+])
+
+const offsetValues = [new Number(), new String()] as const
+export const top = defineCssToken('top', offsetValues)
+export const left = defineCssToken('left', offsetValues)
+export const right = defineCssToken('right', offsetValues)
+export const bottom = defineCssToken('bottom', offsetValues)
+export const zIndex = defineCssToken('zIndex', [new Number()] as const)
+
+// Interaction
+export const cursor = defineCssToken('cursor', [
+  'auto',
+  'default',
+  'pointer',
+  'text',
+  'not-allowed',
+  'grab',
+  'grabbing',
+])
+export const opacity = defineCssToken('opacity', [new Number()] as const)
+export const pointerEvents = defineCssToken('pointerEvents', [
+  'auto',
+  'none',
+])

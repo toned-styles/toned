@@ -1,17 +1,5 @@
 import { stylesheet } from '@toned/systems/base'
 
-/**
- * Shared design tokens for the toned-styles documentation site.
- *
- * These stylesheets provide reusable, composable primitives that dogfood
- * the toned-styles library. The `stylesheet` function comes from the base
- * system, which provides tokens such as bgColor, textColor, borderRadius,
- * borderColor, borderWidth, paddingX, paddingY, shadow, typo, etc.
- *
- * For CSS properties not covered by tokens (display, position, cursor, ...),
- * use the `style` escape hatch.
- */
-
 /** Card-like surface with subtle background and rounded corners. */
 export const cardStyles = stylesheet({
   card: {
@@ -20,9 +8,7 @@ export const cardStyles = stylesheet({
     borderColor: 'subtle',
     borderWidth: 'thin',
     shadow: 'small',
-    style: {
-      padding: '24px',
-    },
+    padding: 3,
   },
 })
 
@@ -32,13 +18,12 @@ export const badgeStyles = stylesheet({
     bgColor: 'muted',
     borderRadius: 'full',
     textColor: 'subtle',
-    style: {
-      display: 'inline-block',
-      padding: '2px 10px',
-      fontSize: '12px',
-      fontWeight: 500,
-      lineHeight: 1.6,
-    },
+    display: 'inline-block',
+    paddingY: 0.25,
+    paddingX: 1.25,
+    fontSize: '12px',
+    fontWeight: 500,
+    lineHeight: 1.6,
   },
 }).variants<{
   variant?: 'default' | 'success' | 'warning' | 'error'
@@ -67,11 +52,11 @@ export const badgeStyles = stylesheet({
 export const dividerStyles = stylesheet({
   divider: {
     borderColor: 'subtle',
+    marginY: 3,
     style: {
       border: 'none',
       borderTop: '1px solid',
       borderColor: 'inherit',
-      margin: '24px 0',
     },
   },
 })

@@ -2,30 +2,32 @@ import { stylesheet } from '@toned/systems/base'
 
 export const layoutStyles = stylesheet({
   root: {
-    style: {
-      display: 'flex',
-      minHeight: '100vh',
-      fontFamily:
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    },
+    display: 'flex',
+    minHeight: '100vh',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   sidebar: {
     bgColor: 'muted',
+    width: '260px',
+    paddingY: 3,
+    paddingX: 2,
+    borderColor: 'subtle',
+    borderWidth: 'thin',
+    overflowY: 'auto',
+    position: 'sticky',
+    top: 0,
+    height: '100vh',
     style: {
-      width: '260px',
-      padding: '24px 16px',
-      borderRight: '1px solid var(--border)',
-      overflowY: 'auto' as const,
-      position: 'sticky' as const,
-      top: 0,
-      height: '100vh',
+      borderTop: 'none',
+      borderBottom: 'none',
+      borderLeft: 'none',
     },
   },
   content: {
-    style: {
-      flex: 1,
-      padding: '32px 48px',
-      maxWidth: '800px',
-    },
+    flexGrow: '1',
+    paddingY: 4,
+    paddingX: 6,
+    maxWidth: '800px',
   },
 })

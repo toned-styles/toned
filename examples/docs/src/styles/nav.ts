@@ -2,30 +2,35 @@ import { stylesheet } from '@toned/systems/base'
 
 export const navStyles = stylesheet({
   link: {
+    display: 'block',
+    paddingY: 0.75,
+    paddingX: 1.5,
+    borderRadius: 'medium',
+    textDecoration: 'none',
+    fontSize: '14px',
+    cursor: 'pointer',
     style: {
-      display: 'block',
-      padding: '6px 12px',
-      borderRadius: '6px',
-      textDecoration: 'none',
-      fontSize: '14px',
       color: 'inherit',
-      cursor: 'pointer',
     },
   },
   section: {
-    style: {
-      marginBottom: '16px',
-    },
+    marginBottom: 2,
   },
   sectionTitle: {
-    style: {
-      fontSize: '12px',
-      fontWeight: 600,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '0.05em',
-      padding: '6px 12px',
-      opacity: 0.6,
-    },
+    fontSize: '12px',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    paddingY: 0.75,
+    paddingX: 1.5,
+    opacity: 0.6,
+  },
+  logo: {
+    fontSize: '18px',
+    fontWeight: 700,
+    paddingY: 0.75,
+    paddingX: 1.5,
+    marginBottom: 2,
   },
 }).variants<{
   active?: 'true'
