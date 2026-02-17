@@ -52,15 +52,15 @@ export const proseStyles = stylesheet({
     fontWeight: 500,
   },
   codeBlock: {
-    bgColor: 'muted',
     borderRadius: 'medium',
     borderColor: 'subtle',
     borderWidth: 'thin',
-    padding: 2,
-    fontSize: '13px',
-    fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
     overflowX: 'auto',
-    lineHeight: 1.6,
     marginY: 2,
+    style: {
+      // Let shiki control fonts and colors; provide fallback for plain code
+      fontSize: '13px',
+      lineHeight: 1.6,
+    },
   },
 })
