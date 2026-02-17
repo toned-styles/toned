@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ConceptsRouteImport } from './routes/concepts'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as GuidesThemingRouteImport } from './routes/guides/theming'
+import { Route as GuidesSsrRouteImport } from './routes/guides/ssr'
 import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web'
 import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native'
 import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive'
@@ -34,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 const GuidesThemingRoute = GuidesThemingRouteImport.update({
   id: '/guides/theming',
   path: '/guides/theming',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesSsrRoute = GuidesSsrRouteImport.update({
+  id: '/guides/ssr',
+  path: '/guides/ssr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuidesReactWebRoute = GuidesReactWebRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/guides/interactive': typeof GuidesInteractiveRoute
   '/guides/react-native': typeof GuidesReactNativeRoute
   '/guides/react-web': typeof GuidesReactWebRoute
+  '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/guides/interactive': typeof GuidesInteractiveRoute
   '/guides/react-native': typeof GuidesReactNativeRoute
   '/guides/react-web': typeof GuidesReactWebRoute
+  '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
 }
 export interface FileRoutesById {
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/guides/interactive': typeof GuidesInteractiveRoute
   '/guides/react-native': typeof GuidesReactNativeRoute
   '/guides/react-web': typeof GuidesReactWebRoute
+  '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/guides/interactive'
     | '/guides/react-native'
     | '/guides/react-web'
+    | '/guides/ssr'
     | '/guides/theming'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/guides/interactive'
     | '/guides/react-native'
     | '/guides/react-web'
+    | '/guides/ssr'
     | '/guides/theming'
   id:
     | '__root__'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/guides/interactive'
     | '/guides/react-native'
     | '/guides/react-web'
+    | '/guides/ssr'
     | '/guides/theming'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +182,7 @@ export interface RootRouteChildren {
   GuidesInteractiveRoute: typeof GuidesInteractiveRoute
   GuidesReactNativeRoute: typeof GuidesReactNativeRoute
   GuidesReactWebRoute: typeof GuidesReactWebRoute
+  GuidesSsrRoute: typeof GuidesSsrRoute
   GuidesThemingRoute: typeof GuidesThemingRoute
 }
 
@@ -194,6 +207,13 @@ declare module '@tanstack/react-router' {
       path: '/guides/theming'
       fullPath: '/guides/theming'
       preLoaderRoute: typeof GuidesThemingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/ssr': {
+      id: '/guides/ssr'
+      path: '/guides/ssr'
+      fullPath: '/guides/ssr'
+      preLoaderRoute: typeof GuidesSsrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guides/react-web': {
@@ -266,6 +286,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesInteractiveRoute: GuidesInteractiveRoute,
   GuidesReactNativeRoute: GuidesReactNativeRoute,
   GuidesReactWebRoute: GuidesReactWebRoute,
+  GuidesSsrRoute: GuidesSsrRoute,
   GuidesThemingRoute: GuidesThemingRoute,
 }
 export const routeTree = rootRouteImport
