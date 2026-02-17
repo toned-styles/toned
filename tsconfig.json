@@ -21,6 +21,9 @@
       "path": "packages/toned"
     },
     {
+      "path": "examples/docs"
+    },
+    {
       "path": "examples/email"
     },
     {
