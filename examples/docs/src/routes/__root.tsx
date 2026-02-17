@@ -1,8 +1,4 @@
-import {
-  Outlet,
-  createRootRoute,
-  useRouterState,
-} from '@tanstack/react-router'
+import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { useEffect } from 'react'
 import { Sidebar } from '../components/Sidebar.tsx'
