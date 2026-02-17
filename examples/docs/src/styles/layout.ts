@@ -69,22 +69,16 @@ export const layoutStyles = stylesheet({
     },
   },
   overlay: {
+    display: 'none',
     position: 'fixed',
     top: 0,
     left: 0,
     width: '100vw',
     height: '100vh',
     zIndex: 30,
+    cursor: 'pointer',
     style: {
       backgroundColor: 'rgba(0, 0, 0, 0.4)',
     },
   },
-}).variants<{
-  menuOpen?: 'true'
-}>(($) => ({
-  [$.menuOpen('true')]: {
-    sidebar: {
-      display: 'block',
-    },
-  },
-}))
+})

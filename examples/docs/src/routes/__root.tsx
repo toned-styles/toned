@@ -4,7 +4,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Sidebar } from '../components/Sidebar.tsx'
 import { layoutStyles } from '../styles/layout.ts'
 
@@ -13,25 +13,24 @@ export const Route = createRootRoute({
 })
 
 function RootLayout() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const s = useStyles(layoutStyles, {
-    menuOpen: menuOpen ? 'true' : undefined,
-  })
+  const s = useStyles(layoutStyles)
 
   // Close menu on route change
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
   useEffect(() => {
-    setMenuOpen(false)
+    const toggle = document.getElementById('menu-toggle') as HTMLInputElement
+    if (toggle) toggle.checked = false
   }, [pathname])
 
   return (
     <div {...s.root}>
-      <button
-        type="button"
+      <input type="checkbox" id="menu-toggle" hidden />
+      <label
+        htmlFor="menu-toggle"
         {...s.hamburger}
-        onClick={() => setMenuOpen(!menuOpen)}
+        role="button"
         aria-label="Toggle menu"
       >
         <svg
@@ -45,15 +44,13 @@ function RootLayout() {
         >
           <path d="M3 5h14M3 10h14M3 15h14" />
         </svg>
-      </button>
-      {menuOpen && (
-        <div
-          {...s.overlay}
-          onClick={() => setMenuOpen(false)}
-          onKeyDown={() => {}}
-          role="presentation"
-        />
-      )}
+      </label>
+      <label
+        htmlFor="menu-toggle"
+        {...s.overlay}
+        role="presentation"
+        aria-hidden="true"
+      />
       <nav {...s.sidebar}>
         <Sidebar />
       </nav>
