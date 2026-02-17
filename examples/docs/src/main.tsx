@@ -11,12 +11,6 @@ const router = createRouter({
   defaultPreload: 'intent',
 })
 
-// Tell TanStack Router this is an SSR-hydrated page so Matches uses
-// SafeFragment instead of Suspense, matching the server-rendered tree.
-if (document.getElementById('root')?.firstElementChild) {
-  ;(router as any).ssr = true
-}
-
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
@@ -31,9 +25,15 @@ const app = (
 
 const rootEl = document.getElementById('root')!
 
-// Hydrate if SSG content exists, otherwise create fresh root (dev mode)
 if (rootEl.firstElementChild) {
-  hydrateRoot(rootEl, app)
+  // Tell TanStack Router this is an SSR-hydrated page so Matches uses
+  // SafeFragment instead of Suspense, matching the server-rendered tree.
+  ;(router as any).ssr = true
+  // Wait for router to load the current route before hydrating,
+  // matching what the server does in entry-server.tsx.
+  router.load().then(() => {
+    hydrateRoot(rootEl, app)
+  })
 } else {
   createRoot(rootEl).render(app)
 }

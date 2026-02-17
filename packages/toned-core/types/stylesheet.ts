@@ -83,7 +83,11 @@ export type ElementStyleNew<
 
 /** Extract element names from stylesheet input (excluding selectors) */
 type ExtractElements<T> = {
-  [K in keyof T]: K extends `${string}:${string}` | `[${string}]` | 'prototype'
+  [K in keyof T]: K extends
+    | `${string}:${string}`
+    | `[${string}]`
+    | `@${string}`
+    | 'prototype'
     ? never
     : K
 }[keyof T]
@@ -120,6 +124,8 @@ export type StylesheetInput<
   [K in Elements]?: ElementStyleNew<S>
 } & {
   [K in CrossElementSelector<Elements>]?: ElementMap<S, Elements>
+} & {
+  [B in keyof InferBreakpoints<S> as `@${B & string}`]?: ElementMap<S, Elements>
 }
 
 // =============================================================================

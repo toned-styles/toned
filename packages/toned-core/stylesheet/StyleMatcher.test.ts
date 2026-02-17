@@ -621,4 +621,119 @@ describe('StyleMatcher cssMediaMode', () => {
     expect(hoverStyle.container.bgColor).toBe('darkblue')
     expect(hoverStyle.container['@sm_bgColor']).toBe('red')
   })
+
+  test('root-level breakpoint flattens into each element', () => {
+    const matcher = new StyleMatcher(
+      {
+        link: { paddingX: 2 },
+        container: { paddingX: 3 },
+        '@md': {
+          link: { paddingX: 4 },
+          container: { paddingX: 6 },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    const style = matcher.match({})
+    expect(style.link.paddingX).toBe(2)
+    expect(style.link['@md_paddingX']).toBe(4)
+    expect(style.container.paddingX).toBe(3)
+    expect(style.container['@md_paddingX']).toBe(6)
+  })
+
+  test('root-level breakpoint does not create mod selectors', () => {
+    const matcher = new StyleMatcher(
+      {
+        link: { paddingX: 2 },
+        '@md': {
+          link: { paddingX: 4 },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    expect(matcher.scheme).not.toHaveProperty('@md')
+  })
+
+  test('root-level breakpoint works when @md comes before element', () => {
+    const matcher = new StyleMatcher(
+      {
+        '@md': {
+          link: { paddingX: 4 },
+        },
+        link: { paddingX: 2 },
+      },
+      { cssMediaMode: true },
+    )
+
+    const style = matcher.match({})
+    expect(style.link.paddingX).toBe(2)
+    expect(style.link['@md_paddingX']).toBe(4)
+  })
+
+  test('root-level breakpoint with multiple breakpoints', () => {
+    const matcher = new StyleMatcher(
+      {
+        card: { paddingX: 2, bgColor: 'blue' },
+        '@sm': {
+          card: { paddingX: 3 },
+        },
+        '@md': {
+          card: { paddingX: 4 },
+        },
+        '@lg': {
+          card: { paddingX: 6 },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    const style = matcher.match({})
+    expect(style.card.paddingX).toBe(2)
+    expect(style.card.bgColor).toBe('blue')
+    expect(style.card['@sm_paddingX']).toBe(3)
+    expect(style.card['@md_paddingX']).toBe(4)
+    expect(style.card['@lg_paddingX']).toBe(6)
+  })
+
+  test('root-level breakpoint works with variants in CSS mode', () => {
+    const matcher = new StyleMatcher(
+      {
+        container: { bgColor: 'blue' },
+        '@md': {
+          container: { bgColor: 'green' },
+        },
+        '[size=lg]': {
+          container: { paddingX: 4 },
+        },
+      },
+      { cssMediaMode: true },
+    )
+
+    const style = matcher.match({ size: 'lg' })
+    expect(style.container.bgColor).toBe('blue')
+    expect(style.container['@md_bgColor']).toBe('green')
+    expect(style.container.paddingX).toBe(4)
+  })
+
+  test('root-level breakpoint in runtime mode creates mod selectors', () => {
+    const matcher = new StyleMatcher(
+      {
+        link: { paddingX: 2 },
+        '@md': {
+          link: { paddingX: 4 },
+        },
+      },
+      { cssMediaMode: false },
+    )
+
+    expect(matcher.scheme).toHaveProperty('@md')
+
+    const baseStyle = matcher.match({})
+    expect(baseStyle.link.paddingX).toBe(2)
+
+    const mdStyle = matcher.match({ '@md': 'true' })
+    expect(mdStyle.link.paddingX).toBe(4)
+  })
 })
