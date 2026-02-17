@@ -1,5 +1,6 @@
 import '../toned.config.ts'
 
+import themeCss from '@toned/themes/shadcn/config.css?raw'
 import {
   RouterProvider,
   createMemoryHistory,
@@ -27,5 +28,5 @@ export async function render(url: string) {
 }
 
 export function generateCss() {
-  return generate(system)
+  return themeCss + generate(system)
 }
