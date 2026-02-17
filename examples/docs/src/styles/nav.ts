@@ -12,7 +12,6 @@ export const navStyles = stylesheet({
     cursor: 'pointer',
     textColor: 'subtle',
     style: {
-      color: 'inherit',
       transition: 'background-color 0.15s ease, color 0.15s ease',
     },
     ':hover': {
