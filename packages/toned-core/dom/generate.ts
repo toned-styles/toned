@@ -44,7 +44,7 @@ export function generate<const S extends TokenStyleDeclaration>({
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
 
       rootRule += `${varName}: initial;`
-      rules += `@media (min-width: ${value}px) { ${varName}: ; }`
+      rules += `@media (min-width: ${value}px) { html { ${varName}: ; } }`
     }
 
     styles += `html {${rootRule}}`
