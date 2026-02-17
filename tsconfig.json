@@ -36,6 +36,12 @@
       "path": "examples/shared"
     },
     {
+      "path": "examples/ui-docs"
+    },
+    {
+      "path": "examples/ui"
+    },
+    {
       "path": "examples/vite"
     },
     {
