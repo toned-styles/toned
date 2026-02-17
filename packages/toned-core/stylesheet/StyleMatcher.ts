@@ -132,6 +132,17 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
             }
           }
         }
+      } else if (key[0] === '@') {
+        // Root-level breakpoint - collect elements inside
+        const bpNode = rules[key]
+        if (bpNode) {
+          for (const targetKey in bpNode) {
+            const actualKey = targetKey.replace(/^\$/, '')
+            if (this.isElementKey(actualKey)) {
+              elementSet.add(actualKey)
+            }
+          }
+        }
       } else if (key[0] === '[') {
         // Variant selector - collect elements from element map
         const elementMap = rules[key]
@@ -332,9 +343,29 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
             traverse(currentSelector, transformedRule, propPrefix)
           }
         } else if (key[0] === '@') {
-          const [mod, modValue] = this.parseAtSelector(key)
+          if (this.cssMediaMode) {
+            // CSS mode: flatten root-level breakpoint into each element's rule
+            // e.g. '@md': { link: { paddingX: 4 } } → link: { '@md_paddingX': 4 }
+            const bpNode = node[key]
+            for (const elemKey in bpNode) {
+              const actualKey = elemKey.replace(/^\$/, '')
+              if (!elementSet.has(actualKey)) continue
+              const elemProps = bpNode[elemKey]
+              selectorRule[actualKey] ??= {}
+              for (const prop in elemProps) {
+                if (prop[0] === '$' || elementSet.has(prop)) {
+                  continue
+                }
+                ;(selectorRule[actualKey] as Record<string, unknown>)[
+                  `${key}_${prop}`
+                ] = elemProps[prop]
+              }
+            }
+          } else {
+            const [mod, modValue] = this.parseAtSelector(key)
 
-          traverseMod(selector, mod, modValue, node[key])
+            traverseMod(selector, mod, modValue, node[key])
+          }
         } else if (this.isCrossElementSelector(key)) {
           // Cross-element selector like 'container:hover'
           const parts = key.split(':')
@@ -387,7 +418,11 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
             node[key],
             propPrefix,
           )
-          selectorRule[elementKey] = elementRule
+          if (selectorRule[elementKey]) {
+            Object.assign(selectorRule[elementKey], elementRule)
+          } else {
+            selectorRule[elementKey] = elementRule
+          }
         }
       }
     }

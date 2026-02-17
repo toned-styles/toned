@@ -311,6 +311,42 @@ describe('defineSystem', () => {
       )
     })
 
+    test('root-level @breakpoint in stylesheet is type-safe', () => {
+      const bgColor = defineToken({
+        values: ['primary', 'secondary'] as const,
+        resolve: (v) => ({
+          backgroundColor: v === 'primary' ? '#007bff' : '#6c757d',
+        }),
+      })
+
+      const paddingX = defineToken({
+        values: [1, 2, 3, 4] as const,
+        resolve: (v) => ({ paddingLeft: v * 4, paddingRight: v * 4 }),
+      })
+
+      const { stylesheet } = defineSystem(
+        { bgColor, paddingX },
+        { breakpoints: { __breakpoints: { sm: 640, md: 768 } } },
+      )
+
+      // This should compile without type errors:
+      // root-level '@md' targeting elements with token values
+      const styles = stylesheet({
+        container: { bgColor: 'primary', paddingX: 2 },
+        label: { bgColor: 'secondary' },
+        '@md': {
+          container: { paddingX: 4 },
+          label: { bgColor: 'primary' },
+        },
+        '@sm': {
+          container: { paddingX: 3 },
+        },
+      })
+
+      // The stylesheet should exist (types compiled without error)
+      expect(styles).toBeDefined()
+    })
+
     test('does not produce CSS variable output when no breakpoints are configured', () => {
       const { exec } = defineSystem({
         bgColor: defineToken({
