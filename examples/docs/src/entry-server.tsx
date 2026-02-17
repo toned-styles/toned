@@ -6,8 +6,9 @@ import {
   createMemoryHistory,
   createRouter,
 } from '@tanstack/react-router'
+import { PassThrough } from 'node:stream'
 import { StrictMode } from 'react'
-import { renderToString } from 'react-dom/server'
+import { renderToPipeableStream } from 'react-dom/server'
 import { generate } from '@toned/core/dom'
 import { system } from '@toned/systems/base'
 import { routeTree } from './routeTree.gen'
@@ -18,13 +19,25 @@ export async function render(url: string) {
 
   await router.load()
 
-  const html = renderToString(
-    <StrictMode>
-      <RouterProvider router={router} />
-    </StrictMode>,
-  )
+  return new Promise<string>((resolve, reject) => {
+    const chunks: Buffer[] = []
+    const passthrough = new PassThrough()
+    passthrough.on('data', (chunk) => chunks.push(chunk))
+    passthrough.on('end', () => resolve(Buffer.concat(chunks).toString()))
+    passthrough.on('error', reject)
 
-  return html
+    const { pipe } = renderToPipeableStream(
+      <StrictMode>
+        <RouterProvider router={router} />
+      </StrictMode>,
+      {
+        onAllReady() {
+          pipe(passthrough)
+        },
+        onError: reject,
+      },
+    )
+  })
 }
 
 export function generateCss() {
