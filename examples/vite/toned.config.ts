@@ -12,5 +12,10 @@ inject(system)
 // also add options to process css-variables/native/tailwind etc
 
 export default setConfig(
-  defineConfig({ ...reactConfig, useClassName: true, useMedia: true }),
+  defineConfig({
+    ...reactConfig,
+    useClassName: true,
+    useMedia: true,
+    mediaMode: 'css',
+  }),
 )

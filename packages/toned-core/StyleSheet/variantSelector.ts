@@ -84,7 +84,7 @@ export type VariantSelector<Mods extends ModType> = {
    * Select a variant value (or multiple values for OR semantics)
    * @example $.size("m") or $.alignment("icon-only", "icon-left")
    */
-  [K in keyof Mods as K extends string ? K : never]: K extends string
+  [K in keyof Mods as K extends string ? K : never]-?: K extends string
     ? <const V extends Exclude<Mods[K], undefined> & string>(
         ...values: [V, ...V[]]
       ) => VariantBuilder<Mods, { [P in K]: V }, `[${K}=${V}]`>
