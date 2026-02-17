@@ -115,7 +115,7 @@ describe('generate', () => {
         },
       })
 
-      expect(result).toContain('@media (min-width: 480px) { --media-sm: ; }')
+      expect(result).toContain('@media (min-width: 480px) { html { --media-sm: ; } }')
     })
 
     test('generates rules for multiple breakpoints', () => {
@@ -128,9 +128,9 @@ describe('generate', () => {
       expect(result).toContain('--media-sm: initial;')
       expect(result).toContain('--media-md: initial;')
       expect(result).toContain('--media-lg: initial;')
-      expect(result).toContain('@media (min-width: 480px) { --media-sm: ; }')
-      expect(result).toContain('@media (min-width: 768px) { --media-md: ; }')
-      expect(result).toContain('@media (min-width: 1024px) { --media-lg: ; }')
+      expect(result).toContain('@media (min-width: 480px) { html { --media-sm: ; } }')
+      expect(result).toContain('@media (min-width: 768px) { html { --media-md: ; } }')
+      expect(result).toContain('@media (min-width: 1024px) { html { --media-lg: ; } }')
     })
 
     test('wraps root variables in html {} rule', () => {
@@ -152,7 +152,7 @@ describe('generate', () => {
 
       expect(result).toContain('--media-small-screen: initial;')
       expect(result).toContain(
-        '@media (min-width: 480px) { --media-small-screen: ; }',
+        '@media (min-width: 480px) { html { --media-small-screen: ; } }',
       )
     })
   })
