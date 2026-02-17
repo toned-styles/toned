@@ -41,9 +41,9 @@
   "include": ["${configDir}/**/*", "./**/*"],
   "exclude": [
     "**/node_modules/**",
-    "${configDir}/.build",
-    "${configDir}/.dist",
-    "${configDir}/.tsc",
+    "**/.build/**",
+    "**/.dist/**",
+    "**/.tsc/**",
     ".config.*.ts"
   ]
 }
