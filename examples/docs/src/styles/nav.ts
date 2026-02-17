@@ -53,6 +53,9 @@ export const navStyles = stylesheet({
       bgColor: 'action',
       textColor: 'on_action',
       fontWeight: 500,
+      ':hover': {
+        bgColor: 'action',
+      },
     },
   },
 }))
