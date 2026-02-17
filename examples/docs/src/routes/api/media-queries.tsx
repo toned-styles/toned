@@ -88,10 +88,46 @@ export const breakpoints = defineBreakpoints({
         not available.
       </p>
 
+      <h2 {...s.h2}>Root-Level Breakpoints</h2>
+      <p>
+        Breakpoints can be declared at the root level of a stylesheet to apply
+        overrides across multiple elements at once. This is useful when a layout
+        change at a given viewport affects several elements simultaneously:
+      </p>
+      <CodeBlock>{`const cardStyles = stylesheet({
+  card: {
+    paddingX: 2,
+    flexLayout: 'column',
+  },
+  title: {
+    typo: 'heading_3',
+  },
+  sidebar: {
+    display: 'none',
+  },
+
+  // At medium viewports, adjust multiple elements together
+  '@md': {
+    card: { paddingX: 4, flexLayout: 'row' },
+    title: { typo: 'heading_2' },
+    sidebar: { display: 'flex' },
+  },
+
+  '@lg': {
+    card: { paddingX: 6 },
+  },
+})`}</CodeBlock>
+      <p>
+        Root-level and element-level breakpoints can be mixed freely. They
+        produce the same result — root-level is shorthand for applying
+        overrides to several elements under the same breakpoint.
+      </p>
+
       <h2 {...s.h2}>Breakpoints in Variants</h2>
       <p>
-        Responsive overrides also work inside variant blocks, letting you
-        combine conditional and responsive styling:
+        Responsive overrides work inside variant blocks too, letting you
+        combine conditional and responsive styling. Breakpoints can be set on
+        individual elements within a variant:
       </p>
       <CodeBlock>{`const styles = stylesheet({
   container: { paddingX: 2 },

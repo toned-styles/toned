@@ -15,7 +15,7 @@ export const navStyles = stylesheet({
       transition: 'background-color 0.15s ease, color 0.15s ease',
     },
     ':hover': {
-      bgColor: 'muted',
+      bgColor: 'subtle',
     },
   },
   section: {

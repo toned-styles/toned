@@ -42,9 +42,9 @@ const { system, stylesheet, t } = defineSystem(tokens, config)`}</CodeBlock>
       <h3 {...s.h3}>Return Value</h3>
       <p>An object with three properties:</p>
       <p>
-        <strong>system</strong> -- The compiled system object. Pass this to{' '}
-        <code {...s.code}>inject(system)</code> to generate CSS rules on the
-        web.
+        <strong>system</strong> -- The compiled system object. Pass this to
+        the Vite plugin (<code {...s.code}>toned({'{ system }'})</code>) or to{' '}
+        <code {...s.code}>inject(system)</code> for runtime CSS generation.
       </p>
       <p>
         <strong>stylesheet</strong> -- A factory function for creating type-safe
