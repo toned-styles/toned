@@ -168,8 +168,10 @@ export class Base {
 
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    const pseudoMode = this.config.pseudoMode ?? 'runtime'
     this.matcher = new StyleMatcher(rules, {
       cssMediaMode: mediaMode === 'css',
+      cssPseudoMode: pseudoMode === 'css',
     })
 
     if (mediaMode === 'runtime') {

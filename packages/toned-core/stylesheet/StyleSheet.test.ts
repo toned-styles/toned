@@ -31,6 +31,7 @@ const mockConfig: Config = {
   useClassName: false,
   useMedia: false,
   mediaMode: 'runtime',
+  pseudoMode: 'runtime',
   debug: false,
   getProps: function (this: Base, elementKey: string) {
     return { style: this.getCurrentStyle(elementKey).style }

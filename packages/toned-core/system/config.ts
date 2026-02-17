@@ -18,6 +18,7 @@ customGlobal[SYMBOL_CONFIG] ??= {
   useClassName: false,
   useMedia: false,
   mediaMode: 'runtime',
+  pseudoMode: 'runtime',
   debug: false,
 
   // Default getProps returns empty object - overridden by toned-react with actual style/className props

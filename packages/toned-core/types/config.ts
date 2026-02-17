@@ -27,6 +27,14 @@ export type Config = Readonly<{
    */
   mediaMode: 'runtime' | 'css' | false
 
+  /**
+   * Pseudo-state handling mode (:hover, :focus, :active):
+   * - 'runtime': JS event handlers update styles imperatively (default, works everywhere)
+   * - 'css': CSS custom property space-toggle (no JS needed, web only)
+   * - false: disable pseudo-state handling entirely
+   */
+  pseudoMode: 'runtime' | 'css' | false
+
   /** Enable debug logging */
   debug: boolean
 

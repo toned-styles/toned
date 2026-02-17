@@ -52,6 +52,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
   useAtPrefix: boolean
   cssMediaMode: boolean
+  cssPseudoMode: boolean
 
   scheme: MatcherScheme
   list: MatcherList
@@ -63,8 +64,9 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
   cache = new Map<number, any>()
 
-  constructor(rules: NestedStyleRules, options?: { cssMediaMode?: boolean }) {
+  constructor(rules: NestedStyleRules, options?: { cssMediaMode?: boolean; cssPseudoMode?: boolean }) {
     this.cssMediaMode = options?.cssMediaMode ?? false
+    this.cssPseudoMode = options?.cssPseudoMode ?? false
 
     const { scheme, list, interactions, elementSet } = this.flattenRules(rules)
 
@@ -209,16 +211,29 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
       for (const key in elementRule) {
         if (key[0] === ':') {
-          // Pseudo class (e.g., ':hover')
-          const mod = `${elementKey}${key}`
-          const modValue = 'true'
+          if (this.cssPseudoMode) {
+            // CSS mode: flatten pseudo-state styles with prefixed keys
+            // e.g. :hover { bgColor: 'red' } → { ':hover_bgColor': 'red' }
+            const pseudoRule = elementRule[key]
+            for (const prop in pseudoRule) {
+              if (prop[0] === '$' || elementSet.has(prop)) {
+                // Element reference inside pseudo — not supported in CSS mode flat output
+                continue
+              }
+              result[`${propPrefix}${key}_${prop}`] = pseudoRule[prop]
+            }
+          } else {
+            // Runtime mode: create mod selector for bitwise matching
+            const mod = `${elementKey}${key}`
+            const modValue = 'true'
 
-          interactions[elementKey] ??= {}
-          interactions[elementKey][key] = true
+            interactions[elementKey] ??= {}
+            interactions[elementKey][key] = true
 
-          const currentRule = processElementRule(elementKey, elementRule[key])
+            const currentRule = processElementRule(elementKey, elementRule[key])
 
-          traverseMod(selector, mod, modValue, currentRule)
+            traverseMod(selector, mod, modValue, currentRule)
+          }
         } else if (key[0] === '[') {
           // Variant selector inside element
           const [mod, modValue] = this.parseSelector(key)
