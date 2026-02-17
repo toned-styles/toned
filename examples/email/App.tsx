@@ -2,7 +2,7 @@ import './toned.config.ts'
 
 import { Body, Html } from '@react-email/components'
 import { setConfig } from '@toned/core'
-import { defineContext, TokensContext } from '@toned/react/ctx'
+import { defineContext, TokensContext } from '@toned/react/context'
 import shadcn from '@toned/themes/shadcn/config'
 import { use } from 'react'
 
