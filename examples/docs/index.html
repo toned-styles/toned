@@ -8,6 +8,16 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; }
       body { margin: 0; }
+      /* CSS-only mobile menu toggle (works without JS) */
+      @media (max-width: 767px) {
+        #menu-toggle:checked ~ nav {
+          display: block !important;
+          position: fixed !important;
+        }
+        #menu-toggle:checked ~ [role="presentation"] {
+          display: block !important;
+        }
+      }
     </style>
     <!--app-head-->
   </head>
