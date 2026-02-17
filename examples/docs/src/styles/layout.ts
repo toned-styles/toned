@@ -25,6 +25,7 @@ export const layoutStyles = stylesheet({
     left: 0,
     zIndex: 40,
     display: 'none',
+    alignSelf: 'stretch',
     style: {
       borderRight: '1px solid var(--border)',
       flexShrink: 0,
@@ -33,6 +34,7 @@ export const layoutStyles = stylesheet({
     '@md': {
       display: 'block',
       position: 'sticky',
+      alignSelf: 'flex-start',
     },
   },
   content: {
