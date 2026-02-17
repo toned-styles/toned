@@ -2,9 +2,97 @@
 
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+
+const alertDialogStyles = stylesheet({
+  overlay: {
+    bgColor: 'overlay',
+    position: 'fixed',
+    zIndex: 50,
+    style: { inset: 0 },
+  },
+  content: {
+    bgColor: 'default',
+    position: 'fixed',
+    zIndex: 50,
+    display: 'grid',
+    width: '100%',
+    gap: 4,
+    borderRadius: 'large',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    padding: 6,
+    shadow: 'large',
+    style: {
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      maxWidth: 'calc(100% - 2rem)',
+      outline: 'none',
+      animation: 'zoom-in 0.2s ease',
+    },
+    '@sm': {
+      maxWidth: '32rem',
+    },
+  },
+  contentSm: {
+    style: {
+      maxWidth: '20rem',
+    },
+  },
+  header: {
+    display: 'grid',
+    gap: 1.5,
+    style: {
+      placeItems: 'center',
+      textAlign: 'center',
+      gridTemplateRows: 'auto 1fr',
+    },
+  },
+  footer: {
+    display: 'flex',
+    gap: 2,
+    style: {
+      flexDirection: 'column-reverse',
+    },
+    '@sm': {
+      style: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+      },
+    },
+  },
+  footerSm: {
+    display: 'grid',
+    style: {
+      gridTemplateColumns: 'repeat(2, 1fr)',
+    },
+  },
+  title: {
+    fontSize: '1.125rem',
+    fontWeight: 600,
+  },
+  description: {
+    textColor: 'muted',
+    typo: 'body_small',
+  },
+  media: {
+    bgColor: 'action_secondary',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 'medium',
+    style: {
+      width: '4rem',
+      height: '4rem',
+      marginBottom: '0.5rem',
+    },
+  },
+})
 
 function AlertDialog({
   ...props
@@ -32,13 +120,13 @@ function AlertDialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
+  const s = useStyles(alertDialogStyles)
+
   return (
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
-      className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
-        className
-      )}
+      className={cn(s.overlay.className, className)}
+      style={s.overlay.style}
       {...props}
     />
   )
@@ -51,6 +139,9 @@ function AlertDialogContent({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
   size?: "default" | "sm"
 }) {
+  const s = useStyles(alertDialogStyles)
+  const sizeStyle = size === "sm" ? s.contentSm.style : undefined
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -58,9 +149,11 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 group/alert-dialog-content fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-lg",
+          s.content.className,
+          size === "sm" && s.contentSm.className,
           className
         )}
+        style={{ ...s.content.style, ...sizeStyle }}
         {...props}
       />
     </AlertDialogPortal>
@@ -71,13 +164,13 @@ function AlertDialogHeader({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const s = useStyles(alertDialogStyles)
+
   return (
     <div
       data-slot="alert-dialog-header"
-      className={cn(
-        "grid grid-rows-[auto_1fr] place-items-center gap-1.5 text-center has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:place-items-start sm:group-data-[size=default]/alert-dialog-content:text-left sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
-        className
-      )}
+      className={cn(s.header.className, className)}
+      style={s.header.style}
       {...props}
     />
   )
@@ -87,13 +180,13 @@ function AlertDialogFooter({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const s = useStyles(alertDialogStyles)
+
   return (
     <div
       data-slot="alert-dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
-        className
-      )}
+      className={cn(s.footer.className, className)}
+      style={s.footer.style}
       {...props}
     />
   )
@@ -103,13 +196,13 @@ function AlertDialogTitle({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+  const s = useStyles(alertDialogStyles)
+
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn(
-        "text-lg font-semibold sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
-        className
-      )}
+      className={cn(s.title.className, className)}
+      style={s.title.style}
       {...props}
     />
   )
@@ -119,10 +212,13 @@ function AlertDialogDescription({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
+  const s = useStyles(alertDialogStyles)
+
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(s.description.className, className)}
+      style={s.description.style}
       {...props}
     />
   )
@@ -132,13 +228,13 @@ function AlertDialogMedia({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const s = useStyles(alertDialogStyles)
+
   return (
     <div
       data-slot="alert-dialog-media"
-      className={cn(
-        "bg-muted mb-2 inline-flex size-16 items-center justify-center rounded-md sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
-        className
-      )}
+      className={cn(s.media.className, className)}
+      style={s.media.style}
       {...props}
     />
   )

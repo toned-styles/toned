@@ -10,6 +10,8 @@ import {
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
+const iconStyle = { width: '1rem', height: '1rem' }
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
@@ -18,11 +20,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
+        success: <CircleCheckIcon style={iconStyle} />,
+        info: <InfoIcon style={iconStyle} />,
+        warning: <TriangleAlertIcon style={iconStyle} />,
+        error: <OctagonXIcon style={iconStyle} />,
+        loading: <Loader2Icon style={{ ...iconStyle, animation: 'spin 1s linear infinite' }} />,
       }}
       style={
         {

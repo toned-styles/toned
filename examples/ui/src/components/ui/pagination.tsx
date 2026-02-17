@@ -4,17 +4,60 @@ import {
   ChevronRightIcon,
   MoreHorizontalIcon,
 } from "lucide-react"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants, type Button } from "@/components/ui/button"
+import { buttonStyles, type Button } from "@/components/ui/button"
+
+const paginationStyles = stylesheet({
+  root: {
+    display: 'flex',
+    justifyContent: 'center',
+    style: {
+      margin: '0 auto',
+      width: '100%',
+    },
+  },
+  content: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    style: {
+      flexDirection: 'row',
+    },
+  },
+  ellipsis: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    style: {
+      width: '2.25rem',
+      height: '2.25rem',
+    },
+  },
+  prevNextText: {
+    style: {
+      display: 'none',
+    },
+    '@sm': {
+      style: {
+        display: 'block',
+      },
+    },
+  },
+})
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+  const s = useStyles(paginationStyles)
+
   return (
     <nav
       role="navigation"
       aria-label="pagination"
       data-slot="pagination"
-      className={cn("mx-auto flex w-full justify-center", className)}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
@@ -24,10 +67,13 @@ function PaginationContent({
   className,
   ...props
 }: React.ComponentProps<"ul">) {
+  const s = useStyles(paginationStyles)
+
   return (
     <ul
       data-slot="pagination-content"
-      className={cn("flex flex-row items-center gap-1", className)}
+      className={cn(s.content.className, className)}
+      style={s.content.style}
       {...props}
     />
   )
@@ -48,18 +94,18 @@ function PaginationLink({
   size = "icon",
   ...props
 }: PaginationLinkProps) {
+  const s = useStyles(buttonStyles, {
+    variant: isActive ? "outline" : "ghost",
+    size,
+  })
+
   return (
     <a
       aria-current={isActive ? "page" : undefined}
       data-slot="pagination-link"
       data-active={isActive}
-      className={cn(
-        buttonVariants({
-          variant: isActive ? "outline" : "ghost",
-          size,
-        }),
-        className
-      )}
+      className={cn(s.root.className, className)}
+      style={s.root.style}
       {...props}
     />
   )
@@ -69,15 +115,18 @@ function PaginationPrevious({
   className,
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  const ps = useStyles(paginationStyles)
+
   return (
     <PaginationLink
       aria-label="Go to previous page"
       size="default"
-      className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
+      className={cn(className)}
+      style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
       {...props}
     >
       <ChevronLeftIcon />
-      <span className="hidden sm:block">Previous</span>
+      <span className={ps.prevNextText.className} style={ps.prevNextText.style}>Previous</span>
     </PaginationLink>
   )
 }
@@ -86,14 +135,17 @@ function PaginationNext({
   className,
   ...props
 }: React.ComponentProps<typeof PaginationLink>) {
+  const ps = useStyles(paginationStyles)
+
   return (
     <PaginationLink
       aria-label="Go to next page"
       size="default"
-      className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
+      className={cn(className)}
+      style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
       {...props}
     >
-      <span className="hidden sm:block">Next</span>
+      <span className={ps.prevNextText.className} style={ps.prevNextText.style}>Next</span>
       <ChevronRightIcon />
     </PaginationLink>
   )
@@ -103,14 +155,17 @@ function PaginationEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const s = useStyles(paginationStyles)
+
   return (
     <span
       aria-hidden
       data-slot="pagination-ellipsis"
-      className={cn("flex size-9 items-center justify-center", className)}
+      className={cn(s.ellipsis.className, className)}
+      style={s.ellipsis.style}
       {...props}
     >
-      <MoreHorizontalIcon className="size-4" />
+      <MoreHorizontalIcon style={{ width: '1rem', height: '1rem' }} />
       <span className="sr-only">More pages</span>
     </span>
   )

@@ -1,18 +1,76 @@
 "use client"
 
 import * as React from "react"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 
+const tableStyles = stylesheet({
+  container: {
+    position: 'relative',
+    width: '100%',
+    overflow: 'auto',
+  },
+  table: {
+    width: '100%',
+    typo: 'body_small',
+    style: { captionSide: 'bottom' },
+  },
+  footer: {
+    borderColor: 'default',
+    borderWidth: 'thin',
+    fontWeight: 500,
+    style: {
+      backgroundColor: 'color-mix(in srgb, var(--muted) 50%, transparent)',
+      borderTop: '1px solid var(--border)',
+    },
+  },
+  row: {
+    borderColor: 'default',
+    style: {
+      borderBottom: '1px solid var(--border)',
+      transition: 'background-color 0.15s',
+    },
+  },
+  head: {
+    textColor: 'default',
+    height: '2.5rem',
+    paddingX: 2,
+    fontWeight: 500,
+    style: {
+      textAlign: 'left',
+      verticalAlign: 'middle',
+      whiteSpace: 'nowrap' as const,
+    },
+  },
+  cell: {
+    padding: 2,
+    style: {
+      verticalAlign: 'middle',
+      whiteSpace: 'nowrap' as const,
+    },
+  },
+  caption: {
+    textColor: 'muted',
+    marginTop: 4,
+    typo: 'body_small',
+  },
+})
+
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const s = useStyles(tableStyles)
+
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={s.container.className}
+      style={s.container.style}
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn(s.table.className, className)}
+        style={s.table.style}
         {...props}
       />
     </div>
@@ -23,7 +81,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={className}
       {...props}
     />
   )
@@ -33,59 +91,59 @@ function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
   return (
     <tbody
       data-slot="table-body"
-      className={cn("[&_tr:last-child]:border-0", className)}
+      className={className}
       {...props}
     />
   )
 }
 
 function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
+  const s = useStyles(tableStyles)
+
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn(
-        "bg-muted/50 border-t font-medium [&>tr]:last:border-b-0",
-        className
-      )}
+      className={cn(s.footer.className, className)}
+      style={s.footer.style}
       {...props}
     />
   )
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+  const s = useStyles(tableStyles)
+
   return (
     <tr
       data-slot="table-row"
-      className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
-        className
-      )}
+      className={cn(s.row.className, className)}
+      style={s.row.style}
       {...props}
     />
   )
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+  const s = useStyles(tableStyles)
+
   return (
     <th
       data-slot="table-head"
-      className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className
-      )}
+      className={cn(s.head.className, className)}
+      style={s.head.style}
       {...props}
     />
   )
 }
 
 function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+  const s = useStyles(tableStyles)
+
   return (
     <td
       data-slot="table-cell"
-      className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
-        className
-      )}
+      className={cn(s.cell.className, className)}
+      style={s.cell.style}
       {...props}
     />
   )
@@ -95,10 +153,13 @@ function TableCaption({
   className,
   ...props
 }: React.ComponentProps<"caption">) {
+  const s = useStyles(tableStyles)
+
   return (
     <caption
       data-slot="table-caption"
-      className={cn("text-muted-foreground mt-4 text-sm", className)}
+      className={cn(s.caption.className, className)}
+      style={s.caption.style}
       {...props}
     />
   )

@@ -5,6 +5,8 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -42,6 +44,36 @@ function useCarousel() {
   return context
 }
 
+const carouselStyles = stylesheet({
+  root: {
+    position: 'relative',
+  },
+  viewport: {
+    style: {
+      overflow: 'hidden',
+    },
+  },
+  contentBase: {
+    display: 'flex',
+  },
+  item: {
+    style: {
+      minWidth: 0,
+      flexShrink: 0,
+      flexGrow: 0,
+      flexBasis: '100%',
+    },
+  },
+  navButton: {
+    position: 'absolute',
+    borderRadius: 'full',
+    style: {
+      width: '2rem',
+      height: '2rem',
+    },
+  },
+})
+
 function Carousel({
   orientation = "horizontal",
   opts,
@@ -60,6 +92,7 @@ function Carousel({
   )
   const [canScrollPrev, setCanScrollPrev] = React.useState(false)
   const [canScrollNext, setCanScrollNext] = React.useState(false)
+  const s = useStyles(carouselStyles)
 
   const onSelect = React.useCallback((api: CarouselApi) => {
     if (!api) return
@@ -120,7 +153,8 @@ function Carousel({
     >
       <div
         onKeyDownCapture={handleKeyDown}
-        className={cn("relative", className)}
+        className={cn(s.root.className, className)}
+        style={s.root.style}
         role="region"
         aria-roledescription="carousel"
         data-slot="carousel"
@@ -134,19 +168,23 @@ function Carousel({
 
 function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
   const { carouselRef, orientation } = useCarousel()
+  const s = useStyles(carouselStyles)
 
   return (
     <div
       ref={carouselRef}
-      className="overflow-hidden"
+      className={s.viewport.className}
+      style={s.viewport.style}
       data-slot="carousel-content"
     >
       <div
-        className={cn(
-          "flex",
-          orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
-          className
-        )}
+        className={cn(s.contentBase.className, className)}
+        style={{
+          ...s.contentBase.style,
+          ...(orientation === "horizontal"
+            ? { marginLeft: '-1rem' }
+            : { marginTop: '-1rem', flexDirection: 'column' }),
+        }}
         {...props}
       />
     </div>
@@ -155,17 +193,20 @@ function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
 
 function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
   const { orientation } = useCarousel()
+  const s = useStyles(carouselStyles)
 
   return (
     <div
       role="group"
       aria-roledescription="slide"
       data-slot="carousel-item"
-      className={cn(
-        "min-w-0 shrink-0 grow-0 basis-full",
-        orientation === "horizontal" ? "pl-4" : "pt-4",
-        className
-      )}
+      className={cn(s.item.className, className)}
+      style={{
+        ...s.item.style,
+        ...(orientation === "horizontal"
+          ? { paddingLeft: '1rem' }
+          : { paddingTop: '1rem' }),
+      }}
       {...props}
     />
   )
@@ -178,19 +219,20 @@ function CarouselPrevious({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+  const s = useStyles(carouselStyles)
 
   return (
     <Button
       data-slot="carousel-previous"
       variant={variant}
       size={size}
-      className={cn(
-        "absolute size-8 rounded-full",
-        orientation === "horizontal"
-          ? "top-1/2 -left-12 -translate-y-1/2"
-          : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
-        className
-      )}
+      className={cn(s.navButton.className, className)}
+      style={{
+        ...s.navButton.style,
+        ...(orientation === "horizontal"
+          ? { top: '50%', left: '-3rem', transform: 'translateY(-50%)' }
+          : { top: '-3rem', left: '50%', transform: 'translateX(-50%) rotate(90deg)' }),
+      }}
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}
@@ -208,19 +250,20 @@ function CarouselNext({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
+  const s = useStyles(carouselStyles)
 
   return (
     <Button
       data-slot="carousel-next"
       variant={variant}
       size={size}
-      className={cn(
-        "absolute size-8 rounded-full",
-        orientation === "horizontal"
-          ? "top-1/2 -right-12 -translate-y-1/2"
-          : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
-        className
-      )}
+      className={cn(s.navButton.className, className)}
+      style={{
+        ...s.navButton.style,
+        ...(orientation === "horizontal"
+          ? { top: '50%', right: '-3rem', transform: 'translateY(-50%)' }
+          : { bottom: '-3rem', left: '50%', transform: 'translateX(-50%) rotate(90deg)' }),
+      }}
       disabled={!canScrollNext}
       onClick={scrollNext}
       {...props}

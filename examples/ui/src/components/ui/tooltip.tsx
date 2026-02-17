@@ -1,7 +1,38 @@
 import * as React from "react"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const tooltipStyles = stylesheet({
+  content: {
+    bgColor: 'emphasized',
+    textColor: 'on_action',
+    zIndex: 50,
+    borderRadius: 'medium',
+    paddingX: 3,
+    paddingY: 1.5,
+    typo: 'caption',
+    style: {
+      width: 'fit-content',
+      textWrap: 'balance',
+      transformOrigin: 'var(--radix-tooltip-content-transform-origin)',
+      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
+    },
+  },
+  arrow: {
+    bgColor: 'emphasized',
+    svgFill: 'default',
+    zIndex: 50,
+    width: '0.625rem',
+    height: '0.625rem',
+    borderRadius: 'small',
+    style: {
+      transform: 'translateY(calc(-50% - 2px)) rotate(45deg)',
+    },
+  },
+})
 
 function TooltipProvider({
   delayDuration = 0,
@@ -34,19 +65,22 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  const s = useStyles(tooltipStyles)
+
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
-        className={cn(
-          "bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--radix-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance",
-          className
-        )}
+        className={cn(s.content.className, className)}
+        style={s.content.style}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+        <TooltipPrimitive.Arrow
+          className={s.arrow.className}
+          style={s.arrow.style}
+        />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )

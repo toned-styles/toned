@@ -1,37 +1,52 @@
-import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 
-const buttonGroupVariants = cva(
-  "flex w-fit items-stretch [&>*]:focus-visible:z-10 [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",
-  {
-    variants: {
-      orientation: {
-        horizontal:
-          "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none",
-        vertical:
-          "flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:border-t-0 [&>*:not(:last-child)]:rounded-b-none",
-      },
+const buttonGroupStyles = stylesheet({
+  root: {
+    display: 'flex',
+    alignItems: 'stretch',
+    style: {
+      width: 'fit-content',
     },
-    defaultVariants: {
-      orientation: "horizontal",
-    },
-  }
-)
+  },
+  text: {
+    bgColor: 'action_secondary',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    borderColor: 'default',
+    borderWidth: 'thin',
+    borderRadius: 'medium',
+    typo: 'body_small',
+    fontWeight: 500,
+    shadow: 'small',
+    paddingX: 4,
+  },
+})
 
 function ButtonGroup({
   className,
-  orientation,
+  orientation = "horizontal",
   ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
+}: React.ComponentProps<"div"> & {
+  orientation?: "horizontal" | "vertical"
+}) {
+  const s = useStyles(buttonGroupStyles)
+
   return (
     <div
       role="group"
       data-slot="button-group"
       data-orientation={orientation}
-      className={cn(buttonGroupVariants({ orientation }), className)}
+      className={cn(s.root.className, className)}
+      style={{
+        ...s.root.style,
+        ...(orientation === 'vertical' ? { flexDirection: 'column' } : undefined),
+      }}
       {...props}
     />
   )
@@ -45,13 +60,12 @@ function ButtonGroupText({
   asChild?: boolean
 }) {
   const Comp = asChild ? Slot.Root : "div"
+  const s = useStyles(buttonGroupStyles)
 
   return (
     <Comp
-      className={cn(
-        "bg-muted flex items-center gap-2 rounded-md border px-4 text-sm font-medium shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(s.text.className, className)}
+      style={s.text.style}
       {...props}
     />
   )
@@ -66,10 +80,8 @@ function ButtonGroupSeparator({
     <Separator
       data-slot="button-group-separator"
       orientation={orientation}
-      className={cn(
-        "bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto",
-        className
-      )}
+      className={cn(className)}
+      style={{ margin: 0, alignSelf: 'stretch', ...(orientation === 'vertical' ? { height: 'auto' } : undefined) }}
       {...props}
     />
   )
@@ -79,5 +91,4 @@ export {
   ButtonGroup,
   ButtonGroupSeparator,
   ButtonGroupText,
-  buttonGroupVariants,
 }

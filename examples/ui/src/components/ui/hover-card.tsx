@@ -1,7 +1,28 @@
 import * as React from "react"
 import { HoverCard as HoverCardPrimitive } from "radix-ui"
+import { useStyles } from "@toned/react"
+import { stylesheet } from "@toned/systems/base"
 
 import { cn } from "@/lib/utils"
+
+const hoverCardStyles = stylesheet({
+  content: {
+    bgColor: 'elevated',
+    textColor: 'default',
+    zIndex: 50,
+    borderRadius: 'medium',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    padding: 4,
+    shadow: 'medium',
+    style: {
+      width: '16rem',
+      outline: 'none',
+      transformOrigin: 'var(--radix-hover-card-content-transform-origin)',
+      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
+    },
+  },
+})
 
 function HoverCard({
   ...props
@@ -23,16 +44,16 @@ function HoverCardContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof HoverCardPrimitive.Content>) {
+  const s = useStyles(hoverCardStyles)
+
   return (
     <HoverCardPrimitive.Portal data-slot="hover-card-portal">
       <HoverCardPrimitive.Content
         data-slot="hover-card-content"
         align={align}
         sideOffset={sideOffset}
-        className={cn(
-          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-64 origin-(--radix-hover-card-content-transform-origin) rounded-md border p-4 shadow-md outline-hidden",
-          className
-        )}
+        className={cn(s.content.className, className)}
+        style={s.content.style}
         {...props}
       />
     </HoverCardPrimitive.Portal>
