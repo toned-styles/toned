@@ -11,6 +11,12 @@ const router = createRouter({
   defaultPreload: 'intent',
 })
 
+// Tell TanStack Router this is an SSR-hydrated page so Matches uses
+// SafeFragment instead of Suspense, matching the server-rendered tree.
+if (document.getElementById('root')?.firstElementChild) {
+  ;(router as any).ssr = true
+}
+
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
