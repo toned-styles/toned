@@ -14,14 +14,11 @@ async function ssrHandler(req, res) {
     let template = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf-8')
     template = await vite.transformIndexHtml(url, template)
 
-    const { render, generateCss } = await vite.ssrLoadModule('/src/entry-server.tsx')
+    const { render } = await vite.ssrLoadModule('/src/entry-server.tsx')
 
     const appHtml = await render(url)
-    const tonedCss = generateCss()
 
-    const html = template
-      .replace('<!--app-head-->', `<style id="toned/main">${tonedCss}</style>`)
-      .replace('<!--app-html-->', appHtml)
+    const html = template.replace('<!--app-html-->', appHtml)
 
     res.writeHead(200, { 'Content-Type': 'text/html' })
     res.end(html)
