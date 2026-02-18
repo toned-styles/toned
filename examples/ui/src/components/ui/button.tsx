@@ -14,8 +14,9 @@ const buttonStyles = stylesheet({
     typo: 'label_small',
     shadow: 'small',
     style: {
+      cursor: 'pointer',
       whiteSpace: 'nowrap' as const,
-      transition: 'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+      transition: 'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s, text-decoration 0.15s',
     },
   },
 }).variants<{
@@ -25,12 +26,18 @@ const buttonStyles = stylesheet({
   // Variants
   [$.variant('default')]: {
     root: { bgColor: 'action', textColor: 'on_action' },
+    'root:hover': {
+      root: { style: { opacity: 0.9 } },
+    },
   },
   [$.variant('destructive')]: {
     root: {
       bgColor: 'destructive',
       textColor: 'on_destructive',
       shadow: 'none',
+    },
+    'root:hover': {
+      root: { style: { opacity: 0.9 } },
     },
   },
   [$.variant('outline')]: {
@@ -40,6 +47,9 @@ const buttonStyles = stylesheet({
       borderWidth: 'thin',
       shadow: 'small',
     },
+    'root:hover': {
+      root: { bgColor: 'subtle', textColor: 'subtle' },
+    },
   },
   [$.variant('secondary')]: {
     root: {
@@ -47,10 +57,16 @@ const buttonStyles = stylesheet({
       textColor: 'on_action_secondary',
       shadow: 'none',
     },
+    'root:hover': {
+      root: { style: { opacity: 0.8 } },
+    },
   },
   [$.variant('ghost')]: {
     root: {
       shadow: 'none',
+    },
+    'root:hover': {
+      root: { bgColor: 'subtle', textColor: 'subtle' },
     },
   },
   [$.variant('link')]: {
@@ -58,6 +74,9 @@ const buttonStyles = stylesheet({
       textColor: 'action',
       shadow: 'none',
       style: { textUnderlineOffset: '4px' },
+    },
+    'root:hover': {
+      root: { style: { textDecoration: 'underline' } },
     },
   },
   // Sizes

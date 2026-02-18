@@ -356,10 +356,6 @@ body {
    Button
    ================================================================ */
 
-[data-slot="button"] {
-  cursor: pointer;
-}
-
 [data-slot="button"]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
@@ -374,33 +370,6 @@ body {
 [data-slot="button"] svg {
   pointer-events: none;
   flex-shrink: 0;
-}
-
-/* Button variant hover states */
-[data-slot="button"][data-variant="default"]:hover {
-  opacity: 0.9;
-}
-
-[data-slot="button"][data-variant="destructive"]:hover {
-  opacity: 0.9;
-}
-
-[data-slot="button"][data-variant="outline"]:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-[data-slot="button"][data-variant="secondary"]:hover {
-  opacity: 0.8;
-}
-
-[data-slot="button"][data-variant="ghost"]:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-[data-slot="button"][data-variant="link"]:hover {
-  text-decoration: underline;
 }
 
 /* ================================================================
@@ -586,11 +555,6 @@ body {
    Toggle
    ================================================================ */
 
-[data-slot="toggle"]:hover {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-}
-
 [data-slot="toggle"]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
@@ -609,11 +573,6 @@ body {
 [data-slot="toggle"][data-variant="outline"] {
   border: 1px solid var(--border);
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-}
-
-[data-slot="toggle"][data-variant="outline"]:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
 }
 
 [data-slot="toggle"] svg {
@@ -638,10 +597,6 @@ body {
 /* ================================================================
    Accordion
    ================================================================ */
-
-[data-slot="accordion-trigger"]:hover {
-  text-decoration: underline;
-}
 
 [data-slot="accordion-trigger"]:focus-visible {
   outline: none;
@@ -719,10 +674,6 @@ body {
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
 }
 
-[data-slot="dialog-close"]:hover {
-  opacity: 1;
-}
-
 /* ================================================================
    Sheet
    ================================================================ */
@@ -758,10 +709,6 @@ body {
 [data-slot="sheet-close"]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
-}
-
-[data-slot="sheet-close"]:hover {
-  opacity: 1;
 }
 
 /* Hide close button on mobile sidebar */
@@ -1056,14 +1003,6 @@ body {
    Breadcrumb
    ================================================================ */
 
-[data-slot="breadcrumb-link"]:hover {
-  color: var(--foreground);
-}
-
-[data-slot="breadcrumb-ellipsis"]:hover {
-  color: var(--foreground);
-}
-
 /* ================================================================
    Badge (variant colors via data-variant)
    ================================================================ */
@@ -1076,10 +1015,6 @@ body {
 /* ================================================================
    Table
    ================================================================ */
-
-[data-slot="table-row"]:hover {
-  background-color: color-mix(in srgb, var(--muted) 50%, transparent);
-}
 
 [data-slot="table-row"][data-state="selected"] {
   background-color: var(--muted);
@@ -1113,14 +1048,6 @@ body {
 [data-slot="slider-thumb"]:disabled {
   pointer-events: none;
   opacity: 0.5;
-}
-
-[data-slot="slider-thumb"]:hover {
-  cursor: grab;
-}
-
-[data-slot="slider-thumb"]:active {
-  cursor: grabbing;
 }
 
 /* ================================================================
@@ -1197,18 +1124,8 @@ body {
   box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
 }
 
-[data-slot="navigation-menu-trigger"]:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
 [data-slot="navigation-menu-trigger"][data-state="open"] svg:last-child {
   transform: rotate(180deg);
-}
-
-[data-slot="navigation-menu-link"]:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
 }
 
 [data-slot="navigation-menu-link"]:focus-visible {
@@ -1379,11 +1296,6 @@ body {
    Pagination
    ================================================================ */
 
-[data-slot="pagination-link"]:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
 /* ================================================================
    Chart
    ================================================================ */
@@ -1509,19 +1421,8 @@ body {
   display: none;
 }
 
-/* Sidebar menu button hover/active states */
-[data-slot="sidebar-menu-button"]:hover {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
-}
-
 [data-slot="sidebar-menu-button"]:focus-visible {
   box-shadow: 0 0 0 2px var(--sidebar-ring);
-}
-
-[data-slot="sidebar-menu-button"]:active {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
 }
 
 [data-slot="sidebar-menu-button"]:disabled,
@@ -1560,12 +1461,6 @@ body {
 /* When there's a menu-action, add right padding */
 .group\/menu-item:has([data-slot="sidebar-menu-action"]) [data-slot="sidebar-menu-button"] {
   padding-right: 2rem;
-}
-
-/* Sidebar menu action hover */
-[data-slot="sidebar-menu-action"]:hover {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
 }
 
 [data-slot="sidebar-menu-action"]:focus-visible {
@@ -1627,17 +1522,6 @@ body {
   }
 }
 
-/* Sidebar sub button hover/active */
-[data-slot="sidebar-menu-sub-button"]:hover {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
-}
-
-[data-slot="sidebar-menu-sub-button"]:active {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
-}
-
 [data-slot="sidebar-menu-sub-button"]:focus-visible {
   box-shadow: 0 0 0 2px var(--sidebar-ring);
 }
@@ -1675,12 +1559,6 @@ body {
 
 [data-slot="sidebar-group-label"]:focus-visible {
   box-shadow: 0 0 0 2px var(--sidebar-ring);
-}
-
-/* Sidebar group action hover + focus + hit area */
-[data-slot="sidebar-group-action"]:hover {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
 }
 
 [data-slot="sidebar-group-action"]:focus-visible {

@@ -27,6 +27,12 @@ const paginationStyles = stylesheet({
       flexDirection: 'row',
     },
   },
+  link: {
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
+  },
   ellipsis: {
     display: 'flex',
     alignItems: 'center',
@@ -92,13 +98,14 @@ function PaginationLink({
     variant: isActive ? "outline" : "ghost",
     size,
   })
+  const ps = useStyles(paginationStyles)
 
   return (
     <a
       aria-current={isActive ? "page" : undefined}
       data-slot="pagination-link"
       data-active={isActive}
-      {...s.root.with({ className })}
+      {...s.root.with(ps.link).with({ className })}
       {...props}
     />
   )

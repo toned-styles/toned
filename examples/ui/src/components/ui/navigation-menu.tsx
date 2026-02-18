@@ -48,6 +48,10 @@ const navMenuStyles = stylesheet({
       transition: 'color 0.15s, box-shadow 0.15s',
       border: 'none',
     },
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
   },
   triggerIcon: {
     position: 'relative',
@@ -116,6 +120,10 @@ const navMenuStyles = stylesheet({
     style: {
       transition: 'all 0.15s',
       outline: 'none',
+    },
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
     },
   },
   indicator: {

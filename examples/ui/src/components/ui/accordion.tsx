@@ -30,6 +30,9 @@ const accordionStyles = stylesheet({
       background: 'none',
       border: 'none',
     },
+    ':hover': {
+      style: { textDecoration: 'underline' },
+    },
   },
   triggerIcon: {
     textColor: 'muted',

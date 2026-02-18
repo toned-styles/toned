@@ -37,6 +37,9 @@ const sheetStyles = stylesheet({
       border: 'none',
       padding: 0,
     },
+    ':hover': {
+      style: { opacity: 1 },
+    },
   },
   header: {
     flexLayout: 'column',

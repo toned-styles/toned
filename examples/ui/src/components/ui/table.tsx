@@ -30,6 +30,9 @@ const tableStyles = stylesheet({
       borderBottom: '1px solid var(--border)',
       transition: 'background-color 0.15s',
     },
+    ':hover': {
+      bgColor: 'subtle',
+    },
   },
   head: {
     textColor: 'default',

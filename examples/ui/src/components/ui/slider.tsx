@@ -38,6 +38,12 @@ const sliderStyles = stylesheet({
       backgroundColor: 'white',
       transition: 'color 0.15s, box-shadow 0.15s',
     },
+    ':hover': {
+      style: { cursor: 'grab' },
+    },
+    ':active': {
+      style: { cursor: 'grabbing' },
+    },
   },
 })
 

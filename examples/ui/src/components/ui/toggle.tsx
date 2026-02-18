@@ -21,6 +21,10 @@ const toggleStyles = stylesheet({
       transition: 'color 0.15s, box-shadow 0.15s',
       border: 'none',
     },
+    ':hover': {
+      bgColor: 'muted',
+      textColor: 'muted',
+    },
   },
 }).variants<{
   variant: 'default' | 'outline'
@@ -37,6 +41,9 @@ const toggleStyles = stylesheet({
       borderWidth: 'thin',
       shadow: 'small',
       style: { background: 'transparent' },
+    },
+    'root:hover': {
+      root: { bgColor: 'subtle', textColor: 'subtle' },
     },
   },
   [$.size('default')]: {

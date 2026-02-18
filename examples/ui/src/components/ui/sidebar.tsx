@@ -191,6 +191,10 @@ const sidebarStyles = stylesheet({
     width: '1.25rem',
     top: '0.875rem',
     right: '0.75rem',
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
     style: {
       aspectRatio: '1',
       padding: 0,
@@ -231,6 +235,14 @@ const sidebarStyles = stylesheet({
     overflow: 'hidden',
     fontSize: '0.875rem',
     lineHeight: '1.25rem',
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
+    ':active': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
     style: {
       borderRadius: 'calc(var(--radius) - 2px)',
       padding: '0.5rem',
@@ -269,6 +281,10 @@ const sidebarStyles = stylesheet({
     width: '1.25rem',
     top: '0.375rem',
     right: '0.25rem',
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
     style: {
       aspectRatio: '1',
       padding: 0,
@@ -343,6 +359,14 @@ const sidebarStyles = stylesheet({
     overflow: 'hidden',
     fontSize: '0.875rem',
     lineHeight: '1.25rem',
+    ':hover': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
+    ':active': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+    },
     style: {
       transform: 'translateX(-1px)',
       borderRadius: 'calc(var(--radius) - 2px)',
