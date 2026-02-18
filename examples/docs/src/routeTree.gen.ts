@@ -10,7 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ConceptsRouteImport } from './routes/concepts'
+import { Route as UiRouteRouteImport } from './routes/ui/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UiIndexRouteImport } from './routes/ui/index'
+import { Route as UiComponentRouteImport } from './routes/ui/$component'
 import { Route as GuidesThemingRouteImport } from './routes/guides/theming'
 import { Route as GuidesSsrRouteImport } from './routes/guides/ssr'
 import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web'
@@ -27,10 +30,25 @@ const ConceptsRoute = ConceptsRouteImport.update({
   path: '/concepts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UiRouteRoute = UiRouteRouteImport.update({
+  id: '/ui',
+  path: '/ui',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const UiIndexRoute = UiIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => UiRouteRoute,
+} as any)
+const UiComponentRoute = UiComponentRouteImport.update({
+  id: '/$component',
+  path: '/$component',
+  getParentRoute: () => UiRouteRoute,
 } as any)
 const GuidesThemingRoute = GuidesThemingRouteImport.update({
   id: '/guides/theming',
@@ -85,6 +103,7 @@ const ApiDefineSystemRoute = ApiDefineSystemRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ui': typeof UiRouteRouteWithChildren
   '/concepts': typeof ConceptsRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
@@ -96,6 +115,8 @@ export interface FileRoutesByFullPath {
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
+  '/ui/$component': typeof UiComponentRoute
+  '/ui/': typeof UiIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,10 +131,13 @@ export interface FileRoutesByTo {
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
+  '/ui/$component': typeof UiComponentRoute
+  '/ui': typeof UiIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ui': typeof UiRouteRouteWithChildren
   '/concepts': typeof ConceptsRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
@@ -125,11 +149,14 @@ export interface FileRoutesById {
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
+  '/ui/$component': typeof UiComponentRoute
+  '/ui/': typeof UiIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ui'
     | '/concepts'
     | '/api/define-system'
     | '/api/media-queries'
@@ -141,6 +168,8 @@ export interface FileRouteTypes {
     | '/guides/react-web'
     | '/guides/ssr'
     | '/guides/theming'
+    | '/ui/$component'
+    | '/ui/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,9 +184,12 @@ export interface FileRouteTypes {
     | '/guides/react-web'
     | '/guides/ssr'
     | '/guides/theming'
+    | '/ui/$component'
+    | '/ui'
   id:
     | '__root__'
     | '/'
+    | '/ui'
     | '/concepts'
     | '/api/define-system'
     | '/api/media-queries'
@@ -169,10 +201,13 @@ export interface FileRouteTypes {
     | '/guides/react-web'
     | '/guides/ssr'
     | '/guides/theming'
+    | '/ui/$component'
+    | '/ui/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  UiRouteRoute: typeof UiRouteRouteWithChildren
   ConceptsRoute: typeof ConceptsRoute
   ApiDefineSystemRoute: typeof ApiDefineSystemRoute
   ApiMediaQueriesRoute: typeof ApiMediaQueriesRoute
@@ -195,12 +230,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConceptsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ui': {
+      id: '/ui'
+      path: '/ui'
+      fullPath: '/ui'
+      preLoaderRoute: typeof UiRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/ui/': {
+      id: '/ui/'
+      path: '/'
+      fullPath: '/ui/'
+      preLoaderRoute: typeof UiIndexRouteImport
+      parentRoute: typeof UiRouteRoute
+    }
+    '/ui/$component': {
+      id: '/ui/$component'
+      path: '/$component'
+      fullPath: '/ui/$component'
+      preLoaderRoute: typeof UiComponentRouteImport
+      parentRoute: typeof UiRouteRoute
     }
     '/guides/theming': {
       id: '/guides/theming'
@@ -275,8 +331,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface UiRouteRouteChildren {
+  UiComponentRoute: typeof UiComponentRoute
+  UiIndexRoute: typeof UiIndexRoute
+}
+
+const UiRouteRouteChildren: UiRouteRouteChildren = {
+  UiComponentRoute: UiComponentRoute,
+  UiIndexRoute: UiIndexRoute,
+}
+
+const UiRouteRouteWithChildren =
+  UiRouteRoute._addFileChildren(UiRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  UiRouteRoute: UiRouteRouteWithChildren,
   ConceptsRoute: ConceptsRoute,
   ApiDefineSystemRoute: ApiDefineSystemRoute,
   ApiMediaQueriesRoute: ApiMediaQueriesRoute,
