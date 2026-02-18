@@ -6,8 +6,6 @@ import { Checkbox as CheckboxPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const checkboxStyles = stylesheet({
   root: {
     borderColor: 'input',
@@ -24,8 +22,8 @@ const checkboxStyles = stylesheet({
   },
   indicator: {
     display: 'grid',
-    placeContent: 'center',
     style: {
+      placeContent: 'center',
       color: 'currentColor',
       transition: 'none',
     },
@@ -41,14 +39,12 @@ function Checkbox({
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     >
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
-        className={s.indicator.className}
-        style={s.indicator.style}
+        {...s.indicator}
       >
         <CheckIcon className="size-3.5" />
       </CheckboxPrimitive.Indicator>

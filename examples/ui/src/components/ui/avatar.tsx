@@ -3,8 +3,6 @@ import { Avatar as AvatarPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const avatarStyles = stylesheet({
   root: {
     position: 'relative',
@@ -41,9 +39,9 @@ const avatarStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 'full',
+    right: 0,
+    bottom: 0,
     style: {
-      right: 0,
-      bottom: 0,
       userSelect: 'none',
       boxShadow: '0 0 0 2px var(--background)',
     },
@@ -83,8 +81,7 @@ function Avatar({
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -99,8 +96,7 @@ function AvatarImage({
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn(s.image.className, className)}
-      style={s.image.style}
+      {...s.image.with({ className })}
       {...props}
     />
   )
@@ -115,8 +111,7 @@ function AvatarFallback({
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
-      className={cn(s.fallback.className, className)}
-      style={s.fallback.style}
+      {...s.fallback.with({ className })}
       {...props}
     />
   )
@@ -128,8 +123,7 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       data-slot="avatar-badge"
-      className={cn(s.badge.className, className)}
-      style={s.badge.style}
+      {...s.badge.with({ className })}
       {...props}
     />
   )
@@ -141,8 +135,7 @@ function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="avatar-group"
-      className={cn(s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className })}
       {...props}
     />
   )
@@ -157,8 +150,7 @@ function AvatarGroupCount({
   return (
     <div
       data-slot="avatar-group-count"
-      className={cn(s.groupCount.className, className)}
-      style={s.groupCount.style}
+      {...s.groupCount.with({ className })}
       {...props}
     />
   )

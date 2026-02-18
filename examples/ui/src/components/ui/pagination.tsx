@@ -37,13 +37,9 @@ const paginationStyles = stylesheet({
     },
   },
   prevNextText: {
-    style: {
-      display: 'none',
-    },
+    display: 'none',
     '@sm': {
-      style: {
-        display: 'block',
-      },
+      display: 'block',
     },
   },
 })
@@ -56,8 +52,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
       role="navigation"
       aria-label="pagination"
       data-slot="pagination"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -72,8 +67,7 @@ function PaginationContent({
   return (
     <ul
       data-slot="pagination-content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )
@@ -104,8 +98,7 @@ function PaginationLink({
       aria-current={isActive ? "page" : undefined}
       data-slot="pagination-link"
       data-active={isActive}
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -126,7 +119,7 @@ function PaginationPrevious({
       {...props}
     >
       <ChevronLeftIcon />
-      <span className={ps.prevNextText.className} style={ps.prevNextText.style}>Previous</span>
+      <span {...ps.prevNextText}>Previous</span>
     </PaginationLink>
   )
 }
@@ -145,7 +138,7 @@ function PaginationNext({
       style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
       {...props}
     >
-      <span className={ps.prevNextText.className} style={ps.prevNextText.style}>Next</span>
+      <span {...ps.prevNextText}>Next</span>
       <ChevronRightIcon />
     </PaginationLink>
   )
@@ -161,8 +154,7 @@ function PaginationEllipsis({
     <span
       aria-hidden
       data-slot="pagination-ellipsis"
-      className={cn(s.ellipsis.className, className)}
-      style={s.ellipsis.style}
+      {...s.ellipsis.with({ className })}
       {...props}
     >
       <MoreHorizontalIcon style={{ width: '1rem', height: '1rem' }} />

@@ -41,9 +41,9 @@ const inputOtpStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    pointerEvents: 'none',
     style: {
       inset: '0',
-      pointerEvents: 'none',
     },
   },
   caretBar: {
@@ -81,8 +81,7 @@ function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-otp-group"
-      className={cn(s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className })}
       {...props}
     />
   )
@@ -103,14 +102,13 @@ function InputOTPSlot({
     <div
       data-slot="input-otp-slot"
       data-active={isActive}
-      className={cn(s.slot.className, className)}
-      style={s.slot.style}
+      {...s.slot.with({ className })}
       {...props}
     >
       {char}
       {hasFakeCaret && (
-        <div className={s.caret.className} style={s.caret.style}>
-          <div className={s.caretBar.className} style={s.caretBar.style} />
+        <div {...s.caret}>
+          <div {...s.caretBar} />
         </div>
       )}
     </div>

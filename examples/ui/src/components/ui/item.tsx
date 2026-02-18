@@ -16,12 +16,12 @@ const itemStyles = stylesheet({
     alignItems: 'center',
     borderRadius: 'medium',
     typo: 'body_small',
+    flexWrap: 'wrap',
     style: {
       borderWidth: '1px',
       borderStyle: 'solid',
       borderColor: 'transparent',
       transition: 'color 0.1s',
-      flexWrap: 'wrap',
       outline: 'none',
     },
   },
@@ -52,9 +52,7 @@ const itemStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
-    style: {
-      flexShrink: 0,
-    },
+    flexShrink: '0',
   },
   mediaIcon: {
     bgColor: 'action_secondary',
@@ -71,10 +69,10 @@ const itemStyles = stylesheet({
   },
   mediaImage: {
     borderRadius: 'small',
+    overflow: 'hidden',
     style: {
       width: '2.5rem',
       height: '2.5rem',
-      overflow: 'hidden',
     },
   },
   content: {
@@ -99,14 +97,14 @@ const itemStyles = stylesheet({
   description: {
     textColor: 'muted',
     typo: 'body_small',
+    fontWeight: 400,
+    overflow: 'hidden',
     style: {
       lineHeight: '1.5',
-      fontWeight: 400,
       textWrap: 'balance',
       display: '-webkit-box',
       WebkitLineClamp: 2,
       WebkitBoxOrient: 'vertical',
-      overflow: 'hidden',
     },
   },
   actions: {
@@ -132,8 +130,7 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       role="list"
       data-slot="item-group"
-      className={cn("group/item-group", s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className: cn("group/item-group", className) })}
       {...props}
     />
   )
@@ -216,8 +213,7 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )
@@ -229,8 +225,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -242,8 +237,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="item-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )
@@ -255,8 +249,7 @@ function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-actions"
-      className={cn(s.actions.className, className)}
-      style={s.actions.style}
+      {...s.actions.with({ className })}
       {...props}
     />
   )
@@ -268,8 +261,7 @@ function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-header"
-      className={cn(s.headerFooter.className, className)}
-      style={s.headerFooter.style}
+      {...s.headerFooter.with({ className })}
       {...props}
     />
   )
@@ -281,8 +273,7 @@ function ItemFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-footer"
-      className={cn(s.headerFooter.className, className)}
-      style={s.headerFooter.style}
+      {...s.headerFooter.with({ className })}
       {...props}
     />
   )

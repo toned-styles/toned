@@ -8,7 +8,6 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 type CarouselApi = UseEmblaCarouselType[1]
@@ -49,18 +48,16 @@ const carouselStyles = stylesheet({
     position: 'relative',
   },
   viewport: {
-    style: {
-      overflow: 'hidden',
-    },
+    overflow: 'hidden',
   },
   contentBase: {
     display: 'flex',
   },
   item: {
+    minWidth: 0,
+    flexShrink: '0',
+    flexGrow: '0',
     style: {
-      minWidth: 0,
-      flexShrink: 0,
-      flexGrow: 0,
       flexBasis: '100%',
     },
   },
@@ -153,8 +150,7 @@ function Carousel({
     >
       <div
         onKeyDownCapture={handleKeyDown}
-        className={cn(s.root.className, className)}
-        style={s.root.style}
+        {...s.root.with({ className })}
         role="region"
         aria-roledescription="carousel"
         data-slot="carousel"
@@ -173,18 +169,16 @@ function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       ref={carouselRef}
-      className={s.viewport.className}
-      style={s.viewport.style}
+      {...s.viewport}
       data-slot="carousel-content"
     >
       <div
-        className={cn(s.contentBase.className, className)}
-        style={{
-          ...s.contentBase.style,
-          ...(orientation === "horizontal"
+        {...s.contentBase.with({
+          className,
+          style: orientation === "horizontal"
             ? { marginLeft: '-1rem' }
-            : { marginTop: '-1rem', flexDirection: 'column' }),
-        }}
+            : { marginTop: '-1rem', flexDirection: 'column' },
+        })}
         {...props}
       />
     </div>
@@ -200,13 +194,12 @@ function CarouselItem({ className, ...props }: React.ComponentProps<"div">) {
       role="group"
       aria-roledescription="slide"
       data-slot="carousel-item"
-      className={cn(s.item.className, className)}
-      style={{
-        ...s.item.style,
-        ...(orientation === "horizontal"
+      {...s.item.with({
+        className,
+        style: orientation === "horizontal"
           ? { paddingLeft: '1rem' }
-          : { paddingTop: '1rem' }),
-      }}
+          : { paddingTop: '1rem' },
+      })}
       {...props}
     />
   )
@@ -226,13 +219,12 @@ function CarouselPrevious({
       data-slot="carousel-previous"
       variant={variant}
       size={size}
-      className={cn(s.navButton.className, className)}
-      style={{
-        ...s.navButton.style,
-        ...(orientation === "horizontal"
+      {...s.navButton.with({
+        className,
+        style: orientation === "horizontal"
           ? { top: '50%', left: '-3rem', transform: 'translateY(-50%)' }
-          : { top: '-3rem', left: '50%', transform: 'translateX(-50%) rotate(90deg)' }),
-      }}
+          : { top: '-3rem', left: '50%', transform: 'translateX(-50%) rotate(90deg)' },
+      })}
       disabled={!canScrollPrev}
       onClick={scrollPrev}
       {...props}
@@ -257,13 +249,12 @@ function CarouselNext({
       data-slot="carousel-next"
       variant={variant}
       size={size}
-      className={cn(s.navButton.className, className)}
-      style={{
-        ...s.navButton.style,
-        ...(orientation === "horizontal"
+      {...s.navButton.with({
+        className,
+        style: orientation === "horizontal"
           ? { top: '50%', right: '-3rem', transform: 'translateY(-50%)' }
-          : { bottom: '-3rem', left: '50%', transform: 'translateX(-50%) rotate(90deg)' }),
-      }}
+          : { bottom: '-3rem', left: '50%', transform: 'translateX(-50%) rotate(90deg)' },
+      })}
       disabled={!canScrollNext}
       onClick={scrollNext}
       {...props}

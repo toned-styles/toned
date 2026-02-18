@@ -17,18 +17,16 @@ const drawerStyles = stylesheet({
     position: 'fixed',
     zIndex: 50,
     flexLayout: 'column',
-    style: {
-      height: 'auto',
-    },
+    height: 'auto',
   },
   handle: {
     bgColor: 'action_secondary',
     borderRadius: 'full',
+    display: 'none',
+    width: '100px',
+    height: '0.5rem',
+    flexShrink: '0',
     style: {
-      display: 'none',
-      width: '100px',
-      height: '0.5rem',
-      flexShrink: 0,
       margin: '1rem auto 0',
     },
   },
@@ -89,8 +87,7 @@ function DrawerOverlay({
   return (
     <DrawerPrimitive.Overlay
       data-slot="drawer-overlay"
-      className={cn(s.overlay.className, className)}
-      style={s.overlay.style}
+      {...s.overlay.with({ className })}
       {...props}
     />
   )
@@ -108,15 +105,11 @@ function DrawerContent({
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
-        className={cn("group/drawer-content", s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className: cn("group/drawer-content", className) })}
         {...props}
       >
         <div
-          className={s.handle.className}
-          style={{
-            ...s.handle.style,
-          }}
+          {...s.handle}
           data-slot="drawer-handle"
         />
         {children}
@@ -131,8 +124,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="drawer-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -144,8 +136,7 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="drawer-footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     />
   )
@@ -160,8 +151,7 @@ function DrawerTitle({
   return (
     <DrawerPrimitive.Title
       data-slot="drawer-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -176,8 +166,7 @@ function DrawerDescription({
   return (
     <DrawerPrimitive.Description
       data-slot="drawer-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )

@@ -4,7 +4,6 @@ import { Accordion as AccordionPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 
 const accordionStyles = stylesheet({
   item: {
@@ -19,6 +18,7 @@ const accordionStyles = stylesheet({
     borderRadius: 'medium',
     typo: 'body_small',
     fontWeight: 500,
+    cursor: 'pointer',
     style: {
       flex: 1,
       justifyContent: 'space-between',
@@ -29,25 +29,22 @@ const accordionStyles = stylesheet({
       outline: 'none',
       background: 'none',
       border: 'none',
-      cursor: 'pointer',
     },
   },
   triggerIcon: {
     textColor: 'muted',
+    pointerEvents: 'none',
     style: {
       width: '1rem',
       height: '1rem',
       flexShrink: 0,
-      pointerEvents: 'none',
       transform: 'translateY(2px)',
       transition: 'transform 0.2s',
     },
   },
   content: {
     typo: 'body_small',
-    style: {
-      overflow: 'hidden',
-    },
+    overflow: 'hidden',
   },
   contentInner: {
     style: {
@@ -72,8 +69,7 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -90,14 +86,12 @@ function AccordionTrigger({
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
-        className={cn(s.trigger.className, className)}
-        style={s.trigger.style}
+        {...s.trigger.with({ className })}
         {...props}
       >
         {children}
         <ChevronDownIcon
-          className={s.triggerIcon.className}
-          style={s.triggerIcon.style}
+          {...s.triggerIcon}
         />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
@@ -114,13 +108,11 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className={s.content.className}
-      style={s.content.style}
+      {...s.content}
       {...props}
     >
       <div
-        className={cn(s.contentInner.className, className)}
-        style={s.contentInner.style}
+        {...s.contentInner.with({ className })}
       >
         {children}
       </div>

@@ -3,8 +3,6 @@ import { HoverCard as HoverCardPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const hoverCardStyles = stylesheet({
   content: {
     bgColor: 'elevated',
@@ -52,8 +50,7 @@ function HoverCardContent({
         data-slot="hover-card-content"
         align={align}
         sideOffset={sideOffset}
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         {...props}
       />
     </HoverCardPrimitive.Portal>

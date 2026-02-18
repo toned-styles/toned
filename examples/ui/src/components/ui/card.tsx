@@ -2,8 +2,6 @@ import * as React from "react"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const cardStyles = stylesheet({
   root: {
     bgColor: 'elevated',
@@ -18,11 +16,11 @@ const cardStyles = stylesheet({
   },
   header: {
     paddingX: 6,
+    alignItems: 'flex-start',
     style: {
       display: 'grid',
       gridAutoRows: 'min-content',
       gridTemplateRows: 'auto auto',
-      alignItems: 'start',
       gap: '8px',
     },
   },
@@ -35,12 +33,12 @@ const cardStyles = stylesheet({
     typo: 'body_small',
   },
   action: {
+    alignSelf: 'flex-start',
+    justifySelf: 'flex-end',
     style: {
       gridColumnStart: 2,
       gridRowStart: 1,
       gridRowEnd: 'span 2',
-      alignSelf: 'start',
-      justifySelf: 'end',
     },
   },
   content: {
@@ -59,8 +57,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -72,8 +69,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -85,8 +81,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -98,8 +93,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )
@@ -111,8 +105,7 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-action"
-      className={cn(s.action.className, className)}
-      style={s.action.style}
+      {...s.action.with({ className })}
       {...props}
     />
   )
@@ -124,8 +117,7 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )
@@ -137,8 +129,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     />
   )

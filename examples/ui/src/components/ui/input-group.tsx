@@ -16,10 +16,10 @@ const inputGroupStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     position: 'relative',
+    width: '100%',
+    minWidth: 0,
     style: {
-      width: '100%',
       height: '2.25rem',
-      minWidth: 0,
       outline: 'none',
       transition: 'color 0.15s, box-shadow 0.15s',
     },
@@ -32,9 +32,9 @@ const inputGroupStyles = stylesheet({
     gap: 2,
     typo: 'body_small',
     fontWeight: 500,
+    cursor: 'text',
     style: {
       height: 'auto',
-      cursor: 'text',
       paddingTop: '0.375rem',
       paddingBottom: '0.375rem',
       userSelect: 'none',
@@ -86,8 +86,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="input-group"
       role="group"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -150,8 +149,7 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
 
   return (
     <span
-      className={cn(s.text.className, className)}
-      style={s.text.style}
+      {...s.text.with({ className })}
       {...props}
     />
   )

@@ -41,6 +41,7 @@ const tabsStyles = stylesheet({
     paddingY: 1,
     typo: 'body_small',
     fontWeight: 500,
+    cursor: 'pointer',
     style: {
       flex: 1,
       position: 'relative',
@@ -49,7 +50,6 @@ const tabsStyles = stylesheet({
       outline: 'none',
       border: '1px solid transparent',
       background: 'none',
-      cursor: 'pointer',
     },
   },
   content: {
@@ -72,11 +72,12 @@ function Tabs({
       data-slot="tabs"
       data-orientation={orientation}
       orientation={orientation}
-      className={cn(s.root.className, className)}
-      style={{
-        ...s.root.style,
-        flexDirection: orientation === "horizontal" ? "column" : undefined,
-      }}
+      {...s.root.with({
+        className,
+        style: {
+          flexDirection: orientation === "horizontal" ? "column" : undefined,
+        },
+      })}
       {...props}
     />
   )
@@ -120,8 +121,7 @@ function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
-      className={cn(s.trigger.className, className)}
-      style={s.trigger.style}
+      {...s.trigger.with({ className })}
       {...props}
     />
   )
@@ -136,8 +136,7 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )

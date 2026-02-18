@@ -3,8 +3,6 @@ import { Switch as SwitchPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const switchStyles = stylesheet({
   root: {
     display: 'inline-flex',
@@ -22,8 +20,8 @@ const switchStyles = stylesheet({
     bgColor: 'default',
     pointerEvents: 'none',
     borderRadius: 'full',
+    display: 'block',
     style: {
-      display: 'block',
       boxShadow: 'none',
       transition: 'transform 0.15s',
     },
@@ -43,14 +41,12 @@ function Switch({
     <SwitchPrimitive.Root
       data-slot="switch"
       data-size={size}
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     >
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
-        className={s.thumb.className}
-        style={s.thumb.style}
+        {...s.thumb}
       />
     </SwitchPrimitive.Root>
   )

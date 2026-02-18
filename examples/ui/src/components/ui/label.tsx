@@ -3,8 +3,6 @@ import { Label as LabelPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const labelStyles = stylesheet({
   root: {
     display: 'flex',
@@ -26,8 +24,7 @@ function Label({
   return (
     <LabelPrimitive.Root
       data-slot="label"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )

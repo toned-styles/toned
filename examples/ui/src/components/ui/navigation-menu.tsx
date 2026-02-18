@@ -41,12 +41,12 @@ const navMenuStyles = stylesheet({
     paddingX: 4,
     paddingY: 2,
     height: '2.25rem',
+    cursor: 'pointer',
     style: {
       width: 'max-content',
       outline: 'none',
       transition: 'color 0.15s, box-shadow 0.15s',
       border: 'none',
-      cursor: 'pointer',
     },
   },
   triggerIcon: {
@@ -93,11 +93,11 @@ const navMenuStyles = stylesheet({
     borderRadius: 'medium',
     shadow: 'medium',
     position: 'relative',
+    overflow: 'hidden',
     style: {
       marginTop: '0.375rem',
       height: 'var(--radix-navigation-menu-viewport-height)',
       width: '100%',
-      overflow: 'hidden',
       transformOrigin: 'top center',
     },
     '@md': {
@@ -123,10 +123,10 @@ const navMenuStyles = stylesheet({
     alignItems: 'flex-end',
     justifyContent: 'center',
     zIndex: 1,
+    overflow: 'hidden',
     style: {
       top: '100%',
       height: '0.375rem',
-      overflow: 'hidden',
     },
   },
   indicatorArrow: {
@@ -157,8 +157,7 @@ function NavigationMenu({
     <NavigationMenuPrimitive.Root
       data-slot="navigation-menu"
       data-viewport={viewport}
-      className={cn("group/navigation-menu", s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className: cn("group/navigation-menu", className) })}
       {...props}
     >
       {children}
@@ -176,8 +175,7 @@ function NavigationMenuList({
   return (
     <NavigationMenuPrimitive.List
       data-slot="navigation-menu-list"
-      className={cn(s.list.className, className)}
-      style={s.list.style}
+      {...s.list.with({ className })}
       {...props}
     />
   )
@@ -192,8 +190,7 @@ function NavigationMenuItem({
   return (
     <NavigationMenuPrimitive.Item
       data-slot="navigation-menu-item"
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -211,14 +208,12 @@ function NavigationMenuTrigger({
   return (
     <NavigationMenuPrimitive.Trigger
       data-slot="navigation-menu-trigger"
-      className={cn("group", s.trigger.className, className)}
-      style={s.trigger.style}
+      {...s.trigger.with({ className: cn("group", className) })}
       {...props}
     >
       {children}{" "}
       <ChevronDownIcon
-        className={s.triggerIcon.className}
-        style={s.triggerIcon.style}
+        {...s.triggerIcon}
         aria-hidden="true"
       />
     </NavigationMenuPrimitive.Trigger>
@@ -234,8 +229,7 @@ function NavigationMenuContent({
   return (
     <NavigationMenuPrimitive.Content
       data-slot="navigation-menu-content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )
@@ -248,11 +242,10 @@ function NavigationMenuViewport({
   const s = useStyles(navMenuStyles)
 
   return (
-    <div className={s.viewportWrapper.className} style={s.viewportWrapper.style}>
+    <div {...s.viewportWrapper}>
       <NavigationMenuPrimitive.Viewport
         data-slot="navigation-menu-viewport"
-        className={cn(s.viewport.className, className)}
-        style={s.viewport.style}
+        {...s.viewport.with({ className })}
         {...props}
       />
     </div>
@@ -268,8 +261,7 @@ function NavigationMenuLink({
   return (
     <NavigationMenuPrimitive.Link
       data-slot="navigation-menu-link"
-      className={cn(s.link.className, className)}
-      style={s.link.style}
+      {...s.link.with({ className })}
       {...props}
     />
   )
@@ -284,11 +276,10 @@ function NavigationMenuIndicator({
   return (
     <NavigationMenuPrimitive.Indicator
       data-slot="navigation-menu-indicator"
-      className={cn(s.indicator.className, className)}
-      style={s.indicator.style}
+      {...s.indicator.with({ className })}
       {...props}
     >
-      <div className={s.indicatorArrow.className} style={s.indicatorArrow.style} />
+      <div {...s.indicatorArrow} />
     </NavigationMenuPrimitive.Indicator>
   )
 }

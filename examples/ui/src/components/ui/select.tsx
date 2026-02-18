@@ -6,7 +6,6 @@ import { Select as SelectPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 
 const selectStyles = stylesheet({
   trigger: {
@@ -21,8 +20,8 @@ const selectStyles = stylesheet({
     paddingY: 2,
     typo: 'body_small',
     shadow: 'small',
+    width: 'fit-content',
     style: {
-      width: 'fit-content',
       backgroundColor: 'transparent',
       whiteSpace: 'nowrap' as const,
       outline: 'none',
@@ -39,11 +38,11 @@ const selectStyles = stylesheet({
     borderWidth: 'thin',
     shadow: 'medium',
     overflow: 'hidden',
+    minWidth: '8rem',
+    overflowX: 'hidden',
     style: {
-      minWidth: '8rem',
       maxHeight: 'var(--radix-select-content-available-height)',
       overflowY: 'auto',
-      overflowX: 'hidden',
       transformOrigin: 'var(--radix-select-content-transform-origin)',
     },
   },
@@ -118,8 +117,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      className={cn(s.trigger.className, className)}
-      style={s.trigger.style}
+      {...s.trigger.with({ className })}
       {...props}
     >
       {children}
@@ -143,8 +141,7 @@ function SelectContent({
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         data-slot="select-content"
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         position={position}
         align={align}
         {...props}
@@ -178,8 +175,7 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn(s.label.className, className)}
-      style={s.label.style}
+      {...s.label.with({ className })}
       {...props}
     />
   )
@@ -195,8 +191,7 @@ function SelectItem({
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     >
       <span
@@ -229,8 +224,7 @@ function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn(s.separator.className, className)}
-      style={s.separator.style}
+      {...s.separator.with({ className })}
       {...props}
     />
   )
@@ -245,8 +239,7 @@ function SelectScrollUpButton({
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
-      className={cn(s.scrollButton.className, className)}
-      style={s.scrollButton.style}
+      {...s.scrollButton.with({ className })}
       {...props}
     >
       <ChevronUpIcon className="size-4" />
@@ -263,8 +256,7 @@ function SelectScrollDownButton({
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
-      className={cn(s.scrollButton.className, className)}
-      style={s.scrollButton.style}
+      {...s.scrollButton.with({ className })}
       {...props}
     >
       <ChevronDownIcon className="size-4" />

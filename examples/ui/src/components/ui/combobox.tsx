@@ -23,9 +23,9 @@ const comboboxStyles = stylesheet({
     borderRadius: 'medium',
     shadow: 'medium',
     position: 'relative',
+    overflow: 'hidden',
     style: {
       maxHeight: '24rem',
-      overflow: 'hidden',
       borderWidth: '1px',
       borderStyle: 'solid',
       borderColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)',
@@ -46,9 +46,9 @@ const comboboxStyles = stylesheet({
     borderRadius: 'small',
     typo: 'body_small',
     position: 'relative',
+    width: '100%',
+    cursor: 'default',
     style: {
-      width: '100%',
-      cursor: 'default',
       paddingTop: '0.375rem',
       paddingBottom: '0.375rem',
       paddingRight: '2rem',
@@ -62,31 +62,31 @@ const comboboxStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    pointerEvents: 'none',
     style: {
       right: '0.5rem',
       width: '1rem',
       height: '1rem',
-      pointerEvents: 'none',
     },
   },
   label: {
     textColor: 'muted',
+    fontSize: '0.75rem',
+    lineHeight: '1rem',
     style: {
       paddingLeft: '0.5rem',
       paddingRight: '0.5rem',
       paddingTop: '0.375rem',
       paddingBottom: '0.375rem',
-      fontSize: '0.75rem',
-      lineHeight: '1rem',
     },
   },
   empty: {
     textColor: 'muted',
     typo: 'body_small',
+    display: 'none',
+    width: '100%',
+    justifyContent: 'center',
     style: {
-      display: 'none',
-      width: '100%',
-      justifyContent: 'center',
       paddingTop: '0.5rem',
       paddingBottom: '0.5rem',
       textAlign: 'center',
@@ -94,18 +94,16 @@ const comboboxStyles = stylesheet({
   },
   separator: {
     bgColor: 'subtle',
+    height: '1px',
     style: {
       margin: '0.25rem -0.25rem',
-      height: '1px',
     },
   },
   triggerIcon: {
     textColor: 'muted',
-    style: {
-      pointerEvents: 'none',
-      width: '1rem',
-      height: '1rem',
-    },
+    pointerEvents: 'none',
+    width: '1rem',
+    height: '1rem',
   },
   chips: {
     borderColor: 'default',
@@ -115,8 +113,8 @@ const comboboxStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     typo: 'body_small',
+    minHeight: '2.25rem',
     style: {
-      minHeight: '2.25rem',
       flexWrap: 'wrap',
       gap: '0.375rem',
       background: 'transparent',
@@ -135,20 +133,20 @@ const comboboxStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 'small',
+    width: 'fit-content',
+    fontSize: '0.75rem',
+    fontWeight: 500,
     style: {
       height: 'calc(1.375rem)',
-      width: 'fit-content',
       gap: '0.25rem',
       paddingLeft: '0.375rem',
       paddingRight: '0.375rem',
-      fontSize: '0.75rem',
-      fontWeight: 500,
       whiteSpace: 'nowrap',
     },
   },
   chipInput: {
+    minWidth: '4rem',
     style: {
-      minWidth: '4rem',
       flex: 1,
       outline: 'none',
     },
@@ -177,8 +175,7 @@ function ComboboxTrigger({
       {children}
       <ChevronDownIcon
         data-slot="combobox-trigger-icon"
-        className={s.triggerIcon.className}
-        style={s.triggerIcon.style}
+        {...s.triggerIcon}
       />
     </ComboboxPrimitive.Trigger>
   )
@@ -261,14 +258,15 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           data-chips={!!anchor}
-          className={cn("group/combobox-content", s.content.className, className)}
-          style={{
-            ...s.content.style,
-            width: 'var(--anchor-width)',
-            maxWidth: 'var(--available-width)',
-            minWidth: 'calc(var(--anchor-width) + 1.75rem)',
-            transformOrigin: 'var(--transform-origin)',
-          }}
+          {...s.content.with({
+            className: cn("group/combobox-content", className),
+            style: {
+              width: 'var(--anchor-width)',
+              maxWidth: 'var(--available-width)',
+              minWidth: 'calc(var(--anchor-width) + 1.75rem)',
+              transformOrigin: 'var(--transform-origin)',
+            },
+          })}
           {...props}
         />
       </ComboboxPrimitive.Positioner>
@@ -282,8 +280,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
     <ComboboxPrimitive.List
       data-slot="combobox-list"
-      className={cn(s.list.className, className)}
-      style={s.list.style}
+      {...s.list.with({ className })}
       {...props}
     />
   )
@@ -299,15 +296,14 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     >
       {children}
       <ComboboxPrimitive.ItemIndicator
         data-slot="combobox-item-indicator"
         render={
-          <span className={s.itemIndicator.className} style={s.itemIndicator.style} />
+          <span {...s.itemIndicator} />
         }
       >
         <CheckIcon style={{ pointerEvents: 'none', width: '1rem', height: '1rem' }} />
@@ -335,8 +331,7 @@ function ComboboxLabel({
   return (
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
-      className={cn(s.label.className, className)}
-      style={s.label.style}
+      {...s.label.with({ className })}
       {...props}
     />
   )
@@ -354,8 +349,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   return (
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
-      className={cn(s.empty.className, className)}
-      style={s.empty.style}
+      {...s.empty.with({ className })}
       {...props}
     />
   )
@@ -370,8 +364,7 @@ function ComboboxSeparator({
   return (
     <ComboboxPrimitive.Separator
       data-slot="combobox-separator"
-      className={cn(s.separator.className, className)}
-      style={s.separator.style}
+      {...s.separator.with({ className })}
       {...props}
     />
   )
@@ -387,8 +380,7 @@ function ComboboxChips({
   return (
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
-      className={cn(s.chips.className, className)}
-      style={s.chips.style}
+      {...s.chips.with({ className })}
       {...props}
     />
   )
@@ -407,8 +399,7 @@ function ComboboxChip({
   return (
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
-      className={cn(s.chip.className, className)}
-      style={s.chip.style}
+      {...s.chip.with({ className })}
       {...props}
     >
       {children}
@@ -435,8 +426,7 @@ function ComboboxChipsInput({
   return (
     <ComboboxPrimitive.Input
       data-slot="combobox-chip-input"
-      className={cn(s.chipInput.className, className)}
-      style={s.chipInput.style}
+      {...s.chipInput.with({ className })}
       {...props}
     />
   )

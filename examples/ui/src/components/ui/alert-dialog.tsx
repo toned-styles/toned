@@ -27,9 +27,9 @@ const alertDialogStyles = stylesheet({
     borderWidth: 'thin',
     padding: 6,
     shadow: 'large',
+    top: '50%',
+    left: '50%',
     style: {
-      top: '50%',
-      left: '50%',
       transform: 'translate(-50%, -50%)',
       maxWidth: 'calc(100% - 2rem)',
       outline: 'none',
@@ -40,9 +40,7 @@ const alertDialogStyles = stylesheet({
     },
   },
   contentSm: {
-    style: {
-      maxWidth: '20rem',
-    },
+    maxWidth: '20rem',
   },
   header: {
     display: 'grid',
@@ -60,9 +58,9 @@ const alertDialogStyles = stylesheet({
       flexDirection: 'column-reverse',
     },
     '@sm': {
+      justifyContent: 'flex-end',
       style: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
       },
     },
   },
@@ -86,9 +84,9 @@ const alertDialogStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 'medium',
+    width: '4rem',
+    height: '4rem',
     style: {
-      width: '4rem',
-      height: '4rem',
       marginBottom: '0.5rem',
     },
   },
@@ -125,8 +123,7 @@ function AlertDialogOverlay({
   return (
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
-      className={cn(s.overlay.className, className)}
-      style={s.overlay.style}
+      {...s.overlay.with({ className })}
       {...props}
     />
   )
@@ -148,12 +145,13 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         data-size={size}
-        className={cn(
-          s.content.className,
-          size === "sm" && s.contentSm.className,
-          className
-        )}
-        style={{ ...s.content.style, ...sizeStyle }}
+        {...s.content.with({
+          className: cn(
+            size === "sm" && s.contentSm.className,
+            className
+          ),
+          style: sizeStyle,
+        })}
         {...props}
       />
     </AlertDialogPortal>
@@ -169,8 +167,7 @@ function AlertDialogHeader({
   return (
     <div
       data-slot="alert-dialog-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -185,8 +182,7 @@ function AlertDialogFooter({
   return (
     <div
       data-slot="alert-dialog-footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     />
   )
@@ -201,8 +197,7 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -217,8 +212,7 @@ function AlertDialogDescription({
   return (
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )
@@ -233,8 +227,7 @@ function AlertDialogMedia({
   return (
     <div
       data-slot="alert-dialog-media"
-      className={cn(s.media.className, className)}
-      style={s.media.style}
+      {...s.media.with({ className })}
       {...props}
     />
   )

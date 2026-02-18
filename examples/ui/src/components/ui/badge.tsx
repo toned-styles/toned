@@ -3,8 +3,6 @@ import { Slot } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const badgeStyles = stylesheet({
   root: {
     display: 'inline-flex',
@@ -17,10 +15,10 @@ const badgeStyles = stylesheet({
     fontWeight: 500,
     flexShrink: '0',
     gap: 1,
+    overflow: 'hidden',
     style: {
       width: 'fit-content',
       whiteSpace: 'nowrap' as const,
-      overflow: 'hidden',
       borderWidth: '1px',
       borderStyle: 'solid',
       borderColor: 'transparent',
@@ -74,8 +72,7 @@ function Badge({
     <Comp
       data-slot="badge"
       data-variant={variant}
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )

@@ -49,11 +49,12 @@ function ToggleGroup({
       data-variant={variant}
       data-size={size}
       data-spacing={spacing}
-      className={cn("group/toggle-group", s.root.className, className)}
-      style={{
-        ...s.root.style,
-        gap: spacing ? `calc(${spacing} * 0.25rem)` : undefined,
-      }}
+      {...s.root.with({
+        className: cn("group/toggle-group", className),
+        style: {
+          gap: spacing ? `calc(${spacing} * 0.25rem)` : undefined,
+        },
+      })}
       {...props}
     >
       <ToggleGroupContext.Provider value={{ variant, size, spacing }}>
@@ -84,14 +85,15 @@ function ToggleGroupItem({
       data-variant={resolvedVariant}
       data-size={resolvedSize}
       data-spacing={context.spacing}
-      className={cn(s.root.className, className)}
-      style={{
-        ...s.root.style,
-        width: 'auto',
-        minWidth: 0,
-        flexShrink: 0,
-        padding: '0 0.75rem',
-      }}
+      {...s.root.with({
+        className,
+        style: {
+          width: 'auto',
+          minWidth: 0,
+          flexShrink: 0,
+          padding: '0 0.75rem',
+        },
+      })}
       {...props}
     >
       {children}

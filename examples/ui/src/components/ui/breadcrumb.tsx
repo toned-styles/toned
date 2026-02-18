@@ -13,8 +13,8 @@ const breadcrumbStyles = stylesheet({
     alignItems: 'center',
     gap: 1.5,
     typo: 'body_small',
+    flexWrap: 'wrap',
     style: {
-      flexWrap: 'wrap',
       wordBreak: 'break-word',
     },
     '@sm': {
@@ -56,8 +56,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
   return (
     <ol
       data-slot="breadcrumb-list"
-      className={cn(s.list.className, className)}
-      style={s.list.style}
+      {...s.list.with({ className })}
       {...props}
     />
   )
@@ -69,8 +68,7 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
   return (
     <li
       data-slot="breadcrumb-item"
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -89,8 +87,7 @@ function BreadcrumbLink({
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn(s.link.className, className)}
-      style={s.link.style}
+      {...s.link.with({ className })}
       {...props}
     />
   )
@@ -105,8 +102,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
       role="link"
       aria-disabled="true"
       aria-current="page"
-      className={cn(s.page.className, className)}
-      style={s.page.style}
+      {...s.page.with({ className })}
       {...props}
     />
   )
@@ -141,8 +137,7 @@ function BreadcrumbEllipsis({
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden="true"
-      className={cn(s.ellipsis.className, className)}
-      style={s.ellipsis.style}
+      {...s.ellipsis.with({ className })}
       {...props}
     >
       <MoreHorizontal className="size-4" />

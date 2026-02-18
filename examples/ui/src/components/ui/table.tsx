@@ -4,8 +4,6 @@ import * as React from "react"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const tableStyles = stylesheet({
   container: {
     position: 'relative',
@@ -64,13 +62,11 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
       data-slot="table-container"
-      className={s.container.className}
-      style={s.container.style}
+      {...s.container}
     >
       <table
         data-slot="table"
-        className={cn(s.table.className, className)}
-        style={s.table.style}
+        {...s.table.with({ className })}
         {...props}
       />
     </div>
@@ -103,8 +99,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     />
   )
@@ -116,8 +111,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   return (
     <tr
       data-slot="table-row"
-      className={cn(s.row.className, className)}
-      style={s.row.style}
+      {...s.row.with({ className })}
       {...props}
     />
   )
@@ -129,8 +123,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
-      className={cn(s.head.className, className)}
-      style={s.head.style}
+      {...s.head.with({ className })}
       {...props}
     />
   )
@@ -142,8 +135,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn(s.cell.className, className)}
-      style={s.cell.style}
+      {...s.cell.with({ className })}
       {...props}
     />
   )
@@ -158,8 +150,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn(s.caption.className, className)}
-      style={s.caption.style}
+      {...s.caption.with({ className })}
       {...props}
     />
   )

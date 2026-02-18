@@ -34,16 +34,14 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 const sidebarStyles = stylesheet({
   wrapper: {
     display: 'flex',
-    style: {
-      minHeight: '100svh',
-      width: '100%',
-    },
+    minHeight: '100svh',
+    width: '100%',
   },
   sidebarNone: {
     display: 'flex',
     flexLayout: 'column',
+    height: '100%',
     style: {
-      height: '100%',
       width: 'var(--sidebar-width)',
       background: 'var(--sidebar)',
       color: 'var(--sidebar-foreground)',
@@ -60,10 +58,8 @@ const sidebarStyles = stylesheet({
   mobileSidebarInner: {
     display: 'flex',
     flexLayout: 'column',
-    style: {
-      height: '100%',
-      width: '100%',
-    },
+    height: '100%',
+    width: '100%',
   },
   sidebarOuter: {
     style: {
@@ -79,11 +75,11 @@ const sidebarStyles = stylesheet({
     },
   },
   sidebarContainer: {
+    position: 'fixed',
+    zIndex: 10,
+    display: 'none',
     style: {
-      position: 'fixed',
       inset: '0',
-      zIndex: 10,
-      display: 'none',
       height: '100svh',
       width: 'var(--sidebar-width)',
       transition: 'left 200ms linear, right 200ms linear, width 200ms linear',
@@ -92,27 +88,25 @@ const sidebarStyles = stylesheet({
   sidebarInner: {
     display: 'flex',
     flexLayout: 'column',
+    height: '100%',
+    width: '100%',
     style: {
-      height: '100%',
-      width: '100%',
       background: 'var(--sidebar)',
     },
   },
   trigger: {
-    style: {
-      width: '1.75rem',
-      height: '1.75rem',
-    },
+    width: '1.75rem',
+    height: '1.75rem',
   },
   rail: {
     position: 'absolute',
+    zIndex: 20,
+    display: 'none',
+    width: '1rem',
+    top: 0,
+    bottom: 0,
     style: {
       inset: '0',
-      top: 0,
-      bottom: 0,
-      zIndex: 20,
-      display: 'none',
-      width: '1rem',
       transform: 'translateX(-50%)',
       transition: 'all 150ms linear',
     },
@@ -120,17 +114,17 @@ const sidebarStyles = stylesheet({
   inset: {
     position: 'relative',
     display: 'flex',
+    width: '100%',
     style: {
-      width: '100%',
       flex: '1',
       flexDirection: 'column',
       background: 'var(--background)',
     },
   },
   input: {
+    height: '2rem',
+    width: '100%',
     style: {
-      height: '2rem',
-      width: '100%',
       background: 'var(--background)',
       boxShadow: 'none',
     },
@@ -159,10 +153,10 @@ const sidebarStyles = stylesheet({
     display: 'flex',
     flexLayout: 'column',
     gap: 2,
+    minHeight: 0,
+    overflowY: 'auto',
     style: {
       flex: '1',
-      minHeight: 0,
-      overflowY: 'auto',
     },
   },
   group: {
@@ -170,22 +164,20 @@ const sidebarStyles = stylesheet({
     display: 'flex',
     flexLayout: 'column',
     padding: 2,
-    style: {
-      width: '100%',
-      minWidth: 0,
-    },
+    width: '100%',
+    minWidth: 0,
   },
   groupLabel: {
     display: 'flex',
     alignItems: 'center',
+    height: '2rem',
+    flexShrink: '0',
+    fontSize: '0.75rem',
+    fontWeight: 500,
     style: {
-      height: '2rem',
-      flexShrink: 0,
       borderRadius: 'calc(var(--radius) - 2px)',
       paddingLeft: '0.5rem',
       paddingRight: '0.5rem',
-      fontSize: '0.75rem',
-      fontWeight: 500,
       color: 'color-mix(in srgb, var(--sidebar-foreground) 70%, transparent)',
       outline: 'none',
       transition: 'margin 200ms linear, opacity 200ms linear',
@@ -196,11 +188,11 @@ const sidebarStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    width: '1.25rem',
+    top: '0.875rem',
+    right: '0.75rem',
     style: {
-      top: '0.875rem',
-      right: '0.75rem',
       aspectRatio: '1',
-      width: '1.25rem',
       padding: 0,
       borderRadius: 'calc(var(--radius) - 2px)',
       color: 'var(--sidebar-foreground)',
@@ -209,19 +201,17 @@ const sidebarStyles = stylesheet({
     },
   },
   groupContent: {
-    style: {
-      width: '100%',
-      fontSize: '0.875rem',
-      lineHeight: '1.25rem',
-    },
+    width: '100%',
+    fontSize: '0.875rem',
+    lineHeight: '1.25rem',
   },
   menu: {
     display: 'flex',
     flexLayout: 'column',
+    width: '100%',
+    minWidth: 0,
+    gap: 1,
     style: {
-      width: '100%',
-      minWidth: 0,
-      gap: '0.25rem',
       listStyle: 'none',
       padding: 0,
       margin: 0,
@@ -236,15 +226,15 @@ const sidebarStyles = stylesheet({
   menuButton: {
     display: 'flex',
     alignItems: 'center',
+    width: '100%',
+    gap: 2,
+    overflow: 'hidden',
+    fontSize: '0.875rem',
+    lineHeight: '1.25rem',
     style: {
-      width: '100%',
-      gap: '0.5rem',
-      overflow: 'hidden',
       borderRadius: 'calc(var(--radius) - 2px)',
       padding: '0.5rem',
       textAlign: 'left',
-      fontSize: '0.875rem',
-      lineHeight: '1.25rem',
       outline: 'none',
       color: 'var(--sidebar-foreground)',
       transition: 'width 200ms, height 200ms, padding 200ms',
@@ -257,36 +247,30 @@ const sidebarStyles = stylesheet({
     },
   },
   menuButtonSm: {
-    style: {
-      height: '1.75rem',
-      fontSize: '0.75rem',
-      lineHeight: '1rem',
-    },
+    height: '1.75rem',
+    fontSize: '0.75rem',
+    lineHeight: '1rem',
   },
   menuButtonDefault: {
-    style: {
-      height: '2rem',
-      fontSize: '0.875rem',
-      lineHeight: '1.25rem',
-    },
+    height: '2rem',
+    fontSize: '0.875rem',
+    lineHeight: '1.25rem',
   },
   menuButtonLg: {
-    style: {
-      height: '3rem',
-      fontSize: '0.875rem',
-      lineHeight: '1.25rem',
-    },
+    height: '3rem',
+    fontSize: '0.875rem',
+    lineHeight: '1.25rem',
   },
   menuAction: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    width: '1.25rem',
+    top: '0.375rem',
+    right: '0.25rem',
     style: {
-      top: '0.375rem',
-      right: '0.25rem',
       aspectRatio: '1',
-      width: '1.25rem',
       padding: 0,
       borderRadius: 'calc(var(--radius) - 2px)',
       color: 'var(--sidebar-foreground)',
@@ -299,27 +283,27 @@ const sidebarStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    height: '1.25rem',
+    minWidth: '1.25rem',
+    fontSize: '0.75rem',
+    fontWeight: 500,
+    pointerEvents: 'none',
+    right: '0.25rem',
     style: {
-      right: '0.25rem',
-      height: '1.25rem',
-      minWidth: '1.25rem',
       borderRadius: 'calc(var(--radius) - 2px)',
       paddingLeft: '0.25rem',
       paddingRight: '0.25rem',
-      fontSize: '0.75rem',
-      fontWeight: 500,
       fontVariantNumeric: 'tabular-nums',
       userSelect: 'none',
-      pointerEvents: 'none',
       color: 'var(--sidebar-foreground)',
     },
   },
   menuSkeleton: {
     display: 'flex',
     alignItems: 'center',
+    height: '2rem',
+    gap: 2,
     style: {
-      height: '2rem',
-      gap: '0.5rem',
       borderRadius: 'calc(var(--radius) - 2px)',
       paddingLeft: '0.5rem',
       paddingRight: '0.5rem',
@@ -328,12 +312,12 @@ const sidebarStyles = stylesheet({
   menuSub: {
     display: 'flex',
     flexLayout: 'column',
+    minWidth: 0,
+    gap: 1,
     style: {
       marginLeft: '0.875rem',
       marginRight: '0.875rem',
-      minWidth: 0,
       transform: 'translateX(1px)',
-      gap: '0.25rem',
       borderLeft: '1px solid var(--sidebar-border)',
       paddingLeft: '0.625rem',
       paddingRight: '0.625rem',
@@ -353,12 +337,14 @@ const sidebarStyles = stylesheet({
   menuSubButton: {
     display: 'flex',
     alignItems: 'center',
+    height: '1.75rem',
+    minWidth: 0,
+    gap: 2,
+    overflow: 'hidden',
+    fontSize: '0.875rem',
+    lineHeight: '1.25rem',
     style: {
-      height: '1.75rem',
-      minWidth: 0,
       transform: 'translateX(-1px)',
-      gap: '0.5rem',
-      overflow: 'hidden',
       borderRadius: 'calc(var(--radius) - 2px)',
       paddingLeft: '0.5rem',
       paddingRight: '0.5rem',
@@ -467,19 +453,14 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
-          style={
-            {
+          {...s.wrapper.with({
+            className: cn("group/sidebar-wrapper", className),
+            style: {
               "--sidebar-width": SIDEBAR_WIDTH,
               "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-              ...s.wrapper.style,
               ...style,
-            } as React.CSSProperties
-          }
-          className={cn(
-            "group/sidebar-wrapper",
-            s.wrapper.className,
-            className
-          )}
+            } as React.CSSProperties,
+          })}
           {...props}
         >
           {children}
@@ -508,8 +489,7 @@ function Sidebar({
     return (
       <div
         data-slot="sidebar"
-        className={cn(s.sidebarNone.className, className)}
-        style={s.sidebarNone.style}
+        {...s.sidebarNone.with({ className })}
         {...props}
       >
         {children}
@@ -524,11 +504,11 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className={s.mobileSidebarContent.className}
-          style={{
-            ...s.mobileSidebarContent.style,
-            "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-          } as React.CSSProperties}
+          {...s.mobileSidebarContent.with({
+            style: {
+              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+            } as React.CSSProperties,
+          })}
           side={side}
         >
           <SheetHeader className="sr-only">
@@ -536,8 +516,7 @@ function Sidebar({
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
           <div
-            className={s.mobileSidebarInner.className}
-            style={s.mobileSidebarInner.style}
+            {...s.mobileSidebarInner}
           >
             {children}
           </div>
@@ -548,8 +527,9 @@ function Sidebar({
 
   return (
     <div
-      className={cn("group peer", s.sidebarOuter.className)}
-      style={s.sidebarOuter.style}
+      {...s.sidebarOuter.with({
+        className: cn("group peer"),
+      })}
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
@@ -559,37 +539,37 @@ function Sidebar({
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
-        className={cn(s.sidebarGap.className)}
-        style={s.sidebarGap.style}
+        {...s.sidebarGap}
       />
       <div
         data-slot="sidebar-container"
-        className={cn(s.sidebarContainer.className, className)}
-        style={{
-          ...s.sidebarContainer.style,
-          ...(side === "left"
-            ? { left: 0 }
-            : { right: 0 }),
-          ...(variant === "floating" || variant === "inset"
-            ? { padding: '0.5rem' }
-            : {}),
-        }}
+        {...s.sidebarContainer.with({
+          className,
+          style: {
+            ...(side === "left"
+              ? { left: 0 }
+              : { right: 0 }),
+            ...(variant === "floating" || variant === "inset"
+              ? { padding: '0.5rem' }
+              : {}),
+          },
+        })}
         {...props}
       >
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className={s.sidebarInner.className}
-          style={{
-            ...s.sidebarInner.style,
-            ...(variant === "floating"
-              ? {
-                  borderRadius: 'calc(var(--radius) + 2px)',
-                  border: '1px solid var(--sidebar-border)',
-                  boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-                }
-              : {}),
-          }}
+          {...s.sidebarInner.with({
+            style: {
+              ...(variant === "floating"
+                ? {
+                    borderRadius: 'calc(var(--radius) + 2px)',
+                    border: '1px solid var(--sidebar-border)',
+                    boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+                  }
+                : {}),
+            },
+          })}
         >
           {children}
         </div>
@@ -612,8 +592,7 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
-      className={cn(s.trigger.className, className)}
-      style={s.trigger.style}
+      {...s.trigger.with({ className })}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
@@ -638,8 +617,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       tabIndex={-1}
       onClick={toggleSidebar}
       title="Toggle Sidebar"
-      className={cn(s.rail.className, className)}
-      style={s.rail.style}
+      {...s.rail.with({ className })}
       {...props}
     />
   )
@@ -651,8 +629,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
     <main
       data-slot="sidebar-inset"
-      className={cn(s.inset.className, className)}
-      style={s.inset.style}
+      {...s.inset.with({ className })}
       {...props}
     />
   )
@@ -668,8 +645,7 @@ function SidebarInput({
     <Input
       data-slot="sidebar-input"
       data-sidebar="input"
-      className={cn(s.input.className, className)}
-      style={s.input.style}
+      {...s.input.with({ className })}
       {...props}
     />
   )
@@ -682,8 +658,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-header"
       data-sidebar="header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -696,8 +671,7 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-footer"
       data-sidebar="footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     />
   )
@@ -713,8 +687,7 @@ function SidebarSeparator({
     <Separator
       data-slot="sidebar-separator"
       data-sidebar="separator"
-      className={cn(s.separator.className, className)}
-      style={s.separator.style}
+      {...s.separator.with({ className })}
       {...props}
     />
   )
@@ -727,8 +700,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-content"
       data-sidebar="content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )
@@ -741,8 +713,7 @@ function SidebarGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="sidebar-group"
       data-sidebar="group"
-      className={cn(s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className })}
       {...props}
     />
   )
@@ -760,8 +731,7 @@ function SidebarGroupLabel({
     <Comp
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
-      className={cn(s.groupLabel.className, className)}
-      style={s.groupLabel.style}
+      {...s.groupLabel.with({ className })}
       {...props}
     />
   )
@@ -779,8 +749,7 @@ function SidebarGroupAction({
     <Comp
       data-slot="sidebar-group-action"
       data-sidebar="group-action"
-      className={cn(s.groupAction.className, className)}
-      style={s.groupAction.style}
+      {...s.groupAction.with({ className })}
       {...props}
     />
   )
@@ -796,8 +765,7 @@ function SidebarGroupContent({
     <div
       data-slot="sidebar-group-content"
       data-sidebar="group-content"
-      className={cn(s.groupContent.className, className)}
-      style={s.groupContent.style}
+      {...s.groupContent.with({ className })}
       {...props}
     />
   )
@@ -810,8 +778,7 @@ function SidebarMenu({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
-      className={cn(s.menu.className, className)}
-      style={s.menu.style}
+      {...s.menu.with({ className })}
       {...props}
     />
   )
@@ -824,8 +791,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
     <li
       data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
-      className={cn("group/menu-item", s.menuItem.className, className)}
-      style={s.menuItem.style}
+      {...s.menuItem.with({ className: cn("group/menu-item", className) })}
       {...props}
     />
   )
@@ -916,8 +882,7 @@ function SidebarMenuAction({
       data-slot="sidebar-menu-action"
       data-sidebar="menu-action"
       data-show-on-hover={showOnHover || undefined}
-      className={cn(s.menuAction.className, className)}
-      style={s.menuAction.style}
+      {...s.menuAction.with({ className })}
       {...props}
     />
   )
@@ -933,8 +898,7 @@ function SidebarMenuBadge({
     <div
       data-slot="sidebar-menu-badge"
       data-sidebar="menu-badge"
-      className={cn(s.menuBadge.className, className)}
-      style={s.menuBadge.style}
+      {...s.menuBadge.with({ className })}
       {...props}
     />
   )
@@ -958,8 +922,7 @@ function SidebarMenuSkeleton({
     <div
       data-slot="sidebar-menu-skeleton"
       data-sidebar="menu-skeleton"
-      className={cn(s.menuSkeleton.className, className)}
-      style={s.menuSkeleton.style}
+      {...s.menuSkeleton.with({ className })}
       {...props}
     >
       {showIcon && (
@@ -990,8 +953,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
     <ul
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
-      className={cn(s.menuSub.className, className)}
-      style={s.menuSub.style}
+      {...s.menuSub.with({ className })}
       {...props}
     />
   )
@@ -1007,8 +969,7 @@ function SidebarMenuSubItem({
     <li
       data-slot="sidebar-menu-sub-item"
       data-sidebar="menu-sub-item"
-      className={cn("group/menu-sub-item", s.menuSubItem.className, className)}
-      style={s.menuSubItem.style}
+      {...s.menuSubItem.with({ className: cn("group/menu-sub-item", className) })}
       {...props}
     />
   )
@@ -1034,13 +995,12 @@ function SidebarMenuSubButton({
       data-sidebar="menu-sub-button"
       data-size={size}
       data-active={isActive}
-      className={cn(s.menuSubButton.className, className)}
-      style={{
-        ...s.menuSubButton.style,
-        ...(size === "sm"
+      {...s.menuSubButton.with({
+        className,
+        style: size === "sm"
           ? { fontSize: '0.75rem', lineHeight: '1rem' }
-          : { fontSize: '0.875rem', lineHeight: '1.25rem' }),
-      }}
+          : {},
+      })}
       {...props}
     />
   )

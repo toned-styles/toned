@@ -3,8 +3,6 @@ import { Slider as SliderPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const sliderStyles = stylesheet({
   root: {
     position: 'relative',
@@ -21,7 +19,7 @@ const sliderStyles = stylesheet({
     position: 'relative',
     overflow: 'hidden',
     borderRadius: 'full',
-    style: { flexGrow: 1 },
+    flexGrow: '1',
   },
   range: {
     bgColor: 'action',
@@ -35,8 +33,8 @@ const sliderStyles = stylesheet({
     flexShrink: '0',
     borderRadius: 'full',
     shadow: 'small',
+    display: 'block',
     style: {
-      display: 'block',
       backgroundColor: 'white',
       transition: 'color 0.15s, box-shadow 0.15s',
     },
@@ -69,27 +67,23 @@ function Slider({
       value={value}
       min={min}
       max={max}
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     >
       <SliderPrimitive.Track
         data-slot="slider-track"
-        className={s.track.className}
-        style={s.track.style}
+        {...s.track}
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
-          className={s.range.className}
-          style={s.range.style}
+          {...s.range}
         />
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className={s.thumb.className}
-          style={s.thumb.style}
+          {...s.thumb}
         />
       ))}
     </SliderPrimitive.Root>
