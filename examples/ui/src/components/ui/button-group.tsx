@@ -42,11 +42,10 @@ function ButtonGroup({
       role="group"
       data-slot="button-group"
       data-orientation={orientation}
-      className={cn(s.root.className, className)}
-      style={{
-        ...s.root.style,
-        ...(orientation === 'vertical' ? { flexDirection: 'column' } : undefined),
-      }}
+      {...s.root.with({
+        className,
+        style: orientation === 'vertical' ? { flexDirection: 'column' } : undefined,
+      })}
       {...props}
     />
   )
@@ -64,8 +63,7 @@ function ButtonGroupText({
 
   return (
     <Comp
-      className={cn(s.text.className, className)}
-      style={s.text.style}
+      {...s.text.with({ className })}
       {...props}
     />
   )

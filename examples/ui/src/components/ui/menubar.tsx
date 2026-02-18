@@ -6,7 +6,6 @@ import { Menubar as MenubarPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 
 const menubarStyles = stylesheet({
   root: {
@@ -29,10 +28,10 @@ const menubarStyles = stylesheet({
     paddingY: 1,
     typo: 'body_small',
     fontWeight: 500,
+    cursor: 'default',
     style: {
       outline: 'none',
       userSelect: 'none',
-      cursor: 'default',
       border: 'none',
       background: 'none',
     },
@@ -46,9 +45,9 @@ const menubarStyles = stylesheet({
     borderWidth: 'thin',
     padding: 1,
     shadow: 'medium',
+    minWidth: '12rem',
+    overflow: 'hidden',
     style: {
-      minWidth: '12rem',
-      overflow: 'hidden',
       transformOrigin: 'var(--radix-menubar-content-transform-origin)',
       animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
     },
@@ -61,9 +60,9 @@ const menubarStyles = stylesheet({
     paddingX: 2,
     paddingY: 1.5,
     typo: 'body_small',
+    position: 'relative',
+    cursor: 'default',
     style: {
-      position: 'relative',
-      cursor: 'default',
       outline: 'none',
       userSelect: 'none',
     },
@@ -75,9 +74,9 @@ const menubarStyles = stylesheet({
     borderRadius: 'small',
     paddingY: 1.5,
     typo: 'body_small',
+    position: 'relative',
+    cursor: 'default',
     style: {
-      position: 'relative',
-      cursor: 'default',
       outline: 'none',
       userSelect: 'none',
       paddingRight: '0.5rem',
@@ -89,11 +88,11 @@ const menubarStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    pointerEvents: 'none',
     style: {
       left: '0.5rem',
       width: '0.875rem',
       height: '0.875rem',
-      pointerEvents: 'none',
     },
   },
   label: {
@@ -104,17 +103,17 @@ const menubarStyles = stylesheet({
   },
   separator: {
     bgColor: 'subtle',
+    height: '1px',
     style: {
       margin: '0.25rem -0.25rem',
-      height: '1px',
     },
   },
   shortcut: {
     textColor: 'muted',
     typo: 'caption',
+    letterSpacing: '0.1em',
     style: {
       marginLeft: 'auto',
-      letterSpacing: '0.1em',
     },
   },
   subContent: {
@@ -126,9 +125,9 @@ const menubarStyles = stylesheet({
     borderWidth: 'thin',
     padding: 1,
     shadow: 'large',
+    minWidth: '8rem',
+    overflow: 'hidden',
     style: {
-      minWidth: '8rem',
-      overflow: 'hidden',
       transformOrigin: 'var(--radix-menubar-content-transform-origin)',
       animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
     },
@@ -144,8 +143,7 @@ function Menubar({
   return (
     <MenubarPrimitive.Root
       data-slot="menubar"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -186,8 +184,7 @@ function MenubarTrigger({
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
-      className={cn(s.trigger.className, className)}
-      style={s.trigger.style}
+      {...s.trigger.with({ className })}
       {...props}
     />
   )
@@ -209,8 +206,7 @@ function MenubarContent({
         align={align}
         alignOffset={alignOffset}
         sideOffset={sideOffset}
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         {...props}
       />
     </MenubarPortal>
@@ -233,8 +229,7 @@ function MenubarItem({
       data-slot="menubar-item"
       data-inset={inset}
       data-variant={variant}
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -251,12 +246,11 @@ function MenubarCheckboxItem({
   return (
     <MenubarPrimitive.CheckboxItem
       data-slot="menubar-checkbox-item"
-      className={cn(s.checkboxItem.className, className)}
-      style={s.checkboxItem.style}
+      {...s.checkboxItem.with({ className })}
       checked={checked}
       {...props}
     >
-      <span className={s.indicator.className} style={s.indicator.style}>
+      <span {...s.indicator}>
         <MenubarPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
         </MenubarPrimitive.ItemIndicator>
@@ -276,11 +270,10 @@ function MenubarRadioItem({
   return (
     <MenubarPrimitive.RadioItem
       data-slot="menubar-radio-item"
-      className={cn(s.checkboxItem.className, className)}
-      style={s.checkboxItem.style}
+      {...s.checkboxItem.with({ className })}
       {...props}
     >
-      <span className={s.indicator.className} style={s.indicator.style}>
+      <span {...s.indicator}>
         <MenubarPrimitive.ItemIndicator>
           <CircleIcon className="size-2 fill-current" />
         </MenubarPrimitive.ItemIndicator>
@@ -303,8 +296,7 @@ function MenubarLabel({
     <MenubarPrimitive.Label
       data-slot="menubar-label"
       data-inset={inset}
-      className={cn(s.label.className, className)}
-      style={s.label.style}
+      {...s.label.with({ className })}
       {...props}
     />
   )
@@ -319,8 +311,7 @@ function MenubarSeparator({
   return (
     <MenubarPrimitive.Separator
       data-slot="menubar-separator"
-      className={cn(s.separator.className, className)}
-      style={s.separator.style}
+      {...s.separator.with({ className })}
       {...props}
     />
   )
@@ -335,8 +326,7 @@ function MenubarShortcut({
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn(s.shortcut.className, className)}
-      style={s.shortcut.style}
+      {...s.shortcut.with({ className })}
       {...props}
     />
   )
@@ -362,8 +352,7 @@ function MenubarSubTrigger({
     <MenubarPrimitive.SubTrigger
       data-slot="menubar-sub-trigger"
       data-inset={inset}
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     >
       {children}
@@ -381,8 +370,7 @@ function MenubarSubContent({
   return (
     <MenubarPrimitive.SubContent
       data-slot="menubar-sub-content"
-      className={cn(s.subContent.className, className)}
-      style={s.subContent.style}
+      {...s.subContent.with({ className })}
       {...props}
     />
   )

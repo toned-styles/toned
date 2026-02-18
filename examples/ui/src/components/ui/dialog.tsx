@@ -4,7 +4,6 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 const dialogStyles = stylesheet({
@@ -26,9 +25,9 @@ const dialogStyles = stylesheet({
     borderWidth: 'thin',
     padding: 6,
     shadow: 'large',
+    top: '50%',
+    left: '50%',
     style: {
-      top: '50%',
-      left: '50%',
       transform: 'translate(-50%, -50%)',
       maxWidth: 'calc(100% - 2rem)',
       outline: 'none',
@@ -42,13 +41,13 @@ const dialogStyles = stylesheet({
     position: 'absolute',
     borderRadius: 'small',
     opacity: 0.7,
+    top: '1rem',
+    right: '1rem',
+    cursor: 'pointer',
     style: {
-      top: '1rem',
-      right: '1rem',
       transition: 'opacity 0.15s',
       background: 'none',
       border: 'none',
-      cursor: 'pointer',
       padding: 0,
     },
   },
@@ -67,9 +66,9 @@ const dialogStyles = stylesheet({
       flexDirection: 'column-reverse',
     },
     '@sm': {
+      justifyContent: 'flex-end',
       style: {
         flexDirection: 'row',
-        justifyContent: 'flex-end',
       },
     },
   },
@@ -117,8 +116,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn(s.overlay.className, className)}
-      style={s.overlay.style}
+      {...s.overlay.with({ className })}
       {...props}
     />
   )
@@ -139,16 +137,14 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         {...props}
       >
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className={s.close.className}
-            style={s.close.style}
+            {...s.close}
           >
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
@@ -165,8 +161,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -185,8 +180,7 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     >
       {children}
@@ -208,8 +202,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -224,8 +217,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )

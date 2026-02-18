@@ -1,8 +1,6 @@
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const kbdStyles = stylesheet({
   root: {
     bgColor: 'muted',
@@ -36,8 +34,7 @@ function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
     <kbd
       data-slot="kbd"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -49,8 +46,7 @@ function KbdGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <kbd
       data-slot="kbd-group"
-      className={cn(s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className })}
       {...props}
     />
   )

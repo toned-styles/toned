@@ -33,16 +33,12 @@ const fieldStyles = stylesheet({
     display: 'flex',
     flexLayout: 'column',
     gap: 7,
-    style: {
-      width: '100%',
-    },
+    width: '100%',
   },
   field: {
     display: 'flex',
     gap: 3,
-    style: {
-      width: '100%',
-    },
+    width: '100%',
   },
   fieldVertical: {
     flexLayout: 'column',
@@ -84,9 +80,9 @@ const fieldStyles = stylesheet({
   fieldDescription: {
     textColor: 'muted',
     typo: 'body_small',
+    fontWeight: 400,
     style: {
       lineHeight: '1.5',
-      fontWeight: 400,
     },
   },
   fieldSeparator: {
@@ -113,9 +109,7 @@ const fieldStyles = stylesheet({
   fieldError: {
     textColor: 'destructive',
     typo: 'body_small',
-    style: {
-      fontWeight: 400,
-    },
+    fontWeight: 400,
   },
   errorList: {
     display: 'flex',
@@ -134,8 +128,7 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
     <fieldset
       data-slot="field-set"
-      className={cn(s.fieldSet.className, className)}
-      style={s.fieldSet.style}
+      {...s.fieldSet.with({ className })}
       {...props}
     />
   )
@@ -167,8 +160,7 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-group"
-      className={cn("group/field-group", s.fieldGroup.className, className)}
-      style={s.fieldGroup.style}
+      {...s.fieldGroup.with({ className: cn("group/field-group", className) })}
       {...props}
     />
   )
@@ -203,8 +195,7 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-content"
-      className={cn("group/field-content", s.fieldContent.className, className)}
-      style={s.fieldContent.style}
+      {...s.fieldContent.with({ className: cn("group/field-content", className) })}
       {...props}
     />
   )
@@ -219,8 +210,7 @@ function FieldLabel({
   return (
     <Label
       data-slot="field-label"
-      className={cn("group/field-label", s.fieldLabel.className, className)}
-      style={s.fieldLabel.style}
+      {...s.fieldLabel.with({ className: cn("group/field-label", className) })}
       {...props}
     />
   )
@@ -232,8 +222,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-label"
-      className={cn(s.fieldTitle.className, className)}
-      style={s.fieldTitle.style}
+      {...s.fieldTitle.with({ className })}
       {...props}
     />
   )
@@ -245,8 +234,7 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="field-description"
-      className={cn(s.fieldDescription.className, className)}
-      style={s.fieldDescription.style}
+      {...s.fieldDescription.with({ className })}
       {...props}
     />
   )
@@ -265,15 +253,13 @@ function FieldSeparator({
     <div
       data-slot="field-separator"
       data-content={!!children}
-      className={cn(s.fieldSeparator.className, className)}
-      style={s.fieldSeparator.style}
+      {...s.fieldSeparator.with({ className })}
       {...props}
     >
       <Separator style={{ position: 'absolute', inset: 0, top: '50%' }} />
       {children && (
         <span
-          className={s.fieldSeparatorContent.className}
-          style={s.fieldSeparatorContent.style}
+          {...s.fieldSeparatorContent}
           data-slot="field-separator-content"
         >
           {children}
@@ -311,7 +297,7 @@ function FieldError({
     }
 
     return (
-      <ul className={s.errorList.className} style={s.errorList.style}>
+      <ul {...s.errorList}>
         {uniqueErrors.map(
           (error, index) =>
             error?.message && <li key={index}>{error.message}</li>
@@ -328,8 +314,7 @@ function FieldError({
     <div
       role="alert"
       data-slot="field-error"
-      className={cn(s.fieldError.className, className)}
-      style={s.fieldError.style}
+      {...s.fieldError.with({ className })}
       {...props}
     >
       {content}

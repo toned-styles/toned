@@ -2,8 +2,6 @@ import { Loader2Icon } from "lucide-react"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const spinnerStyles = stylesheet({
   root: {
     width: '1rem',
@@ -21,8 +19,7 @@ function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
     <Loader2Icon
       role="status"
       aria-label="Loading"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )

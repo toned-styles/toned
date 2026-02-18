@@ -2,8 +2,6 @@ import * as React from "react"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const alertStyles = stylesheet({
   root: {
     borderRadius: 'large',
@@ -14,23 +12,23 @@ const alertStyles = stylesheet({
     typo: 'body_small',
     position: 'relative',
     width: '100%',
+    alignItems: 'flex-start',
     style: {
       display: 'grid',
       gridTemplateColumns: '0 1fr',
       gap: '2px 0',
-      alignItems: 'start',
     },
   },
   title: {
     fontWeight: 500,
+    overflow: 'hidden',
+    minHeight: '1rem',
     style: {
       gridColumnStart: 2,
-      minHeight: '1rem',
       letterSpacing: '-0.01em',
       display: '-webkit-box',
       WebkitLineClamp: 1,
       WebkitBoxOrient: 'vertical' as const,
-      overflow: 'hidden',
     },
   },
   description: {
@@ -70,8 +68,7 @@ function Alert({
       data-slot="alert"
       data-variant={variant}
       role="alert"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -83,8 +80,7 @@ function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="alert-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -99,8 +95,7 @@ function AlertDescription({
   return (
     <div
       data-slot="alert-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )

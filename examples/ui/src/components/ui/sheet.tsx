@@ -6,8 +6,6 @@ import { Dialog as SheetPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const sheetStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
@@ -30,13 +28,13 @@ const sheetStyles = stylesheet({
     position: 'absolute',
     borderRadius: 'small',
     opacity: 0.7,
+    top: '1rem',
+    right: '1rem',
+    cursor: 'pointer',
     style: {
-      top: '1rem',
-      right: '1rem',
       transition: 'opacity 0.15s',
       background: 'none',
       border: 'none',
-      cursor: 'pointer',
       padding: 0,
     },
   },
@@ -92,8 +90,7 @@ function SheetOverlay({
   return (
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
-      className={cn(s.overlay.className, className)}
-      style={s.overlay.style}
+      {...s.overlay.with({ className })}
       {...props}
     />
   )
@@ -123,15 +120,13 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
-        className={cn(s.content.className, className)}
-        style={{ ...s.content.style, ...sideStyles }}
+        {...s.content.with({ className, style: sideStyles })}
         {...props}
       >
         {children}
         {showCloseButton && (
           <SheetPrimitive.Close
-            className={s.close.className}
-            style={s.close.style}
+            {...s.close}
           >
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
@@ -148,8 +143,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -161,8 +155,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn(s.footer.className, className)}
-      style={s.footer.style}
+      {...s.footer.with({ className })}
       {...props}
     />
   )
@@ -177,8 +170,7 @@ function SheetTitle({
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -193,8 +185,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )

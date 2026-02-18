@@ -96,8 +96,7 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
     <FormItemContext.Provider value={{ id }}>
       <div
         data-slot="form-item"
-        className={cn(s.item.className, className)}
-        style={s.item.style}
+        {...s.item.with({ className })}
         {...props}
       />
     </FormItemContext.Provider>
@@ -147,8 +146,7 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )
@@ -167,8 +165,7 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn(s.message.className, className)}
-      style={s.message.style}
+      {...s.message.with({ className })}
       {...props}
     >
       {body}

@@ -3,8 +3,6 @@ import { Slot } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const buttonStyles = stylesheet({
   root: {
     display: 'inline-flex',
@@ -117,8 +115,7 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )

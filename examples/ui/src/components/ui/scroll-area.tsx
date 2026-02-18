@@ -3,8 +3,6 @@ import { ScrollArea as ScrollAreaPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const scrollAreaStyles = stylesheet({
   root: {
     position: 'relative',
@@ -45,14 +43,12 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className={s.viewport.className}
-        style={s.viewport.style}
+        {...s.viewport}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
@@ -73,20 +69,17 @@ function ScrollBar({
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
-      className={cn(s.scrollbar.className, className)}
-      style={{
-        ...s.scrollbar.style,
-        ...(orientation === "vertical"
+      {...s.scrollbar.with({
+        className,
+        style: orientation === "vertical"
           ? { height: '100%', width: '10px', borderLeft: '1px solid transparent' }
-          : { height: '10px', flexDirection: 'column' as const, borderTop: '1px solid transparent' }
-        ),
-      }}
+          : { height: '10px', flexDirection: 'column' as const, borderTop: '1px solid transparent' },
+      })}
       {...props}
     >
       <ScrollAreaPrimitive.ScrollAreaThumb
         data-slot="scroll-area-thumb"
-        className={s.thumb.className}
-        style={s.thumb.style}
+        {...s.thumb}
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   )

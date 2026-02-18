@@ -6,7 +6,6 @@ import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 
 const menuStyles = stylesheet({
   content: {
@@ -18,9 +17,9 @@ const menuStyles = stylesheet({
     borderWidth: 'thin',
     padding: 1,
     shadow: 'medium',
+    minWidth: '8rem',
+    overflow: 'hidden',
     style: {
-      minWidth: '8rem',
-      overflow: 'hidden',
       transformOrigin: 'var(--radix-dropdown-menu-content-transform-origin)',
       animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
     },
@@ -33,9 +32,9 @@ const menuStyles = stylesheet({
     paddingX: 2,
     paddingY: 1.5,
     typo: 'body_small',
+    position: 'relative',
+    cursor: 'default',
     style: {
-      position: 'relative',
-      cursor: 'default',
       outline: 'none',
       userSelect: 'none',
     },
@@ -47,9 +46,9 @@ const menuStyles = stylesheet({
     borderRadius: 'small',
     paddingY: 1.5,
     typo: 'body_small',
+    position: 'relative',
+    cursor: 'default',
     style: {
-      position: 'relative',
-      cursor: 'default',
       outline: 'none',
       userSelect: 'none',
       paddingRight: '0.5rem',
@@ -61,11 +60,11 @@ const menuStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    pointerEvents: 'none',
     style: {
       left: '0.5rem',
       width: '0.875rem',
       height: '0.875rem',
-      pointerEvents: 'none',
     },
   },
   label: {
@@ -76,17 +75,17 @@ const menuStyles = stylesheet({
   },
   separator: {
     bgColor: 'subtle',
+    height: '1px',
     style: {
       margin: '0.25rem -0.25rem',
-      height: '1px',
     },
   },
   shortcut: {
     textColor: 'muted',
     typo: 'caption',
+    letterSpacing: '0.1em',
     style: {
       marginLeft: 'auto',
-      letterSpacing: '0.1em',
     },
   },
   subContent: {
@@ -98,9 +97,9 @@ const menuStyles = stylesheet({
     borderWidth: 'thin',
     padding: 1,
     shadow: 'large',
+    minWidth: '8rem',
+    overflow: 'hidden',
     style: {
-      minWidth: '8rem',
-      overflow: 'hidden',
       transformOrigin: 'var(--radix-dropdown-menu-content-transform-origin)',
       animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
     },
@@ -144,8 +143,7 @@ function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
@@ -176,8 +174,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-inset={inset}
       data-variant={variant}
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -194,15 +191,11 @@ function DropdownMenuCheckboxItem({
   return (
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
-      className={cn(s.checkboxItem.className, className)}
-      style={s.checkboxItem.style}
+      {...s.checkboxItem.with({ className })}
       checked={checked}
       {...props}
     >
-      <span
-        className={s.indicator.className}
-        style={s.indicator.style}
-      >
+      <span {...s.indicator}>
         <DropdownMenuPrimitive.ItemIndicator>
           <CheckIcon className="size-4" />
         </DropdownMenuPrimitive.ItemIndicator>
@@ -233,14 +226,10 @@ function DropdownMenuRadioItem({
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
-      className={cn(s.checkboxItem.className, className)}
-      style={s.checkboxItem.style}
+      {...s.checkboxItem.with({ className })}
       {...props}
     >
-      <span
-        className={s.indicator.className}
-        style={s.indicator.style}
-      >
+      <span {...s.indicator}>
         <DropdownMenuPrimitive.ItemIndicator>
           <CircleIcon className="size-2 fill-current" />
         </DropdownMenuPrimitive.ItemIndicator>
@@ -263,8 +252,7 @@ function DropdownMenuLabel({
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      className={cn(s.label.className, className)}
-      style={s.label.style}
+      {...s.label.with({ className })}
       {...props}
     />
   )
@@ -279,8 +267,7 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn(s.separator.className, className)}
-      style={s.separator.style}
+      {...s.separator.with({ className })}
       {...props}
     />
   )
@@ -295,8 +282,7 @@ function DropdownMenuShortcut({
   return (
     <span
       data-slot="dropdown-menu-shortcut"
-      className={cn(s.shortcut.className, className)}
-      style={s.shortcut.style}
+      {...s.shortcut.with({ className })}
       {...props}
     />
   )
@@ -322,8 +308,7 @@ function DropdownMenuSubTrigger({
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      {...s.item.with({ className })}
       {...props}
     >
       {children}
@@ -341,8 +326,7 @@ function DropdownMenuSubContent({
   return (
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
-      className={cn(s.subContent.className, className)}
-      style={s.subContent.style}
+      {...s.subContent.with({ className })}
       {...props}
     />
   )

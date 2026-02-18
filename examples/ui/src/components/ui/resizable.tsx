@@ -5,15 +5,12 @@ import * as ResizablePrimitive from "react-resizable-panels"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
 
 const resizableStyles = stylesheet({
   group: {
     display: 'flex',
-    style: {
-      height: '100%',
-      width: '100%',
-    },
+    height: '100%',
+    width: '100%',
   },
   handle: {
     bgColor: 'subtle',
@@ -50,8 +47,7 @@ function ResizablePanelGroup({
   return (
     <ResizablePrimitive.Group
       data-slot="resizable-panel-group"
-      className={cn(s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className })}
       {...props}
     />
   )
@@ -73,12 +69,11 @@ function ResizableHandle({
   return (
     <ResizablePrimitive.Separator
       data-slot="resizable-handle"
-      className={cn(s.handle.className, className)}
-      style={s.handle.style}
+      {...s.handle.with({ className })}
       {...props}
     >
       {withHandle && (
-        <div className={s.handleGrip.className} style={s.handleGrip.style}>
+        <div {...s.handleGrip}>
           <GripVerticalIcon style={{ width: '0.625rem', height: '0.625rem' }} />
         </div>
       )}

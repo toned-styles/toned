@@ -3,8 +3,6 @@ import { Tooltip as TooltipPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const tooltipStyles = stylesheet({
   content: {
     bgColor: 'emphasized',
@@ -72,14 +70,12 @@ function TooltipContent({
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         {...props}
       >
         {children}
         <TooltipPrimitive.Arrow
-          className={s.arrow.className}
-          style={s.arrow.style}
+          {...s.arrow}
         />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>

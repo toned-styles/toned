@@ -3,8 +3,6 @@ import { Popover as PopoverPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const popoverStyles = stylesheet({
   content: {
     bgColor: 'elevated',
@@ -61,8 +59,7 @@ function PopoverContent({
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
-        className={cn(s.content.className, className)}
-        style={s.content.style}
+        {...s.content.with({ className })}
         {...props}
       />
     </PopoverPrimitive.Portal>
@@ -81,8 +78,7 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="popover-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -94,8 +90,7 @@ function PopoverTitle({ className, ...props }: React.ComponentProps<"h2">) {
   return (
     <div
       data-slot="popover-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -110,8 +105,7 @@ function PopoverDescription({
   return (
     <p
       data-slot="popover-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )

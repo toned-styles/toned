@@ -12,8 +12,8 @@ const emptyStyles = stylesheet({
     gap: 6,
     borderRadius: 'large',
     padding: 6,
+    minWidth: 0,
     style: {
-      minWidth: 0,
       flex: 1,
       borderStyle: 'dashed',
       textAlign: 'center',
@@ -28,8 +28,8 @@ const emptyStyles = stylesheet({
     flexLayout: 'column',
     alignItems: 'center',
     gap: 2,
+    maxWidth: '24rem',
     style: {
-      maxWidth: '24rem',
       textAlign: 'center',
     },
   },
@@ -37,8 +37,8 @@ const emptyStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: '0',
     style: {
-      flexShrink: 0,
       marginBottom: '0.5rem',
     },
   },
@@ -49,10 +49,10 @@ const emptyStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 'large',
+    flexShrink: '0',
     style: {
       width: '2.5rem',
       height: '2.5rem',
-      flexShrink: 0,
     },
   },
   title: {
@@ -76,10 +76,10 @@ const emptyStyles = stylesheet({
     alignItems: 'center',
     gap: 4,
     typo: 'body_small',
+    width: '100%',
+    maxWidth: '24rem',
+    minWidth: 0,
     style: {
-      width: '100%',
-      maxWidth: '24rem',
-      minWidth: 0,
       textWrap: 'balance',
     },
   },
@@ -91,8 +91,7 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="empty"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -104,8 +103,7 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="empty-header"
-      className={cn(s.header.className, className)}
-      style={s.header.style}
+      {...s.header.with({ className })}
       {...props}
     />
   )
@@ -140,8 +138,7 @@ function EmptyTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="empty-title"
-      className={cn(s.title.className, className)}
-      style={s.title.style}
+      {...s.title.with({ className })}
       {...props}
     />
   )
@@ -153,8 +150,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <div
       data-slot="empty-description"
-      className={cn(s.description.className, className)}
-      style={s.description.style}
+      {...s.description.with({ className })}
       {...props}
     />
   )
@@ -166,8 +162,7 @@ function EmptyContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="empty-content"
-      className={cn(s.content.className, className)}
-      style={s.content.style}
+      {...s.content.with({ className })}
       {...props}
     />
   )

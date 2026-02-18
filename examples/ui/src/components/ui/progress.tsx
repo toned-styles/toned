@@ -5,8 +5,6 @@ import { Progress as ProgressPrimitive } from "radix-ui"
 import { useStyles } from "@toned/react"
 import { stylesheet } from "@toned/systems/base"
 
-import { cn } from "@/lib/utils"
-
 const progressStyles = stylesheet({
   root: {
     position: 'relative',
@@ -39,17 +37,12 @@ function Progress({
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className={s.indicator.className}
-        style={{
-          ...s.indicator.style,
-          transform: `translateX(-${100 - (value || 0)}%)`,
-        }}
+        {...s.indicator.with({ style: { transform: `translateX(-${100 - (value || 0)}%)` } })}
       />
     </ProgressPrimitive.Root>
   )

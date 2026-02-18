@@ -18,10 +18,10 @@ const nativeSelectStyles = stylesheet({
     borderRadius: 'medium',
     typo: 'body_small',
     shadow: 'small',
+    height: '2.25rem',
+    width: '100%',
+    minWidth: '0',
     style: {
-      height: '2.25rem',
-      width: '100%',
-      minWidth: 0,
       appearance: 'none',
       background: 'transparent',
       paddingLeft: '0.75rem',
@@ -33,8 +33,8 @@ const nativeSelectStyles = stylesheet({
     },
   },
   selectSm: {
+    height: '2rem',
     style: {
-      height: '2rem',
       paddingTop: '0.25rem',
       paddingBottom: '0.25rem',
     },
@@ -42,14 +42,14 @@ const nativeSelectStyles = stylesheet({
   icon: {
     textColor: 'muted',
     position: 'absolute',
+    pointerEvents: 'none',
+    opacity: 0.5,
+    width: '1rem',
+    height: '1rem',
     style: {
       top: '50%',
       right: '0.875rem',
-      width: '1rem',
-      height: '1rem',
       transform: 'translateY(-50%)',
-      opacity: 0.5,
-      pointerEvents: 'none',
       userSelect: 'none',
     },
   },
@@ -64,8 +64,7 @@ function NativeSelect({
 
   return (
     <div
-      className={s.wrapper.className}
-      style={s.wrapper.style}
+      {...s.wrapper}
       data-slot="native-select-wrapper"
     >
       <select
@@ -79,8 +78,7 @@ function NativeSelect({
         {...props}
       />
       <ChevronDownIcon
-        className={s.icon.className}
-        style={s.icon.style}
+        {...s.icon}
         aria-hidden="true"
         data-slot="native-select-icon"
       />
