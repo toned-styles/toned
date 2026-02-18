@@ -30,6 +30,9 @@ const breadcrumbStyles = stylesheet({
     style: {
       transition: 'color 0.15s',
     },
+    ':hover': {
+      textColor: 'default',
+    },
   },
   page: {
     textColor: 'default',
@@ -42,6 +45,9 @@ const breadcrumbStyles = stylesheet({
     style: {
       width: '2.25rem',
       height: '2.25rem',
+    },
+    ':hover': {
+      textColor: 'default',
     },
   },
 })
