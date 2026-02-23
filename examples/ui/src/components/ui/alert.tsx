@@ -48,7 +48,13 @@ const alertStyles = stylesheet({
     root: { bgColor: 'elevated', textColor: 'default' },
   },
   [$.variant('destructive')]: {
-    root: { bgColor: 'elevated', textColor: 'destructive' },
+    root: {
+      bgColor: 'elevated',
+      textColor: 'destructive',
+      style: {
+        borderColor: 'color-mix(in srgb, var(--destructive) 50%, transparent)',
+      },
+    },
   },
 }))
 

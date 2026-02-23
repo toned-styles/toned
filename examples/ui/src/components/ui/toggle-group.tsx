@@ -13,9 +13,7 @@ const toggleGroupStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     borderRadius: 'medium',
-    style: {
-      width: 'fit-content',
-    },
+    width: 'fit-content',
   },
 })
 
@@ -67,6 +65,7 @@ function ToggleGroup({
 function ToggleGroupItem({
   className,
   children,
+  disabled,
   variant,
   size,
   ...props
@@ -77,7 +76,7 @@ function ToggleGroupItem({
   const context = React.useContext(ToggleGroupContext)
   const resolvedVariant = context.variant || variant || "default"
   const resolvedSize = context.size || size || "default"
-  const s = useStyles(toggleStyles, { variant: resolvedVariant, size: resolvedSize })
+  const s = useStyles(toggleStyles, { variant: resolvedVariant, size: resolvedSize, pressed: false })
 
   return (
     <ToggleGroupPrimitive.Item
@@ -85,7 +84,7 @@ function ToggleGroupItem({
       data-variant={resolvedVariant}
       data-size={resolvedSize}
       data-spacing={context.spacing}
-      {...s.root.with({
+      {...s.root.with(disabled && s.disabled).with({
         className,
         style: {
           width: 'auto',
@@ -94,6 +93,7 @@ function ToggleGroupItem({
           padding: '0 0.75rem',
         },
       })}
+      disabled={disabled}
       {...props}
     >
       {children}

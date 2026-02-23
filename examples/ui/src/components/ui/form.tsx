@@ -21,6 +21,9 @@ const formStyles = stylesheet({
     display: 'grid',
     gap: 2,
   },
+  labelError: {
+    textColor: 'destructive',
+  },
   description: {
     textColor: 'muted',
     typo: 'body_small',
@@ -108,12 +111,14 @@ function FormLabel({
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root>) {
   const { error, formItemId } = useFormField()
+  const s = useStyles(formStyles)
 
   return (
     <Label
       data-slot="form-label"
       data-error={!!error}
-      className={cn(className)}
+      className={cn(error && s.labelError.className, className)}
+      style={error ? s.labelError.style : undefined}
       htmlFor={formItemId}
       {...props}
     />

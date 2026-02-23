@@ -23,16 +23,25 @@ const inputStyles = stylesheet({
       typo: 'body_small',
     },
   },
+  disabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
+  invalid: {
+    borderColor: 'destructive',
+    style: { boxShadow: '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)' },
+  },
 })
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+function Input({ className, type, disabled, ...props }: React.ComponentProps<"input">) {
   const s = useStyles(inputStyles)
 
   return (
     <input
       type={type}
       data-slot="input"
-      {...s.root.with({ className })}
+      {...s.root.with(disabled && s.disabled).with(props['aria-invalid'] === 'true' && s.invalid).with({ className })}
+      disabled={disabled}
       {...props}
     />
   )

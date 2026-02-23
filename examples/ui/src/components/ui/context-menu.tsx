@@ -38,6 +38,24 @@ const contextMenuStyles = stylesheet({
       outline: 'none',
       userSelect: 'none',
     },
+    ':focus': {
+      bgColor: 'subtle',
+      textColor: 'subtle',
+      style: { outline: 'none' },
+    },
+  },
+  itemDisabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
+  },
+  itemInset: {
+    paddingLeft: 8,
+  },
+  itemDestructiveFocus: {
+    ':focus': {
+      bgColor: 'destructive',
+      style: { outline: 'none', color: 'oklch(0.985 0 0)' },
+    },
   },
   checkboxItem: {
     display: 'flex',
@@ -48,11 +66,11 @@ const contextMenuStyles = stylesheet({
     typo: 'body_small',
     position: 'relative',
     cursor: 'default',
+    paddingRight: 2,
+    paddingLeft: 8,
     style: {
       outline: 'none',
       userSelect: 'none',
-      paddingRight: '0.5rem',
-      paddingLeft: '2rem',
     },
   },
   indicator: {
@@ -61,11 +79,9 @@ const contextMenuStyles = stylesheet({
     justifyContent: 'center',
     position: 'absolute',
     pointerEvents: 'none',
-    style: {
-      left: '0.5rem',
-      width: '0.875rem',
-      height: '0.875rem',
-    },
+    left: '0.5rem',
+    width: '0.875rem',
+    height: '0.875rem',
   },
   label: {
     textColor: 'default',
@@ -74,12 +90,14 @@ const contextMenuStyles = stylesheet({
     typo: 'body_small',
     fontWeight: 500,
   },
+  labelInset: {
+    paddingLeft: 8,
+  },
   separator: {
     bgColor: 'subtle',
     height: '1px',
-    style: {
-      margin: '0.25rem -0.25rem',
-    },
+    marginY: 1,
+    marginX: -1,
   },
   shortcut: {
     textColor: 'muted',
@@ -168,7 +186,7 @@ function ContextMenuSubTrigger({
     <ContextMenuPrimitive.SubTrigger
       data-slot="context-menu-sub-trigger"
       data-inset={inset}
-      {...s.item.with({ className })}
+      {...s.item.with(inset && s.itemInset).with({ className })}
       {...props}
     >
       {children}
@@ -213,6 +231,7 @@ function ContextMenuItem({
   className,
   inset,
   variant = "default",
+  disabled,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Item> & {
   inset?: boolean
@@ -225,7 +244,12 @@ function ContextMenuItem({
       data-slot="context-menu-item"
       data-inset={inset}
       data-variant={variant}
-      {...s.item.with({ className })}
+      disabled={disabled}
+      {...s.item
+        .with(inset && s.itemInset)
+        .with(disabled && s.itemDisabled)
+        .with(variant === "destructive" && s.itemDestructiveFocus)
+        .with({ className })}
       {...props}
     />
   )
@@ -292,7 +316,7 @@ function ContextMenuLabel({
     <ContextMenuPrimitive.Label
       data-slot="context-menu-label"
       data-inset={inset}
-      {...s.label.with({ className })}
+      {...s.label.with(inset && s.labelInset).with({ className })}
       {...props}
     />
   )

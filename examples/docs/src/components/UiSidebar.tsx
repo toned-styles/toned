@@ -71,7 +71,7 @@ export function UiSidebar() {
 function NavLink({ name, isActive }: { name: string; isActive: boolean }) {
   const s = useStyles(uiSidebarStyles, { active: isActive ? 'true' : undefined })
   return (
-    <Link to={`/ui/${name}`} {...s.link}>
+    <Link to={`/ui/${name}` as string} {...s.link}>
       {name.charAt(0).toUpperCase() + name.slice(1)}
     </Link>
   )

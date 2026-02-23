@@ -7,37 +7,15 @@ type AnyValue = any
 
 type Ref = AnyValue
 
-function getProps(this: Base, elementKey: string) {
-  const ref = (current: Ref) => {
-    this.refs[elementKey] = current
-  }
+function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue> {
+  Object.defineProperty(obj, 'with', {
+    value: (props: Record<string, AnyValue> | false | null | undefined) => {
+      if (!props) return obj
 
-  let result: Record<string, AnyValue>
-
-  if (this.matcher.interactions[elementKey]) {
-    result = {
-      ref,
-
-      ...this.getCurrentStyle(elementKey),
-
-      ...this.setOn(elementKey, ':hover', 'onMouseOver', 'onMouseOut'),
-      ...this.setOn(elementKey, ':active', 'onMouseDown', 'onMouseUp'),
-      ...this.setOn(elementKey, ':focus', 'onBlur', 'onFocus'),
-    }
-  } else {
-    result = {
-      ref,
-
-      ...this.getCurrentStyle(elementKey),
-    }
-  }
-
-  Object.defineProperty(result, 'with', {
-    value: (props: Record<string, AnyValue>) => {
       const merged: Record<string, AnyValue> = {}
 
-      for (const key in result) {
-        merged[key] = result[key]
+      for (const key in obj) {
+        merged[key] = obj[key]
       }
 
       for (const key in props) {
@@ -71,13 +49,41 @@ function getProps(this: Base, elementKey: string) {
         }
       }
 
-      return merged
+      return addWith(merged)
     },
     enumerable: false,
     configurable: false,
   })
 
-  return result
+  return obj
+}
+
+function getProps(this: Base, elementKey: string) {
+  const ref = (current: Ref) => {
+    this.refs[elementKey] = current
+  }
+
+  let result: Record<string, AnyValue>
+
+  if (this.matcher.interactions[elementKey]) {
+    result = {
+      ref,
+
+      ...this.getCurrentStyle(elementKey),
+
+      ...this.setOn(elementKey, ':hover', 'onMouseOver', 'onMouseOut'),
+      ...this.setOn(elementKey, ':active', 'onMouseDown', 'onMouseUp'),
+      ...this.setOn(elementKey, ':focus', 'onBlur', 'onFocus'),
+    }
+  } else {
+    result = {
+      ref,
+
+      ...this.getCurrentStyle(elementKey),
+    }
+  }
+
+  return addWith(result)
 }
 
 export default defineConfig({

@@ -12,8 +12,8 @@ const tooltipStyles = stylesheet({
     paddingX: 3,
     paddingY: 1.5,
     typo: 'caption',
+    width: 'fit-content',
     style: {
-      width: 'fit-content',
       textWrap: 'balance',
       transformOrigin: 'var(--radix-tooltip-content-transform-origin)',
       animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',

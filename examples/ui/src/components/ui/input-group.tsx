@@ -33,10 +33,10 @@ const inputGroupStyles = stylesheet({
     typo: 'body_small',
     fontWeight: 500,
     cursor: 'text',
+    paddingTop: 1.5,
+    paddingBottom: 1.5,
+    height: 'auto',
     style: {
-      height: 'auto',
-      paddingTop: '0.375rem',
-      paddingBottom: '0.375rem',
       userSelect: 'none',
     },
   },
@@ -54,20 +54,20 @@ const inputGroupStyles = stylesheet({
   },
   addonBlockStart: {
     paddingX: 3,
+    paddingTop: 3,
     style: {
       order: -1,
       width: '100%',
       justifyContent: 'flex-start',
-      paddingTop: '0.75rem',
     },
   },
   addonBlockEnd: {
     paddingX: 3,
+    paddingBottom: 3,
     style: {
       order: 999,
       width: '100%',
       justifyContent: 'flex-start',
-      paddingBottom: '0.75rem',
     },
   },
   text: {

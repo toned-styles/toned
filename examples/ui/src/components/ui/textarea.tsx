@@ -24,15 +24,24 @@ const textareaStyles = stylesheet({
       typo: 'body_small',
     },
   },
+  disabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
+  invalid: {
+    borderColor: 'destructive',
+    style: { boxShadow: '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)' },
+  },
 })
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ className, disabled, ...props }: React.ComponentProps<"textarea">) {
   const s = useStyles(textareaStyles)
 
   return (
     <textarea
       data-slot="textarea"
-      {...s.root.with({ className })}
+      {...s.root.with(disabled && s.disabled).with(props['aria-invalid'] === 'true' && s.invalid).with({ className })}
+      disabled={disabled}
       {...props}
     />
   )

@@ -21,15 +21,23 @@ const scrollAreaStyles = stylesheet({
     style: {
       touchAction: 'none',
       padding: '1px',
-      transition: 'background-color 0.15s',
+      transition: 'background 150ms',
       userSelect: 'none',
+    },
+    ':hover': {
+      style: {
+        background: 'color-mix(in srgb, var(--border) 50%, transparent)',
+      },
     },
   },
   thumb: {
     bgColor: 'subtle',
     borderRadius: 'full',
     position: 'relative',
-    style: { flex: 1 },
+    style: {
+      flex: 1,
+      transition: 'background 150ms',
+    },
   },
 })
 

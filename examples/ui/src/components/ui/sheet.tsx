@@ -31,14 +31,14 @@ const sheetStyles = stylesheet({
     top: '1rem',
     right: '1rem',
     cursor: 'pointer',
+    padding: 0,
     style: {
       transition: 'opacity 0.15s',
       background: 'none',
       border: 'none',
-      padding: 0,
     },
     ':hover': {
-      style: { opacity: 1 },
+      opacity: 1,
     },
   },
   header: {

@@ -16,9 +16,9 @@ const tabsStyles = stylesheet({
     justifyContent: 'center',
     textColor: 'muted',
     borderRadius: 'large',
+    width: 'fit-content',
     style: {
       padding: '3px',
-      width: 'fit-content',
     },
   },
   listDefault: {
@@ -57,6 +57,10 @@ const tabsStyles = stylesheet({
       flex: 1,
       outline: 'none',
     },
+  },
+  disabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
   },
 })
 
@@ -114,6 +118,7 @@ function TabsList({
 
 function TabsTrigger({
   className,
+  disabled,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   const s = useStyles(tabsStyles)
@@ -121,7 +126,8 @@ function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
-      {...s.trigger.with({ className })}
+      disabled={disabled}
+      {...s.trigger.with(disabled && s.disabled).with({ className })}
       {...props}
     />
   )

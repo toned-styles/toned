@@ -13,11 +13,15 @@ const buttonStyles = stylesheet({
     borderRadius: 'medium',
     typo: 'label_small',
     shadow: 'small',
+    cursor: 'pointer',
     style: {
-      cursor: 'pointer',
       whiteSpace: 'nowrap' as const,
       transition: 'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s, text-decoration 0.15s',
     },
+  },
+  disabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
   },
 }).variants<{
   variant: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
@@ -27,7 +31,7 @@ const buttonStyles = stylesheet({
   [$.variant('default')]: {
     root: { bgColor: 'action', textColor: 'on_action' },
     'root:hover': {
-      root: { style: { opacity: 0.9 } },
+      root: { opacity: 0.9 },
     },
   },
   [$.variant('destructive')]: {
@@ -37,7 +41,7 @@ const buttonStyles = stylesheet({
       shadow: 'none',
     },
     'root:hover': {
-      root: { style: { opacity: 0.9 } },
+      root: { opacity: 0.9 },
     },
   },
   [$.variant('outline')]: {
@@ -58,7 +62,7 @@ const buttonStyles = stylesheet({
       shadow: 'none',
     },
     'root:hover': {
-      root: { style: { opacity: 0.8 } },
+      root: { opacity: 0.8 },
     },
   },
   [$.variant('ghost')]: {
@@ -120,6 +124,7 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  disabled,
   ...props
 }: React.ComponentProps<"button"> & {
   variant?: ButtonVariant
@@ -134,7 +139,8 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      {...s.root.with({ className })}
+      {...s.root.with(disabled && s.disabled).with({ className })}
+      disabled={disabled}
       {...props}
     />
   )

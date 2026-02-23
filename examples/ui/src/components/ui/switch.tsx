@@ -16,6 +16,10 @@ const switchStyles = stylesheet({
       transition: 'all 0.15s',
     },
   },
+  disabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
   thumb: {
     bgColor: 'default',
     pointerEvents: 'none',
@@ -26,22 +30,40 @@ const switchStyles = stylesheet({
       transition: 'transform 0.15s',
     },
   },
-})
+}).variants<{ checked: boolean }>(($) => ({
+  [$.checked(true)]: {
+    root: { bgColor: 'action' },
+  },
+}))
 
 function Switch({
   className,
+  disabled,
   size = "default",
+  checked: checkedProp,
+  defaultChecked,
+  onCheckedChange,
   ...props
 }: React.ComponentProps<typeof SwitchPrimitive.Root> & {
   size?: "sm" | "default"
 }) {
-  const s = useStyles(switchStyles)
+  const [internal, setInternal] = React.useState(checkedProp ?? defaultChecked ?? false)
+  const checked = checkedProp ?? internal
+
+  const s = useStyles(switchStyles, { checked })
 
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
       data-size={size}
-      {...s.root.with({ className })}
+      checked={checkedProp}
+      defaultChecked={defaultChecked}
+      onCheckedChange={(val) => {
+        setInternal(val)
+        onCheckedChange?.(val)
+      }}
+      {...s.root.with(disabled && s.disabled).with({ className })}
+      disabled={disabled}
       {...props}
     >
       <SwitchPrimitive.Thumb

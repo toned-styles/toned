@@ -36,6 +36,13 @@ const inputOtpStyles = stylesheet({
       transition: 'all 0.15s',
     },
   },
+  activeSlot: {
+    borderColor: 'interactive',
+    zIndex: 10,
+    style: {
+      boxShadow: '0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent)',
+    },
+  },
   caret: {
     position: 'absolute',
     display: 'flex',
@@ -44,6 +51,7 @@ const inputOtpStyles = stylesheet({
     pointerEvents: 'none',
     style: {
       inset: '0',
+      animation: 'caret-blink 1.25s ease-out infinite',
     },
   },
   caretBar: {
@@ -102,7 +110,7 @@ function InputOTPSlot({
     <div
       data-slot="input-otp-slot"
       data-active={isActive}
-      {...s.slot.with({ className })}
+      {...s.slot.with(isActive && s.activeSlot).with({ className })}
       {...props}
     >
       {char}

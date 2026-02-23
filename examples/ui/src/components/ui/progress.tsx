@@ -22,7 +22,7 @@ const progressStyles = stylesheet({
     width: '100%',
     style: {
       flex: '1',
-      transition: 'all 0.3s',
+      transition: 'width 200ms ease',
     },
   },
 })
