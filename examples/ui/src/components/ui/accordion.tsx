@@ -19,11 +19,12 @@ const accordionStyles = stylesheet({
     typo: 'body_small',
     fontWeight: 500,
     cursor: 'pointer',
+    justifyContent: 'space-between',
+    gap: 4,
+    paddingY: 4,
+    paddingX: 0,
     style: {
       flex: 1,
-      justifyContent: 'space-between',
-      gap: '1rem',
-      padding: '1rem 0',
       textAlign: 'left',
       transition: 'all 0.15s',
       outline: 'none',
@@ -37,10 +38,10 @@ const accordionStyles = stylesheet({
   triggerIcon: {
     textColor: 'muted',
     pointerEvents: 'none',
+    width: '1rem',
+    height: '1rem',
+    flexShrink: '0',
     style: {
-      width: '1rem',
-      height: '1rem',
-      flexShrink: 0,
       transform: 'translateY(2px)',
       transition: 'transform 0.2s',
     },
@@ -50,10 +51,8 @@ const accordionStyles = stylesheet({
     overflow: 'hidden',
   },
   contentInner: {
-    style: {
-      paddingTop: 0,
-      paddingBottom: '1rem',
-    },
+    paddingTop: 0,
+    paddingBottom: 4,
   },
 })
 

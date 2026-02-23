@@ -34,7 +34,7 @@ export type VariantKey = string
 /**
  * Keys that have been accumulated in a builder
  */
-type AccumulatedKeys = Record<string, string>
+type AccumulatedKeys = Record<string, string | number | boolean>
 
 /**
  * Concatenate existing key with new segment
@@ -42,7 +42,7 @@ type AccumulatedKeys = Record<string, string>
 type AppendKey<
   Existing extends string,
   K extends string,
-  V extends string,
+  V extends string | number | boolean,
 > = `${Existing}[${K}=${V}]`
 
 /**
@@ -64,7 +64,7 @@ export type VariantBuilder<
   [K in Exclude<keyof Mods, keyof Acc> as K extends string
     ? K
     : never]: K extends string
-    ? <const V extends Exclude<Mods[K], undefined> & string>(
+    ? <const V extends Exclude<Mods[K], undefined> & (string | number | boolean)>(
         ...values: [V, ...V[]]
       ) => VariantBuilder<Mods, Acc & Record<K, V>, AppendKey<Key, K, V>>
     : never
@@ -85,7 +85,7 @@ export type VariantSelector<Mods extends ModType> = {
    * @example $.size("m") or $.alignment("icon-only", "icon-left")
    */
   [K in keyof Mods as K extends string ? K : never]-?: K extends string
-    ? <const V extends Exclude<Mods[K], undefined> & string>(
+    ? <const V extends Exclude<Mods[K], undefined> & (string | number | boolean)>(
         ...values: [V, ...V[]]
       ) => VariantBuilder<Mods, { [P in K]: V }, `[${K}=${V}]`>
     : never

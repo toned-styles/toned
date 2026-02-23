@@ -10,6 +10,7 @@ const labelStyles = stylesheet({
     gap: 2,
     typo: 'label_small',
     style: {
+      cursor: 'default',
       userSelect: 'none',
     },
   },

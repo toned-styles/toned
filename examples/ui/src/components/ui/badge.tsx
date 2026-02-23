@@ -16,8 +16,8 @@ const badgeStyles = stylesheet({
     flexShrink: '0',
     gap: 1,
     overflow: 'hidden',
+    width: 'fit-content',
     style: {
-      width: 'fit-content',
       whiteSpace: 'nowrap' as const,
       borderWidth: '1px',
       borderStyle: 'solid',

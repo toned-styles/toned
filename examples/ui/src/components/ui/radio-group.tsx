@@ -24,6 +24,10 @@ const radioGroupStyles = stylesheet({
       transition: 'color 0.15s, box-shadow 0.15s',
     },
   },
+  disabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
   indicator: {
     position: 'relative',
     display: 'flex',
@@ -49,6 +53,7 @@ function RadioGroup({
 
 function RadioGroupItem({
   className,
+  disabled,
   ...props
 }: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
   const s = useStyles(radioGroupStyles)
@@ -56,7 +61,8 @@ function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
-      {...s.item.with({ className })}
+      {...s.item.with(disabled && s.disabled).with({ className })}
+      disabled={disabled}
       {...props}
     >
       <RadioGroupPrimitive.Indicator

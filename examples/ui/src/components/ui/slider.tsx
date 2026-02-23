@@ -39,11 +39,15 @@ const sliderStyles = stylesheet({
       transition: 'color 0.15s, box-shadow 0.15s',
     },
     ':hover': {
-      style: { cursor: 'grab' },
+      cursor: 'grab',
     },
     ':active': {
-      style: { cursor: 'grabbing' },
+      cursor: 'grabbing',
     },
+  },
+  disabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
   },
 })
 
@@ -53,6 +57,7 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  disabled,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const s = useStyles(sliderStyles)
@@ -73,6 +78,7 @@ function Slider({
       value={value}
       min={min}
       max={max}
+      disabled={disabled}
       {...s.root.with({ className })}
       {...props}
     >
@@ -89,7 +95,7 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          {...s.thumb}
+          {...s.thumb.with(disabled && s.disabled)}
         />
       ))}
     </SliderPrimitive.Root>

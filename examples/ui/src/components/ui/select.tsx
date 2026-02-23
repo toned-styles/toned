@@ -28,6 +28,10 @@ const selectStyles = stylesheet({
       transition: 'color 0.15s, box-shadow 0.15s',
     },
   },
+  triggerDisabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
   content: {
     bgColor: 'elevated',
     textColor: 'default',
@@ -40,9 +44,9 @@ const selectStyles = stylesheet({
     overflow: 'hidden',
     minWidth: '8rem',
     overflowX: 'hidden',
+    overflowY: 'auto',
+    maxHeight: 'var(--radix-select-content-available-height)',
     style: {
-      maxHeight: 'var(--radix-select-content-available-height)',
-      overflowY: 'auto',
       transformOrigin: 'var(--radix-select-content-transform-origin)',
     },
   },
@@ -106,6 +110,7 @@ function SelectValue({
 function SelectTrigger({
   className,
   size = "default",
+  disabled,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
@@ -117,7 +122,8 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      {...s.trigger.with({ className })}
+      disabled={disabled}
+      {...s.trigger.with(disabled && s.triggerDisabled).with({ className })}
       {...props}
     >
       {children}

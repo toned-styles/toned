@@ -10,7 +10,7 @@ type ElementProps = {
   style?: Record<string, any>
   className?: string
   // biome-ignore lint/suspicious/noExplicitAny: dynamic merge result
-  with: (props: Record<string, any>) => Record<string, any>
+  with: (props: Record<string, any> | false | null | undefined) => ElementProps
   // biome-ignore lint/suspicious/noExplicitAny: dynamic element attributes
   [key: string]: any
 }

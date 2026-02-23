@@ -8,9 +8,7 @@ import { cn } from "@/lib/utils"
 const nativeSelectStyles = stylesheet({
   wrapper: {
     position: 'relative',
-    style: {
-      width: 'fit-content',
-    },
+    width: 'fit-content',
   },
   select: {
     borderColor: 'default',
@@ -21,23 +19,26 @@ const nativeSelectStyles = stylesheet({
     height: '2.25rem',
     width: '100%',
     minWidth: '0',
+    paddingLeft: 3,
+    paddingRight: 9,
+    paddingY: 2,
     style: {
       appearance: 'none',
       background: 'transparent',
-      paddingLeft: '0.75rem',
-      paddingRight: '2.25rem',
-      paddingTop: '0.5rem',
-      paddingBottom: '0.5rem',
       outline: 'none',
       transition: 'color 0.15s, box-shadow 0.15s',
     },
   },
   selectSm: {
     height: '2rem',
-    style: {
-      paddingTop: '0.25rem',
-      paddingBottom: '0.25rem',
-    },
+    paddingY: 1,
+  },
+  disabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
+  invalid: {
+    borderColor: 'destructive',
   },
   icon: {
     textColor: 'muted',
@@ -46,9 +47,9 @@ const nativeSelectStyles = stylesheet({
     opacity: 0.5,
     width: '1rem',
     height: '1rem',
+    top: '50%',
+    right: '0.875rem',
     style: {
-      top: '50%',
-      right: '0.875rem',
       transform: 'translateY(-50%)',
       userSelect: 'none',
     },
@@ -58,6 +59,7 @@ const nativeSelectStyles = stylesheet({
 function NativeSelect({
   className,
   size = "default",
+  disabled,
   ...props
 }: Omit<React.ComponentProps<"select">, "size"> & { size?: "sm" | "default" }) {
   const s = useStyles(nativeSelectStyles)
@@ -70,11 +72,12 @@ function NativeSelect({
       <select
         data-slot="native-select"
         data-size={size}
-        className={cn(s.select.className, size === 'sm' && s.selectSm.className, className)}
-        style={{
-          ...s.select.style,
-          ...(size === 'sm' ? s.selectSm.style : undefined),
-        }}
+        {...s.select
+          .with(size === 'sm' && s.selectSm)
+          .with(disabled && s.disabled)
+          .with(props['aria-invalid'] === 'true' && s.invalid)
+          .with({ className })}
+        disabled={disabled}
         {...props}
       />
       <ChevronDownIcon

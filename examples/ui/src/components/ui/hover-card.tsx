@@ -13,8 +13,8 @@ const hoverCardStyles = stylesheet({
     borderWidth: 'thin',
     padding: 4,
     shadow: 'medium',
+    width: '16rem',
     style: {
-      width: '16rem',
       outline: 'none',
       transformOrigin: 'var(--radix-hover-card-content-transform-origin)',
       animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',

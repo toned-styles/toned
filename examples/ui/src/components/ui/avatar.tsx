@@ -48,7 +48,7 @@ const avatarStyles = stylesheet({
   },
   group: {
     display: 'flex',
-    style: { marginLeft: '-8px' },
+    marginLeft: -2,
   },
   groupCount: {
     bgColor: 'muted',

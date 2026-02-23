@@ -86,9 +86,7 @@ const alertDialogStyles = stylesheet({
     borderRadius: 'medium',
     width: '4rem',
     height: '4rem',
-    style: {
-      marginBottom: '0.5rem',
-    },
+    marginBottom: 2,
   },
 })
 

@@ -32,10 +32,10 @@ const comboboxStyles = stylesheet({
     },
   },
   list: {
+    overflowY: 'auto',
+    maxHeight: 'min(calc(24rem - 2.25rem), calc(var(--available-height) - 2.25rem))',
+    padding: 1,
     style: {
-      maxHeight: 'min(calc(24rem - 2.25rem), calc(var(--available-height) - 2.25rem))',
-      overflowY: 'auto',
-      padding: '0.25rem',
       scrollPaddingBlock: '0.25rem',
     },
   },
@@ -48,14 +48,18 @@ const comboboxStyles = stylesheet({
     position: 'relative',
     width: '100%',
     cursor: 'default',
+    paddingTop: 1.5,
+    paddingBottom: 1.5,
+    paddingRight: 8,
+    paddingLeft: 2,
     style: {
-      paddingTop: '0.375rem',
-      paddingBottom: '0.375rem',
-      paddingRight: '2rem',
-      paddingLeft: '0.5rem',
       outline: 'none',
       userSelect: 'none',
     },
+  },
+  itemDisabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
   },
   itemIndicator: {
     display: 'flex',
@@ -63,22 +67,16 @@ const comboboxStyles = stylesheet({
     justifyContent: 'center',
     position: 'absolute',
     pointerEvents: 'none',
-    style: {
-      right: '0.5rem',
-      width: '1rem',
-      height: '1rem',
-    },
+    right: '0.5rem',
+    width: '1rem',
+    height: '1rem',
   },
   label: {
     textColor: 'muted',
     fontSize: '0.75rem',
     lineHeight: '1rem',
-    style: {
-      paddingLeft: '0.5rem',
-      paddingRight: '0.5rem',
-      paddingTop: '0.375rem',
-      paddingBottom: '0.375rem',
-    },
+    paddingX: 2,
+    paddingY: 1.5,
   },
   empty: {
     textColor: 'muted',
@@ -86,18 +84,16 @@ const comboboxStyles = stylesheet({
     display: 'none',
     width: '100%',
     justifyContent: 'center',
+    paddingY: 2,
     style: {
-      paddingTop: '0.5rem',
-      paddingBottom: '0.5rem',
       textAlign: 'center',
     },
   },
   separator: {
     bgColor: 'subtle',
     height: '1px',
-    style: {
-      margin: '0.25rem -0.25rem',
-    },
+    marginY: 1,
+    marginX: -1,
   },
   triggerIcon: {
     textColor: 'muted',
@@ -114,15 +110,13 @@ const comboboxStyles = stylesheet({
     alignItems: 'center',
     typo: 'body_small',
     minHeight: '2.25rem',
+    flexWrap: 'wrap',
+    gap: 1.5,
+    paddingX: 2.5,
+    paddingY: 1.5,
     style: {
-      flexWrap: 'wrap',
-      gap: '0.375rem',
       background: 'transparent',
       backgroundClip: 'padding-box',
-      paddingLeft: '0.625rem',
-      paddingRight: '0.625rem',
-      paddingTop: '0.375rem',
-      paddingBottom: '0.375rem',
       transition: 'color 0.15s, box-shadow 0.15s',
     },
   },
@@ -136,11 +130,10 @@ const comboboxStyles = stylesheet({
     width: 'fit-content',
     fontSize: '0.75rem',
     fontWeight: 500,
+    height: '1.375rem',
+    gap: 1,
+    paddingX: 1.5,
     style: {
-      height: 'calc(1.375rem)',
-      gap: '0.25rem',
-      paddingLeft: '0.375rem',
-      paddingRight: '0.375rem',
       whiteSpace: 'nowrap',
     },
   },
@@ -289,6 +282,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
 function ComboboxItem({
   className,
   children,
+  disabled,
   ...props
 }: ComboboxPrimitive.Item.Props) {
   const s = useStyles(comboboxStyles)
@@ -296,7 +290,8 @@ function ComboboxItem({
   return (
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
-      {...s.item.with({ className })}
+      disabled={disabled}
+      {...s.item.with(disabled && s.itemDisabled).with({ className })}
       {...props}
     >
       {children}

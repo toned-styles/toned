@@ -16,9 +16,7 @@ const fieldStyles = stylesheet({
   },
   legend: {
     fontWeight: 500,
-    style: {
-      marginBottom: '0.75rem',
-    },
+    marginBottom: 3,
   },
   legendVariantLegend: {
     style: {
@@ -88,22 +86,20 @@ const fieldStyles = stylesheet({
   fieldSeparator: {
     position: 'relative',
     typo: 'body_small',
-    style: {
-      marginTop: '-0.5rem',
-      marginBottom: '-0.5rem',
-      height: '1.25rem',
-    },
+    marginTop: -2,
+    marginBottom: -2,
+    height: '1.25rem',
   },
   fieldSeparatorContent: {
     bgColor: 'default',
     textColor: 'muted',
     position: 'relative',
+    paddingLeft: 2,
+    paddingRight: 2,
     style: {
       display: 'block',
       width: 'fit-content',
       margin: '0 auto',
-      paddingLeft: '0.5rem',
-      paddingRight: '0.5rem',
     },
   },
   fieldError: {
@@ -115,8 +111,8 @@ const fieldStyles = stylesheet({
     display: 'flex',
     flexLayout: 'column',
     gap: 1,
+    marginLeft: 4,
     style: {
-      marginLeft: '1rem',
       listStyleType: 'disc',
     },
   },

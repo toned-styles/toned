@@ -38,9 +38,7 @@ const emptyStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: '0',
-    style: {
-      marginBottom: '0.5rem',
-    },
+    marginBottom: 2,
   },
   mediaIcon: {
     bgColor: 'action_secondary',

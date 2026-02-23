@@ -12,8 +12,8 @@ const navMenuStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    maxWidth: 'max-content',
     style: {
-      maxWidth: 'max-content',
       flex: 1,
     },
   },
@@ -42,8 +42,8 @@ const navMenuStyles = stylesheet({
     paddingY: 2,
     height: '2.25rem',
     cursor: 'pointer',
+    width: 'max-content',
     style: {
-      width: 'max-content',
       outline: 'none',
       transition: 'color 0.15s, box-shadow 0.15s',
       border: 'none',
@@ -55,22 +55,20 @@ const navMenuStyles = stylesheet({
   },
   triggerIcon: {
     position: 'relative',
+    top: '1px',
+    marginLeft: 1,
+    width: '0.75rem',
+    height: '0.75rem',
     style: {
-      top: '1px',
-      marginLeft: '0.25rem',
-      width: '0.75rem',
-      height: '0.75rem',
       transition: 'transform 0.3s',
     },
   },
   content: {
     padding: 2,
-    style: {
-      top: 0,
-      left: 0,
-      width: '100%',
-      paddingRight: '0.625rem',
-    },
+    top: 0,
+    left: 0,
+    width: '100%',
+    paddingRight: 2.5,
     '@md': {
       position: 'absolute',
       style: {
@@ -83,9 +81,9 @@ const navMenuStyles = stylesheet({
     zIndex: 50,
     display: 'flex',
     justifyContent: 'center',
+    top: '100%',
+    left: 0,
     style: {
-      top: '100%',
-      left: 0,
       isolation: 'isolate',
     },
   },
@@ -98,11 +96,12 @@ const navMenuStyles = stylesheet({
     shadow: 'medium',
     position: 'relative',
     overflow: 'hidden',
+    marginTop: 1.5,
+    height: 'var(--radix-navigation-menu-viewport-height)',
+    width: '100%',
     style: {
-      marginTop: '0.375rem',
-      height: 'var(--radix-navigation-menu-viewport-height)',
-      width: '100%',
       transformOrigin: 'top center',
+      animation: 'fade-in 100ms ease-out',
     },
     '@md': {
       style: {
@@ -132,20 +131,18 @@ const navMenuStyles = stylesheet({
     justifyContent: 'center',
     zIndex: 1,
     overflow: 'hidden',
-    style: {
-      top: '100%',
-      height: '0.375rem',
-    },
+    top: '100%',
+    height: '0.375rem',
   },
   indicatorArrow: {
     bgColor: 'subtle',
     position: 'relative',
     shadow: 'medium',
     borderRadius: 'small',
+    top: '60%',
+    height: '0.5rem',
+    width: '0.5rem',
     style: {
-      top: '60%',
-      height: '0.5rem',
-      width: '0.5rem',
       transform: 'rotate(45deg)',
     },
   },

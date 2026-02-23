@@ -23,10 +23,8 @@ const commandStyles = stylesheet({
     flexLayout: 'column',
     width: '100%',
     borderRadius: 'medium',
-    style: {
-      height: '100%',
-      overflow: 'hidden',
-    },
+    height: '100%',
+    overflow: 'hidden',
   },
   inputWrapper: {
     display: 'flex',
@@ -34,8 +32,8 @@ const commandStyles = stylesheet({
     gap: 2,
     borderColor: 'default',
     paddingX: 3,
+    height: '2.25rem',
     style: {
-      height: '2.25rem',
       borderBottom: '1px solid var(--border)',
     },
   },
@@ -43,10 +41,11 @@ const commandStyles = stylesheet({
     display: 'flex',
     width: '100%',
     typo: 'body_small',
+    height: '2.5rem',
+    paddingY: 3,
+    paddingX: 0,
     style: {
-      height: '2.5rem',
       background: 'transparent',
-      padding: '0.75rem 0',
       outline: 'none',
       border: 'none',
     },
@@ -69,9 +68,7 @@ const commandStyles = stylesheet({
   group: {
     textColor: 'default',
     padding: 1,
-    style: {
-      overflow: 'hidden',
-    },
+    overflow: 'hidden',
   },
   item: {
     display: 'flex',
@@ -81,26 +78,29 @@ const commandStyles = stylesheet({
     paddingX: 2,
     paddingY: 1.5,
     typo: 'body_small',
+    position: 'relative',
+    cursor: 'default',
     style: {
-      position: 'relative',
-      cursor: 'default',
       outline: 'none',
       userSelect: 'none',
     },
   },
+  itemDisabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
+  },
   separator: {
     bgColor: 'subtle',
-    style: {
-      margin: '0 -0.25rem',
-      height: '1px',
-    },
+    height: '1px',
+    marginY: 0,
+    marginX: -1,
   },
   shortcut: {
     textColor: 'muted',
     typo: 'caption',
+    letterSpacing: '0.1em',
     style: {
       marginLeft: 'auto',
-      letterSpacing: '0.1em',
     },
   },
 })
@@ -241,15 +241,18 @@ function CommandSeparator({
 
 function CommandItem({
   className,
+  disabled,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Item>) {
   const s = useStyles(commandStyles)
+  const combined = s.item.with(disabled && s.itemDisabled)
 
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
-      className={cn(s.item.className, className)}
-      style={s.item.style}
+      disabled={disabled}
+      className={cn(combined.className, className)}
+      style={combined.style}
       {...props}
     />
   )

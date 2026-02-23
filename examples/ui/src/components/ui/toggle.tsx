@@ -26,9 +26,14 @@ const toggleStyles = stylesheet({
       textColor: 'muted',
     },
   },
+  disabled: {
+    pointerEvents: 'none',
+    opacity: 0.5,
+  },
 }).variants<{
   variant: 'default' | 'outline'
   size: 'default' | 'sm' | 'lg'
+  pressed: boolean
 }>(($) => ({
   [$.variant('default')]: {
     root: {
@@ -57,33 +62,50 @@ const toggleStyles = stylesheet({
     root: {
       height: '2rem',
       minWidth: '2rem',
-      style: { padding: '0 0.375rem' },
+      paddingY: 0, paddingX: 1.5,
     },
   },
   [$.size('lg')]: {
     root: {
       height: '2.5rem',
       minWidth: '2.5rem',
-      style: { padding: '0 0.625rem' },
+      paddingY: 0, paddingX: 2.5,
     },
+  },
+  [$.pressed(true)]: {
+    root: { bgColor: 'subtle', textColor: 'subtle' },
   },
 }))
 
 function Toggle({
   className,
+  disabled,
   variant = "default",
   size = "default",
+  pressed: pressedProp,
+  defaultPressed,
+  onPressedChange,
   ...props
 }: React.ComponentProps<typeof TogglePrimitive.Root> & {
   variant?: "default" | "outline"
   size?: "default" | "sm" | "lg"
 }) {
-  const s = useStyles(toggleStyles, { variant, size })
+  const [internal, setInternal] = React.useState(pressedProp ?? defaultPressed ?? false)
+  const pressed = pressedProp ?? internal
+
+  const s = useStyles(toggleStyles, { variant, size, pressed })
 
   return (
     <TogglePrimitive.Root
       data-slot="toggle"
-      {...s.root.with({ className })}
+      pressed={pressedProp}
+      defaultPressed={defaultPressed}
+      onPressedChange={(val) => {
+        setInternal(val)
+        onPressedChange?.(val)
+      }}
+      {...s.root.with(disabled && s.disabled).with({ className })}
+      disabled={disabled}
       {...props}
     />
   )

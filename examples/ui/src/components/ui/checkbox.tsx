@@ -20,6 +20,10 @@ const checkboxStyles = stylesheet({
       transition: 'box-shadow 0.15s',
     },
   },
+  disabled: {
+    cursor: 'not-allowed',
+    opacity: 0.5,
+  },
   indicator: {
     display: 'grid',
     style: {
@@ -28,18 +32,39 @@ const checkboxStyles = stylesheet({
       transition: 'none',
     },
   },
-})
+}).variants<{ checked: boolean }>(($) => ({
+  [$.checked(true)]: {
+    root: { bgColor: 'action', textColor: 'on_action', borderColor: 'action' },
+  },
+}))
 
 function Checkbox({
   className,
+  disabled,
+  checked: checkedProp,
+  defaultChecked,
+  onCheckedChange,
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
-  const s = useStyles(checkboxStyles)
+  const [internal, setInternal] = React.useState<boolean | 'indeterminate'>(
+    checkedProp ?? defaultChecked ?? false
+  )
+  const current = checkedProp ?? internal
+  const isActive = current === true || current === 'indeterminate'
+
+  const s = useStyles(checkboxStyles, { checked: isActive })
 
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
-      {...s.root.with({ className })}
+      checked={checkedProp}
+      defaultChecked={defaultChecked}
+      onCheckedChange={(val) => {
+        setInternal(val)
+        onCheckedChange?.(val)
+      }}
+      {...s.root.with(disabled && s.disabled).with({ className })}
+      disabled={disabled}
       {...props}
     >
       <CheckboxPrimitive.Indicator
