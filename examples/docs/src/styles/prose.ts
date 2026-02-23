@@ -12,6 +12,12 @@ export const proseStyles = stylesheet({
     marginBottom: 1.5,
     lineHeight: 1.15,
     letterSpacing: '-0.02em',
+    style: {
+      background: 'var(--gradient-brand-text)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+    },
     '@md': {
       fontSize: '36px',
     },

@@ -1,5 +1,6 @@
 import '../toned.config.ts'
 import '../../ui/src/styles.css'
+import './docs-theme.css'
 
 import {
   RouterProvider,

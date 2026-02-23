@@ -3,37 +3,47 @@ import { stylesheet } from '@toned/systems/base'
 export const playgroundStyles = stylesheet({
   container: {
     flexLayout: 'column',
-    gap: 3,
+    gap: 5,
   },
   title: {
-    fontSize: '28px',
+    fontSize: '30px',
     fontWeight: 700,
-    letterSpacing: '-0.02em',
-    textColor: 'default',
+    letterSpacing: '-0.025em',
+    style: {
+      background: 'var(--gradient-brand-text)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
+    },
   },
   description: {
-    fontSize: '14px',
+    fontSize: '15px',
     textColor: 'subtle',
-    lineHeight: 1.5,
-    marginTop: 0.5,
+    lineHeight: 1.6,
+    marginTop: 1,
   },
   exportBadge: {
     fontSize: '12px',
     textColor: 'muted',
     fontFamily: 'monospace',
-    marginTop: 0.5,
+    marginTop: 1,
   },
   preview: {
-    borderColor: 'subtle',
+    borderColor: 'default',
     borderWidth: 'thin',
-    borderRadius: 'large',
-    paddingX: 4,
-    paddingY: 4,
+    borderRadius: 'xlarge',
+    paddingX: 5,
+    paddingY: 5,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: '100px',
+    minHeight: '240px',
     bgColor: 'default',
+    style: {
+      backgroundImage:
+        'radial-gradient(circle, var(--border) 1px, transparent 1px)',
+      backgroundSize: '20px 20px',
+    },
   },
   compoundNotice: {
     flexLayout: 'column',
@@ -46,9 +56,9 @@ export const playgroundStyles = stylesheet({
   controls: {
     borderColor: 'subtle',
     borderWidth: 'thin',
-    borderRadius: 'large',
-    paddingX: 3,
-    paddingY: 3,
+    borderRadius: 'xlarge',
+    paddingX: 4,
+    paddingY: 4,
     bgColor: 'muted',
   },
   controlsTitle: {
