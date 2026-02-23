@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { usePlaygroundPortal } from '../../components/PlaygroundContext.tsx'
 import { ComponentPreview } from '../../components/playground/ComponentPreview.tsx'
 import { DocPreview } from '../../components/playground/DocPreview.tsx'
 import { PropControls } from '../../components/playground/PropControls.tsx'
@@ -170,6 +172,19 @@ function writePropsToUrl(
   window.history.replaceState(null, '', url)
 }
 
+/** Renders children into the right sidebar portal when available, or inline as fallback */
+function PortalToSidebar({ children }: { children: ReactNode }) {
+  const portalRef = usePlaygroundPortal()
+  const [target, setTarget] = useState<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    setTarget(portalRef?.current ?? null)
+  }, [portalRef])
+
+  if (target) return createPortal(children, target)
+  return <>{children}</>
+}
+
 /** Doc-descriptor-based playground with per-component prop controls */
 function DocPlayground({
   doc,
@@ -240,21 +255,23 @@ function DocPlayground({
 
       <DocPreview doc={doc} propStates={propStates} />
 
-      {doc.entries.map((entry) => {
-        const docgen = docgenByName[entry.name]
-        if (!docgen) return null
-        return (
-          <PropControls
-            key={entry.name}
-            title={isCompound ? `${entry.name} props` : undefined}
-            props={docgen.props}
-            values={propStates[entry.name] ?? {}}
-            onChange={(prop, value) =>
-              updatePropState(entry.name, prop, value)
-            }
-          />
-        )
-      })}
+      <PortalToSidebar>
+        {doc.entries.map((entry) => {
+          const docgen = docgenByName[entry.name]
+          if (!docgen) return null
+          return (
+            <PropControls
+              key={entry.name}
+              title={isCompound ? `${entry.name} props` : undefined}
+              props={docgen.props}
+              values={propStates[entry.name] ?? {}}
+              onChange={(prop, value) =>
+                updatePropState(entry.name, prop, value)
+              }
+            />
+          )
+        })}
+      </PortalToSidebar>
     </div>
   )
 }
@@ -278,13 +295,15 @@ function SimplePlayground({
   return (
     <>
       <ComponentPreview component={Comp} props={propValues} />
-      <PropControls
-        props={doc.props}
-        values={propValues}
-        onChange={(name, value) =>
-          setPropValues((prev) => ({ ...prev, [name]: value }))
-        }
-      />
+      <PortalToSidebar>
+        <PropControls
+          props={doc.props}
+          values={propValues}
+          onChange={(name, value) =>
+            setPropValues((prev) => ({ ...prev, [name]: value }))
+          }
+        />
+      </PortalToSidebar>
     </>
   )
 }
@@ -310,34 +329,36 @@ function CompoundPlayground({
           </span>
         </div>
       </div>
-      {docs.map((doc) => {
-        const propEntries = Object.entries(doc.props).filter(
-          ([name]) => name !== 'ref' && name !== 'key',
-        )
-        if (propEntries.length === 0) return null
-        return (
-          <div key={doc.displayName} {...s.controls}>
-            <div {...s.controlsTitle}>{doc.displayName} props</div>
-            <div {...s.controlGrid}>
-              {propEntries.map(([name, prop]) => (
-                <div key={name} {...s.controlRow}>
-                  <span
-                    style={{
-                      fontWeight: 500,
-                      fontSize: '13px',
-                      minWidth: '120px',
-                    }}
-                  >
-                    {name}
-                    {prop.required ? ' *' : ''}
-                  </span>
-                  <span {...s.readOnly}>{prop.type.name}</span>
-                </div>
-              ))}
+      <PortalToSidebar>
+        {docs.map((doc) => {
+          const propEntries = Object.entries(doc.props).filter(
+            ([name]) => name !== 'ref' && name !== 'key',
+          )
+          if (propEntries.length === 0) return null
+          return (
+            <div key={doc.displayName} {...s.controls}>
+              <div {...s.controlsTitle}>{doc.displayName} props</div>
+              <div {...s.controlGrid}>
+                {propEntries.map(([name, prop]) => (
+                  <div key={name} {...s.controlRow}>
+                    <span
+                      style={{
+                        fontWeight: 500,
+                        fontSize: '13px',
+                        minWidth: '120px',
+                      }}
+                    >
+                      {name}
+                      {prop.required ? ' *' : ''}
+                    </span>
+                    <span {...s.readOnly}>{prop.type.name}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </PortalToSidebar>
     </>
   )
 }

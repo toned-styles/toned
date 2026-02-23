@@ -13,14 +13,14 @@ export const layoutStyles = stylesheet({
     },
   },
   sidebar: {
-    bgColor: 'muted',
+    bgColor: 'default',
     width: '280px',
     height: '100vh',
     overflowY: 'auto',
     // Mobile: extra top padding to clear hamburger button
     paddingTop: 14,
-    paddingBottom: 2,
-    paddingX: 1.5,
+    paddingBottom: 3,
+    paddingX: 2,
     // Mobile: fixed overlay, hidden by default
     position: 'fixed',
     top: 0,
@@ -37,7 +37,7 @@ export const layoutStyles = stylesheet({
       display: 'block',
       position: 'sticky',
       alignSelf: 'flex-start',
-      paddingTop: 2,
+      paddingTop: 3,
     },
   },
   content: {

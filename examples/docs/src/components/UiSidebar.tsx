@@ -18,18 +18,18 @@ const uiSidebarStyles = stylesheet({
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
     paddingY: 0.5,
-    paddingX: 1.25,
-    marginBottom: 0.25,
+    paddingX: 1.5,
+    marginBottom: 0.75,
     textColor: 'muted',
     opacity: 0.7,
   },
   link: {
     display: 'block',
-    paddingY: 0.5,
-    paddingX: 1.25,
-    borderRadius: 'medium',
+    paddingY: 0.75,
+    paddingX: 1.5,
+    borderRadius: 'large',
     textDecoration: 'none',
-    fontSize: '13px',
+    fontSize: '13.5px',
     lineHeight: 1.5,
     cursor: 'pointer',
     textColor: 'subtle',
@@ -45,11 +45,15 @@ const uiSidebarStyles = stylesheet({
 }>(($) => ({
   [$.active('true')]: {
     link: {
-      bgColor: 'action',
       textColor: 'on_action',
       fontWeight: 500,
+      style: {
+        background: 'var(--gradient-brand)',
+      },
       ':hover': {
-        bgColor: 'action',
+        style: {
+          background: 'var(--gradient-brand)',
+        },
       },
     },
   },

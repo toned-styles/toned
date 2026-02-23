@@ -3,9 +3,9 @@ import { stylesheet } from '@toned/systems/base'
 export const navStyles = stylesheet({
   link: {
     display: 'block',
-    paddingY: 0.625,
-    paddingX: 1.25,
-    borderRadius: 'medium',
+    paddingY: 0.75,
+    paddingX: 1.5,
+    borderRadius: 'large',
     textDecoration: 'none',
     fontSize: '13.5px',
     lineHeight: 1.5,
@@ -19,7 +19,7 @@ export const navStyles = stylesheet({
     },
   },
   section: {
-    marginBottom: 2,
+    marginBottom: 3,
   },
   sectionTitle: {
     fontSize: '11px',
@@ -27,22 +27,25 @@ export const navStyles = stylesheet({
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
     paddingY: 0.5,
-    paddingX: 1.25,
-    marginBottom: 0.25,
-    marginTop: 1.5,
+    paddingX: 1.5,
+    marginBottom: 0.5,
+    marginTop: 2,
     textColor: 'muted',
     opacity: 0.7,
   },
   logo: {
     fontSize: '15px',
     fontWeight: 700,
-    paddingY: 1.25,
-    paddingX: 1.25,
-    marginBottom: 1.5,
+    paddingY: 1.5,
+    paddingX: 1.5,
+    marginBottom: 2,
     letterSpacing: '-0.02em',
-    textColor: 'default',
     style: {
       borderBottom: '1px solid var(--border)',
+      background: 'var(--gradient-brand-text)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      backgroundClip: 'text',
     },
   },
 }).variants<{
@@ -50,11 +53,15 @@ export const navStyles = stylesheet({
 }>(($) => ({
   [$.active('true')]: {
     link: {
-      bgColor: 'action',
       textColor: 'on_action',
       fontWeight: 500,
+      style: {
+        background: 'var(--gradient-brand)',
+      },
       ':hover': {
-        bgColor: 'action',
+        style: {
+          background: 'var(--gradient-brand)',
+        },
       },
     },
   },
