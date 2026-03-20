@@ -1,0 +1,31 @@
+{
+  "name": "@examples/docs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "vite build --outDir dist/client && vite build --outDir dist/server --ssr src/entry-server.tsx && node prerender.js",
+    "preview": "vite preview --outDir dist/client"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "^1.160.2",
+    "@toned/core": "workspace:*",
+    "@toned/react": "workspace:*",
+    "@toned/systems": "workspace:*",
+    "@toned/themes": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "shiki": "^3.22.0"
+  },
+  "devDependencies": {
+    "@mdx-js/rollup": "^3.1.0",
+    "@tanstack/router-plugin": "^1.160.2",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "catalog:",
+    "vite": "^6.3.5"
+  }
+}

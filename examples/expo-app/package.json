@@ -25,6 +25,7 @@
     "react-native-web": "catalog:"
   },
   "devDependencies": {
+    "@config/typescript": "workspace:*",
     "@babel/core": "^7.25.2",
     "@types/react": "catalog:",
     "typescript": "catalog:"

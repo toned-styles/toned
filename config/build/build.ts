@@ -7,7 +7,7 @@ const monorepoRoot = path.resolve(__dirname, '../..')
 
 const licenseLocation = path.join(monorepoRoot, 'LICENSE')
 // @ts-expect-error
-const rollupBin = path.join(
+const _rollupBin = path.join(
   __dirname,
   'node_modules',
   'rollup',

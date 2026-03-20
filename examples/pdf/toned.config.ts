@@ -1,6 +1,6 @@
 import { defineConfig, setConfig } from '@toned/core'
 
-import reactConfig from '@toned/react/new/react-web'
+import reactConfig from '@toned/react/react-web'
 
 // should be preset for the framework?
 // also add options to process css-variables/native/tailwind etc

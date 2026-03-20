@@ -1,5 +1,5 @@
+import type { TokenConfig, Tokens } from '@toned/core'
 import { defineToken as defineTokenCore } from '@toned/core'
-import type { TokenConfig, Tokens } from '@toned/core/types.ts'
 import type { CSSProperties } from 'react'
 
 export const defineToken = defineTokenCore as <
@@ -10,6 +10,7 @@ export const defineToken = defineTokenCore as <
 ) => typeof config
 
 // TODO: consider moving to the core
+// biome-ignore lint/suspicious/noExplicitAny: generic token values
 export const defineCssToken = <const Values extends Readonly<any[]>>(
   propName: keyof CSSProperties | Array<keyof CSSProperties>,
   values: Values,

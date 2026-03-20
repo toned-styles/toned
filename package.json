@@ -26,6 +26,8 @@
   },
   "resolutions": {
     "react": "catalog:",
-    "react-native": "catalog:"
+    "react-native": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
   }
 }

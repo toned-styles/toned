@@ -1,9 +1,18 @@
 {
   "name": "@toned/core",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "author": "Kenzhaev Artur",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./dom": "./dom/index.ts",
+    "./types": "./types/index.ts",
+    "./stylesheet": "./stylesheet/index.ts",
+    "./system": "./system/index.ts",
+    "./utils": "./utils/index.ts",
+    "./vite": "./vite/index.ts"
+  },
   "publishConfig": {
     "access": "public",
     "directory": ".dist",
@@ -18,8 +27,17 @@
     "prepublishOnly": "bun run build",
     "build": "bun --bun -e 'import(`@config/build`)'"
   },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*"
+    "@config/typescript": "workspace:*",
+    "vite": "^6.3.5"
   }
 }

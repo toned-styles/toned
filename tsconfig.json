@@ -21,6 +21,9 @@
       "path": "packages/toned"
     },
     {
+      "path": "examples/docs"
+    },
+    {
       "path": "examples/email"
     },
     {
@@ -31,6 +34,9 @@
     },
     {
       "path": "examples/shared"
+    },
+    {
+      "path": "examples/ui"
     },
     {
       "path": "examples/vite"

@@ -5,8 +5,8 @@ import { peerDependencies } from './package.json'
 export default config({
   input: [
     './index.ts',
-    './ctx.native.ts',
-    './ctx.ts',
+    './context.native.ts',
+    './context.ts',
     './config.ts',
     './config.19.ts',
   ],

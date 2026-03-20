@@ -7,10 +7,10 @@ autoInstallPeers: false
 
 catalog:
   '@types/node': ^22.17.2
-  '@types/react': ^19.0.0
-  '@types/react-dom': ^19.0.0
-  react: 19.0.0
-  react-dom: 19.0.0
+  '@types/react': ^19.2.0
+  '@types/react-dom': ^19.2.0
+  react: 19.2.0
+  react-dom: 19.2.0
   react-native: 0.79.6
   react-native-web: ^0.20.0
   typescript: 5.9.2
@@ -18,3 +18,7 @@ catalog:
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - esbuild
+
+supportedArchitectures:
+  cpu: [arm64]
+  os: [darwin, linux, current]

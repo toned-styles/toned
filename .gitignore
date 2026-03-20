@@ -1,3 +1,7 @@
+.tanstack
+
+.pnpm-store
+
 .dist
 .build
 .tsc
