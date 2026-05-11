@@ -54,6 +54,10 @@ export type TFun<S extends TokenStyleDeclaration> = <D extends TokenStyle<S>[]>(
 ) => Merge<D> & {
   /** @internal */
   [SYMBOL_REF]: TokenSystem<S>
+  /** Resolved inline styles */
+  readonly style: Record<string, any>
+  /** Generated class name string */
+  readonly className: string | undefined
 }
 
 /**

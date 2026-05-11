@@ -5,13 +5,13 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./index.ts",
-    "./dom": "./dom/index.ts",
-    "./types": "./types/index.ts",
-    "./stylesheet": "./stylesheet/index.ts",
-    "./system": "./system/index.ts",
-    "./utils": "./utils/index.ts",
-    "./vite": "./vite/index.ts"
+    ".": "./index.js",
+    "./dom": "./dom/index.js",
+    "./types": "./types/index.js",
+    "./stylesheet": "./stylesheet/index.js",
+    "./system": "./system/index.js",
+    "./utils": "./utils/index.js",
+    "./vite": "./vite/index.js"
   },
   "publishConfig": {
     "access": "public",
