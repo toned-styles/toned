@@ -3,6 +3,9 @@ packages:
   - config/*
   - examples/*
 
+allowBuilds:
+  esbuild: true
+
 autoInstallPeers: false
 
 catalog:
