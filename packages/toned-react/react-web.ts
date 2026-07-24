@@ -60,20 +60,104 @@ function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue> {
 
 function getProps(this: Base, elementKey: string) {
   const ref = (current: Ref) => {
-    this.refs[elementKey] = current
+    if (current) {
+      if (!this.refs[elementKey]) this.refs[elementKey] = []
+      if (!this.refs[elementKey].includes(current))
+        this.refs[elementKey].push(current)
+    } else if (this.refs[elementKey]) {
+      this.refs[elementKey] = this.refs[elementKey].filter(
+        (el: AnyValue) => el.isConnected,
+      )
+    }
   }
 
   let result: Record<string, AnyValue>
 
   if (this.matcher.interactions[elementKey]) {
+    if (!this._activeEls) this._activeEls = {}
+
+    const onMouseEnter = (e: AnyValue) => {
+      const el = e.currentTarget
+      const stateKey = `${elementKey}:hover`
+      if (!this._activeEls[stateKey]) this._activeEls[stateKey] = new Set()
+      this._activeEls[stateKey].add(el)
+      this.applyState(
+        { [stateKey]: true },
+        { triggerKey: elementKey, pseudo: ':hover' },
+      )
+    }
+
+    const onMouseLeave = (e: AnyValue) => {
+      const el = e.currentTarget
+      const stateKey = `${elementKey}:hover`
+      const set = this._activeEls[stateKey]
+      if (set) set.delete(el)
+      const anyActive = (set?.size ?? 0) > 0
+      this.applyState(
+        { [stateKey]: anyActive },
+        { triggerKey: elementKey, pseudo: ':hover' },
+      )
+    }
+
+    const onMouseDown = (e: AnyValue) => {
+      // Only the primary (left) button drives :active. Without this guard a
+      // right-click can leave the element stuck active if the context menu
+      // swallows the mouseup.
+      if (e.button !== 0) return
+      const el = e.currentTarget
+      const stateKey = `${elementKey}:active`
+      if (!this._activeEls[stateKey]) this._activeEls[stateKey] = new Set()
+      this._activeEls[stateKey].add(el)
+      this.applyState(
+        { [stateKey]: true },
+        { triggerKey: elementKey, pseudo: ':active' },
+      )
+      const onMouseUp = () => {
+        document.removeEventListener('mouseup', onMouseUp)
+        const activeSet = this._activeEls[stateKey]
+        if (activeSet) activeSet.delete(el)
+        const stillActive = (activeSet?.size ?? 0) > 0
+        if (el?.isConnected) {
+          this.applyState(
+            { [stateKey]: stillActive },
+            { triggerKey: elementKey, pseudo: ':active' },
+          )
+        }
+      }
+      document.addEventListener('mouseup', onMouseUp)
+    }
+
+    const onFocus = (e: AnyValue) => {
+      const el = e.currentTarget
+      const stateKey = `${elementKey}:focus`
+      if (!this._activeEls[stateKey]) this._activeEls[stateKey] = new Set()
+      this._activeEls[stateKey].add(el)
+      this.applyState(
+        { [stateKey]: true },
+        { triggerKey: elementKey, pseudo: ':focus' },
+      )
+    }
+
+    const onBlur = (e: AnyValue) => {
+      const el = e.currentTarget
+      const stateKey = `${elementKey}:focus`
+      const set = this._activeEls[stateKey]
+      if (set) set.delete(el)
+      const anyActive = (set?.size ?? 0) > 0
+      this.applyState(
+        { [stateKey]: anyActive },
+        { triggerKey: elementKey, pseudo: ':focus' },
+      )
+    }
+
     result = {
       ref,
-
       ...this.getCurrentStyle(elementKey),
-
-      ...this.setOn(elementKey, ':hover', 'onMouseOver', 'onMouseOut'),
-      ...this.setOn(elementKey, ':active', 'onMouseDown', 'onMouseUp'),
-      ...this.setOn(elementKey, ':focus', 'onBlur', 'onFocus'),
+      onMouseEnter,
+      onMouseLeave,
+      onMouseDown,
+      onFocus,
+      onBlur,
     }
   } else {
     result = {
