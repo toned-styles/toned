@@ -58,6 +58,10 @@ export function defineUnit<T>(
   return resolver
 }
 
+function isStyleObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 /**
  * Define a complete token system with all tokens and optional configuration.
  *
@@ -88,10 +92,20 @@ export function defineSystem<
     system: { ...system, ...config } as S & C,
     config,
     t: (...values) => {
-      // Using Object.assign in loop for better performance than spread accumulator
-      const value: Record<string, unknown> = {}
+      const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
-        Object.assign(value, SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v)
+        const src = (SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v) as Record<
+          string,
+          unknown
+        > & { style?: unknown }
+        // Deep-merge the `style` object so later arguments extend earlier
+        // entries instead of replacing them. A shallow copy would drop style
+        // props set by earlier arguments (issue #3115).
+        const prevStyle = value.style
+        Object.assign(value, src)
+        if (isStyleObject(prevStyle) && isStyleObject(src.style)) {
+          value.style = { ...prevStyle, ...src.style }
+        }
       }
 
       if (SYMBOL_REF in value) {
@@ -255,6 +269,49 @@ export function defineSystem<
         const PSEUDO_ORDER = [':hover', ':focus', ':active']
 
         for (const [prop, overrides] of Object.entries(pseudoOverrides)) {
+          // Special handling for 'style' prop (raw CSS, not token-resolvable)
+          if (prop === 'style') {
+            const allCssProps = new Set<string>()
+            for (const { value } of overrides) {
+              if (value && typeof value === 'object') {
+                for (const cssProp in value as Record<string, unknown>)
+                  allCssProps.add(cssProp)
+              }
+            }
+            for (const cssProp of allCssProps) {
+              const kebabProp = camelToKebab(cssProp)
+              for (const { pseudo, value } of overrides) {
+                const styleVal = value as Record<string, unknown> | null
+                if (styleVal?.[cssProp] == null) continue
+                const pseudoName = pseudo.slice(1)
+                const varName = `--toned_${pseudoName}__${kebabProp}`
+                acc.style[varName] =
+                  `var(--toned_${pseudoName}) ${styleVal[cssProp]}`
+              }
+              const baseValue =
+                acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
+              let chain = baseValue
+              for (const pseudo of PSEUDO_ORDER) {
+                if (
+                  overrides.some((o) => {
+                    const sv = o.value as Record<string, unknown> | null
+                    return o.pseudo === pseudo && sv?.[cssProp] != null
+                  })
+                ) {
+                  const pseudoName = pseudo.slice(1)
+                  const varName = `--toned_${pseudoName}__${kebabProp}`
+                  chain = chain
+                    ? `var(${varName}, ${chain})`
+                    : `var(${varName})`
+                }
+              }
+              if (chain) {
+                acc.style[cssProp] = chain
+              }
+            }
+            continue
+          }
+
           // Resolve base value if it exists
           const baseTokenValue = tokenStyle[prop]
           const resolvedBase =
@@ -279,7 +336,8 @@ export function defineSystem<
               if (!resolved?.[cssProp]) continue
 
               const varName = `--toned_${pseudoName}__${kebabProp}`
-              acc.style[varName] = `var(--toned_${pseudoName}) ${resolved[cssProp]}`
+              acc.style[varName] =
+                `var(--toned_${pseudoName}) ${resolved[cssProp]}`
             }
 
             // Build fallback chain: use existing value (e.g. breakpoint chain) or base
@@ -295,9 +353,7 @@ export function defineSystem<
               if (overrides.some((o) => o.pseudo === pseudo)) {
                 const pseudoName = pseudo.slice(1)
                 const varName = `--toned_${pseudoName}__${kebabProp}`
-                chain = chain
-                  ? `var(${varName}, ${chain})`
-                  : `var(${varName})`
+                chain = chain ? `var(${varName}, ${chain})` : `var(${varName})`
               }
             }
 

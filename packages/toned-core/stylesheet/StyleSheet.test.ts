@@ -522,3 +522,137 @@ describe('callback-based variants API', () => {
     expect(activeInstance.modsStyle.container.bgColor).toBe('red')
   })
 })
+
+describe('multi-instance interaction state', () => {
+  const boxKey = 'box'
+
+  // Internal (transformed) rule format: each interaction pseudo targets self
+  // ($box) with a distinct property so per-element results are unambiguous.
+  const interactiveRules = {
+    box: {
+      bgColor: 'base',
+      ':hover': { $box: { color: 'hover' } },
+      ':active': { $box: { borderColor: 'active' } },
+      ':focus': { $box: { outlineColor: 'focus' } },
+    },
+  }
+
+  // Minimal element stub: setStyles() takes the setNativeProps path (no DOM
+  // required) and records the resolved style object it receives.
+  function fakeEl() {
+    const el = {
+      recorded: undefined as Record<string, unknown> | undefined,
+      setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
+        el.recorded = style
+      },
+    }
+    return el
+  }
+
+  function setup() {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+    const a = fakeEl()
+    const b = fakeEl()
+    // Two mounted instances sharing one Base (e.g. a list rendered from one
+    // useStyles() result).
+    base.refs[boxKey] = [a, b]
+    return { base, a, b }
+  }
+
+  test('hovering one instance does not style its siblings', () => {
+    const { base, a, b } = setup()
+    base._activeEls['box:hover'] = new Set([a])
+
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('pressing a hovered instance does not leak hover onto siblings', () => {
+    const { base, a, b } = setup()
+
+    // 1. Hover A.
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    // 2. Press A (still hovered). Global modsState now has hover=true AND
+    // active=true, but only A is in either set.
+    base._activeEls['box:active'] = new Set([a])
+    base.applyState(
+      { 'box:active': true },
+      { triggerKey: 'box', pseudo: ':active' },
+    )
+
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      borderColor: 'active',
+    })
+    // Regression guard: the single-baseStyle approach would apply the global
+    // hover style (color: 'hover') to B here.
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('focusing one instance does not style its siblings', () => {
+    const { base, a, b } = setup()
+    base._activeEls['box:focus'] = new Set([a])
+
+    base.applyState(
+      { 'box:focus': true },
+      { triggerKey: 'box', pseudo: ':focus' },
+    )
+
+    expect(a.recorded).toEqual({ bgColor: 'base', outlineColor: 'focus' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('a single mounted instance still receives interaction styles', () => {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+    const only = fakeEl()
+    base.refs[boxKey] = [only]
+    base._activeEls['box:hover'] = new Set([only])
+
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(only.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+
+  test('native-style single ref (no context) applies style via the unchanged path', () => {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+    // React Native assigns a single element (never an array) and setOn()
+    // drives applyState without interaction context. This must take the plain
+    // `else if (ref)` branch — identical to the pre-change behaviour — so the
+    // multi-instance combo logic can never affect native.
+    const nativeEl = fakeEl()
+    base.refs[boxKey] = nativeEl
+
+    base.applyState({ 'box:hover': true })
+
+    expect(nativeEl.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+})

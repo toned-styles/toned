@@ -64,7 +64,10 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
   cache = new Map<number, any>()
 
-  constructor(rules: NestedStyleRules, options?: { cssMediaMode?: boolean; cssPseudoMode?: boolean }) {
+  constructor(
+    rules: NestedStyleRules,
+    options?: { cssMediaMode?: boolean; cssPseudoMode?: boolean },
+  ) {
     this.cssMediaMode = options?.cssMediaMode ?? false
     this.cssPseudoMode = options?.cssPseudoMode ?? false
 
@@ -604,7 +607,20 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
       for (const elementKey in compiledRule.rule) {
         result[elementKey] ??= {}
-        Object.assign(result[elementKey], compiledRule.rule[elementKey])
+        const target = result[elementKey]
+        const source = compiledRule.rule[elementKey]
+        for (const key in source) {
+          if (
+            key === 'style' &&
+            target[key] &&
+            typeof target[key] === 'object' &&
+            typeof source[key] === 'object'
+          ) {
+            target[key] = { ...target[key], ...source[key] }
+          } else {
+            target[key] = source[key]
+          }
+        }
 
         result[this.#elementHash][elementKey] ^= compiledRule.bitValue
       }

@@ -366,4 +366,57 @@ describe('defineSystem', () => {
       expect(result.style).toEqual({ backgroundColor: '#007bff' })
     })
   })
+
+  describe('t() deep-merges style across arguments (#3115)', () => {
+    test('combines style objects from multiple arguments', () => {
+      const { t } = defineSystem({ bgColor })
+
+      const result = t(
+        { style: { backgroundColor: 'yellow' } },
+        { style: { color: 'magenta' } },
+      )
+
+      expect(result.style).toEqual({
+        backgroundColor: 'yellow',
+        color: 'magenta',
+      })
+    })
+
+    test('later arguments override earlier ones for the same property', () => {
+      const { t } = defineSystem({ bgColor })
+
+      const result = t(
+        { style: { backgroundColor: 'yellow', color: 'red' } },
+        { style: { color: 'magenta' } },
+      )
+
+      expect(result.style).toEqual({
+        backgroundColor: 'yellow',
+        color: 'magenta',
+      })
+    })
+
+    test('merges style alongside resolved tokens', () => {
+      const { t } = defineSystem({ bgColor })
+
+      const result = t(
+        { bgColor: 'primary', style: { opacity: 0.5 } },
+        { style: { color: 'magenta' } },
+      )
+
+      expect(result.style).toEqual({
+        backgroundColor: '#007bff',
+        opacity: 0.5,
+        color: 'magenta',
+      })
+    })
+
+    test('passes a single argument through unchanged', () => {
+      const { t } = defineSystem({ bgColor })
+
+      const result = t({ style: { color: 'magenta' } })
+
+      expect(result.style).toEqual({ color: 'magenta' })
+    })
+  })
 })

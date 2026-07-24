@@ -23,6 +23,12 @@ type AnyValue = any
 
 type ElementKey = string
 
+type ApplyContext = { triggerKey?: string; pseudo?: string }
+
+// Interaction pseudo-states that can be tracked per-element for multi-instance
+// stylesheets. Order only affects the internal signature key, not output.
+const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
+
 type ElementStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
@@ -147,6 +153,8 @@ export class Base {
 
   interactiveState: Record<string, Record<string, boolean>> = {}
 
+  _activeEls: Record<string, Set<AnyValue>> = {}
+
   constructor({
     ref,
     rules,
@@ -222,19 +230,57 @@ export class Base {
     )
   }
 
-  applyElementStyles() {
+  applyElementStyles(context?: ApplyContext) {
     for (const elementKey of this.matcher.elementSet) {
-      if (
-        this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)
-      ) {
-        continue
+      const ref = this.refs[elementKey]
+      const isMultiInstance = Array.isArray(ref) && ref.length > 1
+      const isSelfTarget = context?.triggerKey === elementKey
+
+      // For multi-instance self-targets, bypass isEqual (element-level state differs)
+      if (!(isMultiInstance && isSelfTarget)) {
+        if (
+          this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)
+        ) {
+          continue
+        }
       }
 
-      setStyles(this.refs[elementKey], this.getCurrentStyle(elementKey))
+      const style = this.getCurrentStyle(elementKey)
+
+      if (isMultiInstance && isSelfTarget && context?.pseudo) {
+        // Each mounted element can be in a different interaction state, so
+        // resolve every element from its own hover/active/focus signature
+        // rather than the shared global modsState (which can only represent a
+        // single element's state). Group elements by signature to reuse
+        // match() results across identically-stated elements.
+        const styleBySignature = new Map<string, AnyValue>()
+        for (const el of ref) {
+          let signature = ''
+          for (const pseudo of PSEUDO_STATES) {
+            if (this._activeEls[`${elementKey}${pseudo}`]?.has(el))
+              signature += pseudo
+          }
+          if (!styleBySignature.has(signature)) {
+            const elMods = { ...this.modsState }
+            for (const pseudo of PSEUDO_STATES) {
+              elMods[`${elementKey}${pseudo}`] = signature.includes(pseudo)
+            }
+            styleBySignature.set(
+              signature,
+              this.applyTokens(this.matcher.match(elMods)[elementKey]),
+            )
+          }
+          setStyles(el, styleBySignature.get(signature))
+        }
+      } else if (Array.isArray(ref)) {
+        for (const el of ref) setStyles(el, style)
+      } else if (ref) {
+        setStyles(ref, style)
+      }
     }
   }
 
-  applyState(modsState: ModState) {
+  applyState(modsState: ModState, context?: ApplyContext) {
     if (this.config.debug) {
       console.log('[toned:debug] applyState', {
         prevState: { ...this.modsState },
@@ -246,7 +292,7 @@ export class Base {
 
     this.matchStyles()
 
-    this.applyElementStyles()
+    this.applyElementStyles(context)
   }
 
   setOn = (

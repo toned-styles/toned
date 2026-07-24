@@ -44,5 +44,5 @@ export function inject<
 
   const styles = generate(system as TokenStyleDeclaration)
 
-  sheet.innerHTML = styles
+  sheet.textContent = styles
 }
