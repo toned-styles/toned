@@ -78,8 +78,6 @@ function getProps(this: Base, elementKey: string) {
   let result: Record<string, AnyValue>
 
   if (this.matcher.interactions[elementKey]) {
-    if (!this._activeEls) this._activeEls = {}
-
     const onMouseEnter = (e: AnyValue) => {
       const el = e.currentTarget
       const stateKey = `${elementKey}:hover`
