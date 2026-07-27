@@ -61,18 +61,19 @@ function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue> {
 function getProps(this: Base, elementKey: string) {
   const ref = (current: Ref) => {
     if (current) {
-      if (!this.refs[elementKey]) this.refs[elementKey] = []
-      if (!this.refs[elementKey].includes(current))
-        this.refs[elementKey].push(current)
+      let set = this.refs[elementKey]
+      if (!(set instanceof Set)) set = this.refs[elementKey] = new Set()
+      set.add(current)
       // React (re)applies the pseudo-free resting style on every commit, so
       // restore this element's own live hover/active/focus here — otherwise an
       // unrelated re-render would drop its interaction state (and, for
       // multi-instance stylesheets, paint every sibling with the global state).
       if (this.matcher.interactions[elementKey])
         this.reapplyInteraction(elementKey, current)
-    } else {
-      this.pruneDisconnected(elementKey)
     }
+    // On detach React calls this with null. We don't scan here: disconnected
+    // nodes are pruned lazily (O(1)) during the next applyElementStyles, which
+    // keeps ref handling O(n) per render instead of O(n^2).
   }
 
   let result: Record<string, AnyValue>
