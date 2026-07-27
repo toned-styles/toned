@@ -64,10 +64,14 @@ function getProps(this: Base, elementKey: string) {
       if (!this.refs[elementKey]) this.refs[elementKey] = []
       if (!this.refs[elementKey].includes(current))
         this.refs[elementKey].push(current)
-    } else if (this.refs[elementKey]) {
-      this.refs[elementKey] = this.refs[elementKey].filter(
-        (el: AnyValue) => el.isConnected,
-      )
+      // React (re)applies the pseudo-free resting style on every commit, so
+      // restore this element's own live hover/active/focus here — otherwise an
+      // unrelated re-render would drop its interaction state (and, for
+      // multi-instance stylesheets, paint every sibling with the global state).
+      if (this.matcher.interactions[elementKey])
+        this.reapplyInteraction(elementKey, current)
+    } else {
+      this.pruneDisconnected(elementKey)
     }
   }
 
@@ -152,7 +156,7 @@ function getProps(this: Base, elementKey: string) {
 
     result = {
       ref,
-      ...this.getCurrentStyle(elementKey),
+      ...this.getRestingStyle(elementKey),
       onMouseEnter,
       onMouseLeave,
       onMouseDown,
