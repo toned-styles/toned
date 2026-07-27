@@ -419,4 +419,73 @@ describe('defineSystem', () => {
       expect(result.style).toEqual({ color: 'magenta' })
     })
   })
+
+  describe('exec() pseudo-state raw style precedence', () => {
+    test('raw style in a pseudo builds a var fallback chain', () => {
+      const { exec } = defineSystem({ bgColor })
+
+      const result = exec({ tokens: {}, useClassName: false }, {
+        style: { cursor: 'pointer' },
+        ':hover_style': { cursor: 'grab' },
+      } as any)
+
+      expect((result.style as AnyStyle)['--toned_hover__cursor__style']).toBe(
+        'var(--toned_hover) grab',
+      )
+      expect((result.style as AnyStyle)['cursor']).toBe(
+        'var(--toned_hover__cursor__style, pointer)',
+      )
+    })
+
+    test('raw style deterministically overrides a token for the same CSS property, regardless of key order', () => {
+      const { exec } = defineSystem({ textColor })
+
+      const run = (styleFirst: boolean) => {
+        const input = styleFirst
+          ? {
+              textColor: 'white',
+              ':hover_style': { color: 'red' },
+              ':hover_textColor': 'black',
+            }
+          : {
+              textColor: 'white',
+              ':hover_textColor': 'black',
+              ':hover_style': { color: 'red' },
+            }
+        return exec({ tokens: {}, useClassName: false }, input as any)
+          .style as AnyStyle
+      }
+
+      for (const styleFirst of [false, true]) {
+        const style = run(styleFirst)
+        // Token var is still emitted (kept as an inner fallback)…
+        expect(style['--toned_hover__color']).toBe('var(--toned_hover) #000')
+        // …the raw-style var lives in its own namespace…
+        expect(style['--toned_hover__color__style']).toBe(
+          'var(--toned_hover) red',
+        )
+        // …and style is outermost, so it wins on :hover, then token, then base.
+        expect(style['color']).toBe(
+          'var(--toned_hover__color__style, var(--toned_hover__color, #fff))',
+        )
+      }
+    })
+
+    test('token-only pseudo overrides are unaffected (no __style namespace)', () => {
+      const { exec } = defineSystem({ bgColor })
+
+      const result = exec({ tokens: {}, useClassName: false }, {
+        bgColor: 'primary',
+        ':hover_bgColor': 'secondary',
+      } as any).style as AnyStyle
+
+      expect(result['--toned_hover__background-color']).toBe(
+        'var(--toned_hover) #6c757d',
+      )
+      expect(result['backgroundColor']).toBe(
+        'var(--toned_hover__background-color, #007bff)',
+      )
+      expect(result['--toned_hover__background-color__style']).toBeUndefined()
+    })
+  })
 })

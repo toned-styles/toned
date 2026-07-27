@@ -268,7 +268,19 @@ export function defineSystem<
       if (Object.keys(pseudoOverrides).length > 0) {
         const PSEUDO_ORDER = [':hover', ':focus', ':active']
 
-        for (const [prop, overrides] of Object.entries(pseudoOverrides)) {
+        // Process token-backed props first and raw `style` last. When a pseudo
+        // override sets the same CSS property via both a token and raw `style`,
+        // this makes precedence deterministic instead of depending on object key
+        // order: the raw style wins (escape hatch) and composes on top of the
+        // token's fallback chain. Style-derived custom properties use a distinct
+        // `__style` namespace so they never overwrite a token's `--toned_*` var.
+        const pseudoEntries = Object.entries(pseudoOverrides)
+        const orderedPseudoEntries = [
+          ...pseudoEntries.filter(([prop]) => prop !== 'style'),
+          ...pseudoEntries.filter(([prop]) => prop === 'style'),
+        ]
+
+        for (const [prop, overrides] of orderedPseudoEntries) {
           // Special handling for 'style' prop (raw CSS, not token-resolvable)
           if (prop === 'style') {
             const allCssProps = new Set<string>()
@@ -284,7 +296,7 @@ export function defineSystem<
                 const styleVal = value as Record<string, unknown> | null
                 if (styleVal?.[cssProp] == null) continue
                 const pseudoName = pseudo.slice(1)
-                const varName = `--toned_${pseudoName}__${kebabProp}`
+                const varName = `--toned_${pseudoName}__${kebabProp}__style`
                 acc.style[varName] =
                   `var(--toned_${pseudoName}) ${styleVal[cssProp]}`
               }
@@ -299,7 +311,7 @@ export function defineSystem<
                   })
                 ) {
                   const pseudoName = pseudo.slice(1)
-                  const varName = `--toned_${pseudoName}__${kebabProp}`
+                  const varName = `--toned_${pseudoName}__${kebabProp}__style`
                   chain = chain
                     ? `var(${varName}, ${chain})`
                     : `var(${varName})`
