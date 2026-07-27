@@ -777,3 +777,76 @@ describe('unmount cleanup (multi-instance)', () => {
     expect(() => base.pruneDisconnected('box')).not.toThrow()
   })
 })
+
+describe('contextless updates do not leak interaction across instances', () => {
+  // box reacts to BOTH an interaction pseudo (:hover) and a non-interaction mod
+  // (a `size` variant). The variant lets a *contextless* applyState genuinely
+  // change box (so isEqual doesn't short-circuit the paint), exercising the
+  // path that previously fell back to the shared global style.
+  const rules = {
+    box: {
+      bgColor: 'base',
+      ':hover': { $box: { color: 'hover' } },
+      '[size=large]': { $box: { pad: 'large' } },
+    },
+  }
+
+  function setupPair() {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
+    })
+    const a = fakeInteractiveEl()
+    const b = fakeInteractiveEl()
+    base.refs['box'] = [a, b]
+    return { base, a, b }
+  }
+
+  test('a media/variant tick while a sibling is hovered does not paint hover onto others', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A (interaction-triggered, carries context). A → hover, B → resting.
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // A variant tick arrives with NO interaction context. Global modsState still
+    // carries box:hover=true (A is genuinely hovered), but only A is in the
+    // hover set, so every element must resolve from its own signature.
+    base.applyState({ size: 'large' })
+
+    // A: still hovered + large.
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      pad: 'large',
+    })
+    // B: resting + large. Regression guard: the shared-global fallback painted
+    // B with color: 'hover' here.
+    expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
+  })
+
+  test('after a hovered sibling unmounts, a contextless tick leaves the survivor resting', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A, then A unmounts without firing mouseleave (global stays hover=true).
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    a.isConnected = false
+    base.pruneDisconnected('box') // React ref(null) path: refs → [b]
+
+    // A contextless tick must not paint the survivor with A's stale hover.
+    base.applyState({ size: 'large' })
+
+    expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
+  })
+})

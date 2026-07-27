@@ -294,6 +294,7 @@ export class Base {
       const ref = this.refs[elementKey]
       const isMultiInstance = Array.isArray(ref) && ref.length > 1
       const isSelfTarget = context?.triggerKey === elementKey
+      const isInteractive = !!this.matcher.interactions[elementKey]
 
       // For multi-instance self-targets, bypass isEqual (element-level state differs)
       if (!(isMultiInstance && isSelfTarget)) {
@@ -304,14 +305,14 @@ export class Base {
         }
       }
 
-      const style = this.getCurrentStyle(elementKey)
-
-      if (isMultiInstance && isSelfTarget && context?.pseudo) {
-        // Each mounted element can be in a different interaction state, so
-        // resolve every element from its own hover/active/focus signature
-        // rather than the shared global modsState (which can only represent a
-        // single element's state). Group elements by signature to reuse
-        // match() results across identically-stated elements.
+      if (Array.isArray(ref) && isInteractive) {
+        // An interactive element shared across mounted instances must be
+        // resolved from each element's OWN hover/active/focus signature — never
+        // the shared global modsState, which can only represent one element's
+        // interaction at a time (and may be stale after an unmount). This holds
+        // for contextless updates too (media/variant), so a sibling's live
+        // interaction can never leak onto other instances. Group by signature to
+        // reuse match() results across identically-stated elements.
         const styleBySignature = new Map<string, AnyValue>()
         for (const el of ref) {
           const signature = this.elementSignature(elementKey, el)
@@ -324,9 +325,12 @@ export class Base {
           setStyles(el, styleBySignature.get(signature))
         }
       } else if (Array.isArray(ref)) {
+        // Non-interactive elements share one resolved style across instances.
+        const style = this.getCurrentStyle(elementKey)
         for (const el of ref) setStyles(el, style)
       } else if (ref) {
-        setStyles(ref, style)
+        // Single ref (native) — unchanged.
+        setStyles(ref, this.getCurrentStyle(elementKey))
       }
     }
   }
