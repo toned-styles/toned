@@ -100,7 +100,7 @@ export function defineSystem<
         > & { style?: unknown }
         // Deep-merge the `style` object so later arguments extend earlier
         // entries instead of replacing them. A shallow copy would drop style
-        // props set by earlier arguments (issue #3115).
+        // props set by earlier arguments.
         const prevStyle = value.style
         Object.assign(value, src)
         if (isStyleObject(prevStyle) && isStyleObject(src.style)) {

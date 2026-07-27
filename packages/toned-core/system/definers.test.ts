@@ -367,7 +367,7 @@ describe('defineSystem', () => {
     })
   })
 
-  describe('t() deep-merges style across arguments (#3115)', () => {
+  describe('t() deep-merges style across arguments', () => {
     test('combines style objects from multiple arguments', () => {
       const { t } = defineSystem({ bgColor })
 

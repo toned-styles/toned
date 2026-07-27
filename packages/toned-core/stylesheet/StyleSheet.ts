@@ -230,6 +230,65 @@ export class Base {
     )
   }
 
+  // Concatenation of the interaction pseudo-states a single element is currently
+  // in (e.g. ':hover:active'), derived from its per-element tracking sets. An
+  // empty string means "resting" (no active interaction).
+  private elementSignature(elementKey: ElementKey, el: AnyValue): string {
+    let signature = ''
+    for (const pseudo of PSEUDO_STATES) {
+      if (this._activeEls[`${elementKey}${pseudo}`]?.has(el))
+        signature += pseudo
+    }
+    return signature
+  }
+
+  // Resolve an element's style for a specific interaction signature, forcing its
+  // own pseudo mods to match `signature` and ignoring the shared global ones
+  // (which can only represent a single element's state at a time).
+  private styleForSignature(
+    elementKey: ElementKey,
+    signature: string,
+  ): AnyValue {
+    const elMods = { ...this.modsState }
+    for (const pseudo of PSEUDO_STATES) {
+      elMods[`${elementKey}${pseudo}`] = signature.includes(pseudo)
+    }
+    return this.applyTokens(this.matcher.match(elMods)[elementKey])
+  }
+
+  // The "resting" style is the element resolved with all of its own interaction
+  // pseudo-states forced off. The web binding spreads this declaratively so a
+  // sibling's live hover/active/focus (tracked in the shared global modsState)
+  // can never leak across instances when React re-applies props on re-render.
+  getRestingStyle(elementKey: ElementKey): AnyValue {
+    return this.styleForSignature(elementKey, '')
+  }
+
+  // Re-apply a single element's own interaction signature imperatively. Called
+  // from the web ref callback after each commit: React re-applies the pseudo-free
+  // resting style to every element, so an element that is genuinely hovered/
+  // active/focused needs its state restored here (and only that element).
+  reapplyInteraction(elementKey: ElementKey, el: AnyValue) {
+    const signature = this.elementSignature(elementKey, el)
+    if (!signature) return
+    setStyles(el, this.styleForSignature(elementKey, signature))
+  }
+
+  // Drop unmounted elements from refs and from every interaction set, so detached
+  // DOM nodes aren't retained (memory leak) and stale entries don't skew the
+  // "any element still active?" checks that drive the shared global mod.
+  pruneDisconnected(elementKey: ElementKey) {
+    const ref = this.refs[elementKey]
+    if (Array.isArray(ref)) {
+      this.refs[elementKey] = ref.filter((el: AnyValue) => el.isConnected)
+    }
+    for (const pseudo of PSEUDO_STATES) {
+      const set = this._activeEls[`${elementKey}${pseudo}`]
+      if (!set) continue
+      for (const el of set) if (!el.isConnected) set.delete(el)
+    }
+  }
+
   applyElementStyles(context?: ApplyContext) {
     for (const elementKey of this.matcher.elementSet) {
       const ref = this.refs[elementKey]
@@ -255,19 +314,11 @@ export class Base {
         // match() results across identically-stated elements.
         const styleBySignature = new Map<string, AnyValue>()
         for (const el of ref) {
-          let signature = ''
-          for (const pseudo of PSEUDO_STATES) {
-            if (this._activeEls[`${elementKey}${pseudo}`]?.has(el))
-              signature += pseudo
-          }
+          const signature = this.elementSignature(elementKey, el)
           if (!styleBySignature.has(signature)) {
-            const elMods = { ...this.modsState }
-            for (const pseudo of PSEUDO_STATES) {
-              elMods[`${elementKey}${pseudo}`] = signature.includes(pseudo)
-            }
             styleBySignature.set(
               signature,
-              this.applyTokens(this.matcher.match(elMods)[elementKey]),
+              this.styleForSignature(elementKey, signature),
             )
           }
           setStyles(el, styleBySignature.get(signature))

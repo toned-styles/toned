@@ -350,6 +350,48 @@ describe('style matcher with media', () => {
 })
 
 // =============================================================================
+// STYLE DEEP-MERGE
+// =============================================================================
+
+describe('style deep-merge across rules', () => {
+  test('a variant style extends the base style instead of replacing it', () => {
+    const matcher = new StyleMatcher({
+      container: {
+        style: { cursor: 'pointer', userSelect: 'none' },
+      },
+      '[variant=accent]': {
+        $container: {
+          style: { cursor: 'default' },
+        },
+      },
+    })
+
+    expect(matcher.match({}).container.style).toEqual({
+      cursor: 'pointer',
+      userSelect: 'none',
+    })
+
+    // cursor is overridden by the variant; userSelect survives from the base.
+    expect(matcher.match({ variant: 'accent' }).container.style).toEqual({
+      cursor: 'default',
+      userSelect: 'none',
+    })
+  })
+
+  test('the base style object is not mutated by the merge', () => {
+    const baseStyle = { cursor: 'pointer', userSelect: 'none' }
+    const matcher = new StyleMatcher({
+      container: { style: baseStyle },
+      '[variant=accent]': { $container: { style: { cursor: 'default' } } },
+    })
+
+    matcher.match({ variant: 'accent' })
+
+    expect(baseStyle).toEqual({ cursor: 'pointer', userSelect: 'none' })
+  })
+})
+
+// =============================================================================
 // NEW API TESTS
 // =============================================================================
 

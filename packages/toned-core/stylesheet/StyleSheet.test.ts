@@ -4,9 +4,10 @@ import type {
   TokenStyleDeclaration,
   TokenSystem,
 } from '../types/index.ts'
+import { SYMBOL_INIT } from '../utils/symbols.ts'
+import { setStyles } from './applyStyles.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
-import { SYMBOL_INIT } from '../utils/symbols.ts'
 import {
   createVariantSelector,
   getNamedStyleName,
@@ -518,7 +519,9 @@ describe('callback-based variants API', () => {
     expect(baseInstance.modsStyle.container.bgColor).toBe('blue')
 
     // With variant — overridden style applies
-    const activeInstance = withVariants[SYMBOL_INIT](mockConfig, { active: 'true' })
+    const activeInstance = withVariants[SYMBOL_INIT](mockConfig, {
+      active: 'true',
+    })
     expect(activeInstance.modsStyle.container.bgColor).toBe('red')
   })
 })
@@ -654,5 +657,123 @@ describe('multi-instance interaction state', () => {
     base.applyState({ 'box:hover': true })
 
     expect(nativeEl.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+})
+
+// Shared fixtures for the re-render / unmount suites below.
+const interactiveRules = {
+  box: {
+    bgColor: 'base',
+    ':hover': { $box: { color: 'hover' } },
+    ':active': { $box: { borderColor: 'active' } },
+    ':focus': { $box: { outlineColor: 'focus' } },
+  },
+}
+
+function fakeInteractiveEl() {
+  const el = {
+    isConnected: true,
+    recorded: undefined as Record<string, unknown> | undefined,
+    // Mimic a DOM node closely enough for setStyles' web branch AND the RN
+    // branch. We drive setStyles through setNativeProps to avoid needing a DOM.
+    setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
+      el.recorded = style
+    },
+  }
+  return el
+}
+
+function setupPair() {
+  const base = new Base({
+    ref: mockTokenSystem,
+    rules: interactiveRules,
+    config: mockConfig,
+    modsState: {},
+  })
+  const a = fakeInteractiveEl()
+  const b = fakeInteractiveEl()
+  base.refs['box'] = [a, b]
+  return { base, a, b }
+}
+
+describe('declarative re-render isolation (multi-instance)', () => {
+  test("getRestingStyle strips the element's own pseudo-state even when global modsState carries it", () => {
+    const { base, a } = setupPair()
+
+    // Hover A: global modsState now has box:hover = true (shared across siblings).
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(base.modsState['box:hover']).toBe(true)
+
+    // The style React spreads declaratively must be the *resting* style, i.e.
+    // pseudo-free — otherwise a re-render paints every sibling with A's hover.
+    expect(base.getRestingStyle('box').style).toEqual({ bgColor: 'base' })
+  })
+
+  test("an external re-render does not leak a hovered element's state onto siblings", () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A imperatively (no React render).
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // Simulate an unrelated React re-render: the declarative (resting) style is
+    // re-applied to EVERY mounted element, then each ref callback re-runs.
+    const resting = base.getRestingStyle('box')
+    for (const el of [a, b]) {
+      setStyles(el, resting) // React re-writes the style prop
+      base.reapplyInteraction('box', el) // ref callback restores per-element state
+    }
+
+    // A keeps its hover; B is never touched by A's state.
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('reapplyInteraction is a no-op for an element with no active interaction', () => {
+    const { base, b } = setupPair()
+
+    setStyles(b, base.getRestingStyle('box'))
+    b.recorded = undefined
+    base.reapplyInteraction('box', b)
+
+    expect(b.recorded).toBeUndefined()
+  })
+})
+
+describe('unmount cleanup (multi-instance)', () => {
+  test('pruneDisconnected drops unmounted nodes from refs and every interaction set', () => {
+    const { base, a, b } = setupPair()
+
+    base._activeEls['box:hover'] = new Set([a, b])
+    base._activeEls['box:focus'] = new Set([b])
+
+    // B unmounts (DOM detaches it) without firing mouseleave/blur.
+    b.isConnected = false
+
+    base.pruneDisconnected('box')
+
+    expect(base.refs['box']).toEqual([a])
+    expect([...base._activeEls['box:hover']]).toEqual([a])
+    expect(base._activeEls['box:focus'].size).toBe(0)
+  })
+
+  test('pruneDisconnected is safe when the element has no tracked state', () => {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+
+    expect(() => base.pruneDisconnected('box')).not.toThrow()
   })
 })
