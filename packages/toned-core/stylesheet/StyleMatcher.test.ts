@@ -779,3 +779,40 @@ describe('StyleMatcher cssMediaMode', () => {
     expect(mdStyle.link.paddingX).toBe(4)
   })
 })
+
+describe('match() cache is bounded (LRU)', () => {
+  const rules = {
+    box: {
+      bgColor: 'base',
+      '[size=sm]': { $box: { pad: 1 } },
+      '[size=md]': { $box: { pad: 2 } },
+      '[size=lg]': { $box: { pad: 3 } },
+    },
+  }
+
+  test('evicts the least-recently-used entry past the cap', () => {
+    const matcher = new StyleMatcher(rules, { cacheMax: 2 })
+
+    const sm1 = matcher.match({ size: 'sm' }) // cache: [sm]
+    const md1 = matcher.match({ size: 'md' }) // cache: [sm, md]
+    expect(matcher.cache.size).toBe(2)
+
+    // Touch sm so it becomes most-recently-used (order: [md, sm]).
+    expect(matcher.match({ size: 'sm' })).toBe(sm1)
+
+    // Overflow: lg evicts the least-recently-used entry (md), not sm.
+    matcher.match({ size: 'lg' }) // cache: [sm, lg]
+    expect(matcher.cache.size).toBe(2)
+
+    // sm survived → same cached reference.
+    expect(matcher.match({ size: 'sm' })).toBe(sm1)
+    // md was evicted → recomputed into a fresh object.
+    expect(matcher.match({ size: 'md' })).not.toBe(md1)
+  })
+
+  test('defaults to a finite cap when none is provided', () => {
+    const matcher = new StyleMatcher(rules)
+    expect(matcher.cacheMax).toBeGreaterThan(0)
+    expect(Number.isFinite(matcher.cacheMax)).toBe(true)
+  })
+})
