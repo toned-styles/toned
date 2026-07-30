@@ -850,3 +850,23 @@ describe('contextless updates do not leak interaction across instances', () => {
     expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
   })
 })
+
+describe('interaction state helpers (single source of truth)', () => {
+  test('setElementActive tracks and clears per-element pseudo membership', () => {
+    const { base, a, b } = setupPair()
+
+    base.setElementActive('box', ':hover', a, true)
+    expect(base.anyElementActive('box', ':hover')).toBe(true)
+    expect(base._activeEls['box:hover']?.has(a)).toBe(true)
+    expect(base._activeEls['box:hover']?.has(b)).toBe(false)
+
+    base.setElementActive('box', ':hover', a, false)
+    expect(base.anyElementActive('box', ':hover')).toBe(false)
+    expect(base._activeEls['box:hover']?.has(a)).toBe(false)
+  })
+
+  test('anyElementActive is false for an untracked pseudo', () => {
+    const { base } = setupPair()
+    expect(base.anyElementActive('box', ':focus')).toBe(false)
+  })
+})

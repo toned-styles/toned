@@ -6,6 +6,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
@@ -24,10 +25,6 @@ type AnyValue = any
 type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
-
-// Interaction pseudo-states that can be tracked per-element for multi-instance
-// stylesheets. Order only affects the internal signature key, not output.
-const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
 
 type ElementStyle = AnyValue
 
@@ -228,28 +225,69 @@ export class Base {
     )
   }
 
-  // Concatenation of the interaction pseudo-states a single element is currently
-  // in (e.g. ':hover:active'), derived from its per-element tracking sets. An
-  // empty string means "resting" (no active interaction).
-  private elementSignature(elementKey: ElementKey, el: AnyValue): string {
-    let signature = ''
-    for (const pseudo of PSEUDO_STATES) {
-      if (this._activeEls[`${elementKey}${pseudo}`]?.has(el))
-        signature += pseudo
-    }
-    return signature
+  // --- per-element interaction state -------------------------------------
+  // `_activeEls[`${elementKey}${pseudo}`]` is the single source of truth for
+  // which mounted elements are in each pseudo-state. The shared boolean
+  // `modsState[`${elementKey}${pseudo}`]` only records "any element active" (for
+  // single-instance and cross-element rules) — never read it to answer "is
+  // *this* element active?"; use these helpers instead.
+
+  private stateKey(elementKey: ElementKey, pseudo: string): string {
+    return `${elementKey}${pseudo}`
   }
 
-  // Resolve an element's style for a specific interaction signature, forcing its
-  // own pseudo mods to match `signature` and ignoring the shared global ones
-  // (which can only represent a single element's state at a time).
-  private styleForSignature(
+  // Mark or clear an element's membership in a pseudo-state.
+  setElementActive(
     elementKey: ElementKey,
-    signature: string,
+    pseudo: string,
+    el: AnyValue,
+    on: boolean,
+  ) {
+    const key = this.stateKey(elementKey, pseudo)
+    let set = this._activeEls[key]
+    if (!set) {
+      set = new Set()
+      this._activeEls[key] = set
+    }
+    if (on) set.add(el)
+    else set.delete(el)
+  }
+
+  // Are ANY mounted elements for this key in the pseudo-state? Drives the shared
+  // global mod written to modsState.
+  anyElementActive(elementKey: ElementKey, pseudo: string): boolean {
+    return (this._activeEls[this.stateKey(elementKey, pseudo)]?.size ?? 0) > 0
+  }
+
+  // The interaction pseudo-states this element is currently in, in canonical
+  // order (empty means "resting").
+  private activePseudos(elementKey: ElementKey, el: AnyValue): string[] {
+    const active: string[] = []
+    for (const pseudo of PSEUDO_STATES) {
+      if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el))
+        active.push(pseudo)
+    }
+    return active
+  }
+
+  // Stable grouping key for a set of active pseudos. Joined with a separator so
+  // it stays unambiguous even if a future pseudo name is a prefix of another
+  // (e.g. ':focus' vs ':focus-visible').
+  private pseudoSignature(activePseudos: string[]): string {
+    return activePseudos.join(PSEUDO_SIGNATURE_SEPARATOR)
+  }
+
+  // Resolve an element's style with exactly `activePseudos` forced on (and every
+  // other interaction pseudo off), ignoring the shared global pseudo mods, which
+  // can only represent a single element's state at a time.
+  private styleForPseudos(
+    elementKey: ElementKey,
+    activePseudos: string[],
   ): AnyValue {
+    const active = new Set(activePseudos)
     const elMods = { ...this.modsState }
     for (const pseudo of PSEUDO_STATES) {
-      elMods[`${elementKey}${pseudo}`] = signature.includes(pseudo)
+      elMods[this.stateKey(elementKey, pseudo)] = active.has(pseudo)
     }
     return this.applyTokens(this.matcher.match(elMods)[elementKey])
   }
@@ -259,17 +297,17 @@ export class Base {
   // sibling's live hover/active/focus (tracked in the shared global modsState)
   // can never leak across instances when React re-applies props on re-render.
   getRestingStyle(elementKey: ElementKey): AnyValue {
-    return this.styleForSignature(elementKey, '')
+    return this.styleForPseudos(elementKey, [])
   }
 
-  // Re-apply a single element's own interaction signature imperatively. Called
-  // from the web ref callback after each commit: React re-applies the pseudo-free
+  // Re-apply a single element's own interaction state imperatively. Called from
+  // the web ref callback after each commit: React re-applies the pseudo-free
   // resting style to every element, so an element that is genuinely hovered/
   // active/focused needs its state restored here (and only that element).
   reapplyInteraction(elementKey: ElementKey, el: AnyValue) {
-    const signature = this.elementSignature(elementKey, el)
-    if (!signature) return
-    setStyles(el, this.styleForSignature(elementKey, signature))
+    const active = this.activePseudos(elementKey, el)
+    if (active.length === 0) return
+    setStyles(el, this.styleForPseudos(elementKey, active))
   }
 
   // Drop unmounted elements from refs and from every interaction set, so detached
@@ -281,7 +319,7 @@ export class Base {
       this.refs[elementKey] = ref.filter((el: AnyValue) => el.isConnected)
     }
     for (const pseudo of PSEUDO_STATES) {
-      const set = this._activeEls[`${elementKey}${pseudo}`]
+      const set = this._activeEls[this.stateKey(elementKey, pseudo)]
       if (!set) continue
       for (const el of set) if (!el.isConnected) set.delete(el)
     }
@@ -313,11 +351,12 @@ export class Base {
         // reuse match() results across identically-stated elements.
         const styleBySignature = new Map<string, AnyValue>()
         for (const el of ref) {
-          const signature = this.elementSignature(elementKey, el)
+          const active = this.activePseudos(elementKey, el)
+          const signature = this.pseudoSignature(active)
           if (!styleBySignature.has(signature)) {
             styleBySignature.set(
               signature,
-              this.styleForSignature(elementKey, signature),
+              this.styleForPseudos(elementKey, active),
             )
           }
           setStyles(el, styleBySignature.get(signature))

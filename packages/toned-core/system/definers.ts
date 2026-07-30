@@ -16,6 +16,7 @@ import type {
 } from '../types/index.ts'
 import { camelToKebab } from '../utils/css.ts'
 import { mergeStyle } from '../utils/mergeStyle.ts'
+import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { getConfig } from './config.ts'
 
@@ -262,8 +263,6 @@ export function defineSystem<
       // Process pseudo-state overrides into CSS variable fallback chains
       // Priority: :active > :focus > :hover (active outermost in chain)
       if (Object.keys(pseudoOverrides).length > 0) {
-        const PSEUDO_ORDER = [':hover', ':focus', ':active']
-
         // Process token-backed props first and raw `style` last. When a pseudo
         // override sets the same CSS property via both a token and raw `style`,
         // this makes precedence deterministic instead of depending on object key
@@ -299,7 +298,7 @@ export function defineSystem<
               const baseValue =
                 acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
-              for (const pseudo of PSEUDO_ORDER) {
+              for (const pseudo of PSEUDO_CASCADE_ORDER) {
                 if (
                   overrides.some((o) => {
                     const sv = o.value as Record<string, unknown> | null
@@ -357,7 +356,7 @@ export function defineSystem<
                   : null
 
             let chain = innerValue
-            for (const pseudo of PSEUDO_ORDER) {
+            for (const pseudo of PSEUDO_CASCADE_ORDER) {
               if (overrides.some((o) => o.pseudo === pseudo)) {
                 const pseudoName = pseudo.slice(1)
                 const varName = `--toned_${pseudoName}__${kebabProp}`
