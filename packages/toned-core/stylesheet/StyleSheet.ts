@@ -151,8 +151,6 @@ export class Base {
   modsStyle!: StyleDecl
   modsStylePrev!: StyleDecl
 
-  interactiveState: Record<string, Record<string, boolean>> = {}
-
   _activeEls: Record<string, Set<AnyValue>> = {}
 
   constructor({
