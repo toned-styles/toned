@@ -1,3 +1,5 @@
+import { mergeStyle } from '../utils/mergeStyle.ts'
+
 type StyleValue = string | number | number
 type StyleObject = Record<string, StyleValue>
 type StyleRules = Record<string, StyleObject>
@@ -610,16 +612,10 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
         const target = result[elementKey]
         const source = compiledRule.rule[elementKey]
         for (const key in source) {
-          if (
-            key === 'style' &&
-            target[key] &&
-            typeof target[key] === 'object' &&
-            typeof source[key] === 'object'
-          ) {
-            target[key] = { ...target[key], ...source[key] }
-          } else {
-            target[key] = source[key]
-          }
+          // `style` layers deep (one level) so a pseudo/variant rule extends the
+          // base style; every other property is replaced. See utils/mergeStyle.
+          target[key] =
+            key === 'style' ? mergeStyle(target[key], source[key]) : source[key]
         }
 
         result[this.#elementHash][elementKey] ^= compiledRule.bitValue

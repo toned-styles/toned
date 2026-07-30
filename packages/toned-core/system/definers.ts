@@ -15,6 +15,7 @@ import type {
   Tokens,
 } from '../types/index.ts'
 import { camelToKebab } from '../utils/css.ts'
+import { mergeStyle } from '../utils/mergeStyle.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { getConfig } from './config.ts'
 
@@ -58,10 +59,6 @@ export function defineUnit<T>(
   return resolver
 }
 
-function isStyleObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 /**
  * Define a complete token system with all tokens and optional configuration.
  *
@@ -103,9 +100,8 @@ export function defineSystem<
         // props set by earlier arguments.
         const prevStyle = value.style
         Object.assign(value, src)
-        if (isStyleObject(prevStyle) && isStyleObject(src.style)) {
-          value.style = { ...prevStyle, ...src.style }
-        }
+        const mergedStyle = mergeStyle(prevStyle, src.style)
+        if (mergedStyle !== undefined) value.style = mergedStyle
       }
 
       if (SYMBOL_REF in value) {
