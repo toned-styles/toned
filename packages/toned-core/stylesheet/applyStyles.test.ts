@@ -5,24 +5,33 @@ import { setStyles } from './applyStyles.ts'
 // enough for setStyles' web branch: toned writes camelCase properties via
 // Object.assign and reads them back with getPropertyValue(kebab). No value
 // normalization, so reads return exactly what was written.
-function makeEl() {
+type FakeStyle = {
+  getPropertyValue(prop: string): string
+  setProperty(prop: string, value: string): void
+} & Record<string, unknown>
+type FakeEl = { style: FakeStyle }
+
+function makeEl(): FakeEl {
   const kebabToCamel = (prop: string) =>
     prop.startsWith('--')
       ? prop
       : prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 
-  const style: Record<string, unknown> = {
-    getPropertyValue(prop: string) {
+  const style = {
+    getPropertyValue(prop: string): string {
       const v = style[kebabToCamel(prop)]
       return v == null ? '' : String(v)
     },
-  }
+    // Stand-in for a non-toned source writing an inline property.
+    setProperty(prop: string, value: string): void {
+      style[kebabToCamel(prop)] = value
+    },
+  } as FakeStyle
   // No setNativeProps → setStyles takes the web (DOM) branch.
   return { style }
 }
 
-const cssValue = (el: { style: Record<string, unknown> }, prop: string) =>
-  (el.style.getPropertyValue as (p: string) => string)(prop)
+const cssValue = (el: FakeEl, prop: string) => el.style.getPropertyValue(prop)
 
 describe('setStyles (web) baseline restore', () => {
   test('applies resolved styles and appends px to unitless-exempt numbers', () => {
@@ -54,7 +63,7 @@ describe('setStyles (web) baseline restore', () => {
     setStyles(el, { style: { color: 'red' } })
 
     // An external source takes over the inline `color`.
-    el.style.color = 'green'
+    el.style.setProperty('color', 'green')
 
     // toned drops `color`. Because the live value is no longer what toned wrote,
     // it must leave the foreign value untouched instead of restoring baseline.
@@ -68,7 +77,7 @@ describe('setStyles (web) baseline restore', () => {
     setStyles(el, { style: { color: 'red' } })
 
     // External write, then toned writes the property again — baseline refreshes.
-    el.style.color = 'green'
+    el.style.setProperty('color', 'green')
     setStyles(el, { style: { color: 'blue' } })
 
     // Now toned drops it: the restored baseline is the foreign value, not the
@@ -81,7 +90,7 @@ describe('setStyles (web) baseline restore', () => {
   test('restores the pre-toned baseline when toned still owns the property', () => {
     const el = makeEl()
     // Pre-existing, non-toned inline value.
-    el.style.color = 'rebeccapurple'
+    el.style.setProperty('color', 'rebeccapurple')
 
     setStyles(el, { style: { color: 'red' } })
     expect(cssValue(el, 'color')).toBe('red')
