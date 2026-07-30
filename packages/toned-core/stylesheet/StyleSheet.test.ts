@@ -947,3 +947,56 @@ describe('cross-element interaction isolation (multi-instance)', () => {
     warn.mockRestore()
   })
 })
+
+describe('redundant write elision (multi-instance)', () => {
+  test('an unrelated interaction does not rewrite resting siblings', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A → A hover, B resting (both written once).
+    base.setElementActive('box', ':hover', a, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // Sentinel to detect any further write to B.
+    b.recorded = { sentinel: true }
+
+    // Press A. B's resting rule is unchanged, so it must be skipped.
+    base.setElementActive('box', ':active', a, true)
+    base.applyState(
+      { 'box:active': true },
+      { triggerKey: 'box', pseudo: ':active' },
+    )
+
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      borderColor: 'active',
+    })
+    // B was skipped (resting rule unchanged) → sentinel intact.
+    expect(b.recorded).toEqual({ sentinel: true })
+  })
+
+  test('a genuine change still writes the sibling', () => {
+    const { base, a, b } = setupPair()
+
+    base.setElementActive('box', ':hover', a, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    b.recorded = { sentinel: true }
+
+    // Hover B too: its rule changes (resting → hover), so it must be written.
+    base.setElementActive('box', ':hover', b, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(b.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+})

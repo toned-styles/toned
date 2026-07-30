@@ -159,6 +159,12 @@ export class Base {
   // multi-instance mode (dev-only; warn once per key).
   private _warnedCrossElement = new Set<ElementKey>()
 
+  // The compiled rule last written to each mounted element, so applyElementStyles
+  // can skip rewriting inline styles on siblings whose resolved style is
+  // unchanged (StyleMatcher caches the rule, so reference identity is a valid,
+  // cheap signal).
+  private _lastAppliedRule = new WeakMap<AnyValue, AnyValue>()
+
   constructor({
     ref,
     rules,
@@ -286,10 +292,13 @@ export class Base {
     return activePseudos.join(PSEUDO_SIGNATURE_SEPARATOR)
   }
 
-  // Resolve an element's style with exactly `activePseudos` forced on (and every
-  // other interaction pseudo off), ignoring the shared global pseudo mods, which
-  // can only represent a single element's state at a time.
-  private styleForPseudos(
+  // The compiled match rule for an element with exactly `activePseudos` forced
+  // on (and every other interaction pseudo off), ignoring the shared global
+  // pseudo mods (which can only represent a single element's state at a time).
+  // StyleMatcher caches by mod bitmask, so the returned reference is stable
+  // across identical (pseudo + variant + media) state — which drives the
+  // redundant-write skip in applyElementStyles.
+  private matchedRule(
     elementKey: ElementKey,
     activePseudos: string[],
   ): AnyValue {
@@ -298,7 +307,15 @@ export class Base {
     for (const pseudo of PSEUDO_STATES) {
       elMods[this.stateKey(elementKey, pseudo)] = active.has(pseudo)
     }
-    return this.applyTokens(this.matcher.match(elMods)[elementKey])
+    return this.matcher.match(elMods)[elementKey]
+  }
+
+  // Resolve an element's style for exactly `activePseudos`.
+  private styleForPseudos(
+    elementKey: ElementKey,
+    activePseudos: string[],
+  ): AnyValue {
+    return this.applyTokens(this.matchedRule(elementKey, activePseudos))
   }
 
   // The "resting" style is the element resolved with all of its own interaction
@@ -390,18 +407,21 @@ export class Base {
         // interaction at a time (and may be stale after an unmount). This holds
         // for contextless updates too (media/variant), so a sibling's live
         // interaction can never leak onto other instances. Group by signature to
-        // reuse match() results across identically-stated elements.
+        // reuse match() results across identically-stated elements, and skip
+        // elements whose resolved rule is unchanged to avoid no-op DOM writes.
         const styleBySignature = new Map<string, AnyValue>()
         for (const el of ref) {
           const active = this.activePseudos(elementKey, el)
+          const rule = this.matchedRule(elementKey, active)
+          if (rule !== undefined && this._lastAppliedRule.get(el) === rule) {
+            continue
+          }
           const signature = this.pseudoSignature(active)
           if (!styleBySignature.has(signature)) {
-            styleBySignature.set(
-              signature,
-              this.styleForPseudos(elementKey, active),
-            )
+            styleBySignature.set(signature, this.applyTokens(rule))
           }
           setStyles(el, styleBySignature.get(signature))
+          this._lastAppliedRule.set(el, rule)
         }
       } else if (Array.isArray(ref)) {
         if (isMultiInstance) {
