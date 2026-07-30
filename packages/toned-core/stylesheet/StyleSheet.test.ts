@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type {
   Config,
   TokenStyleDeclaration,
@@ -868,5 +868,82 @@ describe('interaction state helpers (single source of truth)', () => {
   test('anyElementActive is false for an untracked pseudo', () => {
     const { base } = setupPair()
     expect(base.anyElementActive('box', ':focus')).toBe(false)
+  })
+})
+
+describe('cross-element interaction isolation (multi-instance)', () => {
+  // `container:hover` restyles BOTH container and its label — `label` is a
+  // cross-element target (never itself interactive).
+  const rules = {
+    container: {
+      bgColor: 'base',
+      ':hover': {
+        $container: { bgColor: 'hover' },
+        $label: { textColor: 'hovered' },
+      },
+    },
+    label: { textColor: 'base' },
+  }
+
+  function newBase() {
+    return new Base({
+      ref: mockTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
+    })
+  }
+
+  test('hovering one instance does not paint sibling cross-element targets', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const base = newBase()
+    const [c1, c2, l1, l2] = [
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+    ]
+    base.refs['container'] = [c1, c2]
+    base.refs['label'] = [l1, l2]
+
+    base.setElementActive('container', ':hover', c1, true)
+    base.applyState(
+      { 'container:hover': true },
+      { triggerKey: 'container', pseudo: ':hover' },
+    )
+
+    // The hovered container gets its hover style; its sibling stays resting.
+    expect(c1.recorded).toEqual({ bgColor: 'hover' })
+    expect(c2.recorded).toEqual({ bgColor: 'base' })
+
+    // Regression guard: before the fix both labels were painted with the
+    // cross-element hover ('hovered'). They must now both render resting.
+    expect(l1.recorded).toEqual({ textColor: 'base' })
+    expect(l2.recorded).toEqual({ textColor: 'base' })
+
+    // The suppressed cross-element effect is surfaced to developers once.
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+
+  test('a single shared instance keeps full cross-element interaction', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const base = newBase()
+    const c = fakeInteractiveEl()
+    const l = fakeInteractiveEl()
+    base.refs['container'] = [c]
+    base.refs['label'] = [l]
+
+    base.setElementActive('container', ':hover', c, true)
+    base.applyState(
+      { 'container:hover': true },
+      { triggerKey: 'container', pseudo: ':hover' },
+    )
+
+    expect(c.recorded).toEqual({ bgColor: 'hover' })
+    // Single instance → the cross-element hover applies live, no suppression.
+    expect(l.recorded).toEqual({ textColor: 'hovered' })
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 })

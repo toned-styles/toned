@@ -26,6 +26,11 @@ type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
 
+// Bundlers replace `process.env.NODE_ENV`; fall back to non-production when the
+// global is unavailable so dev-only warnings still surface in browser bundles.
+const IS_PRODUCTION =
+  (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
+
 type ElementStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
@@ -149,6 +154,10 @@ export class Base {
   modsStylePrev!: StyleDecl
 
   _activeEls: Record<string, Set<AnyValue>> = {}
+
+  // Element keys already warned about unisolated cross-element interaction in
+  // multi-instance mode (dev-only; warn once per key).
+  private _warnedCrossElement = new Set<ElementKey>()
 
   constructor({
     ref,
@@ -325,6 +334,39 @@ export class Base {
     }
   }
 
+  // A copy of modsState with every element's interaction pseudo mods forced
+  // off. Used to resolve non-interactive elements in multi-instance mode so a
+  // sibling's live hover/active/focus can never leak across instances.
+  private restingModsState(): ModState {
+    const elMods = { ...this.modsState }
+    for (const triggerKey in this.matcher.interactions) {
+      for (const pseudo of PSEUDO_STATES) {
+        elMods[this.stateKey(triggerKey, pseudo)] = false
+      }
+    }
+    return elMods
+  }
+
+  // Dev-only, once per key: warn when a shared element genuinely varies with
+  // another element's interaction (its live style differs from resting) while
+  // rendered multi-instance — i.e. the cross-element effect is being suppressed
+  // to avoid leaking across instances.
+  private warnCrossElementMultiInstance(
+    elementKey: ElementKey,
+    restingStyle: AnyValue,
+  ) {
+    if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
+    const liveStyle = this.getCurrentStyle(elementKey)
+    if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
+    this._warnedCrossElement.add(elementKey)
+    console.warn(
+      `[toned] Cross-element interaction targeting "${elementKey}" is not ` +
+        'isolated across multiple instances of a shared stylesheet, so it is ' +
+        'rendered in its resting state. Use one stylesheet instance per ' +
+        'element group to get per-instance cross-element hover/active/focus.',
+    )
+  }
+
   applyElementStyles(context?: ApplyContext) {
     for (const elementKey of this.matcher.elementSet) {
       const ref = this.refs[elementKey]
@@ -362,9 +404,25 @@ export class Base {
           setStyles(el, styleBySignature.get(signature))
         }
       } else if (Array.isArray(ref)) {
-        // Non-interactive elements share one resolved style across instances.
-        const style = this.getCurrentStyle(elementKey)
-        for (const el of ref) setStyles(el, style)
+        if (isMultiInstance) {
+          // A non-interactive element shared across instances may still be a
+          // cross-element *target* (e.g. `container:hover → { label }`).
+          // Resolving it from the shared global state would paint EVERY instance
+          // whenever ANY sibling's trigger is active. With no per-instance
+          // grouping of trigger↔target refs, resolve from the resting
+          // (pseudo-free) state instead: the cross-element effect is suppressed
+          // for multi-instance, but never leaks. Single instances keep the live
+          // cross-element behavior in the branch below.
+          const restingStyle = this.applyTokens(
+            this.matcher.match(this.restingModsState())[elementKey],
+          )
+          this.warnCrossElementMultiInstance(elementKey, restingStyle)
+          for (const el of ref) setStyles(el, restingStyle)
+        } else {
+          // Single shared instance: full cross-element behavior is safe.
+          const style = this.getCurrentStyle(elementKey)
+          for (const el of ref) setStyles(el, style)
+        }
       } else if (ref) {
         // Single ref (native) — unchanged.
         setStyles(ref, this.getCurrentStyle(elementKey))
