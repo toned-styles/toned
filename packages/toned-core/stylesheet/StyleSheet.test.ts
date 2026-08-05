@@ -544,6 +544,7 @@ describe('multi-instance interaction state', () => {
   // required) and records the resolved style object it receives.
   function fakeEl() {
     const el = {
+      isConnected: true,
       recorded: undefined as Record<string, unknown> | undefined,
       setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
         el.recorded = style
@@ -563,7 +564,7 @@ describe('multi-instance interaction state', () => {
     const b = fakeEl()
     // Two mounted instances sharing one Base (e.g. a list rendered from one
     // useStyles() result).
-    base.refs[boxKey] = [a, b]
+    base.refs[boxKey] = new Set([a, b])
     return { base, a, b }
   }
 
@@ -629,7 +630,7 @@ describe('multi-instance interaction state', () => {
       modsState: {},
     })
     const only = fakeEl()
-    base.refs[boxKey] = [only]
+    base.refs[boxKey] = new Set([only])
     base._activeEls['box:hover'] = new Set([only])
 
     base.applyState(
@@ -692,7 +693,7 @@ function setupPair() {
   })
   const a = fakeInteractiveEl()
   const b = fakeInteractiveEl()
-  base.refs['box'] = [a, b]
+  base.refs['box'] = new Set([a, b])
   return { base, a, b }
 }
 
@@ -749,8 +750,8 @@ describe('declarative re-render isolation (multi-instance)', () => {
   })
 })
 
-describe('unmount cleanup (multi-instance)', () => {
-  test('pruneDisconnected drops unmounted nodes from refs and every interaction set', () => {
+describe('unmount cleanup (multi-instance, lazy prune)', () => {
+  test('the next applyState drops unmounted nodes from refs and every interaction set', () => {
     const { base, a, b } = setupPair()
 
     base._activeEls['box:hover'] = new Set([a, b])
@@ -759,22 +760,33 @@ describe('unmount cleanup (multi-instance)', () => {
     // B unmounts (DOM detaches it) without firing mouseleave/blur.
     b.isConnected = false
 
-    base.pruneDisconnected('box')
+    // Any subsequent style application prunes the disconnected node in-place.
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
 
-    expect(base.refs['box']).toEqual([a])
+    expect([...(base.refs['box'] as Set<unknown>)]).toEqual([a])
     expect([...base._activeEls['box:hover']]).toEqual([a])
     expect(base._activeEls['box:focus'].size).toBe(0)
+    // The still-mounted element is styled as normal.
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
 
-  test('pruneDisconnected is safe when the element has no tracked state', () => {
-    const base = new Base({
-      ref: mockTokenSystem,
-      rules: interactiveRules,
-      config: mockConfig,
-      modsState: {},
-    })
+  test('a disconnected node is never styled', () => {
+    const { base, a, b } = setupPair()
+    base._activeEls['box:hover'] = new Set([a])
+    b.isConnected = false
+    b.recorded = { sentinel: true }
 
-    expect(() => base.pruneDisconnected('box')).not.toThrow()
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    // B was skipped (and pruned), so its recorded style is untouched.
+    expect(b.recorded).toEqual({ sentinel: true })
+    expect((base.refs['box'] as Set<unknown>).has(b)).toBe(false)
   })
 })
 
@@ -800,7 +812,7 @@ describe('contextless updates do not leak interaction across instances', () => {
     })
     const a = fakeInteractiveEl()
     const b = fakeInteractiveEl()
-    base.refs['box'] = [a, b]
+    base.refs['box'] = new Set([a, b])
     return { base, a, b }
   }
 
@@ -842,12 +854,13 @@ describe('contextless updates do not leak interaction across instances', () => {
       { triggerKey: 'box', pseudo: ':hover' },
     )
     a.isConnected = false
-    base.pruneDisconnected('box') // React ref(null) path: refs → [b]
 
-    // A contextless tick must not paint the survivor with A's stale hover.
+    // A contextless tick must not paint the survivor with A's stale hover. The
+    // disconnected node is pruned lazily as applyElementStyles iterates.
     base.applyState({ size: 'large' })
 
     expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
+    expect((base.refs['box'] as Set<unknown>).has(a)).toBe(false)
   })
 })
 

@@ -160,10 +160,6 @@ export class Base {
   private _warnedCrossElement = new Set<ElementKey>()
 
   // The compiled rule last written to each mounted element, so applyElementStyles
-  // can skip rewriting inline styles on siblings whose resolved style is
-  // unchanged (StyleMatcher caches the rule, so reference identity is a valid,
-  // cheap signal).
-  private _lastAppliedRule = new WeakMap<AnyValue, AnyValue>()
 
   constructor({
     ref,
@@ -336,20 +332,16 @@ export class Base {
     setStyles(el, this.styleForPseudos(elementKey, active))
   }
 
-  // Drop unmounted elements from refs and from every interaction set, so detached
-  // DOM nodes aren't retained (memory leak) and stale entries don't skew the
-  // "any element still active?" checks that drive the shared global mod.
-  pruneDisconnected(elementKey: ElementKey) {
+  // Remove a single unmounted element from refs and from every interaction set.
+  // O(1). Called lazily from applyElementStyles when a detached node is seen, so
+  // there's no O(n) scan on every React ref detach.
+  private pruneEl(elementKey: ElementKey, el: AnyValue) {
     const ref = this.refs[elementKey]
-    if (Array.isArray(ref)) {
-      this.refs[elementKey] = ref.filter((el: AnyValue) => el.isConnected)
-    }
-    for (const pseudo of PSEUDO_STATES) {
-      const set = this._activeEls[this.stateKey(elementKey, pseudo)]
-      if (!set) continue
-      for (const el of set) if (!el.isConnected) set.delete(el)
-    }
-  }
+    if (ref instanceof Set) ref.delete(el)
+     for (const pseudo of PSEUDO_STATES) {
+      this._activeEls[`${elementKey}${pseudo}`]?.delete(el)
+     }
+   }
 
   // A copy of modsState with every element's interaction pseudo mods forced
   // off. Used to resolve non-interactive elements in multi-instance mode so a
@@ -387,7 +379,10 @@ export class Base {
   applyElementStyles(context?: ApplyContext) {
     for (const elementKey of this.matcher.elementSet) {
       const ref = this.refs[elementKey]
-      const isMultiInstance = Array.isArray(ref) && ref.length > 1
+      // Web stores every mounted element for a key in a Set (O(1) add/has/delete);
+      // native assigns a single element. `size > 1` is the multi-instance case.
+      const isSet = ref instanceof Set
+      const isMultiInstance = isSet && ref.size > 1
       const isSelfTarget = context?.triggerKey === elementKey
       const isInteractive = !!this.matcher.interactions[elementKey]
 
@@ -400,36 +395,36 @@ export class Base {
         }
       }
 
-      if (Array.isArray(ref) && isInteractive) {
-        // An interactive element shared across mounted instances must be
-        // resolved from each element's OWN hover/active/focus signature — never
-        // the shared global modsState, which can only represent one element's
-        // interaction at a time (and may be stale after an unmount). This holds
-        // for contextless updates too (media/variant), so a sibling's live
-        // interaction can never leak onto other instances. Group by signature to
-        // reuse match() results across identically-stated elements, and skip
-        // elements whose resolved rule is unchanged to avoid no-op DOM writes.
-        const styleBySignature = new Map<string, AnyValue>()
-        for (const el of ref) {
-          const active = this.activePseudos(elementKey, el)
-          const rule = this.matchedRule(elementKey, active)
-          if (rule !== undefined && this._lastAppliedRule.get(el) === rule) {
-            continue
+      if (isSet) {
+        if (isInteractive) {
+          // Resolve each element from its OWN hover/active/focus signature whenever
+          // the element is interactive — even on a contextless update (media/
+          // variant) — so the shared global modsState (which can only represent one
+          // element's interaction, and may be stale after an unmount) can never leak
+          // a sibling's live state onto other instances. Group by signature to reuse
+          // match() results; prune disconnected nodes in-place as we iterate (Set
+          // delete during for..of is safe).
+          const styleBySignature = new Map<string, AnyValue>()
+          for (const el of ref) {
+            if (!el.isConnected) {
+              this.pruneEl(elementKey, el)
+              continue
+            }
+            const active = this.activePseudos(elementKey, el)
+            const signature = this.pseudoSignature(active)
+            if (!styleBySignature.has(signature)) {
+              styleBySignature.set(
+                signature,
+                this.styleForPseudos(elementKey, active),
+              )
+            }
+            setStyles(el, styleBySignature.get(signature))
           }
-          const signature = this.pseudoSignature(active)
-          if (!styleBySignature.has(signature)) {
-            styleBySignature.set(signature, this.applyTokens(rule))
-          }
-          setStyles(el, styleBySignature.get(signature))
-          this._lastAppliedRule.set(el, rule)
-        }
-      } else if (Array.isArray(ref)) {
-        if (isMultiInstance) {
+        } else if (isMultiInstance) {
           // A non-interactive element shared across instances may still be a
           // cross-element *target* (e.g. `container:hover → { label }`).
           // Resolving it from the shared global state would paint EVERY instance
-          // whenever ANY sibling's trigger is active. With no per-instance
-          // grouping of trigger↔target refs, resolve from the resting
+          // whenever ANY sibling's trigger is active. Resolve from the resting
           // (pseudo-free) state instead: the cross-element effect is suppressed
           // for multi-instance, but never leaks. Single instances keep the live
           // cross-element behavior in the branch below.
@@ -437,11 +432,17 @@ export class Base {
             this.matcher.match(this.restingModsState())[elementKey],
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
-          for (const el of ref) setStyles(el, restingStyle)
+          for (const el of ref) {
+            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            setStyles(el, restingStyle)
+          }
         } else {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
-          for (const el of ref) setStyles(el, style)
+          for (const el of ref) {
+            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            setStyles(el, style)
+          }
         }
       } else if (ref) {
         // Single ref (native) — unchanged.
