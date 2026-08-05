@@ -1,16 +1,18 @@
 // @vitest-environment happy-dom
 
 import { cleanup, fireEvent, render } from '@testing-library/react'
-import { defineSystem, defineToken, setConfig } from '@toned/core'
+import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { createElement } from 'react'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterAll, afterEach, describe, expect, test } from 'vitest'
 import { useStyles } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
 // Install the web binding as the active global config. getTokens is overridden
 // with a plain function: the real one resolves tokens via React's `use(context)`,
 // which can't run inside the interaction handlers (they fire outside render).
+const originalConfig = getConfig()
 setConfig({ ...reactWebConfig, getTokens: () => ({}) })
+afterAll(() => setConfig(originalConfig))
 
 // Minimal token system: `cur` maps 1:1 to the CSS `cursor` value so assertions
 // read back verbatim from happy-dom (no colour normalisation to reason about).
