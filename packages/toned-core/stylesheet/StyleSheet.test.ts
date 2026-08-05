@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type {
   Config,
   TokenStyleDeclaration,
@@ -861,5 +861,155 @@ describe('contextless updates do not leak interaction across instances', () => {
 
     expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
     expect((base.refs['box'] as Set<unknown>).has(a)).toBe(false)
+  })
+})
+
+describe('interaction state helpers (single source of truth)', () => {
+  test('setElementActive tracks and clears per-element pseudo membership', () => {
+    const { base, a, b } = setupPair()
+
+    base.setElementActive('box', ':hover', a, true)
+    expect(base.anyElementActive('box', ':hover')).toBe(true)
+    expect(base._activeEls['box:hover']?.has(a)).toBe(true)
+    expect(base._activeEls['box:hover']?.has(b)).toBe(false)
+
+    base.setElementActive('box', ':hover', a, false)
+    expect(base.anyElementActive('box', ':hover')).toBe(false)
+    expect(base._activeEls['box:hover']?.has(a)).toBe(false)
+  })
+
+  test('anyElementActive is false for an untracked pseudo', () => {
+    const { base } = setupPair()
+    expect(base.anyElementActive('box', ':focus')).toBe(false)
+  })
+})
+
+describe('cross-element interaction isolation (multi-instance)', () => {
+  // `container:hover` restyles BOTH container and its label — `label` is a
+  // cross-element target (never itself interactive).
+  const rules = {
+    container: {
+      bgColor: 'base',
+      ':hover': {
+        $container: { bgColor: 'hover' },
+        $label: { textColor: 'hovered' },
+      },
+    },
+    label: { textColor: 'base' },
+  }
+
+  function newBase() {
+    return new Base({
+      ref: mockTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
+    })
+  }
+
+  test('hovering one instance does not paint sibling cross-element targets', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const base = newBase()
+    const [c1, c2, l1, l2] = [
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+    ]
+    base.refs['container'] = [c1, c2]
+    base.refs['label'] = [l1, l2]
+
+    base.setElementActive('container', ':hover', c1, true)
+    base.applyState(
+      { 'container:hover': true },
+      { triggerKey: 'container', pseudo: ':hover' },
+    )
+
+    // The hovered container gets its hover style; its sibling stays resting.
+    expect(c1.recorded).toEqual({ bgColor: 'hover' })
+    expect(c2.recorded).toEqual({ bgColor: 'base' })
+
+    // Regression guard: before the fix both labels were painted with the
+    // cross-element hover ('hovered'). They must now both render resting.
+    expect(l1.recorded).toEqual({ textColor: 'base' })
+    expect(l2.recorded).toEqual({ textColor: 'base' })
+
+    // The suppressed cross-element effect is surfaced to developers once.
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+
+  test('a single shared instance keeps full cross-element interaction', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const base = newBase()
+    const c = fakeInteractiveEl()
+    const l = fakeInteractiveEl()
+    base.refs['container'] = [c]
+    base.refs['label'] = [l]
+
+    base.setElementActive('container', ':hover', c, true)
+    base.applyState(
+      { 'container:hover': true },
+      { triggerKey: 'container', pseudo: ':hover' },
+    )
+
+    expect(c.recorded).toEqual({ bgColor: 'hover' })
+    // Single instance → the cross-element hover applies live, no suppression.
+    expect(l.recorded).toEqual({ textColor: 'hovered' })
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})
+
+describe('redundant write elision (multi-instance)', () => {
+  test('an unrelated interaction does not rewrite resting siblings', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A → A hover, B resting (both written once).
+    base.setElementActive('box', ':hover', a, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // Sentinel to detect any further write to B.
+    b.recorded = { sentinel: true }
+
+    // Press A. B's resting rule is unchanged, so it must be skipped.
+    base.setElementActive('box', ':active', a, true)
+    base.applyState(
+      { 'box:active': true },
+      { triggerKey: 'box', pseudo: ':active' },
+    )
+
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      borderColor: 'active',
+    })
+    // B was skipped (resting rule unchanged) → sentinel intact.
+    expect(b.recorded).toEqual({ sentinel: true })
+  })
+
+  test('a genuine change still writes the sibling', () => {
+    const { base, a, b } = setupPair()
+
+    base.setElementActive('box', ':hover', a, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    b.recorded = { sentinel: true }
+
+    // Hover B too: its rule changes (resting → hover), so it must be written.
+    base.setElementActive('box', ':hover', b, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(b.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
 })

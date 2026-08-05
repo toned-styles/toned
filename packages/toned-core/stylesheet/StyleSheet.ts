@@ -6,6 +6,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
@@ -25,9 +26,10 @@ type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
 
-// Interaction pseudo-states that can be tracked per-element for multi-instance
-// stylesheets. Order only affects the internal signature key, not output.
-const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
+// Bundlers replace `process.env.NODE_ENV`; fall back to non-production when the
+// global is unavailable so dev-only warnings still surface in browser bundles.
+const IS_PRODUCTION =
+  (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
 
 type ElementStyle = AnyValue
 
@@ -151,9 +153,13 @@ export class Base {
   modsStyle!: StyleDecl
   modsStylePrev!: StyleDecl
 
-  interactiveState: Record<string, Record<string, boolean>> = {}
-
   _activeEls: Record<string, Set<AnyValue>> = {}
+
+  // Element keys already warned about unisolated cross-element interaction in
+  // multi-instance mode (dev-only; warn once per key).
+  private _warnedCrossElement = new Set<ElementKey>()
+
+  // The compiled rule last written to each mounted element, so applyElementStyles
 
   constructor({
     ref,
@@ -230,30 +236,82 @@ export class Base {
     )
   }
 
-  // Concatenation of the interaction pseudo-states a single element is currently
-  // in (e.g. ':hover:active'), derived from its per-element tracking sets. An
-  // empty string means "resting" (no active interaction).
-  private elementSignature(elementKey: ElementKey, el: AnyValue): string {
-    let signature = ''
-    for (const pseudo of PSEUDO_STATES) {
-      if (this._activeEls[`${elementKey}${pseudo}`]?.has(el))
-        signature += pseudo
-    }
-    return signature
+  // --- per-element interaction state -------------------------------------
+  // `_activeEls[`${elementKey}${pseudo}`]` is the single source of truth for
+  // which mounted elements are in each pseudo-state. The shared boolean
+  // `modsState[`${elementKey}${pseudo}`]` only records "any element active" (for
+  // single-instance and cross-element rules) — never read it to answer "is
+  // *this* element active?"; use these helpers instead.
+
+  private stateKey(elementKey: ElementKey, pseudo: string): string {
+    return `${elementKey}${pseudo}`
   }
 
-  // Resolve an element's style for a specific interaction signature, forcing its
-  // own pseudo mods to match `signature` and ignoring the shared global ones
-  // (which can only represent a single element's state at a time).
-  private styleForSignature(
+  // Mark or clear an element's membership in a pseudo-state.
+  setElementActive(
     elementKey: ElementKey,
-    signature: string,
+    pseudo: string,
+    el: AnyValue,
+    on: boolean,
+  ) {
+    const key = this.stateKey(elementKey, pseudo)
+    let set = this._activeEls[key]
+    if (!set) {
+      set = new Set()
+      this._activeEls[key] = set
+    }
+    if (on) set.add(el)
+    else set.delete(el)
+  }
+
+  // Are ANY mounted elements for this key in the pseudo-state? Drives the shared
+  // global mod written to modsState.
+  anyElementActive(elementKey: ElementKey, pseudo: string): boolean {
+    return (this._activeEls[this.stateKey(elementKey, pseudo)]?.size ?? 0) > 0
+  }
+
+  // The interaction pseudo-states this element is currently in, in canonical
+  // order (empty means "resting").
+  private activePseudos(elementKey: ElementKey, el: AnyValue): string[] {
+    const active: string[] = []
+    for (const pseudo of PSEUDO_STATES) {
+      if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el))
+        active.push(pseudo)
+    }
+    return active
+  }
+
+  // Stable grouping key for a set of active pseudos. Joined with a separator so
+  // it stays unambiguous even if a future pseudo name is a prefix of another
+  // (e.g. ':focus' vs ':focus-visible').
+  private pseudoSignature(activePseudos: string[]): string {
+    return activePseudos.join(PSEUDO_SIGNATURE_SEPARATOR)
+  }
+
+  // The compiled match rule for an element with exactly `activePseudos` forced
+  // on (and every other interaction pseudo off), ignoring the shared global
+  // pseudo mods (which can only represent a single element's state at a time).
+  // StyleMatcher caches by mod bitmask, so the returned reference is stable
+  // across identical (pseudo + variant + media) state — which drives the
+  // redundant-write skip in applyElementStyles.
+  private matchedRule(
+    elementKey: ElementKey,
+    activePseudos: string[],
   ): AnyValue {
+    const active = new Set(activePseudos)
     const elMods = { ...this.modsState }
     for (const pseudo of PSEUDO_STATES) {
-      elMods[`${elementKey}${pseudo}`] = signature.includes(pseudo)
+      elMods[this.stateKey(elementKey, pseudo)] = active.has(pseudo)
     }
-    return this.applyTokens(this.matcher.match(elMods)[elementKey])
+    return this.matcher.match(elMods)[elementKey]
+  }
+
+  // Resolve an element's style for exactly `activePseudos`.
+  private styleForPseudos(
+    elementKey: ElementKey,
+    activePseudos: string[],
+  ): AnyValue {
+    return this.applyTokens(this.matchedRule(elementKey, activePseudos))
   }
 
   // The "resting" style is the element resolved with all of its own interaction
@@ -261,17 +319,17 @@ export class Base {
   // sibling's live hover/active/focus (tracked in the shared global modsState)
   // can never leak across instances when React re-applies props on re-render.
   getRestingStyle(elementKey: ElementKey): AnyValue {
-    return this.styleForSignature(elementKey, '')
+    return this.styleForPseudos(elementKey, [])
   }
 
-  // Re-apply a single element's own interaction signature imperatively. Called
-  // from the web ref callback after each commit: React re-applies the pseudo-free
+  // Re-apply a single element's own interaction state imperatively. Called from
+  // the web ref callback after each commit: React re-applies the pseudo-free
   // resting style to every element, so an element that is genuinely hovered/
   // active/focused needs its state restored here (and only that element).
   reapplyInteraction(elementKey: ElementKey, el: AnyValue) {
-    const signature = this.elementSignature(elementKey, el)
-    if (!signature) return
-    setStyles(el, this.styleForSignature(elementKey, signature))
+    const active = this.activePseudos(elementKey, el)
+    if (active.length === 0) return
+    setStyles(el, this.styleForPseudos(elementKey, active))
   }
 
   // Remove a single unmounted element from refs and from every interaction set.
@@ -280,9 +338,42 @@ export class Base {
   private pruneEl(elementKey: ElementKey, el: AnyValue) {
     const ref = this.refs[elementKey]
     if (ref instanceof Set) ref.delete(el)
-    for (const pseudo of PSEUDO_STATES) {
+     for (const pseudo of PSEUDO_STATES) {
       this._activeEls[`${elementKey}${pseudo}`]?.delete(el)
+     }
+   }
+
+  // A copy of modsState with every element's interaction pseudo mods forced
+  // off. Used to resolve non-interactive elements in multi-instance mode so a
+  // sibling's live hover/active/focus can never leak across instances.
+  private restingModsState(): ModState {
+    const elMods = { ...this.modsState }
+    for (const triggerKey in this.matcher.interactions) {
+      for (const pseudo of PSEUDO_STATES) {
+        elMods[this.stateKey(triggerKey, pseudo)] = false
+      }
     }
+    return elMods
+  }
+
+  // Dev-only, once per key: warn when a shared element genuinely varies with
+  // another element's interaction (its live style differs from resting) while
+  // rendered multi-instance — i.e. the cross-element effect is being suppressed
+  // to avoid leaking across instances.
+  private warnCrossElementMultiInstance(
+    elementKey: ElementKey,
+    restingStyle: AnyValue,
+  ) {
+    if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
+    const liveStyle = this.getCurrentStyle(elementKey)
+    if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
+    this._warnedCrossElement.add(elementKey)
+    console.warn(
+      `[toned] Cross-element interaction targeting "${elementKey}" is not ` +
+        'isolated across multiple instances of a shared stylesheet, so it is ' +
+        'rendered in its resting state. Use one stylesheet instance per ' +
+        'element group to get per-instance cross-element hover/active/focus.',
+    )
   }
 
   applyElementStyles(context?: ApplyContext) {
@@ -304,40 +395,58 @@ export class Base {
         }
       }
 
-      const style = this.getCurrentStyle(elementKey)
-
       if (isSet) {
-        // Resolve each element from its OWN hover/active/focus signature whenever
-        // the element is interactive — even on a contextless update (media/
-        // variant) — so the shared global modsState (which can only represent one
-        // element's interaction, and may be stale after an unmount) can never leak
-        // a sibling's live state onto other instances. Non-interactive elements
-        // share one style. Group by signature to reuse match() results; prune
-        // disconnected nodes in-place as we iterate (Set delete during for..of is
-        // safe).
-        const perElement = isInteractive
-        const styleBySignature = perElement ? new Map<string, AnyValue>() : null
-        for (const el of ref) {
-          if (!el.isConnected) {
-            this.pruneEl(elementKey, el)
-            continue
-          }
-          if (styleBySignature) {
-            const signature = this.elementSignature(elementKey, el)
+        if (isInteractive) {
+          // Resolve each element from its OWN hover/active/focus signature whenever
+          // the element is interactive — even on a contextless update (media/
+          // variant) — so the shared global modsState (which can only represent one
+          // element's interaction, and may be stale after an unmount) can never leak
+          // a sibling's live state onto other instances. Group by signature to reuse
+          // match() results; prune disconnected nodes in-place as we iterate (Set
+          // delete during for..of is safe).
+          const styleBySignature = new Map<string, AnyValue>()
+          for (const el of ref) {
+            if (!el.isConnected) {
+              this.pruneEl(elementKey, el)
+              continue
+            }
+            const active = this.activePseudos(elementKey, el)
+            const signature = this.pseudoSignature(active)
             if (!styleBySignature.has(signature)) {
               styleBySignature.set(
                 signature,
-                this.styleForSignature(elementKey, signature),
+                this.styleForPseudos(elementKey, active),
               )
             }
             setStyles(el, styleBySignature.get(signature))
-          } else {
+          }
+        } else if (isMultiInstance) {
+          // A non-interactive element shared across instances may still be a
+          // cross-element *target* (e.g. `container:hover → { label }`).
+          // Resolving it from the shared global state would paint EVERY instance
+          // whenever ANY sibling's trigger is active. Resolve from the resting
+          // (pseudo-free) state instead: the cross-element effect is suppressed
+          // for multi-instance, but never leaks. Single instances keep the live
+          // cross-element behavior in the branch below.
+          const restingStyle = this.applyTokens(
+            this.matcher.match(this.restingModsState())[elementKey],
+          )
+          this.warnCrossElementMultiInstance(elementKey, restingStyle)
+          for (const el of ref) {
+            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            setStyles(el, restingStyle)
+          }
+        } else {
+          // Single shared instance: full cross-element behavior is safe.
+          const style = this.getCurrentStyle(elementKey)
+          for (const el of ref) {
+            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
             setStyles(el, style)
           }
         }
       } else if (ref) {
         // Single ref (native) — unchanged.
-        setStyles(ref, style)
+        setStyles(ref, this.getCurrentStyle(elementKey))
       }
     }
   }

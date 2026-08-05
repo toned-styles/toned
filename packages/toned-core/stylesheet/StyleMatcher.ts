@@ -1,3 +1,11 @@
+import { mergeStyle } from '../utils/mergeStyle.ts'
+
+// Upper bound on distinct match() results retained. The cache key is a
+// schema-derived bitmask (a finite space), but never evicting means a
+// long-lived session can still accumulate every reachable combination, so cap
+// it and evict the least-recently-used entries past the limit.
+const DEFAULT_CACHE_MAX = 1024
+
 type StyleValue = string | number | number
 type StyleObject = Record<string, StyleValue>
 type StyleRules = Record<string, StyleObject>
@@ -64,12 +72,19 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
   cache = new Map<number, any>()
 
+  cacheMax: number
+
   constructor(
     rules: NestedStyleRules,
-    options?: { cssMediaMode?: boolean; cssPseudoMode?: boolean },
+    options?: {
+      cssMediaMode?: boolean
+      cssPseudoMode?: boolean
+      cacheMax?: number
+    },
   ) {
     this.cssMediaMode = options?.cssMediaMode ?? false
     this.cssPseudoMode = options?.cssPseudoMode ?? false
+    this.cacheMax = options?.cacheMax ?? DEFAULT_CACHE_MAX
 
     const { scheme, list, interactions, elementSet } = this.flattenRules(rules)
 
@@ -586,8 +601,12 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   ) {
     const propsBits = this.getPropsBits(props)
 
-    if (this.cache.has(propsBits)) {
-      return this.cache.get(propsBits)
+    const cached = this.cache.get(propsBits)
+    if (cached !== undefined) {
+      // Refresh recency so the entry survives LRU eviction.
+      this.cache.delete(propsBits)
+      this.cache.set(propsBits, cached)
+      return cached
     }
 
     // Match against compiled rules
@@ -610,22 +629,21 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
         const target = result[elementKey]
         const source = compiledRule.rule[elementKey]
         for (const key in source) {
-          if (
-            key === 'style' &&
-            target[key] &&
-            typeof target[key] === 'object' &&
-            typeof source[key] === 'object'
-          ) {
-            target[key] = { ...target[key], ...source[key] }
-          } else {
-            target[key] = source[key]
-          }
+          // `style` layers deep (one level) so a pseudo/variant rule extends the
+          // base style; every other property is replaced. See utils/mergeStyle.
+          target[key] =
+            key === 'style' ? mergeStyle(target[key], source[key]) : source[key]
         }
 
         result[this.#elementHash][elementKey] ^= compiledRule.bitValue
       }
     }
 
+    // Evict the least-recently-used entry once the cache is full.
+    if (this.cache.size >= this.cacheMax) {
+      const oldest = this.cache.keys().next().value
+      if (oldest !== undefined) this.cache.delete(oldest)
+    }
     this.cache.set(propsBits, result)
 
     return result

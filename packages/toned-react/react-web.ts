@@ -79,78 +79,48 @@ function getProps(this: Base, elementKey: string) {
   let result: Record<string, AnyValue>
 
   if (this.matcher.interactions[elementKey]) {
-    const onMouseEnter = (e: AnyValue) => {
-      const el = e.currentTarget
-      const stateKey = `${elementKey}:hover`
-      if (!this._activeEls[stateKey]) this._activeEls[stateKey] = new Set()
-      this._activeEls[stateKey].add(el)
+    // Track the element's pseudo-state in the Base (the single source of truth)
+    // and push the shared "any element active?" flag into modsState.
+    const setPseudo = (pseudo: string, el: AnyValue, on: boolean) => {
+      this.setElementActive(elementKey, pseudo, el, on)
       this.applyState(
-        { [stateKey]: true },
-        { triggerKey: elementKey, pseudo: ':hover' },
+        {
+          [`${elementKey}${pseudo}`]: this.anyElementActive(elementKey, pseudo),
+        },
+        { triggerKey: elementKey, pseudo },
       )
     }
 
-    const onMouseLeave = (e: AnyValue) => {
-      const el = e.currentTarget
-      const stateKey = `${elementKey}:hover`
-      const set = this._activeEls[stateKey]
-      if (set) set.delete(el)
-      const anyActive = (set?.size ?? 0) > 0
-      this.applyState(
-        { [stateKey]: anyActive },
-        { triggerKey: elementKey, pseudo: ':hover' },
-      )
-    }
+    const onMouseEnter = (e: AnyValue) =>
+      setPseudo(':hover', e.currentTarget, true)
+    const onMouseLeave = (e: AnyValue) =>
+      setPseudo(':hover', e.currentTarget, false)
+    const onFocus = (e: AnyValue) => setPseudo(':focus', e.currentTarget, true)
+    const onBlur = (e: AnyValue) => setPseudo(':focus', e.currentTarget, false)
 
     const onMouseDown = (e: AnyValue) => {
       // Only the primary (left) button drives :active. Without this guard a
       // right-click can leave the element stuck active if the context menu
-      // swallows the mouseup.
+      // swallows the release.
       if (e.button !== 0) return
       const el = e.currentTarget
-      const stateKey = `${elementKey}:active`
-      if (!this._activeEls[stateKey]) this._activeEls[stateKey] = new Set()
-      this._activeEls[stateKey].add(el)
-      this.applyState(
-        { [stateKey]: true },
-        { triggerKey: elementKey, pseudo: ':active' },
-      )
-      const onMouseUp = () => {
-        document.removeEventListener('mouseup', onMouseUp)
-        const activeSet = this._activeEls[stateKey]
-        if (activeSet) activeSet.delete(el)
-        const stillActive = (activeSet?.size ?? 0) > 0
-        if (el?.isConnected) {
-          this.applyState(
-            { [stateKey]: stillActive },
-            { triggerKey: elementKey, pseudo: ':active' },
-          )
-        }
+      setPseudo(':active', el, true)
+
+      // A press can end anywhere — including outside the window, where no
+      // `mouseup` is delivered. Reconcile `:active` on a document release, a
+      // pointer cancel, or a window blur, and remove all three the moment one
+      // fires. This replaces the previous per-press `mouseup` listener, which
+      // leaked (and left the element stuck `:active`) on an off-window release.
+      if (typeof document === 'undefined') return
+      const endPress = () => {
+        document.removeEventListener('mouseup', endPress)
+        document.removeEventListener('pointercancel', endPress)
+        window.removeEventListener('blur', endPress)
+        setPseudo(':active', el, false)
       }
-      document.addEventListener('mouseup', onMouseUp)
-    }
-
-    const onFocus = (e: AnyValue) => {
-      const el = e.currentTarget
-      const stateKey = `${elementKey}:focus`
-      if (!this._activeEls[stateKey]) this._activeEls[stateKey] = new Set()
-      this._activeEls[stateKey].add(el)
-      this.applyState(
-        { [stateKey]: true },
-        { triggerKey: elementKey, pseudo: ':focus' },
-      )
-    }
-
-    const onBlur = (e: AnyValue) => {
-      const el = e.currentTarget
-      const stateKey = `${elementKey}:focus`
-      const set = this._activeEls[stateKey]
-      if (set) set.delete(el)
-      const anyActive = (set?.size ?? 0) > 0
-      this.applyState(
-        { [stateKey]: anyActive },
-        { triggerKey: elementKey, pseudo: ':focus' },
-      )
+      document.addEventListener('mouseup', endPress)
+      document.addEventListener('pointercancel', endPress)
+      window.addEventListener('blur', endPress)
     }
 
     result = {
