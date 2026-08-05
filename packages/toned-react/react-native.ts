@@ -1,13 +1,11 @@
 import { defineConfig } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
-import reactConfig from './config.ts'
+import reactConfig from './config.native.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
 type AnyValue = any
 
 type Ref = AnyValue
-
-type InteractionState = { hovered: boolean; pressed: boolean; focused: boolean }
 
 function attachWith(result: Record<string, AnyValue>) {
   Object.defineProperty(result, 'with', {
@@ -55,6 +53,7 @@ function attachWith(result: Record<string, AnyValue>) {
         }
       }
 
+      attachWith(merged)
       return merged
     },
     enumerable: false,
@@ -72,30 +71,10 @@ function getProps(this: Base, elementKey: string) {
   if (this.matcher.interactions[elementKey]) {
     result = {
       ref,
-      style: (state: InteractionState) => {
-        const interactiveState = {
-          ':hover': state.hovered,
-          ':active': state.pressed,
-          ':focus': state.focused,
-        }
-
-        if (!this.interactiveState[elementKey]) {
-          this.interactiveState[elementKey] = interactiveState
-          return this.getCurrentStyle(elementKey)
-        }
-
-        this.interactiveState[elementKey] = interactiveState
-
-        Object.assign(this.modsState, {
-          [`${elementKey}:hover`]: state.hovered,
-          [`${elementKey}:focus`]: state.focused,
-          [`${elementKey}:active`]: state.pressed,
-        })
-
-        this.matchStyles()
-
-        this.applyElementStyles()
-      },
+      ...this.getCurrentStyle(elementKey),
+      ...this.setOn(elementKey, ':active', 'onPressIn', 'onPressOut'),
+      ...this.setOn(elementKey, ':hover', 'onHoverIn', 'onHoverOut'),
+      ...this.setOn(elementKey, ':focus', 'onFocus', 'onBlur'),
     }
   } else {
     result = {

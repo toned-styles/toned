@@ -60,20 +60,77 @@ function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue> {
 
 function getProps(this: Base, elementKey: string) {
   const ref = (current: Ref) => {
-    this.refs[elementKey] = current
+    if (current) {
+      let set = this.refs[elementKey]
+      if (!(set instanceof Set)) set = this.refs[elementKey] = new Set()
+      set.add(current)
+      // React (re)applies the pseudo-free resting style on every commit, so
+      // restore this element's own live hover/active/focus here — otherwise an
+      // unrelated re-render would drop its interaction state (and, for
+      // multi-instance stylesheets, paint every sibling with the global state).
+      if (this.matcher.interactions[elementKey])
+        this.reapplyInteraction(elementKey, current)
+    }
+    // On detach React calls this with null. We don't scan here: disconnected
+    // nodes are pruned lazily (O(1)) during the next applyElementStyles, which
+    // keeps ref handling O(n) per render instead of O(n^2).
   }
 
   let result: Record<string, AnyValue>
 
   if (this.matcher.interactions[elementKey]) {
+    // Track the element's pseudo-state in the Base (the single source of truth)
+    // and push the shared "any element active?" flag into modsState.
+    const setPseudo = (pseudo: string, el: AnyValue, on: boolean) => {
+      this.setElementActive(elementKey, pseudo, el, on)
+      this.applyState(
+        {
+          [`${elementKey}${pseudo}`]: this.anyElementActive(elementKey, pseudo),
+        },
+        { triggerKey: elementKey, pseudo },
+      )
+    }
+
+    const onMouseEnter = (e: AnyValue) =>
+      setPseudo(':hover', e.currentTarget, true)
+    const onMouseLeave = (e: AnyValue) =>
+      setPseudo(':hover', e.currentTarget, false)
+    const onFocus = (e: AnyValue) => setPseudo(':focus', e.currentTarget, true)
+    const onBlur = (e: AnyValue) => setPseudo(':focus', e.currentTarget, false)
+
+    const onMouseDown = (e: AnyValue) => {
+      // Only the primary (left) button drives :active. Without this guard a
+      // right-click can leave the element stuck active if the context menu
+      // swallows the release.
+      if (e.button !== 0) return
+      const el = e.currentTarget
+      setPseudo(':active', el, true)
+
+      // A press can end anywhere — including outside the window, where no
+      // `mouseup` is delivered. Reconcile `:active` on a document release, a
+      // pointer cancel, or a window blur, and remove all three the moment one
+      // fires. This replaces the previous per-press `mouseup` listener, which
+      // leaked (and left the element stuck `:active`) on an off-window release.
+      if (typeof document === 'undefined') return
+      const endPress = () => {
+        document.removeEventListener('mouseup', endPress)
+        document.removeEventListener('pointercancel', endPress)
+        window.removeEventListener('blur', endPress)
+        setPseudo(':active', el, false)
+      }
+      document.addEventListener('mouseup', endPress)
+      document.addEventListener('pointercancel', endPress)
+      window.addEventListener('blur', endPress)
+    }
+
     result = {
       ref,
-
-      ...this.getCurrentStyle(elementKey),
-
-      ...this.setOn(elementKey, ':hover', 'onMouseOver', 'onMouseOut'),
-      ...this.setOn(elementKey, ':active', 'onMouseDown', 'onMouseUp'),
-      ...this.setOn(elementKey, ':focus', 'onBlur', 'onFocus'),
+      ...this.getRestingStyle(elementKey),
+      onMouseEnter,
+      onMouseLeave,
+      onMouseDown,
+      onFocus,
+      onBlur,
     }
   } else {
     result = {

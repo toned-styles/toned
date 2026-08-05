@@ -15,6 +15,8 @@ import type {
   Tokens,
 } from '../types/index.ts'
 import { camelToKebab } from '../utils/css.ts'
+import { mergeStyle } from '../utils/mergeStyle.ts'
+import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { getConfig } from './config.ts'
 
@@ -88,10 +90,19 @@ export function defineSystem<
     system: { ...system, ...config } as S & C,
     config,
     t: (...values) => {
-      // Using Object.assign in loop for better performance than spread accumulator
-      const value: Record<string, unknown> = {}
+      const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
-        Object.assign(value, SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v)
+        const src = (SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v) as Record<
+          string,
+          unknown
+        > & { style?: unknown }
+        // Deep-merge the `style` object so later arguments extend earlier
+        // entries instead of replacing them. A shallow copy would drop style
+        // props set by earlier arguments.
+        const prevStyle = value.style
+        Object.assign(value, src)
+        const mergedStyle = mergeStyle(prevStyle, src.style)
+        if (mergedStyle !== undefined) value.style = mergedStyle
       }
 
       if (SYMBOL_REF in value) {
@@ -252,9 +263,62 @@ export function defineSystem<
       // Process pseudo-state overrides into CSS variable fallback chains
       // Priority: :active > :focus > :hover (active outermost in chain)
       if (Object.keys(pseudoOverrides).length > 0) {
-        const PSEUDO_ORDER = [':hover', ':focus', ':active']
+        // Process token-backed props first and raw `style` last. When a pseudo
+        // override sets the same CSS property via both a token and raw `style`,
+        // this makes precedence deterministic instead of depending on object key
+        // order: the raw style wins (escape hatch) and composes on top of the
+        // token's fallback chain. Style-derived custom properties use a distinct
+        // `__style` namespace so they never overwrite a token's `--toned_*` var.
+        const pseudoEntries = Object.entries(pseudoOverrides)
+        const orderedPseudoEntries = [
+          ...pseudoEntries.filter(([prop]) => prop !== 'style'),
+          ...pseudoEntries.filter(([prop]) => prop === 'style'),
+        ]
 
-        for (const [prop, overrides] of Object.entries(pseudoOverrides)) {
+        for (const [prop, overrides] of orderedPseudoEntries) {
+          // Special handling for 'style' prop (raw CSS, not token-resolvable)
+          if (prop === 'style') {
+            const allCssProps = new Set<string>()
+            for (const { value } of overrides) {
+              if (value && typeof value === 'object') {
+                for (const cssProp in value as Record<string, unknown>)
+                  allCssProps.add(cssProp)
+              }
+            }
+            for (const cssProp of allCssProps) {
+              const kebabProp = camelToKebab(cssProp)
+              for (const { pseudo, value } of overrides) {
+                const styleVal = value as Record<string, unknown> | null
+                if (styleVal?.[cssProp] == null) continue
+                const pseudoName = pseudo.slice(1)
+                const varName = `--toned_${pseudoName}__${kebabProp}__style`
+                acc.style[varName] =
+                  `var(--toned_${pseudoName}) ${styleVal[cssProp]}`
+              }
+              const baseValue =
+                acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
+              let chain = baseValue
+              for (const pseudo of PSEUDO_CASCADE_ORDER) {
+                if (
+                  overrides.some((o) => {
+                    const sv = o.value as Record<string, unknown> | null
+                    return o.pseudo === pseudo && sv?.[cssProp] != null
+                  })
+                ) {
+                  const pseudoName = pseudo.slice(1)
+                  const varName = `--toned_${pseudoName}__${kebabProp}__style`
+                  chain = chain
+                    ? `var(${varName}, ${chain})`
+                    : `var(${varName})`
+                }
+              }
+              if (chain) {
+                acc.style[cssProp] = chain
+              }
+            }
+            continue
+          }
+
           // Resolve base value if it exists
           const baseTokenValue = tokenStyle[prop]
           const resolvedBase =
@@ -279,7 +343,8 @@ export function defineSystem<
               if (!resolved?.[cssProp]) continue
 
               const varName = `--toned_${pseudoName}__${kebabProp}`
-              acc.style[varName] = `var(--toned_${pseudoName}) ${resolved[cssProp]}`
+              acc.style[varName] =
+                `var(--toned_${pseudoName}) ${resolved[cssProp]}`
             }
 
             // Build fallback chain: use existing value (e.g. breakpoint chain) or base
@@ -291,13 +356,11 @@ export function defineSystem<
                   : null
 
             let chain = innerValue
-            for (const pseudo of PSEUDO_ORDER) {
+            for (const pseudo of PSEUDO_CASCADE_ORDER) {
               if (overrides.some((o) => o.pseudo === pseudo)) {
                 const pseudoName = pseudo.slice(1)
                 const varName = `--toned_${pseudoName}__${kebabProp}`
-                chain = chain
-                  ? `var(${varName}, ${chain})`
-                  : `var(${varName})`
+                chain = chain ? `var(${varName}, ${chain})` : `var(${varName})`
               }
             }
 

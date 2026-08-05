@@ -1,12 +1,13 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type {
   Config,
   TokenStyleDeclaration,
   TokenSystem,
 } from '../types/index.ts'
+import { SYMBOL_INIT } from '../utils/symbols.ts'
+import { setStyles } from './applyStyles.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
-import { SYMBOL_INIT } from '../utils/symbols.ts'
 import {
   createVariantSelector,
   getNamedStyleName,
@@ -518,7 +519,497 @@ describe('callback-based variants API', () => {
     expect(baseInstance.modsStyle.container.bgColor).toBe('blue')
 
     // With variant — overridden style applies
-    const activeInstance = withVariants[SYMBOL_INIT](mockConfig, { active: 'true' })
+    const activeInstance = withVariants[SYMBOL_INIT](mockConfig, {
+      active: 'true',
+    })
     expect(activeInstance.modsStyle.container.bgColor).toBe('red')
+  })
+})
+
+describe('multi-instance interaction state', () => {
+  const boxKey = 'box'
+
+  // Internal (transformed) rule format: each interaction pseudo targets self
+  // ($box) with a distinct property so per-element results are unambiguous.
+  const interactiveRules = {
+    box: {
+      bgColor: 'base',
+      ':hover': { $box: { color: 'hover' } },
+      ':active': { $box: { borderColor: 'active' } },
+      ':focus': { $box: { outlineColor: 'focus' } },
+    },
+  }
+
+  // Minimal element stub: setStyles() takes the setNativeProps path (no DOM
+  // required) and records the resolved style object it receives.
+  function fakeEl() {
+    const el = {
+      isConnected: true,
+      recorded: undefined as Record<string, unknown> | undefined,
+      setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
+        el.recorded = style
+      },
+    }
+    return el
+  }
+
+  function setup() {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+    const a = fakeEl()
+    const b = fakeEl()
+    // Two mounted instances sharing one Base (e.g. a list rendered from one
+    // useStyles() result).
+    base.refs[boxKey] = new Set([a, b])
+    return { base, a, b }
+  }
+
+  test('hovering one instance does not style its siblings', () => {
+    const { base, a, b } = setup()
+    base._activeEls['box:hover'] = new Set([a])
+
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('pressing a hovered instance does not leak hover onto siblings', () => {
+    const { base, a, b } = setup()
+
+    // 1. Hover A.
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    // 2. Press A (still hovered). Global modsState now has hover=true AND
+    // active=true, but only A is in either set.
+    base._activeEls['box:active'] = new Set([a])
+    base.applyState(
+      { 'box:active': true },
+      { triggerKey: 'box', pseudo: ':active' },
+    )
+
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      borderColor: 'active',
+    })
+    // Regression guard: the single-baseStyle approach would apply the global
+    // hover style (color: 'hover') to B here.
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('focusing one instance does not style its siblings', () => {
+    const { base, a, b } = setup()
+    base._activeEls['box:focus'] = new Set([a])
+
+    base.applyState(
+      { 'box:focus': true },
+      { triggerKey: 'box', pseudo: ':focus' },
+    )
+
+    expect(a.recorded).toEqual({ bgColor: 'base', outlineColor: 'focus' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('a single mounted instance still receives interaction styles', () => {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+    const only = fakeEl()
+    base.refs[boxKey] = new Set([only])
+    base._activeEls['box:hover'] = new Set([only])
+
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(only.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+
+  test('native-style single ref (no context) applies style via the unchanged path', () => {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules: interactiveRules,
+      config: mockConfig,
+      modsState: {},
+    })
+    // React Native assigns a single element (never an array) and setOn()
+    // drives applyState without interaction context. This must take the plain
+    // `else if (ref)` branch — identical to the pre-change behaviour — so the
+    // multi-instance combo logic can never affect native.
+    const nativeEl = fakeEl()
+    base.refs[boxKey] = nativeEl
+
+    base.applyState({ 'box:hover': true })
+
+    expect(nativeEl.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+})
+
+// Shared fixtures for the re-render / unmount suites below.
+const interactiveRules = {
+  box: {
+    bgColor: 'base',
+    ':hover': { $box: { color: 'hover' } },
+    ':active': { $box: { borderColor: 'active' } },
+    ':focus': { $box: { outlineColor: 'focus' } },
+  },
+}
+
+function fakeInteractiveEl() {
+  const el = {
+    isConnected: true,
+    recorded: undefined as Record<string, unknown> | undefined,
+    // Mimic a DOM node closely enough for setStyles' web branch AND the RN
+    // branch. We drive setStyles through setNativeProps to avoid needing a DOM.
+    setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
+      el.recorded = style
+    },
+  }
+  return el
+}
+
+function setupPair() {
+  const base = new Base({
+    ref: mockTokenSystem,
+    rules: interactiveRules,
+    config: mockConfig,
+    modsState: {},
+  })
+  const a = fakeInteractiveEl()
+  const b = fakeInteractiveEl()
+  base.refs['box'] = new Set([a, b])
+  return { base, a, b }
+}
+
+describe('declarative re-render isolation (multi-instance)', () => {
+  test("getRestingStyle strips the element's own pseudo-state even when global modsState carries it", () => {
+    const { base, a } = setupPair()
+
+    // Hover A: global modsState now has box:hover = true (shared across siblings).
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(base.modsState['box:hover']).toBe(true)
+
+    // The style React spreads declaratively must be the *resting* style, i.e.
+    // pseudo-free — otherwise a re-render paints every sibling with A's hover.
+    expect(base.getRestingStyle('box').style).toEqual({ bgColor: 'base' })
+  })
+
+  test("an external re-render does not leak a hovered element's state onto siblings", () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A imperatively (no React render).
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // Simulate an unrelated React re-render: the declarative (resting) style is
+    // re-applied to EVERY mounted element, then each ref callback re-runs.
+    const resting = base.getRestingStyle('box')
+    for (const el of [a, b]) {
+      setStyles(el, resting) // React re-writes the style prop
+      base.reapplyInteraction('box', el) // ref callback restores per-element state
+    }
+
+    // A keeps its hover; B is never touched by A's state.
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+  })
+
+  test('reapplyInteraction is a no-op for an element with no active interaction', () => {
+    const { base, b } = setupPair()
+
+    setStyles(b, base.getRestingStyle('box'))
+    b.recorded = undefined
+    base.reapplyInteraction('box', b)
+
+    expect(b.recorded).toBeUndefined()
+  })
+})
+
+describe('unmount cleanup (multi-instance, lazy prune)', () => {
+  test('the next applyState drops unmounted nodes from refs and every interaction set', () => {
+    const { base, a, b } = setupPair()
+
+    base._activeEls['box:hover'] = new Set([a, b])
+    base._activeEls['box:focus'] = new Set([b])
+
+    // B unmounts (DOM detaches it) without firing mouseleave/blur.
+    b.isConnected = false
+
+    // Any subsequent style application prunes the disconnected node in-place.
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect([...(base.refs['box'] as Set<unknown>)]).toEqual([a])
+    expect([...base._activeEls['box:hover']]).toEqual([a])
+    expect(base._activeEls['box:focus'].size).toBe(0)
+    // The still-mounted element is styled as normal.
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+  })
+
+  test('a disconnected node is never styled', () => {
+    const { base, a, b } = setupPair()
+    base._activeEls['box:hover'] = new Set([a])
+    b.isConnected = false
+    b.recorded = { sentinel: true }
+
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    // B was skipped (and pruned), so its recorded style is untouched.
+    expect(b.recorded).toEqual({ sentinel: true })
+    expect((base.refs['box'] as Set<unknown>).has(b)).toBe(false)
+  })
+})
+
+describe('contextless updates do not leak interaction across instances', () => {
+  // box reacts to BOTH an interaction pseudo (:hover) and a non-interaction mod
+  // (a `size` variant). The variant lets a *contextless* applyState genuinely
+  // change box (so isEqual doesn't short-circuit the paint), exercising the
+  // path that previously fell back to the shared global style.
+  const rules = {
+    box: {
+      bgColor: 'base',
+      ':hover': { $box: { color: 'hover' } },
+      '[size=large]': { $box: { pad: 'large' } },
+    },
+  }
+
+  function setupPair() {
+    const base = new Base({
+      ref: mockTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
+    })
+    const a = fakeInteractiveEl()
+    const b = fakeInteractiveEl()
+    base.refs['box'] = new Set([a, b])
+    return { base, a, b }
+  }
+
+  test('a media/variant tick while a sibling is hovered does not paint hover onto others', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A (interaction-triggered, carries context). A → hover, B → resting.
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // A variant tick arrives with NO interaction context. Global modsState still
+    // carries box:hover=true (A is genuinely hovered), but only A is in the
+    // hover set, so every element must resolve from its own signature.
+    base.applyState({ size: 'large' })
+
+    // A: still hovered + large.
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      pad: 'large',
+    })
+    // B: resting + large. Regression guard: the shared-global fallback painted
+    // B with color: 'hover' here.
+    expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
+  })
+
+  test('after a hovered sibling unmounts, a contextless tick leaves the survivor resting', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A, then A unmounts without firing mouseleave (global stays hover=true).
+    base._activeEls['box:hover'] = new Set([a])
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    a.isConnected = false
+
+    // A contextless tick must not paint the survivor with A's stale hover. The
+    // disconnected node is pruned lazily as applyElementStyles iterates.
+    base.applyState({ size: 'large' })
+
+    expect(b.recorded).toEqual({ bgColor: 'base', pad: 'large' })
+    expect((base.refs['box'] as Set<unknown>).has(a)).toBe(false)
+  })
+})
+
+describe('interaction state helpers (single source of truth)', () => {
+  test('setElementActive tracks and clears per-element pseudo membership', () => {
+    const { base, a, b } = setupPair()
+
+    base.setElementActive('box', ':hover', a, true)
+    expect(base.anyElementActive('box', ':hover')).toBe(true)
+    expect(base._activeEls['box:hover']?.has(a)).toBe(true)
+    expect(base._activeEls['box:hover']?.has(b)).toBe(false)
+
+    base.setElementActive('box', ':hover', a, false)
+    expect(base.anyElementActive('box', ':hover')).toBe(false)
+    expect(base._activeEls['box:hover']?.has(a)).toBe(false)
+  })
+
+  test('anyElementActive is false for an untracked pseudo', () => {
+    const { base } = setupPair()
+    expect(base.anyElementActive('box', ':focus')).toBe(false)
+  })
+})
+
+describe('cross-element interaction isolation (multi-instance)', () => {
+  // `container:hover` restyles BOTH container and its label — `label` is a
+  // cross-element target (never itself interactive).
+  const rules = {
+    container: {
+      bgColor: 'base',
+      ':hover': {
+        $container: { bgColor: 'hover' },
+        $label: { textColor: 'hovered' },
+      },
+    },
+    label: { textColor: 'base' },
+  }
+
+  function newBase() {
+    return new Base({
+      ref: mockTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
+    })
+  }
+
+  test('hovering one instance does not paint sibling cross-element targets', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const base = newBase()
+    const [c1, c2, l1, l2] = [
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+      fakeInteractiveEl(),
+    ]
+    base.refs['container'] = [c1, c2]
+    base.refs['label'] = [l1, l2]
+
+    base.setElementActive('container', ':hover', c1, true)
+    base.applyState(
+      { 'container:hover': true },
+      { triggerKey: 'container', pseudo: ':hover' },
+    )
+
+    // The hovered container gets its hover style; its sibling stays resting.
+    expect(c1.recorded).toEqual({ bgColor: 'hover' })
+    expect(c2.recorded).toEqual({ bgColor: 'base' })
+
+    // Regression guard: before the fix both labels were painted with the
+    // cross-element hover ('hovered'). They must now both render resting.
+    expect(l1.recorded).toEqual({ textColor: 'base' })
+    expect(l2.recorded).toEqual({ textColor: 'base' })
+
+    // The suppressed cross-element effect is surfaced to developers once.
+    expect(warn).toHaveBeenCalledTimes(1)
+    warn.mockRestore()
+  })
+
+  test('a single shared instance keeps full cross-element interaction', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const base = newBase()
+    const c = fakeInteractiveEl()
+    const l = fakeInteractiveEl()
+    base.refs['container'] = [c]
+    base.refs['label'] = [l]
+
+    base.setElementActive('container', ':hover', c, true)
+    base.applyState(
+      { 'container:hover': true },
+      { triggerKey: 'container', pseudo: ':hover' },
+    )
+
+    expect(c.recorded).toEqual({ bgColor: 'hover' })
+    // Single instance → the cross-element hover applies live, no suppression.
+    expect(l.recorded).toEqual({ textColor: 'hovered' })
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+})
+
+describe('redundant write elision (multi-instance)', () => {
+  test('an unrelated interaction does not rewrite resting siblings', () => {
+    const { base, a, b } = setupPair()
+
+    // Hover A → A hover, B resting (both written once).
+    base.setElementActive('box', ':hover', a, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
+    expect(b.recorded).toEqual({ bgColor: 'base' })
+
+    // Sentinel to detect any further write to B.
+    b.recorded = { sentinel: true }
+
+    // Press A. B's resting rule is unchanged, so it must be skipped.
+    base.setElementActive('box', ':active', a, true)
+    base.applyState(
+      { 'box:active': true },
+      { triggerKey: 'box', pseudo: ':active' },
+    )
+
+    expect(a.recorded).toEqual({
+      bgColor: 'base',
+      color: 'hover',
+      borderColor: 'active',
+    })
+    // B was skipped (resting rule unchanged) → sentinel intact.
+    expect(b.recorded).toEqual({ sentinel: true })
+  })
+
+  test('a genuine change still writes the sibling', () => {
+    const { base, a, b } = setupPair()
+
+    base.setElementActive('box', ':hover', a, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+    b.recorded = { sentinel: true }
+
+    // Hover B too: its rule changes (resting → hover), so it must be written.
+    base.setElementActive('box', ':hover', b, true)
+    base.applyState(
+      { 'box:hover': true },
+      { triggerKey: 'box', pseudo: ':hover' },
+    )
+
+    expect(b.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
 })
