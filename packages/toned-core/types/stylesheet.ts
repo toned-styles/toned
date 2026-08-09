@@ -86,7 +86,7 @@ export type ElementStyleNew<
 }
 
 /** Extract element names from stylesheet input (excluding selectors) */
-type ExtractElements<T> = {
+export type ExtractElements<T> = {
   [K in keyof T]: K extends
     | `${string}:${string}`
     | `[${string}]`

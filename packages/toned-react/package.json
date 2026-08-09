@@ -16,15 +16,15 @@
   },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun -e 'import(`@config/build`)'"
+    "build": "bun -e 'import(`@toned-config/build`)'"
   },
   "peerDependencies": {
     "@toned/core": "workspace:~",
     "react": ">=18"
   },
   "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@toned/core": "workspace:~",
@@ -34,5 +34,17 @@
     "happy-dom": "^20.11.1",
     "react": "catalog:",
     "react-dom": "catalog:"
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./config": "./config.ts",
+    "./config.native": "./config.native.ts",
+    "./config.18": "./config.18.ts",
+    "./config.19": "./config.19.ts",
+    "./config.auto": "./config.auto.ts",
+    "./context": "./context.ts",
+    "./context.native": "./context.native.ts",
+    "./react-web": "./react-web.ts",
+    "./react-native": "./react-native.ts"
   }
 }

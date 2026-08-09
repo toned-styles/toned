@@ -16,15 +16,19 @@
   },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun -e 'import(`@config/build`)'"
+    "build": "bun -e 'import(`@toned-config/build`)'"
   },
   "peerDependencies": {
     "@toned/core": "workspace:~"
   },
   "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
     "@toned/core": "workspace:~",
     "@types/react": "catalog:"
+  },
+  "exports": {
+    "./base": "./base/index.ts",
+    "./defineCssToken": "./defineCssToken.ts"
   }
 }

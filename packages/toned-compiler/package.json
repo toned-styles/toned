@@ -2,7 +2,7 @@
   "name": "@toned/compiler",
   "private": true,
   "devDependencies": {
-    "@config/typescript": "workspace:*",
-    "@config/build": "workspace:*"
+    "@toned-config/typescript": "workspace:*",
+    "@toned-config/build": "workspace:*"
   }
 }

@@ -1,4 +1,4 @@
-import config from '@config/build/rollup.config'
+import config from '@toned-config/build/rollup.config'
 import { createTransform } from 'rollup-copy-transform-css'
 import copy from 'rollup-plugin-copy'
 
