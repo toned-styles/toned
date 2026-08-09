@@ -309,7 +309,8 @@ export type StylesheetWithVariants<
    */
   variants<Mods extends ModType>(
     callback: VariantsCallback<S, Elements, Mods>,
-  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods>
+  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods> &
+    StylesheetWithVariants<S, Elements>
 
   /**
    * Define variants using an object (legacy API)
@@ -317,7 +318,40 @@ export type StylesheetWithVariants<
    */
   variants<Mods extends ModType>(
     variants: VariantsInput<S, Elements, Mods>,
-  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods>
+  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods> &
+    StylesheetWithVariants<S, Elements>
+
+  /**
+   * Compose a new stylesheet by deep-merging additional rules into this one.
+   * The result is itself composable, so `.extend()` and `.variants()` chain in
+   * any order.
+   *
+   * @example
+   * ```ts
+   * const primary = base.extend({ container: { bgColor: 'action' } })
+   * ```
+   */
+  extend<Extension extends StylesheetInput<S, Extension>>(
+    rules: Extension,
+  ): Stylesheet<
+    S,
+    Record<Elements | PickString<ExtractElements<Extension>>, TokenStyle<S>>,
+    never
+  > &
+    StylesheetWithVariants<S, Elements | PickString<ExtractElements<Extension>>>
+}
+
+/**
+ * The runtime object `[SYMBOL_INIT]` hands back — structurally the public surface
+ * of the `Base` engine. Declared structurally rather than importing `Base` so the
+ * types module stays free of a cycle back into the implementation.
+ */
+export type StylesheetInstance = {
+  matchStyles(): void
+  getCurrentStyle(key: string): unknown
+  applyState(modsState: unknown, context?: unknown): void
+  applyElementStyles(context?: unknown): void
+  reapplyInteraction(elementKey: string, el: unknown): void
 }
 
 /**
@@ -332,11 +366,18 @@ export type Stylesheet<
 } & {
   /** @internal */
   [SYMBOL_REF]: TokenSystem<S>
-  /** @internal */
+  /**
+   * @internal
+   *
+   * Returns the live `Base` instance, not a bare record: the element accessors
+   * are defined on its prototype, and callers (useStyles, the benches) also
+   * reach for matchStyles / applyState / getCurrentStyle on it. Typing this as
+   * only the element map hid that.
+   */
   [SYMBOL_INIT]: (
     config: Config,
     modState?: M,
-  ) => {
+  ) => StylesheetInstance & {
     [key in keyof T]: ReturnType<TFun<S>>
   }
   /** @internal - prevents type collapse */

@@ -1,6 +1,8 @@
 import { bench, describe } from 'vitest'
 import { defineSystem, defineToken, setConfig } from '../system/index.ts'
+import type { Config } from '../types/index.ts'
 import { type Base, createStylesheet } from './StyleSheet.ts'
+import { SYMBOL_INIT } from '../utils/symbols.ts'
 
 // Create a mock token system
 const mockSystem = defineSystem({
@@ -63,10 +65,12 @@ const complexRules = {
 }
 
 // Setup config mock
-const mockConfig = {
+const mockConfig: Config = {
   getTokens: () => ({}),
   useClassName: false,
   useMedia: false,
+  mediaMode: 'runtime',
+  pseudoMode: 'runtime',
   debug: false,
   getProps(this: Base, elementKey: string) {
     return this.getCurrentStyle(elementKey)
@@ -85,13 +89,11 @@ describe('StyleSheet Performance', () => {
   const stylesheet = createStylesheet(mockSystem, complexRules)
 
   bench('SYMBOL_INIT (Base creation)', () => {
-    const sym = Symbol.for('@toned/core/SYMBOL_INIT')
-    stylesheet[sym](mockConfig, { size: 'sm', variant: 'primary' })
+    stylesheet[SYMBOL_INIT](mockConfig)
   })
 
   // Create an instance for element access benchmarks
-  const sym = Symbol.for('@toned/core/SYMBOL_INIT')
-  const instance = stylesheet[sym](mockConfig, {})
+  const instance = stylesheet[SYMBOL_INIT](mockConfig)
 
   bench('element access - container', () => {
     // @ts-expect-error dynamic property
