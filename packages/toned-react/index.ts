@@ -1,19 +1,31 @@
-import { getConfig, type Stylesheet, SYMBOL_INIT } from '@toned/core'
+import {
+  getConfig,
+  type Stylesheet,
+  SYMBOL_INIT,
+  type TokenStyleDeclaration,
+} from '@toned/core'
 import { useRef } from 'react'
 
 /**
  * Props returned for each element in a stylesheet.
  * Includes known properties (style, className) plus dynamic attributes.
  */
-type ElementProps = {
+type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   // biome-ignore lint/suspicious/noExplicitAny: dynamic style object
   style?: Record<string, any>
   className?: string
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic merge result
-  with: (props: Record<string, any> | false | null | undefined) => ElementProps
+  /*
+   * NOTE: there was a `with(props)` member declared here. Nothing implements it —
+   * it type-checked at every call site and threw
+   * "…with is not a function" at runtime. Use the system's `t()` for one-off
+   * token styles; it is variadic, typed as TokenStyle<S>, and real.
+   */
   // biome-ignore lint/suspicious/noExplicitAny: dynamic element attributes
   [key: string]: any
 }
+
+/** Composition methods on a stylesheet — never element names. */
+type StylesheetMethod = 'variants' | 'extend'
 
 /**
  * Base type for stylesheets that can be used with useStyles.
@@ -30,14 +42,22 @@ type StylesheetLike = {
  * from the Stylesheet<S, T, M> intersection, avoiding index signature pollution.
  */
 type InferElements<S> = S extends Stylesheet<
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any,
+  infer Sys,
   infer T,
   // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
   any
 >
-  ? { [K in keyof T as K extends string ? K : never]: ElementProps }
-  : { [K in keyof S as K extends string ? K : never]: ElementProps }
+  ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
+  : {
+      // The fallback maps EVERY string key, so the composition methods have to
+      // be excluded by name — otherwise `s.extend` / `s.variants` type as
+      // elements and a typo'd element name silently resolves to one of them.
+      [K in keyof S as K extends StylesheetMethod
+        ? never
+        : K extends string
+          ? K
+          : never]: ElementProps
+    }
 
 /**
  * Infer the mods type from a Stylesheet generic.
