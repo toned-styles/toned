@@ -50,6 +50,11 @@ type StylesheetLike = {
  * expands to an intersection containing a mapped type, which TypeScript cannot
  * infer back through. The brand is a plain property, so it can.
  */
+/*
+ * Recovered from the phantom rather than by matching `Stylesheet<…>`: the
+ * stylesheet type is self-referential through StylesheetWithVariants, and that
+ * defeats inference through the generic reference.
+ */
 type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
 
 type InferElements<S> = InferMeta<S> extends {

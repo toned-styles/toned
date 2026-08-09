@@ -23,7 +23,6 @@ export type {
   Pseudo,
   Stylesheet,
   StylesheetInput,
-  StylesheetMeta,
   StylesheetType,
   StylesheetWithVariants,
   TFun,

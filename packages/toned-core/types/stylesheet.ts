@@ -32,29 +32,6 @@ export type PickString<K> = K extends string ? K : never
 /** Brand symbol for internal type discrimination */
 declare const _internalBrand: unique symbol
 
-/**
- * Carries a Stylesheet's generic parameters somewhere they can be inferred back
- * out.
- *
- * `Stylesheet<S, T, M>` expands to an intersection containing a MAPPED type
- * (`{ [key in keyof T]: … }`), and TypeScript cannot recover generics from that
- * — `X extends Stylesheet<any, infer T, any>` silently fails to match and falls
- * to the false branch. Consumers (useStyles' InferElements / InferMods) then
- * degrade to a fallback: element keys lose their system type and variant state
- * types as `never`, so passing one is "Expected 1 arguments, but got 2".
- *
- * A phantom property in a plain, non-mapped position is inferable, so this makes
- * the parameters recoverable without changing anything at runtime.
- */
-export type StylesheetMeta<
-  S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
-  M extends ModType,
-> = {
-  system: S
-  elements: T
-  mods: M
-}
 
 /** Merge tuple of objects into intersection type */
 // biome-ignore lint/suspicious/noExplicitAny: tuple manipulation requires any[]
@@ -308,10 +285,10 @@ export type VariantsCallback<
 /**
  * Stylesheet with variants() method for adding conditional styles.
  */
-export type StylesheetWithVariants<
+export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
-> = {
+> {
   /**
    * Define variants using a callback with type-safe selector proxy
    *
@@ -408,14 +385,20 @@ export type Stylesheet<
   [_internalBrand]?: never
 
   /**
-   * @internal — carries S/T/M so they can be inferred back out.
+   * @internal — carries S/T/M so `useStyles` can recover them.
    *
-   * A plain property rather than a symbol key: a `declare const … unique symbol`
+   * Needed because `variants()` and `extend()` return a type that references
+   * StylesheetWithVariants, which references them back. That self-reference
+   * defeats `X extends Stylesheet<any, any, infer M>`: the match silently fails,
+   * InferMods resolves to `never`, and the variant-state argument types out of
+   * existence ("Expected 1 arguments, but got 2"). A phantom property is a plain,
+   * directly-inferable position, so it survives.
+   *
+   * A plain property rather than a symbol key: `declare const … unique symbol`
    * has no runtime value, so consumers cannot import it under
-   * verbatimModuleSyntax without emitting a broken runtime import. Optional and
-   * never assigned; it exists only in the type domain.
+   * verbatimModuleSyntax. Optional and never assigned — type domain only.
    */
-  readonly __toned__?: StylesheetMeta<S, T, M>
+  readonly __toned__?: { system: S; elements: T; mods: M }
 }
 
 /**
