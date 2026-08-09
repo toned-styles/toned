@@ -1,4 +1,4 @@
-import config from '@config/build/rollup.config'
+import config from '@toned-config/build/rollup.config'
 
 import { peerDependencies } from './package.json'
 

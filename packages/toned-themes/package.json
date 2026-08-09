@@ -16,12 +16,15 @@
   },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun -e 'import(`@config/build`)'"
+    "build": "bun -e 'import(`@toned-config/build`)'"
   },
   "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
     "rollup-copy-transform-css": "^2.1.0",
     "rollup-plugin-copy": "^3.5.0"
+  },
+  "exports": {
+    "./shadcn": "./shadcn/config.ts"
   }
 }

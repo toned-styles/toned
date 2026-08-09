@@ -1,13 +1,12 @@
 {
-  "name": "root",
+  "name": "@toned/monorepo",
   "private": true,
   "license": "MIT",
   "type": "module",
   "scripts": {
     "ci:lint": "biome ci --error-on-warnings .",
     "ci:typecheck": "update-ts-references --check && tsc -b",
-    "ci:prettier": "prettier -c .",
-    "prepare": "update-ts-references --usecase update-ts-references.yaml"
+    "ci:prettier": "prettier -c ."
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.1",

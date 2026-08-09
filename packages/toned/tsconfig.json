@@ -1,5 +1,5 @@
 {
-  "extends": "@config/typescript/lib",
+  "extends": "@toned-config/typescript/lib",
   "references": [
     {
       "path": "../../config/build"

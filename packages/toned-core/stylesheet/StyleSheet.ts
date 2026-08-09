@@ -1,7 +1,11 @@
 import { getConfig } from '../system/config.ts'
 import type {
   Config,
+  ExtractElements,
   ModType,
+  PickString,
+  PreVariantsStylesheet,
+  TokenStyle,
   TokenStyleDeclaration,
   TokenSystem,
   Tokens,
@@ -43,7 +47,15 @@ export function createStylesheet<
   S extends TokenStyleDeclaration,
   _Mods extends ModType,
   T,
->(ref: TokenSystem<S>, rules: T, variantRules?: AnyValue) {
+>(
+  ref: TokenSystem<S>,
+  rules: T,
+  variantRules?: AnyValue,
+): PreVariantsStylesheet<
+  S,
+  { [K in PickString<ExtractElements<T>>]: TokenStyle<S> },
+  PickString<ExtractElements<T>>
+> {
   // Merge base rules with variants - StyleMatcher handles the format directly
   const mergedRules = mergeRules(rules, variantRules)
 

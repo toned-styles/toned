@@ -9,7 +9,7 @@
     "@toned/systems": "workspace:*"
   },
   "devDependencies": {
-    "@config/typescript": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
     "typescript": "catalog:"
   }
 }

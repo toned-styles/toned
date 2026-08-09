@@ -1,5 +1,5 @@
 {
-  "name": "@config/typescript",
+  "name": "@toned-config/typescript",
   "private": true,
   "type": "module",
   "main": "base.tsconfig.json",

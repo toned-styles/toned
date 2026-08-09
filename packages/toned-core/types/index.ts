@@ -13,6 +13,7 @@ export type { Config } from './config.ts'
 export type {
   ElementMap,
   ElementStyleNew,
+  ExtractElements,
   ExtractNamedStyles,
   ModType,
   NamedStyleDef,

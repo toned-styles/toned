@@ -5,13 +5,13 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./index.js",
-    "./dom": "./dom/index.js",
-    "./types": "./types/index.js",
-    "./stylesheet": "./stylesheet/index.js",
-    "./system": "./system/index.js",
-    "./utils": "./utils/index.js",
-    "./vite": "./vite/index.js"
+    ".": "./index.ts",
+    "./dom": "./dom/index.ts",
+    "./types": "./types/index.ts",
+    "./stylesheet": "./stylesheet/index.ts",
+    "./system": "./system/index.ts",
+    "./utils": "./utils/index.ts",
+    "./vite": "./vite/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -25,7 +25,7 @@
   },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun --bun -e 'import(`@config/build`)'"
+    "build": "bun --bun -e 'import(`@toned-config/build`)'"
   },
   "peerDependencies": {
     "vite": ">=5"
@@ -36,8 +36,8 @@
     }
   },
   "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
     "vite": "^6.3.5"
   }
 }

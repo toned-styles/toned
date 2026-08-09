@@ -16,6 +16,24 @@ const _rollupBin = path.join(
   'rollup',
 )
 
+/**
+ * Source `exports` point at the TypeScript entry points, so the packages can be
+ * consumed directly from a workspace with no build step. The published package
+ * ships compiled output, so every `.ts` target is rewritten to `.js` here.
+ */
+const toDistTarget = (value: unknown): unknown => {
+  if (typeof value === 'string') {
+    return value.endsWith('.ts') ? `${value.slice(0, -3)}.js` : value
+  }
+  if (Array.isArray(value)) return value.map(toDistTarget)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, toDistTarget(entry)]),
+    )
+  }
+  return value
+}
+
 const transformPkg = async () => {
   const {
     scripts: _scripts,
@@ -23,6 +41,8 @@ const transformPkg = async () => {
     publishConfig: _publishConfig,
     ...pkg
   } = await Bun.file('package.json').json()
+
+  if (pkg.exports) pkg.exports = toDistTarget(pkg.exports)
 
   await Bun.write(
     path.join(dist, 'package.json'),
