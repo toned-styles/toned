@@ -1,7 +1,7 @@
 import {
   getConfig,
-  type Stylesheet,
   SYMBOL_INIT,
+  type TokenStyle,
   type TokenStyleDeclaration,
 } from '@toned/core'
 import { useRef } from 'react'
@@ -14,12 +14,14 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   // biome-ignore lint/suspicious/noExplicitAny: dynamic style object
   style?: Record<string, any>
   className?: string
-  /*
-   * NOTE: there was a `with(props)` member declared here. Nothing implements it —
-   * it type-checked at every call site and threw
-   * "…with is not a function" at runtime. Use the system's `t()` for one-off
-   * token styles; it is variadic, typed as TokenStyle<S>, and real.
+  /**
+   * Layer one-off token styles (and plain props) onto this element.
+   *
+   * Implemented by `addWith` in react-web.ts / react-native.ts, so it exists
+   * only when one of those configs is installed — `@toned/react/config` alone
+   * has no `getProps` and yields bare elements with no `with`.
    */
+  with: (props: TokenStyle<S> | Record<string, unknown> | false | null | undefined) => ElementProps<S>
   // biome-ignore lint/suspicious/noExplicitAny: dynamic element attributes
   [key: string]: any
 }
@@ -41,17 +43,24 @@ type StylesheetLike = {
  * Uses conditional type inference to pull out the element record T
  * from the Stylesheet<S, T, M> intersection, avoiding index signature pollution.
  */
-type InferElements<S> = S extends Stylesheet<
-  infer Sys,
-  infer T,
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any
->
+/**
+ * Recover a stylesheet's generic parameters from its phantom brand.
+ *
+ * Matching `S extends Stylesheet<any, infer T, any>` does NOT work: Stylesheet
+ * expands to an intersection containing a mapped type, which TypeScript cannot
+ * infer back through. The brand is a plain property, so it can.
+ */
+type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
+
+type InferElements<S> = InferMeta<S> extends {
+  system: infer Sys extends TokenStyleDeclaration
+  elements: infer T
+}
   ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
   : {
-      // The fallback maps EVERY string key, so the composition methods have to
-      // be excluded by name — otherwise `s.extend` / `s.variants` type as
-      // elements and a typo'd element name silently resolves to one of them.
+      // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
+      // key, so the composition methods have to be excluded by name — otherwise
+      // `s.extend` types as an element and a typo'd element name resolves to it.
       [K in keyof S as K extends StylesheetMethod
         ? never
         : K extends string
@@ -59,18 +68,7 @@ type InferElements<S> = S extends Stylesheet<
           : never]: ElementProps
     }
 
-/**
- * Infer the mods type from a Stylesheet generic.
- */
-type InferMods<S> = S extends Stylesheet<
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any,
-  infer M
->
-  ? M
-  : never
+type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
 
 /**
  * Hook to use a stylesheet in a React component.
