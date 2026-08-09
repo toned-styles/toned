@@ -90,6 +90,7 @@ export const flexLayout = defineToken({
   }),
 })
 
+export const flexBasis = defineCssToken('flexBasis', paddingValues, SpaceUnit)
 export const flexGrow = defineCssToken('flexGrow', ['0', '1'])
 export const flexWrap = defineCssToken('flexWrap', [
   'wrap',
