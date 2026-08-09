@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from 'vitest'
 import type {
   Config,
-  TokenStyleDeclaration,
   TokenSystem,
 } from '../types/index.ts'
-import { SYMBOL_INIT } from '../utils/symbols.ts'
+import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
+import { defineToken } from '../system/index.ts'
 import { setStyles } from './applyStyles.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
@@ -14,8 +14,42 @@ import {
   isNamedStyleKey,
 } from './variantSelector.ts'
 
-// Mock TokenSystem for testing
+/*
+ * Mock TokenSystem for testing.
+ *
+ * The token DECLARATIONS are real even though `exec` is stubbed. Typing this as
+ * TokenSystem<TokenStyleDeclaration> instead collapses TokenStyle<S> to
+ * Partial<{ [x: string]: never }>, so every style object below becomes a type
+ * error — the degenerate case, not a realistic one.
+ */
+const testTokens = {
+  bgColor: defineToken({
+    values: ['base', 'blue', 'green', 'hover', 'muted', 'red', 'yellow'] as const,
+    resolve: (value) => ({ backgroundColor: String(value) }),
+  }),
+  textColor: defineToken({
+    values: ['base', 'black', 'white'] as const,
+    resolve: (value) => ({ color: String(value) }),
+  }),
+  color: defineToken({
+    values: ['hover'] as const,
+    resolve: (value) => ({ color: String(value) }),
+  }),
+  borderRadius: defineToken({
+    values: ['medium'] as const,
+    resolve: (value) => ({ borderRadius: String(value) }),
+  }),
+  paddingX: defineToken({
+    values: [0, 2, 4] as const,
+    resolve: (value) => ({ paddingLeft: Number(value), paddingRight: Number(value) }),
+  }),
+}
+
 const mockTokenSystem = {
+  // `system` stays EMPTY at runtime — these tests assert on the stubbed `exec`
+  // passing the token style straight through, and a populated system makes the
+  // resolver rewrite it. Only the TYPE needs to be concrete; the cast below is
+  // what carries it.
   system: {},
   config: undefined,
   t: () => ({}),
@@ -24,7 +58,7 @@ const mockTokenSystem = {
     style: tokenStyle as object,
     className: '',
   }),
-} as unknown as TokenSystem<TokenStyleDeclaration>
+} as unknown as TokenSystem<typeof testTokens>
 
 // Mock Config
 const mockConfig: Config = {
@@ -59,7 +93,7 @@ describe('createStylesheet', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
 
-      expect(typeof stylesheet[Symbol.for('@toned/core/SYMBOL_INIT')]).toBe(
+      expect(typeof stylesheet[SYMBOL_INIT]).toBe(
         'function',
       )
     })
@@ -68,7 +102,7 @@ describe('createStylesheet', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
 
-      expect(stylesheet[Symbol.for('@toned/core/SYMBOL_REF')]).toBe(
+      expect(stylesheet[SYMBOL_REF]).toBe(
         mockTokenSystem,
       )
     })

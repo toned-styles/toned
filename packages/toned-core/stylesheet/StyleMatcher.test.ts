@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
+import type { TokenSystem } from '../types/index.ts'
+import { defineToken } from '../system/index.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 
 describe('style matcher', () => {
@@ -397,8 +398,42 @@ describe('style deep-merge across rules', () => {
 
 import { createStylesheet } from './StyleSheet.ts'
 
-// Mock TokenSystem for testing
+/*
+ * Mock TokenSystem for testing.
+ *
+ * The token DECLARATIONS are real even though `exec` is stubbed. Typing this as
+ * TokenSystem<TokenStyleDeclaration> instead collapses TokenStyle<S> to
+ * Partial<{ [x: string]: never }>, so every style object below becomes a type
+ * error — the degenerate case, not a realistic one.
+ */
+const testTokens = {
+  bgColor: defineToken({
+    values: ['base', 'blue', 'green', 'hover', 'muted', 'red', 'yellow'] as const,
+    resolve: (value) => ({ backgroundColor: String(value) }),
+  }),
+  textColor: defineToken({
+    values: ['base', 'black', 'white'] as const,
+    resolve: (value) => ({ color: String(value) }),
+  }),
+  color: defineToken({
+    values: ['hover'] as const,
+    resolve: (value) => ({ color: String(value) }),
+  }),
+  borderRadius: defineToken({
+    values: ['medium'] as const,
+    resolve: (value) => ({ borderRadius: String(value) }),
+  }),
+  paddingX: defineToken({
+    values: [0, 2, 4] as const,
+    resolve: (value) => ({ paddingLeft: Number(value), paddingRight: Number(value) }),
+  }),
+}
+
 const mockTokenSystem = {
+  // `system` stays EMPTY at runtime — these tests assert on the stubbed `exec`
+  // passing the token style straight through, and a populated system makes the
+  // resolver rewrite it. Only the TYPE needs to be concrete; the cast below is
+  // what carries it.
   system: {},
   config: undefined,
   t: () => ({}),
@@ -407,7 +442,7 @@ const mockTokenSystem = {
     style: tokenStyle as object,
     className: '',
   }),
-} as unknown as TokenSystem<TokenStyleDeclaration>
+} as unknown as TokenSystem<typeof testTokens>
 
 describe('new API: stylesheet with variants chain', () => {
   test('creates stylesheet with variants method', () => {
@@ -432,14 +467,14 @@ describe('new API: stylesheet with variants chain', () => {
       label: { textColor: 'white' },
     }
 
-    const variants = {
+    const stylesheet = createStylesheet(mockTokenSystem, rules)
+    // inline, so the literal is contextually typed by VariantsInput — hoisting it
+    // to a const widens `paddingX: 2` to `number` and it stops matching the token
+    const withVariants = stylesheet.variants({
       '[size=sm]': {
         container: { paddingX: 2 },
       },
-    }
-
-    const stylesheet = createStylesheet(mockTokenSystem, rules)
-    const withVariants = stylesheet.variants(variants)
+    })
 
     expect(withVariants).toBeDefined()
     expect(withVariants).toHaveProperty('variants')

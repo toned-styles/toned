@@ -86,7 +86,19 @@ export type InlineStyle = any
  * ```
  */
 export type TokenStyle<S extends TokenStyleDeclaration> = Partial<{
-  [key in TokenKeys<S>]: S[key] extends TokenConfig<infer V, unknown>
+  // `Extract` first, because on the OPEN system (`S` = TokenStyleDeclaration
+  // itself) `S[key]` is the union `TokenConfig | Breakpoints | undefined`, which
+  // does not extend `TokenConfig<infer V, unknown>`. Without the Extract that
+  // branch yields `never`, so TokenStyle<TokenStyleDeclaration> collapses to
+  // `Partial<{ [x: string]: never }>` — every style object becomes a type error,
+  // and TokenSystem<Concrete> stops being assignable to TokenSystem<open>.
+  // Extracting the TokenConfig member keeps the open system permissive while
+  // leaving concrete systems exactly as strict as before.
+  [key in TokenKeys<S>]: Extract<
+    S[key],
+    // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
+    TokenConfig<any, unknown>
+  > extends TokenConfig<infer V, unknown>
     ? V[number]
     : never
 }> & { style?: InlineStyle }

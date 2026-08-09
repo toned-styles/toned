@@ -84,7 +84,7 @@ export function createStylesheet<
     [SYMBOL_REF]: ref,
     [SYMBOL_INIT]: (config: Config, modsState: ModState) => {
       return new LocalBase({
-        // Cast needed: TokenSystem generic S doesn't match BaseRef's TokenStyleDeclaration
+        // Base is system-agnostic at runtime; S is only meaningful to callers.
         ref: ref as AnyValue,
         rules: mergedRules,
         config,
@@ -147,7 +147,16 @@ export function createStylesheet<
   return stylesheet
 }
 
-type BaseRef = TokenSystem<TokenStyleDeclaration>
+/*
+ * `Base` is the untyped runtime engine — it walks rules dynamically and already
+ * treats its ref as AnyValue internally. It must therefore accept a system of
+ * ANY shape: TokenSystem<S> is invariant in S (StylesheetType<S> takes S in
+ * parameter position), so TokenSystem<Concrete> is not assignable to
+ * TokenSystem<TokenStyleDeclaration> and pinning it to the open declaration
+ * rejects every real system.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: the runtime engine is system-agnostic
+type BaseRef = TokenSystem<any>
 type BaseRules = AnyValue
 
 export class Base {
