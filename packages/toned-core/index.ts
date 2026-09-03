@@ -44,4 +44,9 @@ export { bridgeVarName } from './utils/css.ts'
 export { SYMBOL_INIT } from './types/index.ts'
 // Type-only brands, exported so downstream declaration emission can name a
 // stylesheet's inferred type across package boundaries (TS4023 otherwise).
-export type { _internalBrand, _symInit, _symRef, StylesheetInstance } from './types/index.ts'
+export type {
+  _internalBrand,
+  _symInit,
+  _symRef,
+  StylesheetInstance,
+} from './types/index.ts'

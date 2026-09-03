@@ -408,7 +408,15 @@ import { createStylesheet } from './StyleSheet.ts'
  */
 const testTokens = {
   bgColor: defineToken({
-    values: ['base', 'blue', 'green', 'hover', 'muted', 'red', 'yellow'] as const,
+    values: [
+      'base',
+      'blue',
+      'green',
+      'hover',
+      'muted',
+      'red',
+      'yellow',
+    ] as const,
     resolve: (value) => ({ backgroundColor: String(value) }),
   }),
   textColor: defineToken({
@@ -425,7 +433,10 @@ const testTokens = {
   }),
   paddingX: defineToken({
     values: [0, 2, 4] as const,
-    resolve: (value) => ({ paddingLeft: Number(value), paddingRight: Number(value) }),
+    resolve: (value) => ({
+      paddingLeft: Number(value),
+      paddingRight: Number(value),
+    }),
   }),
 }
 

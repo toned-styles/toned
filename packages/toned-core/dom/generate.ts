@@ -30,9 +30,31 @@ export function generate<const S extends TokenStyleDeclaration>({
   breakpoints,
   animations,
   bridges,
+  states,
   ...system
 }: S) {
   let styles = ''
+
+  // Declared state toggles — the attribute analogue of the pseudo toggles
+  // below. Each state's selector, applied to the element (`._<selector>`),
+  // empties `--toned_<alias>`; the nested reset keeps it self-scoped (a state
+  // on an ancestor does not leak onto descendants' chains). Not hover-gated —
+  // these are data-states, always live.
+  if (states) {
+    let stateToggles = ''
+    for (const [alias, selector] of Object.entries(
+      states as Record<string, string>,
+    )) {
+      const name = `--toned_${alias}`
+      stateToggles += `html {${name}: initial;}`
+      const sel =
+        selector.startsWith(':') || selector.startsWith('[')
+          ? `._${selector}`
+          : `._ ${selector}`
+      stateToggles += `${sel} {${name}: ;} ${sel} ._ {${name}: initial;} ${sel} ${sel} {${name}: ;}`
+    }
+    styles += stateToggles
+  }
 
   // Bridges: one static parameter-reading rule per target, plus the `._`
   // boundary reset so a parameter never inherits across component boundaries.
@@ -52,7 +74,10 @@ export function generate<const S extends TokenStyleDeclaration>({
   // sets, so the class path is total. Pseudo-element bridges keep the
   // parameter mechanism (they attach to the element itself, tie with
   // component css at equal specificity, and lose to it on import order).
-  const descendantBridgeVars = new Map<string, { selector: string; cssProp: string }>()
+  const descendantBridgeVars = new Map<
+    string,
+    { selector: string; cssProp: string }
+  >()
   if (bridges) {
     const INHERITED = new Set([
       'color',
@@ -126,7 +151,8 @@ export function generate<const S extends TokenStyleDeclaration>({
       // Hover only exists where the primary input can hover — the same gate
       // every hover utility framework applies. Without it, a touch tap leaves
       // an element stuck in its hover style until the next tap elsewhere.
-      rules += pseudo === 'hover' ? `@media (hover: hover) {${toggles}}` : toggles
+      rules +=
+        pseudo === 'hover' ? `@media (hover: hover) {${toggles}}` : toggles
     })
 
     // The cross-element hover channel: a source element (marker class `_s`)
@@ -163,10 +189,12 @@ export function generate<const S extends TokenStyleDeclaration>({
     // Skip non-token entries (like breakpoints)
     if (!token || !('values' in token) || !('resolve' in token)) continue
 
-    const alphaChannel = (token as { alphaChannel?: readonly string[] }).alphaChannel
+    const alphaChannel = (token as { alphaChannel?: readonly string[] })
+      .alphaChannel
     if (alphaChannel) {
       const steps =
-        (token as { alphaSteps?: readonly number[] }).alphaSteps ?? DEFAULT_ALPHA_STEPS
+        (token as { alphaSteps?: readonly number[] }).alphaSteps ??
+        DEFAULT_ALPHA_STEPS
       for (const step of steps) {
         const decl = alphaChannel
           .map((prop) => `${alphaVarName(prop)}:${step / 100}`)

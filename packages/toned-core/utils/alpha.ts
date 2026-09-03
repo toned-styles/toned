@@ -56,7 +56,14 @@ export function splitAlphaValue(value: unknown): AlphaValue | null {
   return { base: value.slice(0, idx), alpha }
 }
 
-const UNWRAPPABLE = new Set(['transparent', 'currentcolor', 'inherit', 'initial', 'unset', 'none'])
+const UNWRAPPABLE = new Set([
+  'transparent',
+  'currentcolor',
+  'inherit',
+  'initial',
+  'unset',
+  'none',
+])
 
 /** Whether a resolved colour value can carry the alpha parameter. */
 export const alphaWrappable = (value: unknown): value is string =>
@@ -86,19 +93,22 @@ export function alphaLiteral(colorValue: string, alpha01: number): string {
     const body = hex.slice(1)
     const long =
       body.length === 3 || body.length === 4
-        ? [...body].map(c => c + c).join('')
+        ? [...body].map((c) => c + c).join('')
         : body
     if (long.length === 6 || long.length === 8) {
       const r = Number.parseInt(long.slice(0, 2), 16)
       const g = Number.parseInt(long.slice(2, 4), 16)
       const b = Number.parseInt(long.slice(4, 6), 16)
-      const baseA = long.length === 8 ? Number.parseInt(long.slice(6, 8), 16) / 255 : 1
+      const baseA =
+        long.length === 8 ? Number.parseInt(long.slice(6, 8), 16) / 255 : 1
       if ([r, g, b, baseA].every(Number.isFinite)) {
         return `rgba(${r}, ${g}, ${b}, ${round3(baseA * alpha01)})`
       }
     }
   }
-  const rgbMatch = hex.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+))?\s*\)$/i)
+  const rgbMatch = hex.match(
+    /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+))?\s*\)$/i,
+  )
   if (rgbMatch?.[1] && rgbMatch[2] && rgbMatch[3]) {
     const baseA = rgbMatch[4] === undefined ? 1 : Number(rgbMatch[4])
     return `rgba(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]}, ${round3(baseA * alpha01)})`
@@ -120,6 +130,7 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000
  * keeps the same stylesheet meaningful where CSS does not exist.
  */
 export function applyAlpha(colorValue: string, alpha01: number): string {
-  if (colorValue.includes('var(')) return withAlphaExpr(colorValue, String(alpha01))
+  if (colorValue.includes('var('))
+    return withAlphaExpr(colorValue, String(alpha01))
   return alphaLiteral(colorValue, alpha01)
 }

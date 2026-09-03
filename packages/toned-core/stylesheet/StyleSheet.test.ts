@@ -1,8 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import type {
-  Config,
-  TokenSystem,
-} from '../types/index.ts'
+import type { Config, TokenSystem } from '../types/index.ts'
 import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 import { defineToken } from '../system/index.ts'
 import { setStyles } from './applyStyles.ts'
@@ -24,7 +21,15 @@ import {
  */
 const testTokens = {
   bgColor: defineToken({
-    values: ['base', 'blue', 'green', 'hover', 'muted', 'red', 'yellow'] as const,
+    values: [
+      'base',
+      'blue',
+      'green',
+      'hover',
+      'muted',
+      'red',
+      'yellow',
+    ] as const,
     resolve: (value) => ({ backgroundColor: String(value) }),
   }),
   textColor: defineToken({
@@ -41,7 +46,10 @@ const testTokens = {
   }),
   paddingX: defineToken({
     values: [0, 2, 4] as const,
-    resolve: (value) => ({ paddingLeft: Number(value), paddingRight: Number(value) }),
+    resolve: (value) => ({
+      paddingLeft: Number(value),
+      paddingRight: Number(value),
+    }),
   }),
 }
 
@@ -93,18 +101,14 @@ describe('createStylesheet', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
 
-      expect(typeof stylesheet[SYMBOL_INIT]).toBe(
-        'function',
-      )
+      expect(typeof stylesheet[SYMBOL_INIT]).toBe('function')
     })
 
     test('stylesheet has SYMBOL_REF for system reference', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
 
-      expect(stylesheet[SYMBOL_REF]).toBe(
-        mockTokenSystem,
-      )
+      expect(stylesheet[SYMBOL_REF]).toBe(mockTokenSystem)
     })
   })
 

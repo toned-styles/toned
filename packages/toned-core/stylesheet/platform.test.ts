@@ -11,7 +11,7 @@ import { SYMBOL_INIT } from '../utils/symbols.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent', 'muted'] as const,
-  resolve: value => ({ backgroundColor: value }),
+  resolve: (value) => ({ backgroundColor: value }),
 })
 
 const system = defineSystem({ bgColor })
@@ -67,8 +67,14 @@ describe('@platform keys', () => {
   })
 
   test('resolution is memoized per platform', () => {
-    const rules = { root: { bgColor: 'base', '@platform.web': { bgColor: 'accent' } } }
-    expect(resolvePlatformKeys(rules, 'web')).toBe(resolvePlatformKeys(rules, 'web'))
-    expect(resolvePlatformKeys(rules, 'web')).not.toBe(resolvePlatformKeys(rules, 'native'))
+    const rules = {
+      root: { bgColor: 'base', '@platform.web': { bgColor: 'accent' } },
+    }
+    expect(resolvePlatformKeys(rules, 'web')).toBe(
+      resolvePlatformKeys(rules, 'web'),
+    )
+    expect(resolvePlatformKeys(rules, 'web')).not.toBe(
+      resolvePlatformKeys(rules, 'native'),
+    )
   })
 })

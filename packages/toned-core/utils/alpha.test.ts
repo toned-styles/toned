@@ -34,7 +34,10 @@ const exec = (style: Record<string, unknown>, useClassName: boolean): any =>
 
 describe('splitAlphaValue', () => {
   test('parses value/step', () => {
-    expect(splitAlphaValue('primary/90')).toEqual({ base: 'primary', alpha: 90 })
+    expect(splitAlphaValue('primary/90')).toEqual({
+      base: 'primary',
+      alpha: 90,
+    })
     expect(splitAlphaValue('danger-surface/12.5')).toEqual({
       base: 'danger-surface',
       alpha: 12.5,
@@ -106,7 +109,9 @@ describe('exec, className mode', () => {
 describe('exec, inline mode (native/email path)', () => {
   test('var() references route through relative colour syntax', () => {
     const out = exec({ bgColor: 'primary/50' }, false)
-    expect(out.style.backgroundColor).toBe('rgb(from var(--primary) r g b / calc(alpha * 0.5))')
+    expect(out.style.backgroundColor).toBe(
+      'rgb(from var(--primary) r g b / calc(alpha * 0.5))',
+    )
   })
 
   test('literal tokens compute an rgba', () => {
@@ -130,7 +135,9 @@ describe('alphaLiteral', () => {
 
   test('rgb()/rgba() forms compose alphas', () => {
     expect(alphaLiteral('rgb(20 20 28)', 0.3)).toBe('rgba(20, 20, 28, 0.3)')
-    expect(alphaLiteral('rgb(20 20 28 / 0.5)', 0.5)).toBe('rgba(20, 20, 28, 0.25)')
+    expect(alphaLiteral('rgb(20 20 28 / 0.5)', 0.5)).toBe(
+      'rgba(20, 20, 28, 0.25)',
+    )
   })
 })
 
@@ -150,7 +157,9 @@ describe('defineAnimations', async () => {
 
   test('keyframes are compiled with the system', () => {
     const css = generate(animSystem.system)
-    expect(css).toContain('@keyframes toned_fade-in {from {opacity:0;}to {opacity:1;}}')
+    expect(css).toContain(
+      '@keyframes toned_fade-in {from {opacity:0;}to {opacity:1;}}',
+    )
     expect(css).toContain('@keyframes toned_zoom-in-95 {')
   })
 
@@ -180,7 +189,7 @@ describe('bridges', async () => {
   })
   const iconSize = defineToken({
     values: [3, 4, 5] as const,
-    resolve: value => ({
+    resolve: (value) => ({
       [bridgeVarName('icon', 'width')]: `calc(var(--base) * ${value})`,
       [bridgeVarName('icon', 'height')]: `calc(var(--base) * ${value})`,
     }),
@@ -190,14 +199,19 @@ describe('bridges', async () => {
     {
       bridges: {
         placeholder: { selector: '::placeholder', properties: ['color'] },
-        icon: { selector: "svg:not([class*='size-'])", properties: ['width', 'height'] },
+        icon: {
+          selector: "svg:not([class*='size-'])",
+          properties: ['width', 'height'],
+        },
       },
     },
   )
   const css = generate(bridgeSystem.system)
 
   test('pseudo-element bridges attach to the element', () => {
-    expect(css).toContain('._::placeholder {color: var(--toned-b-placeholder-color, inherit);}')
+    expect(css).toContain(
+      '._::placeholder {color: var(--toned-b-placeholder-color, inherit);}',
+    )
   })
 
   test('descendant bridges compile class-scoped — no always-on rule', () => {
@@ -217,9 +231,17 @@ describe('bridges', async () => {
   })
 
   test('bridge tokens are ordinary tokens — atomic classes and all', () => {
-    expect(css).toContain('.placeholderColor_muted{--toned-b-placeholder-color:var(--muted);}')
+    expect(css).toContain(
+      '.placeholderColor_muted{--toned-b-placeholder-color:var(--muted);}',
+    )
     const out = bridgeSystem.exec(
-      { tokens: new Proxy({}, { get: (_t, p: string) => `var(--${String(p)})` }), useClassName: true },
+      {
+        tokens: new Proxy(
+          {},
+          { get: (_t, p: string) => `var(--${String(p)})` },
+        ),
+        useClassName: true,
+      },
       // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
       { placeholderColor: 'muted', iconSize: 4 } as any,
     )

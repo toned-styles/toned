@@ -64,7 +64,10 @@ export type VariantBuilder<
   [K in Exclude<keyof Mods, keyof Acc> as K extends string
     ? K
     : never]: K extends string
-    ? <const V extends Exclude<Mods[K], undefined> & (string | number | boolean)>(
+    ? <
+        const V extends Exclude<Mods[K], undefined> &
+          (string | number | boolean),
+      >(
         ...values: [V, ...V[]]
       ) => VariantBuilder<Mods, Acc & Record<K, V>, AppendKey<Key, K, V>>
     : never
@@ -85,7 +88,10 @@ export type VariantSelector<Mods extends ModType> = {
    * @example $.size("m") or $.alignment("icon-only", "icon-left")
    */
   [K in keyof Mods as K extends string ? K : never]-?: K extends string
-    ? <const V extends Exclude<Mods[K], undefined> & (string | number | boolean)>(
+    ? <
+        const V extends Exclude<Mods[K], undefined> &
+          (string | number | boolean),
+      >(
         ...values: [V, ...V[]]
       ) => VariantBuilder<Mods, { [P in K]: V }, `[${K}=${V}]`>
     : never

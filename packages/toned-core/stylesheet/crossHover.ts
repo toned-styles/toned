@@ -30,7 +30,12 @@ export function resolveCrossHoverCss(rules: AnyValue): AnyValue {
     if (!key.endsWith(SUFFIX)) continue
     const sourceName = key.slice(0, -SUFFIX.length)
     // single ':hover' on a plain element name only
-    if (!sourceName || sourceName.includes(':') || sourceName[0] === '@' || sourceName[0] === '[')
+    if (
+      !sourceName ||
+      sourceName.includes(':') ||
+      sourceName[0] === '@' ||
+      sourceName[0] === '['
+    )
       continue
     if (!(sourceName in rules)) continue
     const elementMap = rules[key]

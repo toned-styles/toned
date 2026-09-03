@@ -260,7 +260,11 @@ export class Base {
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
-    this.matcher = sharedMatcher(rules, mediaMode === 'css', pseudoMode === 'css')
+    this.matcher = sharedMatcher(
+      rules,
+      mediaMode === 'css',
+      pseudoMode === 'css',
+    )
 
     if (mediaMode === false && this.matcher.hasMediaRules) {
       warnOnce(
@@ -430,10 +434,10 @@ export class Base {
   private pruneEl(elementKey: ElementKey, el: AnyValue) {
     const ref = this.refs[elementKey]
     if (ref instanceof Set) ref.delete(el)
-     for (const pseudo of PSEUDO_STATES) {
+    for (const pseudo of PSEUDO_STATES) {
       this._activeEls[`${elementKey}${pseudo}`]?.delete(el)
-     }
-   }
+    }
+  }
 
   // A copy of modsState with every element's interaction pseudo mods forced
   // off. Used to resolve non-interactive elements in multi-instance mode so a
@@ -525,14 +529,20 @@ export class Base {
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
           for (const el of ref) {
-            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            if (!el.isConnected) {
+              this.pruneEl(elementKey, el)
+              continue
+            }
             setStyles(el, restingStyle)
           }
         } else {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
           for (const el of ref) {
-            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            if (!el.isConnected) {
+              this.pruneEl(elementKey, el)
+              continue
+            }
             setStyles(el, style)
           }
         }

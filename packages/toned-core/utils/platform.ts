@@ -74,12 +74,17 @@ function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
  */
 const CACHE = new WeakMap<object, Map<string, AnyValue>>()
 
-export function resolvePlatformKeys<T>(rules: T, platform: string | undefined): T {
+export function resolvePlatformKeys<T>(
+  rules: T,
+  platform: string | undefined,
+): T {
   if (!isPlainObject(rules)) return rules
   const cacheKey = platform ?? ''
   let byPlatform = CACHE.get(rules)
   if (byPlatform?.has(cacheKey)) return byPlatform.get(cacheKey) as T
-  const resolved = hasPlatformKeys(rules) ? (resolveNode(rules, platform) as T) : rules
+  const resolved = hasPlatformKeys(rules)
+    ? (resolveNode(rules, platform) as T)
+    : rules
   if (!byPlatform) {
     byPlatform = new Map()
     CACHE.set(rules, byPlatform)

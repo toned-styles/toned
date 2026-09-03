@@ -18,6 +18,13 @@ type InferBreakpoints<R> = R extends { breakpoints?: Breakpoints<infer X> }
   ? X
   : never
 
+/** Declared state aliases (`states` config) → their `:alias` stylesheet keys. */
+type InferStatePseudos<R> = R extends { states?: infer States }
+  ? States extends Record<string, string>
+    ? `:${keyof States & string}`
+    : never
+  : never
+
 /** String, number, or symbol (for object keys) */
 type StringOrNumber = string | number | symbol
 
@@ -32,7 +39,6 @@ export type PickString<K> = K extends string ? K : never
 
 /** Brand symbol for internal type discrimination */
 export declare const _internalBrand: unique symbol
-
 
 /** Merge tuple of objects into intersection type */
 // biome-ignore lint/suspicious/noExplicitAny: tuple manipulation requires any[]
@@ -76,7 +82,7 @@ export type TFun<S extends TokenStyleDeclaration> = <D extends TokenStyle<S>[]>(
  */
 export type ElementStyleNew<
   S extends TokenStyleDeclaration,
-  AvailablePseudo extends string = Pseudo,
+  AvailablePseudo extends string = Pseudo | InferStatePseudos<S>,
   AvailableBreakpoints extends StringOrNumber = keyof InferBreakpoints<S>,
   ET extends ElementType | undefined = undefined,
 > = TokenStyle<S, ET> & {
@@ -149,7 +155,12 @@ export type StylesheetInput<
   T,
   Elements extends string = PickString<ExtractElements<T>>,
 > = {
-  [K in Elements]?: ElementStyleNew<S, Pseudo, keyof InferBreakpoints<S>, InferElementType<T, K>>
+  [K in Elements]?: ElementStyleNew<
+    S,
+    Pseudo | InferStatePseudos<S>,
+    keyof InferBreakpoints<S>,
+    InferElementType<T, K>
+  >
 } & {
   [K in CrossElementSelector<Elements>]?: ElementMap<S, Elements>
 } & {
