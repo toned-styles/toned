@@ -367,6 +367,43 @@ export function defineSystem<
         const sortedBps = Object.entries(bpValues).sort(([, a], [, b]) => a - b)
 
         for (const [prop, overrides] of Object.entries(breakpointOverrides)) {
+          // Raw `style` inside a breakpoint — the escape-hatch analogue of the
+          // pseudo path's __style handling. Each css property named by any
+          // override gets its own chain, based on the resting inline value
+          // when one exists.
+          if (prop === 'style') {
+            const allCssProps = new Set<string>()
+            for (const { value } of overrides) {
+              if (value && typeof value === 'object') {
+                for (const cssProp in value as Record<string, unknown>) allCssProps.add(cssProp)
+              }
+            }
+            for (const cssProp of allCssProps) {
+              const kebabProp = camelToKebab(cssProp)
+              for (const { breakpoint, value } of overrides) {
+                const styleVal = value as Record<string, unknown> | null
+                if (styleVal?.[cssProp] == null) continue
+                const bpName = breakpoint.slice(1)
+                acc.style[`--media-${bpName}__${kebabProp}__style`] =
+                  `var(--media-${bpName}) ${styleVal[cssProp]}`
+              }
+              const baseValue = acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
+              let chain = baseValue
+              for (const [bpKey] of sortedBps) {
+                if (
+                  overrides.some(o => {
+                    const sv = o.value as Record<string, unknown> | null
+                    return o.breakpoint === `@${bpKey}` && sv?.[cssProp] != null
+                  })
+                ) {
+                  const varName = `--media-${bpKey}__${kebabProp}__style`
+                  chain = chain === null ? `var(${varName})` : `var(${varName}, ${chain})`
+                }
+              }
+              if (chain !== null) acc.style[cssProp] = chain
+            }
+            continue
+          }
           // Resolve base value (already in acc.style from the token system)
           const resolvedBase = resolveTokenValue(
             system[prop],

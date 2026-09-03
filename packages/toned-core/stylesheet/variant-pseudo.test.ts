@@ -132,3 +132,20 @@ describe('css-only group hover (source channel)', () => {
     )
   })
 })
+
+describe('breakpoint raw-style chains', () => {
+  test("'@md': { style: {...} } rides the media toggle like a token", () => {
+    const sheet = system.stylesheet({
+      root: {
+        bgColor: 'primary',
+        style: { fontSize: '1rem' },
+        '@md': { style: { fontSize: '0.875rem' } },
+      },
+    })
+    const mediaConfig = { ...config, useMedia: true, mediaMode: 'css' as const }
+    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
+    const style = (sheet as any)[SYMBOL_INIT](mediaConfig, {}).getCurrentStyle('root').style
+    expect(style['--media-md__font-size__style']).toBe('var(--media-md) 0.875rem')
+    expect(style.fontSize).toBe('var(--media-md__font-size__style, 1rem)')
+  })
+})
