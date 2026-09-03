@@ -1051,3 +1051,25 @@ describe('redundant write elision (multi-instance)', () => {
     expect(b.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
 })
+
+describe('elementDescriptors', () => {
+  test('enumerates real elements with their $$type', () => {
+    const rules = {
+      root: { $$type: 'view', bgColor: 'blue' },
+      label: { $$type: 'text', textColor: 'white' },
+      plain: { bgColor: 'red' },
+    }
+    const stylesheet = createStylesheet(mockTokenSystem, rules)
+    const base = stylesheet[SYMBOL_INIT](mockConfig, undefined) as Base
+
+    const got = base
+      .elementDescriptors()
+      .sort((a, b) => a.key.localeCompare(b.key))
+
+    expect(got).toEqual([
+      { key: 'label', type: 'text' },
+      { key: 'plain', type: undefined },
+      { key: 'root', type: 'view' },
+    ])
+  })
+})
