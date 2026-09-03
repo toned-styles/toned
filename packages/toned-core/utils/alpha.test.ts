@@ -57,7 +57,7 @@ describe('generated CSS', () => {
 
   test('alpha-capable colour rules route through relative colour syntax', () => {
     expect(css).toContain(
-      '.bgColor_primary{background-color:rgb(from var(--primary) r g b / var(--toned-alpha-background-color, 1));}',
+      '.bgColor_primary{background-color:rgb(from var(--primary) r g b / calc(alpha * var(--toned-alpha-background-color, 1)));}',
     )
   })
 
@@ -106,7 +106,7 @@ describe('exec, className mode', () => {
 describe('exec, inline mode (native/email path)', () => {
   test('var() references route through relative colour syntax', () => {
     const out = exec({ bgColor: 'primary/50' }, false)
-    expect(out.style.backgroundColor).toBe('rgb(from var(--primary) r g b / 0.5)')
+    expect(out.style.backgroundColor).toBe('rgb(from var(--primary) r g b / calc(alpha * 0.5))')
   })
 
   test('literal tokens compute an rgba', () => {

@@ -65,9 +65,15 @@ export const alphaWrappable = (value: unknown): value is string =>
 /**
  * Route a colour value through relative colour syntax with the given alpha
  * expression (a literal like `0.9`, or `var(--toned-alpha-…, 1)`).
+ *
+ * `calc(alpha * …)` — MULTIPLYING the source's own alpha channel — is
+ * load-bearing: a bare `/ expr` REPLACES it, which silently turns a
+ * translucent token opaque (measured: every `--border: rgb(20 20 28 / 0.08)`
+ * hairline rendered solid, 39 of 109 showcase slugs shifted). Multiplication
+ * also matches color-mix-with-transparent semantics, which compose alphas.
  */
 export const withAlphaExpr = (colorValue: string, alphaExpr: string): string =>
-  `rgb(from ${colorValue} r g b / ${alphaExpr})`
+  `rgb(from ${colorValue} r g b / calc(alpha * ${alphaExpr}))`
 
 /**
  * Compute a literal rgba for platforms without CSS (react-native, email).
