@@ -4,7 +4,7 @@ import { cleanup, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { createElement } from 'react'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
-import { bind } from './index.ts'
+import { bind, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
 const originalConfig = getConfig()
@@ -60,5 +60,32 @@ describe('bind (mod-less)', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
     const { Root } = bind(styles)
     expect(typeof Root.with).toBe('function')
+  })
+})
+
+describe('useBind (hook, mods in the call)', () => {
+  const styles = stylesheet({
+    Root: { $$type: 'view', cur: 'pointer' },
+    Label: { $$type: 'text' },
+  }).variants<{ tone: 'a' | 'b' }>(($) => ({
+    [$.tone('a')]: { Root: { cur: 'pointer' } },
+    [$.tone('b')]: { Root: { cur: 'grab' } },
+  }))
+
+  test('mods reflect on the element; component identities stay stable', () => {
+    let firstRoot: unknown
+    let stableAcrossMods = true
+    function View({ tone }: { tone: 'a' | 'b' }) {
+      const s = useBind(styles, { tone })
+      if (firstRoot === undefined) firstRoot = s.Root
+      else if (s.Root !== firstRoot) stableAcrossMods = false
+      return createElement(s.Root, { 'data-slot': 'r' }, createElement(s.Label, null, 'x'))
+    }
+    const { rerender, container } = render(createElement(View, { tone: 'a' }))
+    const a = (container.querySelector('[data-slot="r"]') as HTMLElement).className
+    rerender(createElement(View, { tone: 'b' }))
+    const b = (container.querySelector('[data-slot="r"]') as HTMLElement).className
+    expect(stableAcrossMods).toBe(true)
+    expect(a).not.toBe(b)
   })
 })

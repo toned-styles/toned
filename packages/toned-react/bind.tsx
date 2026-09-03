@@ -1,5 +1,10 @@
-import { createElement, type ReactElement } from 'react'
+import { createElement, useRef, type ReactElement } from 'react'
 import { getConfig, SYMBOL_INIT, type Config, type ElementType } from '@toned/core'
+// Cycle-safe: index.ts imports this module for its typed re-exports, and this
+// line imports back. `useStyles` is a hoisted function declaration, so its
+// binding is live before index.ts finishes evaluating; `useBind` only calls it
+// at render time regardless. No runtime state crosses at module load.
+import { useStyles } from './index.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: the runtime binding is stylesheet-agnostic; index.ts provides the precise typed surface.
 type AnyProps = Record<string, any>
@@ -79,4 +84,32 @@ export function bind(styles: StylesheetLike): Record<string, BoundElement> {
   const map = buildBoundMap(() => instance, config)
   reflectBags(map, instance)
   return map
+}
+
+/**
+ * The general form: same arguments as `useStyles` (mods in the hook call), one
+ * resolution shared with it, but returns COMPONENTS. Element identities are
+ * stable across renders (the map is keyed on the stylesheet, built once); mods
+ * flow anew because the components read the live resolution through a ref.
+ */
+export function useBind(
+  styles: StylesheetLike,
+  ...mods: [] | [AnyProps]
+): Record<string, BoundElement> {
+  // useStyles owns the resolution + its applyState guard; its result IS the
+  // Base instance (element getters + elementDescriptors) at runtime.
+  const instance = (useStyles as (s: StylesheetLike, m?: AnyProps) => Instance)(styles, mods[0])
+
+  const liveInstance = useRef(instance)
+  liveInstance.current = instance
+
+  const mapRef = useRef<{ styles: StylesheetLike; map: Record<string, BoundElement> } | null>(null)
+  if (mapRef.current?.styles !== styles) {
+    mapRef.current = {
+      styles,
+      map: buildBoundMap(() => liveInstance.current, getConfig()),
+    }
+  }
+  reflectBags(mapRef.current.map, instance)
+  return mapRef.current.map
 }
