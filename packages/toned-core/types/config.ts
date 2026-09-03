@@ -4,7 +4,7 @@
  * @module types/config
  */
 
-import type { Tokens } from './tokens.ts'
+import type { ElementType, Tokens } from './tokens.ts'
 
 /**
  * Runtime configuration for the styling system.
@@ -64,6 +64,17 @@ export type Config = Readonly<{
   /** Get props for an element - returns style/className based on config */
   // biome-ignore lint/suspicious/noExplicitAny: context type varies by usage
   getProps(this: any, elementKey: string): Record<string, unknown>
+
+  /**
+   * Maps an element's `$$type` to the host element a binding should render for
+   * it — a React intrinsic tag on web (`view`→`'div'`), a component for native
+   * or a host override (e.g. haelo-primitives `View`/`Text`/`Image`).
+   *
+   * Only bindings (useBind/bind) read this; `getProps`-based useStyles ignores
+   * it. Optional and absent on the bare default config, so useBind throws a
+   * named error when it is missing rather than rendering the wrong element.
+   */
+  resolveElement?: (type?: ElementType) => unknown
 
   /** Initialize ref handling */
   initRef: () => void

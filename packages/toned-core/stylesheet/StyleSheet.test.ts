@@ -1060,7 +1060,7 @@ describe('elementDescriptors', () => {
       plain: { bgColor: 'red' },
     }
     const stylesheet = createStylesheet(mockTokenSystem, rules)
-    const base = stylesheet[SYMBOL_INIT](mockConfig, undefined) as Base
+    const base = stylesheet[SYMBOL_INIT](mockConfig, undefined)
 
     const got = base
       .elementDescriptors()
