@@ -488,4 +488,38 @@ describe('defineSystem', () => {
       expect(result['--toned_hover__background-color__style']).toBeUndefined()
     })
   })
+
+  describe('per-platform token resolve (§4)', () => {
+    // A token whose resolve branches on the platform carried in the context —
+    // box-shadow on web, RN shadow* props on native. This is the one core-side
+    // affordance the bound-layer spec asks for (elevation, gradients, etc.).
+    const elevation = defineToken({
+      values: ['sm'] as const,
+      resolve: (_v, _tokens, ctx) =>
+        ctx?.platform === 'native'
+          ? { shadowRadius: 4, shadowOpacity: 0.2 }
+          : { boxShadow: '0 1px 4px rgba(0,0,0,0.2)' },
+    })
+
+    test('web platform resolves to box-shadow', () => {
+      const { exec } = defineSystem({ elevation })
+      const style = exec(
+        { tokens: {}, useClassName: false, platform: 'web' },
+        { elevation: 'sm' },
+      ).style as AnyStyle
+      expect(style['boxShadow']).toBe('0 1px 4px rgba(0,0,0,0.2)')
+      expect(style['shadowRadius']).toBeUndefined()
+    })
+
+    test('native platform resolves to shadow* props', () => {
+      const { exec } = defineSystem({ elevation })
+      const style = exec(
+        { tokens: {}, useClassName: false, platform: 'native' },
+        { elevation: 'sm' },
+      ).style as AnyStyle
+      expect(style['shadowRadius']).toBe(4)
+      expect(style['shadowOpacity']).toBe(0.2)
+      expect(style['boxShadow']).toBeUndefined()
+    })
+  })
 })

@@ -52,6 +52,8 @@ export type TokenSystem<
     config: {
       tokens: Tokens
       useClassName?: boolean
+      /** Threaded into each token's `resolve` as `ctx.platform` (see ResolveContext). */
+      platform?: import('./config.ts').Platform
     },
     tokenStyle: TokenStyle<S>,
   ) => { style: object; className?: string }

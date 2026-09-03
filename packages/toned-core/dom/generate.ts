@@ -227,7 +227,10 @@ export function generate<const S extends TokenStyleDeclaration>({
         return
       }
 
-      const result = token.resolve(value, tokens)
+      // Static CSS generation is the web target, so a per-platform token
+      // resolves its web branch here (its native branch resolves inline under
+      // the RN binding, which does not use generated CSS).
+      const result = token.resolve(value, tokens, { platform: 'web' })
 
       if (!result) return
 

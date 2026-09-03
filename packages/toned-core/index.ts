@@ -29,6 +29,7 @@ export type {
   Platform,
   ModType,
   Pseudo,
+  ResolveContext,
   Stylesheet,
   StylesheetInput,
   StylesheetType,
