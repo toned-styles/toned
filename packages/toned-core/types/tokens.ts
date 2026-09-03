@@ -58,6 +58,8 @@ export type TokenConfig<Values extends readonly any[], Result> = {
   alphaSteps?: readonly number[]
   /** Element types this token applies to — see `TokenTypeConfig`. */
   $types?: readonly ElementType[]
+  /** Inheritable on a View — see `TokenInheritConfig`. */
+  inherit?: boolean
 }
 
 /** The extra shape `defineToken` preserves so `TokenStyle` can widen values. */
@@ -79,6 +81,15 @@ export type ElementType = 'view' | 'text' | 'image'
  */
 export type TokenTypeConfig = {
   $types?: readonly ElementType[]
+  /**
+   * The principled third $types state. A token declaring `$types: ['text']` is
+   * normally an ERROR on a view; marked `inherit: true` it becomes LEGAL on a
+   * view too — carried there as an inheritable value rather than a direct style.
+   * The web/native split falls out of the binding, not the stylesheet: the same
+   * declaration is CSS inheritance on web (the token emits its property on the
+   * div, which descendants inherit) and a Text context default on native.
+   */
+  inherit?: boolean
 }
 
 /**
@@ -230,7 +241,14 @@ type TokenAllowedOn<
         }
       ? ET extends TS[number]
         ? true
-        : false
+        : // Outside its $types: allowed only if the token is `inherit` AND this
+          // is a view — a view may carry an inheritable value (CSS inheritance
+          // on web, a Text context default on native).
+          C extends { inherit: true }
+          ? ET extends 'view'
+            ? true
+            : false
+          : false
       : true
   : true
 
