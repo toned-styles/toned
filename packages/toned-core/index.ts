@@ -19,6 +19,7 @@ export {
 // Re-export types for convenience
 export type {
   AnimationDefinition,
+  BridgeConfig,
   AnimationInput,
   AnimationKeyframes,
   Breakpoints,
@@ -38,6 +39,7 @@ export type {
 } from './types/index.ts'
 
 export type { TonedTypeRegistry } from './registry.ts'
+export { bridgeVarName } from './utils/css.ts'
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'
 // Type-only brands, exported so downstream declaration emission can name a

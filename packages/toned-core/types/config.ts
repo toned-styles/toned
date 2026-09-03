@@ -21,6 +21,15 @@ export type Config = Readonly<{
   getTokens: () => Tokens
 
   /**
+   * Parameter custom property → element prop, for platforms that surface a
+   * bridge as a PROP rather than CSS (react-native: placeholderTextColor,
+   * selectionColor). The binding ships conventional defaults; a host may
+   * extend via setConfig. Values are moved out of `style` into props by
+   * getProps.
+   */
+  bridgeProps?: Record<string, string>
+
+  /**
    * Which platform this runtime is. Set by the platform binding
    * (react-web → 'web', react-native → 'native'); resolves
    * `'@platform.<name>'` stylesheet keys. Unset means no platform keys apply.

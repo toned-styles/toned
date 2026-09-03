@@ -68,6 +68,22 @@ function getProps(this: Base, elementKey: string) {
 
   let result: Record<string, AnyValue>
 
+  // Bridge parameters surface as PROPS here — native has no pseudo-elements,
+  // so `--toned-b-placeholder-color` becomes placeholderTextColor et al.
+  const surfaceBridgeProps = (props: Record<string, AnyValue>) => {
+    const mapping = this.config.bridgeProps
+    const style = props['style']
+    if (!mapping || !style) return props
+    for (const varName in mapping) {
+      if (varName in style) {
+        const propName = mapping[varName]
+        if (propName !== undefined) props[propName] = style[varName]
+        delete style[varName]
+      }
+    }
+    return props
+  }
+
   if (this.matcher.interactions[elementKey]) {
     result = {
       ref,
@@ -84,6 +100,7 @@ function getProps(this: Base, elementKey: string) {
     }
   }
 
+  surfaceBridgeProps(result)
   attachWith(result)
 
   return result
@@ -92,5 +109,11 @@ function getProps(this: Base, elementKey: string) {
 export default defineConfig({
   ...reactConfig,
   platform: 'native',
+  // Conventional bridge names (see BridgeConfig): a host renaming its bridges
+  // overrides this map via setConfig.
+  bridgeProps: {
+    '--toned-b-placeholder-color': 'placeholderTextColor',
+    '--toned-b-selection-color': 'selectionColor',
+  },
   getProps,
 })

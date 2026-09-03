@@ -122,17 +122,37 @@ export type AnimationDefinition = {
 
 export type AnimationInput = AnimationKeyframes | AnimationDefinition
 
+/**
+ * A bridge: styling for a target CSS alone cannot reach from the element's
+ * own style attribute — a pseudo-element (`::placeholder`) or a descendant
+ * (` svg`). The system css emits ONE static rule per bridge reading parameter
+ * custom properties (`--toned-b-<bridge>-<prop>`), plus a boundary reset on
+ * `._` so a parameter never leaks across component boundaries; tokens then
+ * just resolve to those parameters. On platforms without CSS the same
+ * parameters surface as element PROPS through the binding's `bridgeProps`
+ * mapping (placeholderTextColor et al).
+ */
+export type BridgeConfig = {
+  /** Starts with ':' → attaches to the element (`._::placeholder`);
+   * otherwise a descendant selector suffix (`._ <selector>`). */
+  selector: string
+  /** The CSS properties the bridge rule reads, camelCase. */
+  properties: readonly string[]
+}
+
 /** Narrow an input to its two halves. */
 export const isAnimationDefinition = (a: AnimationInput): a is AnimationDefinition =>
   'keyframes' in a && typeof a.keyframes === 'object' && !Array.isArray(a.keyframes)
 
 export type TokenStyleDeclaration = {
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
-  [key: string]: TokenConfig<any, any> | Breakpoints<any> | Record<string, AnimationInput> | undefined
+  [key: string]: TokenConfig<any, any> | Breakpoints<any> | Record<string, AnimationInput> | Record<string, BridgeConfig> | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
+  /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
+  bridges?: Record<string, BridgeConfig>
 }
 
 /** Filter out 'breakpoints' key from token style keys */

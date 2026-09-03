@@ -9,6 +9,7 @@ import { isAnimationDefinition } from '../types/index.ts'
 import type {
   AnimationInput,
   Breakpoints,
+  BridgeConfig,
   StylesheetInput,
   StylesheetType,
   TokenAlphaConfig,
@@ -186,6 +187,7 @@ export function defineSystem<
     // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
     breakpoints?: Breakpoints<any>
     animations?: Record<string, AnimationInput>
+    bridges?: Record<string, BridgeConfig>
   },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {

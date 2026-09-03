@@ -46,6 +46,7 @@ export type { TokenSystem } from './system.ts'
 export { isAnimationDefinition } from './tokens.ts'
 export type {
   AnimationDefinition,
+  BridgeConfig,
   AnimationInput,
   AnimationKeyframes,
   Breakpoints,
