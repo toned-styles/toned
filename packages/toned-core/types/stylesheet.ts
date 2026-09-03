@@ -400,6 +400,7 @@ export type StylesheetInstance = {
   applyState(modsState: unknown, context?: unknown): void
   applyElementStyles(context?: unknown): void
   reapplyInteraction(elementKey: string, el: unknown): void
+  elementDescriptors(): Array<{ key: string; type?: ElementType }>
 }
 
 /**

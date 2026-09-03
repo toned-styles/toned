@@ -1,6 +1,7 @@
 import { getConfig } from '../system/config.ts'
 import type {
   Config,
+  ElementType,
   ExtractElements,
   ModType,
   PickString,
@@ -319,6 +320,24 @@ export class Base {
       this.modsState = { ...modsState }
       this.matchStyles()
     }
+  }
+
+  /**
+   * The real elements of this stylesheet, each with its declared `$$type`.
+   *
+   * A binding (useBind/bind) needs both the element list and the primitive each
+   * element selects. The list is exactly the matcher's `elementSet` minus the
+   * cross-element target keys it also carries (`source:state`, `[attr]`), and
+   * `$$type` rides on the merged rule the constructor stored in `this.rules`.
+   */
+  elementDescriptors(): Array<{ key: string; type?: ElementType }> {
+    const out: Array<{ key: string; type?: ElementType }> = []
+    for (const key of this.matcher.elementSet) {
+      if (key.includes(':') || key[0] === '[') continue
+      const rule = (this.rules as Record<string, { $$type?: ElementType }>)[key]
+      out.push({ key, type: rule?.$$type })
+    }
+    return out
   }
 
   matchStyles() {
