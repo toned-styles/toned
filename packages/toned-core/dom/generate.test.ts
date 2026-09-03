@@ -204,6 +204,32 @@ describe('generate', () => {
     })
   })
 
+  describe('declared-state cross-element channel', () => {
+    test('emits a --toned_src-<alias> channel per attribute/pseudo state', () => {
+      const result = generate({ states: { open: "[data-state='open']" } })
+
+      // self-state toggle (existing behaviour) still emits
+      expect(result).toContain('--toned_open: initial;')
+      expect(result).toContain("._[data-state='open'] {--toned_open: ;}")
+
+      // cross-element source channel: gated by the source's state, propagates to
+      // descendants, reset by a nested source (nearest-wins), NOT hover-gated
+      expect(result).toContain('--toned_src-open: initial;')
+      expect(result).toContain("._s[data-state='open'] {--toned_src-open: ;}")
+      expect(result).toContain(
+        "._s[data-state='open'] ._s {--toned_src-open: initial;}",
+      )
+      expect(result).toContain(
+        "._s[data-state='open'] ._s[data-state='open'] {--toned_src-open: ;}",
+      )
+    })
+
+    test('a :pseudo state selector attaches its source channel to ._s', () => {
+      const result = generate({ states: { disabled: ':disabled' } })
+      expect(result).toContain('._s:disabled {--toned_src-disabled: ;}')
+    })
+  })
+
   describe('skips boxed primitives', () => {
     test('skips values that are boxed Number instances', () => {
       const result = generate({

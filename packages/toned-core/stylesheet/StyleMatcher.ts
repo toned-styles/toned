@@ -80,17 +80,23 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
   cacheMax: number
 
+  private stateAliases: readonly string[]
+
   constructor(
     rules: NestedStyleRules,
     options?: {
       cssMediaMode?: boolean
       cssPseudoMode?: boolean
       cacheMax?: number
+      // Declared-state alias names, so base-level `'source:<alias>'` cross-element
+      // keys compile to the CSS src-state channel (see crossHover).
+      stateAliases?: readonly string[]
     },
   ) {
     this.cssMediaMode = options?.cssMediaMode ?? false
     this.cssPseudoMode = options?.cssPseudoMode ?? false
     this.cacheMax = options?.cacheMax ?? DEFAULT_CACHE_MAX
+    this.stateAliases = options?.stateAliases ?? []
 
     const { scheme, list, interactions, elementSet } = this.flattenRules(rules)
 
@@ -132,7 +138,8 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   }
 
   private flattenRules(rules: NestedStyleRules) {
-    if (this.cssPseudoMode) rules = resolveCrossHoverCss(rules)
+    if (this.cssPseudoMode)
+      rules = resolveCrossHoverCss(rules, this.stateAliases)
     const elementSet = new Set<string>()
     const interactions: InteractionList = {}
     const list: MatcherList = {}

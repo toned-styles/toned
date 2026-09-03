@@ -137,8 +137,17 @@ export type ElementMap<
   [E in Elements]?: TokenStyle<S>
 }
 
-/** Cross-element pseudo selectors (e.g., 'container:hover') */
-type CrossElementSelector<Elements extends string> =
+/**
+ * Cross-element selectors (e.g. `'container:hover'`, `'trigger:open'`).
+ *
+ * Interaction pseudos and their combos, PLUS a single declared-state suffix
+ * (`'trigger:open'`) — a parent's data-state styling a descendant. A single
+ * state only: compound `state:hover` cross keys stay out of the CSS channel.
+ */
+type CrossElementSelector<
+  Elements extends string,
+  S extends TokenStyleDeclaration,
+> =
   | `${Elements}:active`
   | `${Elements}:active:focus`
   | `${Elements}:active:focus:hover`
@@ -146,6 +155,7 @@ type CrossElementSelector<Elements extends string> =
   | `${Elements}:focus`
   | `${Elements}:focus:hover`
   | `${Elements}:hover`
+  | `${Elements}${InferStatePseudos<S>}`
 
 /**
  * Stylesheet input type - defines elements and cross-element selectors.
@@ -162,7 +172,7 @@ export type StylesheetInput<
     InferElementType<T, K>
   >
 } & {
-  [K in CrossElementSelector<Elements>]?: ElementMap<S, Elements>
+  [K in CrossElementSelector<Elements, S>]?: ElementMap<S, Elements>
 } & {
   [B in keyof InferBreakpoints<S> as `@${B & string}`]?: ElementMap<S, Elements>
 } & {

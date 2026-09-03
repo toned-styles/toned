@@ -56,6 +56,7 @@ function sharedMatcher(
   rules: BaseRules,
   cssMediaMode: boolean,
   cssPseudoMode: boolean,
+  stateAliases: readonly string[],
 ): StyleMatcher {
   let byMode = MATCHER_CACHE.get(rules)
   if (!byMode) {
@@ -65,7 +66,13 @@ function sharedMatcher(
   const key = (cssMediaMode ? 1 : 0) | (cssPseudoMode ? 2 : 0)
   let matcher = byMode.get(key)
   if (!matcher) {
-    matcher = new StyleMatcher(rules, { cssMediaMode, cssPseudoMode })
+    // stateAliases are constant for a given rules object (one system per
+    // stylesheet), so they never diverge across cache hits on the same rules.
+    matcher = new StyleMatcher(rules, {
+      cssMediaMode,
+      cssPseudoMode,
+      stateAliases,
+    })
     byMode.set(key, matcher)
   }
   return matcher
@@ -260,10 +267,18 @@ export class Base {
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
+    // Declared-state aliases live on the system ref (`defineSystem` spreads the
+    // config, incl. `states`, into `.system`). They drive the CSS src-state
+    // cross-element channel; absent, only `:hover` cross keys compile to CSS.
+    const stateAliases = Object.keys(
+      (this.ref as { system?: { states?: Record<string, string> } })?.system
+        ?.states ?? {},
+    )
     this.matcher = sharedMatcher(
       rules,
       mediaMode === 'css',
       pseudoMode === 'css',
+      stateAliases,
     )
 
     if (mediaMode === false && this.matcher.hasMediaRules) {

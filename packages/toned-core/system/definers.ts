@@ -265,10 +265,18 @@ export function defineSystem<
       // Declared states extend the pseudo cascade, OUTERMOST (they win over the
       // interaction pseudos): a `data-state=on` paint beats `:hover`. Config
       // order decides precedence among states.
-      const stateOrder = config?.states
-        ? Object.keys(config.states).map((k) => `:${k}` as const)
-        : []
-      const cascadeOrder = [...PSEUDO_CASCADE_ORDER, ...stateOrder]
+      const stateAliases = config?.states ? Object.keys(config.states) : []
+      const stateOrder = stateAliases.map((k) => `:${k}` as const)
+      // Their cross-element counterparts (`'source:<alias>'` → `:src-<alias>` on a
+      // descendant target) sit INNERMOST, below every self state/pseudo, so a
+      // target that also styles its own state keeps the more specific answer —
+      // exactly as `:src-hover` sits below `:hover`.
+      const srcStateOrder = stateAliases.map((k) => `:src-${k}` as const)
+      const cascadeOrder = [
+        ...srcStateOrder,
+        ...PSEUDO_CASCADE_ORDER,
+        ...stateOrder,
+      ]
       // Collect @breakpoint_prop entries for CSS variable mode
       const breakpointOverrides: Record<
         string,
