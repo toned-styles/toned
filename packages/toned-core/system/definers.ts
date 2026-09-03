@@ -26,6 +26,7 @@ import {
   alphaWrappable,
   applyAlpha,
   splitAlphaValue,
+  withAlphaExpr,
 } from '../utils/alpha.ts'
 import { camelToKebab } from '../utils/css.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -196,6 +197,41 @@ function resolveTokenValue(
     }
   }
   return tokenCfg.resolve(value, tokens, ctx)
+}
+
+/**
+ * Bring a chain value to CLASS FIDELITY: the atomic class for an
+ * alpha-channel property paints `rgb(from X r g b / calc(alpha *
+ * var(--toned-alpha-…, 1)))`, so a breakpoint/pseudo chain (whose values ride
+ * the element's inline style instead) must paint the very same expression.
+ * Without this the chain's raw value differs from the class's wrapped one by
+ * the browser's RCS serialization (measured: a hairline border shifted by
+ * 1/255 alpha the moment a state override put it on a chain) and ignores a
+ * caller's alpha parameter besides.
+ */
+function resolveForChain(
+  // biome-ignore lint/suspicious/noExplicitAny: internal dynamic token shape
+  tokenCfg: any,
+  value: unknown,
+  tokens: Tokens,
+  ctx?: ResolveContext,
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
+): Record<string, any> | undefined {
+  const resolved = resolveTokenValue(tokenCfg, value, tokens, ctx)
+  if (!resolved || !tokenCfg?.alphaChannel) return resolved
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
+  const out: Record<string, any> = {}
+  for (const prop in resolved) {
+    const propValue = resolved[prop]
+    out[prop] =
+      tokenCfg.alphaChannel.includes(prop) &&
+      alphaWrappable(propValue) &&
+      // An alpha-modifier value ('primary/90') is already wrapped.
+      !String(propValue).startsWith('rgb(from ')
+        ? withAlphaExpr(String(propValue), `var(${alphaVarName(prop)}, 1)`)
+        : propValue
+  }
+  return out
 }
 
 export function defineSystem<
@@ -466,7 +502,7 @@ export function defineSystem<
             continue
           }
           // Resolve base value (already in acc.style from the token system)
-          const resolvedBase = resolveTokenValue(
+          const resolvedBase = resolveForChain(
             system[prop],
             tokenStyle[prop],
             execConfig.tokens,
@@ -482,7 +518,7 @@ export function defineSystem<
             // Generate --media-bp__css-prop custom properties for each override
             for (const { breakpoint, value } of overrides) {
               const bpName = breakpoint.slice(1) // remove @
-              const resolved = resolveTokenValue(
+              const resolved = resolveForChain(
                 system[prop],
                 value,
                 execConfig.tokens,
@@ -573,7 +609,7 @@ export function defineSystem<
           const baseTokenValue = tokenStyle[prop]
           const resolvedBase =
             baseTokenValue != null
-              ? resolveTokenValue(
+              ? resolveForChain(
                   system[prop],
                   baseTokenValue,
                   execConfig.tokens,
@@ -596,7 +632,7 @@ export function defineSystem<
             // Generate --toned_pseudo__css-prop custom properties for each override
             for (const { pseudo, value } of overrides) {
               const pseudoName = pseudo.slice(1) // remove :
-              const resolved = resolveTokenValue(
+              const resolved = resolveForChain(
                 system[prop],
                 value,
                 execConfig.tokens,
@@ -610,12 +646,44 @@ export function defineSystem<
             }
 
             // Build fallback chain: use existing value (e.g. breakpoint chain) or base
-            const innerValue =
+            let innerValue =
               acc.style[cssProp] != null
                 ? String(acc.style[cssProp])
                 : resolvedBase?.[cssProp] != null
                   ? String(resolvedBase[cssProp])
                   : null
+
+            // The resting value for this CSS property may live on a DIFFERENT
+            // token: a resting `shadowStep: 'xs'` under a `ring` state
+            // override resolves box-shadow through another key entirely.
+            // Without this scan the chain's fallback is empty and the resting
+            // paint vanishes the moment any state override touches the
+            // property (measured: native-select lost its resting shadow-xs).
+            if (innerValue == null) {
+              for (const baseKey in tokenStyle) {
+                if (baseKey === prop || baseKey === 'style') continue
+                const cfg = system[baseKey]
+                if (!cfg || typeof cfg !== 'object' || !('resolve' in cfg))
+                  continue
+                const other = resolveForChain(
+                  cfg,
+                  tokenStyle[baseKey],
+                  execConfig.tokens,
+                  ctx,
+                )
+                if (other?.[cssProp] != null) {
+                  innerValue = String(other[cssProp])
+                  break
+                }
+              }
+              if (innerValue == null) {
+                const rawStyle = tokenStyle['style'] as
+                  | Record<string, unknown>
+                  | undefined
+                if (rawStyle && rawStyle[cssProp] != null)
+                  innerValue = String(rawStyle[cssProp])
+              }
+            }
 
             let chain = innerValue
             for (const pseudo of cascadeOrder) {
