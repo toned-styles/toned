@@ -143,8 +143,17 @@ function getProps(this: Base, elementKey: string) {
   return addWith(result)
 }
 
+// The default web element for each `$$type`. A host (e.g. haelo-primitives)
+// overrides `resolveElement` to render its own View/Text/Image instead.
+const WEB_ELEMENT_BY_TYPE: Record<string, 'div' | 'span' | 'img'> = {
+  view: 'div',
+  text: 'span',
+  image: 'img',
+}
+
 export default defineConfig({
   ...reactConfig,
   platform: 'web',
   getProps,
+  resolveElement: (type?: string) => WEB_ELEMENT_BY_TYPE[type ?? 'view'] ?? 'div',
 })
