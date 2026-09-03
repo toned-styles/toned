@@ -1,17 +1,20 @@
 import { describe, expect, test } from 'vitest'
 import {
+  CSS_ONLY_PSEUDO_STATES,
   PSEUDO_CASCADE_ORDER,
   PSEUDO_SIGNATURE_SEPARATOR,
   PSEUDO_STATES,
 } from './pseudo.ts'
 
 describe('pseudo constants', () => {
-  test('cascade order is a permutation of the tracked states (single source)', () => {
-    expect([...PSEUDO_CASCADE_ORDER].sort()).toEqual([...PSEUDO_STATES].sort())
+  test('cascade order is a permutation of tracked + css-only states (single source)', () => {
+    expect([...PSEUDO_CASCADE_ORDER].sort()).toEqual(
+      [...PSEUDO_STATES, ...CSS_ONLY_PSEUDO_STATES].sort(),
+    )
   })
 
-  test('cascade order runs :hover < :focus < :active (active outermost)', () => {
-    expect(PSEUDO_CASCADE_ORDER).toEqual([':hover', ':focus', ':active'])
+  test('cascade order runs :hover < :focus < :focus-visible < :active (active outermost)', () => {
+    expect(PSEUDO_CASCADE_ORDER).toEqual([':hover', ':focus', ':focus-visible', ':active'])
   })
 
   test('signature separator disambiguates prefix pseudos', () => {

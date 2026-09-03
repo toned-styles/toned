@@ -6,6 +6,7 @@
 
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import type {
+  AnimationKeyframes,
   Breakpoints,
   StylesheetInput,
   StylesheetType,
@@ -53,6 +54,38 @@ export function defineToken<
   const Extra extends TokenAlphaConfig = {},
 >(config: TokenConfig<Values, Result> & Extra): TokenConfig<Values, Result> & Extra {
   return config
+}
+
+/**
+ * Declare the system's named animations — the motion analogue of the token
+ * set: an enumerated, system-compiled vocabulary rather than per-component
+ * keyframes. `generate()` emits `@keyframes toned_<name>` for each, and the
+ * returned `animation` token resolves a name to its `animation-name`, so a
+ * stylesheet says `animation: 'fade-in'` (composable with duration/easing
+ * however the host tokenizes them). Platforms without CSS map the same names
+ * to their own motion backends.
+ *
+ * @example
+ * ```ts
+ * const motion = defineAnimations({
+ *   'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
+ * })
+ * const system = defineSystem(
+ *   { ...tokens, animation: motion.animation },
+ *   { breakpoints, animations: motion.animations },
+ * )
+ * ```
+ */
+export function defineAnimations<const A extends Record<string, AnimationKeyframes>>(
+  animations: A,
+) {
+  return {
+    animations,
+    animation: defineToken({
+      values: Object.keys(animations) as (keyof A & string)[],
+      resolve: value => ({ animationName: `toned_${value}` }),
+    }),
+  }
 }
 
 /**
@@ -128,8 +161,11 @@ function resolveTokenValue(
 export function defineSystem<
   // biome-ignore lint/suspicious/noExplicitAny: generic token system requires flexible types
   const S extends Record<string, TokenConfig<any, any>>,
-  // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
-  const C extends { breakpoints?: Breakpoints<any> },
+  const C extends {
+    // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
+    breakpoints?: Breakpoints<any>
+    animations?: Record<string, AnimationKeyframes>
+  },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {
     system: { ...system, ...config } as S & C,

@@ -12,7 +12,7 @@
  *   (no-platform) config.
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { defineSystem, defineToken, setConfig } from '../system/index.ts'
+import { defineSystem, defineToken } from '../system/index.ts'
 import { getConfig } from '../system/config.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'
 import { resetWarnings } from '../utils/warn.ts'

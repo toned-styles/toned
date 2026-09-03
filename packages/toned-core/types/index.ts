@@ -44,6 +44,7 @@ export type {
 export type { TokenSystem } from './system.ts'
 // Token types
 export type {
+  AnimationKeyframes,
   Breakpoints,
   InlineStyle,
   TokenAlphaConfig,

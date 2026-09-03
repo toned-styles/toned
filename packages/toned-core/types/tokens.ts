@@ -71,11 +71,21 @@ export type Breakpoints<O extends Record<string, number>> = { __breakpoints: O }
  * Token style declaration - the complete system definition.
  * Maps token names to their configurations, with optional breakpoints.
  */
+/**
+ * One animation's keyframes: step ('from' | 'to' | '50%') to raw CSS
+ * properties. Raw on purpose — keyframes are enumerated, system-compiled
+ * artifacts (like the tokens), and a var() reference in a value still resolves
+ * against the token custom properties at play time.
+ */
+export type AnimationKeyframes = Record<string, Record<string, string | number>>
+
 export type TokenStyleDeclaration = {
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
-  [key: string]: TokenConfig<any, any> | Breakpoints<any> | undefined
+  [key: string]: TokenConfig<any, any> | Breakpoints<any> | Record<string, AnimationKeyframes> | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
+  /** Named animations compiled with the system css — see `defineAnimations`. */
+  animations?: Record<string, AnimationKeyframes>
 }
 
 /** Filter out 'breakpoints' key from token style keys */

@@ -27,9 +27,27 @@ const tokens = new Proxy(
  */
 export function generate<const S extends TokenStyleDeclaration>({
   breakpoints,
+  animations,
   ...system
 }: S) {
   let styles = ''
+
+  // Named animations: enumerated and system-compiled, like the tokens. The
+  // matching `.animation_<name>` classes come from the `animation` token
+  // `defineAnimations` returns, through the ordinary token loop below.
+  if (animations) {
+    for (const [name, frames] of Object.entries(animations)) {
+      let body = ''
+      for (const [step, decl] of Object.entries(frames)) {
+        let rule = ''
+        for (const prop in decl) {
+          rule += `${camelToKebab(prop)}:${decl[prop]};`
+        }
+        body += `${step} {${rule}}`
+      }
+      styles += `@keyframes toned_${name} {${body}}`
+    }
+  }
 
   if (breakpoints) {
     const bpValues = breakpoints.__breakpoints
@@ -71,7 +89,8 @@ export function generate<const S extends TokenStyleDeclaration>({
   let alphaClasses = ''
 
   for (const key in system) {
-    const token = system[key]
+    // biome-ignore lint/suspicious/noExplicitAny: the index union narrows structurally, not by type
+    const token = system[key] as any
 
     // Skip non-token entries (like breakpoints)
     if (!token || !('values' in token) || !('resolve' in token)) continue
