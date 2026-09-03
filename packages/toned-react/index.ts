@@ -5,7 +5,7 @@ import {
   type TokenStyleDeclaration,
 } from '@toned/core'
 import { useRef, type ComponentType } from 'react'
-import { bind as _bind, type BoundElement } from './bind.tsx'
+import { bind as _bind, useBind as _useBind, type BoundElement } from './bind.tsx'
 
 /**
  * Props returned for each element in a stylesheet.
@@ -180,3 +180,14 @@ type BoundElementsOf<T> = {
  * `const { Root, Label } = bind(styles)`. The general form is `useBind`.
  */
 export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundElementsOf<T>
+
+/**
+ * The bound counterpart of `useStyles`: same arguments (mods in the hook call),
+ * returns components (`<s.Root/>`) that also carry the raw prop-bag. Mods are
+ * typed exactly as `useStyles`' — required iff the stylesheet declares them, and
+ * only declared values accepted.
+ */
+export const useBind = _useBind as <T extends StylesheetLike>(
+  stylesheet: T,
+  ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
+) => BoundElementsOf<T>
