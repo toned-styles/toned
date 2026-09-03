@@ -43,7 +43,10 @@ export type {
 // System types
 export type { TokenSystem } from './system.ts'
 // Token types
+export { isAnimationDefinition } from './tokens.ts'
 export type {
+  AnimationDefinition,
+  AnimationInput,
   AnimationKeyframes,
   Breakpoints,
   InlineStyle,

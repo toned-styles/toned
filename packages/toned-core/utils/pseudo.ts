@@ -19,7 +19,7 @@ export const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
  * native renderer simply never activates it. Runtime pseudo mode ignores
  * these; css mode treats them exactly like the tracked set.
  */
-export const CSS_ONLY_PSEUDO_STATES = [':focus-visible'] as const
+export const CSS_ONLY_PSEUDO_STATES = [':src-hover', ':focus-visible'] as const
 
 export type PseudoState = (typeof PSEUDO_STATES)[number]
 
@@ -28,6 +28,9 @@ export type PseudoState = (typeof PSEUDO_STATES)[number]
 // Typed against PSEUDO_STATES so adding a pseudo without a priority is a
 // compile error — keeping the two lists from drifting apart.
 const PSEUDO_PRIORITY: Record<PseudoState | CssOnlyPseudoState, number> = {
+  // Ancestor-driven hover sits below the element's own states: a target that
+  // also styles its own :hover keeps the more specific answer.
+  ':src-hover': -1,
   ':hover': 0,
   ':focus': 1,
   ':focus-visible': 2,

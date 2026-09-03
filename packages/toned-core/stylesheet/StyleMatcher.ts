@@ -1,4 +1,5 @@
 import { mergeStyle } from '../utils/mergeStyle.ts'
+import { resolveCrossHoverCss } from './crossHover.ts'
 import { warnOnce } from '../utils/warn.ts'
 
 // Upper bound on distinct match() results retained. The cache key is a
@@ -131,6 +132,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
   }
 
   private flattenRules(rules: NestedStyleRules) {
+    if (this.cssPseudoMode) rules = resolveCrossHoverCss(rules)
     const elementSet = new Set<string>()
     const interactions: InteractionList = {}
     const list: MatcherList = {}
@@ -233,7 +235,11 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
       elementSet.add(elementKey)
 
       for (const key in elementRule) {
-        if (key[0] === ':') {
+        if (key[0] === ':' && key.includes('_')) {
+          // Already flattened (`:src-hover_bgColor` from resolveCrossHoverCss)
+          // — pass through; the value is the style value, not a pseudo block.
+          result[`${propPrefix}${key}`] = elementRule[key]
+        } else if (key[0] === ':') {
           if (this.cssPseudoMode) {
             // CSS mode: flatten pseudo-state styles with prefixed keys
             // e.g. :hover { bgColor: 'red' } → { ':hover_bgColor': 'red' }
@@ -408,15 +414,22 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
           }
         } else if (this.isCrossElementSelector(key)) {
           // Cross-element selector like 'container:hover'.
-          // These are RUNTIME-driven even under cssPseudoMode: coordinating one
-          // element's state onto another needs JS, so mouse/focus handlers get
-          // attached regardless of the css setting. Say so rather than being a
-          // silent exception to "css mode".
+          //
+          // Under cssPseudoMode, the ':hover' form at BASE level compiles to
+          // pure CSS through the shared source channel: the source element
+          // gains the `_s` marker class and each target property rides a
+          // `--toned_src-hover` chain (toggled by `._s:hover` in the system
+          // css, hover-gated). Nearest-source-wins: a nested `_s` resets the
+          // channel, so a target answers its closest cross-element source.
+          // (Base-level ':hover' sources were rewritten to `:src-hover_*` keys
+          // by resolveCrossHoverCss before flattening — reaching here in css
+          // mode means a form the channel cannot express.)
           if (this.cssPseudoMode) {
             warnOnce(
               'cross-element-pseudo-css-mode',
               `'${key}' is a cross-element pseudo selector — it runs through runtime ` +
-                'event handlers even though pseudoMode is css. Self pseudos stay pure CSS.',
+                'event handlers even though pseudoMode is css. Self pseudos and base-level ' +
+                `':hover' sources stay pure CSS.`,
             )
           }
           const parts = key.split(':')

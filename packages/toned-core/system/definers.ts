@@ -5,8 +5,9 @@
  */
 
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
+import { isAnimationDefinition } from '../types/index.ts'
 import type {
-  AnimationKeyframes,
+  AnimationInput,
   Breakpoints,
   StylesheetInput,
   StylesheetType,
@@ -78,14 +79,32 @@ export function defineToken<
  * )
  * ```
  */
-export function defineAnimations<const A extends Record<string, AnimationKeyframes>>(
+export function defineAnimations<const A extends Record<string, AnimationInput>>(
   animations: A,
 ) {
+  const ms = (v: number | string | undefined) =>
+    v === undefined ? undefined : typeof v === 'number' ? `${v}ms` : v
   return {
     animations,
     animation: defineToken({
       values: Object.keys(animations) as (keyof A & string)[],
-      resolve: value => ({ animationName: `toned_${value}` }),
+      resolve: value => {
+        const def = animations[value]
+        const timing = def !== undefined && isAnimationDefinition(def) ? def : undefined
+        // Timing compiles INTO the animation's class, so `animation: 'pulse'`
+        // is self-contained; a consumer can still override any piece.
+        return {
+          animationName: `toned_${value}`,
+          ...(timing?.duration !== undefined && { animationDuration: ms(timing.duration) }),
+          ...(timing?.easing !== undefined && { animationTimingFunction: timing.easing }),
+          ...(timing?.delay !== undefined && { animationDelay: ms(timing.delay) }),
+          ...(timing?.iterations !== undefined && {
+            animationIterationCount: String(timing.iterations),
+          }),
+          ...(timing?.direction !== undefined && { animationDirection: timing.direction }),
+          ...(timing?.fillMode !== undefined && { animationFillMode: timing.fillMode }),
+        }
+      },
     }),
   }
 }
@@ -166,7 +185,7 @@ export function defineSystem<
   const C extends {
     // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
     breakpoints?: Breakpoints<any>
-    animations?: Record<string, AnimationKeyframes>
+    animations?: Record<string, AnimationInput>
   },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {
