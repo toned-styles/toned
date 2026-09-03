@@ -119,7 +119,7 @@ function resolveElement(type?: string): never {
     `useBind/bind on native need a host resolveElement (got $$type ${JSON.stringify(
       type,
     )}). Install one via setConfig before the first bound component renders — ` +
-      `e.g. @lib/haelo-primitives mapping view→View, text→Text, image→Image. ` +
+      `e.g. @lib/haelo-primitives mapping view→View, text→Text, image→Image, pressable→Pressable. ` +
       `toned-react ships no native default because it has no react-native dependency.`,
   )
 }

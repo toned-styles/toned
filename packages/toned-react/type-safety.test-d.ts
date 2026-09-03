@@ -79,6 +79,26 @@ export function BoundVariantedMods() {
   return null
 }
 
+// `as` infers the target's interface: intrinsic props for a tag, the
+// component's own props for a component. The no-`as` signature forbids `as`,
+// so a failed `as` call cannot fall through to it and silently pass.
+export function BoundAs() {
+  const s = useBind(plain)
+  const Needs = (_props: { x: number; className?: string }) => null
+
+  s.container({ as: 'button', type: 'submit' })
+  s.container({ as: Needs, x: 1, className: 'y' })
+  // @ts-expect-error — 'href' is not a button prop
+  s.container({ as: 'button', href: '/nope' })
+  // @ts-expect-error — an anchor's `type` is a string, not a number
+  s.container({ as: 'a', type: 2 })
+  // @ts-expect-error — Needs requires `x`
+  s.container({ as: Needs })
+  // @ts-expect-error — `x` must be a number
+  s.container({ as: Needs, x: 'one' })
+  return null
+}
+
 export function ModlessBind() {
   const { container } = bind(plain)
   container.with({ className: 'x' })
