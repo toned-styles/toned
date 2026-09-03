@@ -10,7 +10,7 @@ export { SYMBOL_INIT } from '../utils/symbols.ts'
 export type { _symInit, _symRef } from '../utils/symbols.ts'
 export type { _internalBrand } from './stylesheet.ts'
 // Config types
-export type { Config } from './config.ts'
+export type { Config, Platform } from './config.ts'
 // Stylesheet types.
 // StylesheetInstance and the brand declarations (_internalBrand, _symRef,
 // _symInit) are exported so a host package can EXPORT a stylesheet: without
@@ -47,8 +47,10 @@ export type {
   AnimationKeyframes,
   Breakpoints,
   InlineStyle,
+  ElementType,
   TokenAlphaConfig,
   TokenConfig,
+  TokenTypeConfig,
   TokenKeys,
   TokenStyle,
   TokenStyleDeclaration,

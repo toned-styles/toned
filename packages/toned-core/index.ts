@@ -20,17 +20,21 @@ export {
 export type {
   Breakpoints,
   Config,
+  ElementType,
+  Platform,
   ModType,
   Pseudo,
   Stylesheet,
   StylesheetInput,
   StylesheetType,
   TokenConfig,
+  TokenTypeConfig,
   TokenStyle,
   TokenStyleDeclaration,
   Tokens,
 } from './types/index.ts'
 
+export type { TonedTypeRegistry } from './registry.ts'
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'
 // Type-only brands, exported so downstream declaration emission can name a

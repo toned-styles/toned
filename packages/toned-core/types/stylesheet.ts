@@ -5,8 +5,9 @@
  */
 
 import type { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
-import type { Config } from './config.ts'
+import type { Config, Platform } from './config.ts'
 import type {
+  ElementType,
   Breakpoints,
   TokenStyle,
   TokenStyleDeclaration,
@@ -77,14 +78,36 @@ export type ElementStyleNew<
   S extends TokenStyleDeclaration,
   AvailablePseudo extends string = Pseudo,
   AvailableBreakpoints extends StringOrNumber = keyof InferBreakpoints<S>,
-> = TokenStyle<S> & {
-  /** Element type hint for React Native */
-  $$type?: 'view' | 'text' | 'image'
+  ET extends ElementType | undefined = undefined,
+> = TokenStyle<S, ET> & {
+  /**
+   * The element's primitive type. Declaring one constrains which tokens the
+   * element accepts to those whose `$types` include it — how a stylesheet
+   * stays compliant with React Native, where e.g. text styling exists only on
+   * Text. Undeclared elements accept every token.
+   */
+  $$type?: ElementType
 } & {
-  [P in AvailablePseudo]?: TokenStyle<S>
+  [P in AvailablePseudo]?: TokenStyle<S, ET>
 } & {
-  [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S>
+  [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S, ET>
+} & {
+  /**
+   * Platform-conditional styling: the block matching the running config's
+   * `platform` merges into this element (winning over siblings); other
+   * platforms' blocks are dropped before compilation. See utils/platform.ts.
+   */
+  [P in Platform as `@platform.${P}`]?: TokenStyle<S, ET> & {
+    [Q in AvailablePseudo]?: TokenStyle<S, ET>
+  }
 }
+
+/** The `$$type` an element declared in the input, if any. */
+type InferElementType<T, K> = K extends keyof T
+  ? T[K] extends { $$type: infer TT extends ElementType }
+    ? TT
+    : undefined
+  : undefined
 
 /** Extract element names from stylesheet input (excluding selectors) */
 export type ExtractElements<T> = {
@@ -126,11 +149,14 @@ export type StylesheetInput<
   T,
   Elements extends string = PickString<ExtractElements<T>>,
 > = {
-  [K in Elements]?: ElementStyleNew<S>
+  [K in Elements]?: ElementStyleNew<S, Pseudo, keyof InferBreakpoints<S>, InferElementType<T, K>>
 } & {
   [K in CrossElementSelector<Elements>]?: ElementMap<S, Elements>
 } & {
   [B in keyof InferBreakpoints<S> as `@${B & string}`]?: ElementMap<S, Elements>
+} & {
+  /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
+  [P in Platform as `@platform.${P}`]?: ElementMap<S, Elements>
 }
 
 // =============================================================================
@@ -414,7 +440,9 @@ export type PreVariantsStylesheet<
  * Stylesheet factory function type.
  */
 export type StylesheetType<S extends TokenStyleDeclaration> = <
-  T extends StylesheetInput<S, T>,
+  // `const`: without it an element's `$$type: 'view'` literal widens to
+  // string during inference and the token constraint silently never applies.
+  const T extends StylesheetInput<S, T>,
 >(
   style: T,
 ) => PreVariantsStylesheet<

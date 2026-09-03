@@ -11,7 +11,8 @@
     "./stylesheet": "./stylesheet/index.ts",
     "./system": "./system/index.ts",
     "./utils": "./utils/index.ts",
-    "./vite": "./vite/index.ts"
+    "./vite": "./vite/index.ts",
+    "./registry": "./registry.ts"
   },
   "publishConfig": {
     "access": "public",
