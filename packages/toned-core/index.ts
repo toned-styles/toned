@@ -7,6 +7,7 @@
 export type { TokenSystem } from './system/index.ts'
 // System definition and configuration
 export {
+  defineAnimations,
   defineConfig,
   defineSystem,
   defineToken,

@@ -14,7 +14,7 @@ declare const process: { env?: Record<string, string | undefined> } | undefined
 
 const isDev = (): boolean => {
   try {
-    return typeof process !== 'undefined' && process?.env?.NODE_ENV !== 'production'
+    return typeof process !== 'undefined' && process?.env?.['NODE_ENV'] !== 'production'
   } catch {
     return true
   }

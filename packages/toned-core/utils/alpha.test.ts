@@ -21,7 +21,8 @@ const textColor = defineToken({
 
 const system = defineSystem({ bgColor, textColor })
 
-const exec = (style: Record<string, unknown>, useClassName: boolean) =>
+// biome-ignore lint/suspicious/noExplicitAny: tests inspect dynamic style output
+const exec = (style: Record<string, unknown>, useClassName: boolean): any =>
   system.exec(
     {
       tokens: new Proxy({}, { get: (_t, p: string) => `var(--${p})` }),
@@ -110,7 +111,8 @@ describe('exec, inline mode (native/email path)', () => {
 
   test('literal tokens compute an rgba', () => {
     const literalTokens = { primary: '#2f54eb' }
-    const out = system.exec(
+    // biome-ignore lint/suspicious/noExplicitAny: tests inspect dynamic style output
+    const out: any = system.exec(
       { tokens: literalTokens, useClassName: false },
       // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
       { bgColor: 'primary/50' } as any,
@@ -129,5 +131,40 @@ describe('alphaLiteral', () => {
   test('rgb()/rgba() forms compose alphas', () => {
     expect(alphaLiteral('rgb(20 20 28)', 0.3)).toBe('rgba(20, 20, 28, 0.3)')
     expect(alphaLiteral('rgb(20 20 28 / 0.5)', 0.5)).toBe('rgba(20, 20, 28, 0.25)')
+  })
+})
+
+describe('defineAnimations', async () => {
+  const { defineAnimations } = await import('../system/index.ts')
+  const motion = defineAnimations({
+    'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
+    'zoom-in-95': {
+      from: { opacity: 0, transform: 'scale(0.95)' },
+      to: { opacity: 1, transform: 'scale(1)' },
+    },
+  })
+  const animSystem = defineSystem(
+    { bgColor, animation: motion.animation },
+    { animations: motion.animations },
+  )
+
+  test('keyframes are compiled with the system', () => {
+    const css = generate(animSystem.system)
+    expect(css).toContain('@keyframes toned_fade-in {from {opacity:0;}to {opacity:1;}}')
+    expect(css).toContain('@keyframes toned_zoom-in-95 {')
+  })
+
+  test('the animation token emits its class through the ordinary loop', () => {
+    const css = generate(animSystem.system)
+    expect(css).toContain('.animation_fade-in{animation-name:toned_fade-in;}')
+  })
+
+  test('a stylesheet references an animation by name', () => {
+    const out = animSystem.exec(
+      { tokens: {}, useClassName: true },
+      // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
+      { animation: 'fade-in' } as any,
+    )
+    expect(out.className).toContain('animation_fade-in')
   })
 })
