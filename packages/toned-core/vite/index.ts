@@ -6,10 +6,24 @@ const RESOLVED_ID = '\0virtual:toned.css'
 
 export interface TonedPluginOptions {
   system: TokenStyleDeclaration
+  /**
+   * Wrap the generated stylesheet in a CSS cascade layer.
+   *
+   * A host that also runs a utility framework needs toned's atomic classes to
+   * sit at a chosen point in the cascade — e.g. `layer: 'components'` under
+   * Tailwind's `theme, base, components, utilities` order lets a caller's
+   * utility className still override a component's toned styling, exactly as
+   * it could override the component's own classes before toned. Unlayered
+   * (the default), the generated rules beat every layered rule on the page.
+   */
+  layer?: string
 }
 
 export default function toned(options: TonedPluginOptions) {
-  const css = generate(options.system)
+  const generated = generate(options.system)
+  const css = options.layer
+    ? `@layer ${options.layer} {\n${generated}\n}`
+    : generated
 
   return {
     name: 'toned',

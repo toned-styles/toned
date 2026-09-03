@@ -37,6 +37,32 @@ export const overflowY = defineCssToken('overflowY', [
 
 const paddingValues = [
   new Number(),
+  // The common steps of the 4px scale, enumerated as literals so static CSS
+  // generation (`dom/generate.ts`) can emit an atomic class for each and the
+  // runtime resolves them by className instead of an inline style. The boxed
+  // Number above still covers any other value dynamically — an off-scale
+  // number simply resolves inline, exactly as every number did before.
+  0,
+  0.5,
+  1,
+  1.5,
+  2,
+  2.5,
+  3,
+  3.5,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  14,
+  16,
+  20,
+  24,
   'xxsmal',
   'xsmall',
   'small',

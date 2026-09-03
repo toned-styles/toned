@@ -79,7 +79,13 @@ export function generate<const S extends TokenStyleDeclaration>({
 
       const ruleKey = `${key}_${value}`
 
-      cssRule = `.${ruleKey}{${cssRule}}`
+      // The class NAME may contain characters that are valid in a class
+      // attribute but meta-characters in a selector — `paddingX_0.5` needs to
+      // be matched as `.paddingX_0\.5`. Escape the selector, not the name: the
+      // runtime emits the unescaped form into className.
+      const selector = ruleKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
+
+      cssRule = `.${selector}{${cssRule}}`
 
       styles += cssRule
     })
