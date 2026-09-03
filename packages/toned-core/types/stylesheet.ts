@@ -30,7 +30,7 @@ export type Pseudo = ':hover' | ':active' | ':focus'
 export type PickString<K> = K extends string ? K : never
 
 /** Brand symbol for internal type discrimination */
-declare const _internalBrand: unique symbol
+export declare const _internalBrand: unique symbol
 
 
 /** Merge tuple of objects into intersection type */

@@ -1,4 +1,5 @@
 import { mergeStyle } from '../utils/mergeStyle.ts'
+import { warnOnce } from '../utils/warn.ts'
 
 // Upper bound on distinct match() results retained. The cache key is a
 // schema-derived bitmask (a finite space), but never evicting means a
@@ -71,6 +72,10 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
   // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
   cache = new Map<number, any>()
+
+  /** Whether any rule keys on a breakpoint — lets the host warn when media
+   * handling is disabled and these styles would be silently dropped. */
+  hasMediaRules = false
 
   cacheMax: number
 
@@ -260,6 +265,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
           traverseMod(selector, mod, modValue, currentRule)
         } else if (key[0] === '@') {
+          this.hasMediaRules = true
           if (this.cssMediaMode) {
             // CSS mode: flatten breakpoint styles with prefixed keys
             // e.g. @sm { bgColor: 'red' } → { '@sm_bgColor': 'red' }
@@ -376,6 +382,7 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
             traverse(currentSelector, transformedRule, propPrefix)
           }
         } else if (key[0] === '@') {
+          this.hasMediaRules = true
           if (this.cssMediaMode) {
             // CSS mode: flatten root-level breakpoint into each element's rule
             // e.g. '@md': { link: { paddingX: 4 } } → link: { '@md_paddingX': 4 }
@@ -400,7 +407,18 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
             traverseMod(selector, mod, modValue, node[key])
           }
         } else if (this.isCrossElementSelector(key)) {
-          // Cross-element selector like 'container:hover'
+          // Cross-element selector like 'container:hover'.
+          // These are RUNTIME-driven even under cssPseudoMode: coordinating one
+          // element's state onto another needs JS, so mouse/focus handlers get
+          // attached regardless of the css setting. Say so rather than being a
+          // silent exception to "css mode".
+          if (this.cssPseudoMode) {
+            warnOnce(
+              'cross-element-pseudo-css-mode',
+              `'${key}' is a cross-element pseudo selector — it runs through runtime ` +
+                'event handlers even though pseudoMode is css. Self pseudos stay pure CSS.',
+            )
+          }
           const parts = key.split(':')
           const elementName = parts[0]
           if (!elementName) return

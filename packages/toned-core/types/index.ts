@@ -7,11 +7,18 @@
 // Only export SYMBOL_INIT publicly (used by toned-react)
 // Other symbols are internal and should be imported from utils/symbols.ts directly
 export { SYMBOL_INIT } from '../utils/symbols.ts'
+export type { _symInit, _symRef } from '../utils/symbols.ts'
+export type { _internalBrand } from './stylesheet.ts'
 // Config types
 export type { Config } from './config.ts'
-// Stylesheet types
+// Stylesheet types.
+// StylesheetInstance and the brand declarations (_internalBrand, _symRef,
+// _symInit) are exported so a host package can EXPORT a stylesheet: without
+// public names for them, declaration emission dies on TS4023 at every
+// `export const styles = stylesheet(...)` that crosses a package boundary.
 export type {
   ElementMap,
+  StylesheetInstance,
   ElementStyleNew,
   ExtractElements,
   ExtractNamedStyles,

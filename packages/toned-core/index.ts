@@ -32,3 +32,6 @@ export type {
 
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'
+// Type-only brands, exported so downstream declaration emission can name a
+// stylesheet's inferred type across package boundaries (TS4023 otherwise).
+export type { _internalBrand, _symInit, _symRef, StylesheetInstance } from './types/index.ts'

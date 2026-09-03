@@ -11,8 +11,8 @@
  */
 
 // Type-level unique symbol declarations
-declare const _symRef: unique symbol
-declare const _symInit: unique symbol
+export declare const _symRef: unique symbol
+export declare const _symInit: unique symbol
 declare const _symVariants: unique symbol
 declare const _symStyle: unique symbol
 declare const _symAccess: unique symbol
