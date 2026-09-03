@@ -361,7 +361,11 @@ export class Base {
   // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
   applyTokens(value: ElementStyle): any {
     return this.ref.exec(
-      { tokens: this.tokens, useClassName: this.config.useClassName },
+      {
+        tokens: this.tokens,
+        useClassName: this.config.useClassName,
+        platform: this.config.platform,
+      },
       value,
     )
   }

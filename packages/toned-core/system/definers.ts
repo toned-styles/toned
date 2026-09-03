@@ -10,6 +10,7 @@ import type {
   AnimationInput,
   Breakpoints,
   BridgeConfig,
+  ResolveContext,
   StylesheetInput,
   StylesheetType,
   TokenAlphaConfig,
@@ -171,13 +172,14 @@ function resolveTokenValue(
   tokenCfg: any,
   value: unknown,
   tokens: Tokens,
+  ctx?: ResolveContext,
   // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
 ): Record<string, any> | undefined {
   if (!tokenCfg) return undefined
   if (tokenCfg.alphaChannel) {
     const parsed = splitAlphaValue(value)
     if (parsed && tokenCfg.values.includes(parsed.base)) {
-      const resolved = tokenCfg.resolve(parsed.base, tokens) as Record<
+      const resolved = tokenCfg.resolve(parsed.base, tokens, ctx) as Record<
         string,
         unknown
       >
@@ -193,7 +195,7 @@ function resolveTokenValue(
       return out
     }
   }
-  return tokenCfg.resolve(value, tokens)
+  return tokenCfg.resolve(value, tokens, ctx)
 }
 
 export function defineSystem<
@@ -239,7 +241,11 @@ export function defineSystem<
           const tokens = config.getTokens()
 
           return ref.exec(
-            { tokens, useClassName: config.useClassName },
+            {
+              tokens,
+              useClassName: config.useClassName,
+              platform: config.platform,
+            },
             resolvePlatformKeys(value, config.platform) as TokenStyle<S & C>,
           ).style
         },
@@ -248,7 +254,11 @@ export function defineSystem<
           const tokens = config.getTokens()
 
           return ref.exec(
-            { tokens, useClassName: config.useClassName },
+            {
+              tokens,
+              useClassName: config.useClassName,
+              platform: config.platform,
+            },
             resolvePlatformKeys(value, config.platform) as TokenStyle<S & C>,
           ).className
         },
@@ -262,6 +272,9 @@ export function defineSystem<
       return createStylesheet(ref as any, rules)
     }) as StylesheetType<S & C>,
     exec: (execConfig, tokenStyle) => {
+      // Threaded into every token's resolve so a token can branch per platform
+      // (elevation → box-shadow on web, shadow* on native). See ResolveContext.
+      const ctx: ResolveContext = { platform: execConfig.platform }
       // Declared states extend the pseudo cascade, OUTERMOST (they win over the
       // interaction pseudos): a `data-state=on` paint beats `:hover`. Config
       // order decides precedence among states.
@@ -374,6 +387,7 @@ export function defineSystem<
             const resolved = tokenCfg.resolve(
               parsed.base,
               execConfig.tokens,
+              ctx,
             ) as Record<string, unknown>
             for (const prop in resolved) {
               const value = resolved[prop]
@@ -395,7 +409,7 @@ export function defineSystem<
           continue
         }
 
-        Object.assign(acc.style, tokenCfg?.resolve(v, execConfig.tokens))
+        Object.assign(acc.style, tokenCfg?.resolve(v, execConfig.tokens, ctx))
       }
 
       // Process breakpoint overrides into CSS variable fallback chains
@@ -454,6 +468,7 @@ export function defineSystem<
             system[prop],
             tokenStyle[prop],
             execConfig.tokens,
+            ctx,
           )
           if (!resolvedBase) continue
 
@@ -469,6 +484,7 @@ export function defineSystem<
                 system[prop],
                 value,
                 execConfig.tokens,
+                ctx,
               )
               if (!resolved?.[cssProp]) continue
 
@@ -559,6 +575,7 @@ export function defineSystem<
                   system[prop],
                   baseTokenValue,
                   execConfig.tokens,
+                  ctx,
                 )
               : null
 
@@ -567,6 +584,7 @@ export function defineSystem<
             system[prop],
             overrides[0]?.value,
             execConfig.tokens,
+            ctx,
           )
           if (!sampleResolved) continue
 
@@ -580,6 +598,7 @@ export function defineSystem<
                 system[prop],
                 value,
                 execConfig.tokens,
+                ctx,
               )
               if (!resolved?.[cssProp]) continue
 

@@ -33,10 +33,20 @@ export type Tokens = Record<string, any>
  * }
  * ```
  */
+/**
+ * Context passed to a token's `resolve` as its third argument, so a token can
+ * resolve differently per platform where CSS and native genuinely diverge
+ * (`elevation` → box-shadow on web, shadow* props on native; also gradients,
+ * backdrop-filter, ::selection). Optional and additive — a two-arg resolver is
+ * unaffected. `platform` is whatever `Config.platform` carries at exec time
+ * (`'web'` during static CSS generation, `'native'` under the RN binding).
+ */
+export type ResolveContext = { platform?: import('./config.ts').Platform }
+
 // biome-ignore lint/suspicious/noExplicitAny: const generic requires any[] for tuple inference
 export type TokenConfig<Values extends readonly any[], Result> = {
   values: Values
-  resolve: (value: Values[number], tokens: Tokens) => Result
+  resolve: (value: Values[number], tokens: Tokens, ctx?: ResolveContext) => Result
   /**
    * CSS properties in `resolve`'s result that carry this token's colour.
    * Declaring it enables the alpha modifier — `bgColor: 'primary/90'` — see

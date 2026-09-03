@@ -52,6 +52,7 @@ export type {
   Breakpoints,
   InlineStyle,
   ElementType,
+  ResolveContext,
   TokenAlphaConfig,
   TokenConfig,
   TokenTypeConfig,
