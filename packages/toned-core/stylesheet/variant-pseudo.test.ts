@@ -78,7 +78,7 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
     const base = (alphaSheet as any)[SYMBOL_INIT](config, {})
     const style = base.getCurrentStyle('root').style
     expect(style['--toned_hover__background-color']).toBe(
-      'var(--toned_hover) rgb(from var(--primary) r g b / 0.9)',
+      'var(--toned_hover) rgb(from var(--primary) r g b / calc(alpha * 0.9))',
     )
   })
 })
