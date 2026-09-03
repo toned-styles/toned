@@ -23,8 +23,15 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
    * Implemented by `addWith` in react-web.ts / react-native.ts, so it exists
    * only when one of those configs is installed — `@toned/react/config` alone
    * has no `getProps` and yields bare elements with no `with`.
+   *
+   * The return type CARRIES the passed props: `{...s.root.with({ value })}`
+   * must still satisfy a consumer whose `value` is required — with() merges
+   * className/style/ref/handlers and passes everything else through.
    */
-  with: (props: TokenStyle<S> | Record<string, unknown> | false | null | undefined) => ElementProps<S>
+  with: <P extends TokenStyle<S> | Record<string, unknown> | false | null | undefined>(
+    props: P,
+  ) => ElementProps<S> &
+    (P extends Record<string, unknown> ? Omit<P, 'className' | 'style' | 'ref' | 'with'> : {})
 } & InteractionHandlerProps
 
 /**

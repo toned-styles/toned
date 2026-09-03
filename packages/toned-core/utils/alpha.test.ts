@@ -200,17 +200,17 @@ describe('bridges', async () => {
     expect(css).toContain('._::placeholder {color: var(--toned-b-placeholder-color, inherit);}')
   })
 
-  test('descendant bridges target under the element', () => {
+  test('descendant bridges compile class-scoped — no always-on rule', () => {
+    // An always-on `._ svg` rule cascade-wins over component css even when its
+    // parameter is unset; the setter class carries the rule instead.
+    expect(css).not.toContain('._ svg')
     expect(css).toContain(
-      "._ svg:not([class*='size-']) {width: var(--toned-b-icon-width, initial);height: var(--toned-b-icon-height, initial);}",
+      ".iconSize_4 svg:not([class*='size-']) {width:calc(var(--base) * 4);height:calc(var(--base) * 4);}",
     )
   })
 
-  test('the boundary reset stops parameters at component boundaries', () => {
-    expect(css).toContain(
-      '._ {--toned-b-placeholder-color: initial;--toned-b-icon-width: initial;--toned-b-icon-height: initial;}',
-    )
-    // ...and precedes the setter classes, so a setter wins on order.
+  test('pseudo-element parameters keep their boundary reset, before setters', () => {
+    expect(css).toContain('._ {--toned-b-placeholder-color: initial;}')
     expect(css.indexOf('._ {--toned-b-placeholder-color')).toBeLessThan(
       css.indexOf('.placeholderColor_muted'),
     )
@@ -218,7 +218,6 @@ describe('bridges', async () => {
 
   test('bridge tokens are ordinary tokens — atomic classes and all', () => {
     expect(css).toContain('.placeholderColor_muted{--toned-b-placeholder-color:var(--muted);}')
-    expect(css).toContain('.iconSize_4{--toned-b-icon-width:calc(var(--base) * 4);--toned-b-icon-height:calc(var(--base) * 4);}')
     const out = bridgeSystem.exec(
       { tokens: new Proxy({}, { get: (_t, p: string) => `var(--${String(p)})` }), useClassName: true },
       // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
