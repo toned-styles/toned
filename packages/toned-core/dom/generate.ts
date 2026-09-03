@@ -38,14 +38,33 @@ export function generate<const S extends TokenStyleDeclaration>({
   // boundary reset so a parameter never inherits across component boundaries.
   // The reset precedes every token class (emitted below), so a setter class
   // beats it on order at equal specificity; an inline parameter wins outright.
+  //
+  // The unset fallback must preserve the property's pre-bridge behavior:
+  // INHERITED properties fall back to `inherit` (an icon with no iconColor
+  // keeps inheriting its parent's colour — `initial` painted them black),
+  // everything else to `initial`.
   if (bridges) {
+    const INHERITED = new Set([
+      'color',
+      'fontFamily',
+      'fontSize',
+      'fontStyle',
+      'fontWeight',
+      'letterSpacing',
+      'lineHeight',
+      'textAlign',
+      'textTransform',
+      'visibility',
+      'cursor',
+    ])
     let resets = ''
     for (const [name, bridge] of Object.entries(bridges)) {
       let rule = ''
       for (const prop of bridge.properties) {
         const varName = bridgeVarName(name, prop)
         resets += `${varName}: initial;`
-        rule += `${camelToKebab(prop)}: var(${varName}, initial);`
+        const fallback = INHERITED.has(prop) ? 'inherit' : 'initial'
+        rule += `${camelToKebab(prop)}: var(${varName}, ${fallback});`
       }
       const target = bridge.selector.startsWith(':')
         ? `._${bridge.selector}`
