@@ -37,6 +37,21 @@ export type Tokens = Record<string, any>
 export type TokenConfig<Values extends readonly any[], Result> = {
   values: Values
   resolve: (value: Values[number], tokens: Tokens) => Result
+  /**
+   * CSS properties in `resolve`'s result that carry this token's colour.
+   * Declaring it enables the alpha modifier — `bgColor: 'primary/90'` — see
+   * `utils/alpha.ts` for the whole mechanism.
+   */
+  alphaChannel?: readonly string[]
+  /** Alpha percentages that get a static atomic class (default: 5…95 by 5).
+   * Off-scale values still work via an inline parameter custom property. */
+  alphaSteps?: readonly number[]
+}
+
+/** The extra shape `defineToken` preserves so `TokenStyle` can widen values. */
+export type TokenAlphaConfig = {
+  alphaChannel?: readonly string[]
+  alphaSteps?: readonly number[]
 }
 
 /**
@@ -99,6 +114,11 @@ export type TokenStyle<S extends TokenStyleDeclaration> = Partial<{
     // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
     TokenConfig<any, unknown>
   > extends TokenConfig<infer V, unknown>
-    ? V[number]
+    ? // A token that declared an alphaChannel also accepts `'value/alpha'`.
+      // The presence test is on a REQUIRED alphaChannel, so the open system
+      // (where the field is merely optional) stays exactly as strict as before.
+      Extract<S[key], { alphaChannel: readonly string[] }> extends never
+      ? V[number]
+      : V[number] | `${V[number] & string}/${number}`
     : never
 }> & { style?: InlineStyle }

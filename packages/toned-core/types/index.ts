@@ -46,6 +46,7 @@ export type { TokenSystem } from './system.ts'
 export type {
   Breakpoints,
   InlineStyle,
+  TokenAlphaConfig,
   TokenConfig,
   TokenKeys,
   TokenStyle,

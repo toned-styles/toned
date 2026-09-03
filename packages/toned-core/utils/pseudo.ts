@@ -12,25 +12,38 @@
  */
 export const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
 
+/**
+ * States that resolve through the CSS variable chains but have NO runtime
+ * event pairing — web-only graceful enhancement. `:focus-visible` is the
+ * canonical member: the browser decides it, no JS event reports it, and a
+ * native renderer simply never activates it. Runtime pseudo mode ignores
+ * these; css mode treats them exactly like the tracked set.
+ */
+export const CSS_ONLY_PSEUDO_STATES = [':focus-visible'] as const
+
 export type PseudoState = (typeof PSEUDO_STATES)[number]
 
 // Cascade precedence for CSS variable fallback chains: a higher number sits
 // further out, so it wins. `:active` overrides `:focus` overrides `:hover`.
 // Typed against PSEUDO_STATES so adding a pseudo without a priority is a
 // compile error — keeping the two lists from drifting apart.
-const PSEUDO_PRIORITY: Record<PseudoState, number> = {
+const PSEUDO_PRIORITY: Record<PseudoState | CssOnlyPseudoState, number> = {
   ':hover': 0,
   ':focus': 1,
-  ':active': 2,
+  ':focus-visible': 2,
+  ':active': 3,
 }
+
+export type CssOnlyPseudoState = (typeof CSS_ONLY_PSEUDO_STATES)[number]
 
 /**
  * The pseudo-states in cascade order (outermost/highest priority last). Derived
  * from {@link PSEUDO_STATES}, so it is always a permutation of the tracked set.
  */
-export const PSEUDO_CASCADE_ORDER: PseudoState[] = [...PSEUDO_STATES].sort(
-  (a, b) => PSEUDO_PRIORITY[a] - PSEUDO_PRIORITY[b],
-)
+export const PSEUDO_CASCADE_ORDER: (PseudoState | CssOnlyPseudoState)[] = [
+  ...PSEUDO_STATES,
+  ...CSS_ONLY_PSEUDO_STATES,
+].sort((a, b) => PSEUDO_PRIORITY[a] - PSEUDO_PRIORITY[b])
 
 /**
  * Separator used to join an element's active pseudos into a signature string.
