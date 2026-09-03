@@ -5,6 +5,13 @@
  */
 
 export { defineConfig, getConfig, setConfig } from './config.ts'
+export { definePalette } from './palette.ts'
+export type {
+  Palette,
+  PaletteConfig,
+  ThemeMeta,
+  ThemeValue,
+} from './palette.ts'
 export type { TokenSystem } from './definers.ts'
 export {
   defineAnimations,

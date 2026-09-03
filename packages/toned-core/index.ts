@@ -12,6 +12,7 @@ export {
   defineSystem,
   defineToken,
   defineUnit,
+  definePalette,
   getConfig,
   setConfig,
 } from './system/index.ts'
@@ -38,6 +39,12 @@ export type {
   Tokens,
 } from './types/index.ts'
 
+export type {
+  Palette,
+  PaletteConfig,
+  ThemeMeta,
+  ThemeValue,
+} from './system/index.ts'
 export type { TonedTypeRegistry } from './registry.ts'
 export { bridgeVarName } from './utils/css.ts'
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
