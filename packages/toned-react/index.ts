@@ -4,7 +4,8 @@ import {
   type TokenStyle,
   type TokenStyleDeclaration,
 } from '@toned/core'
-import { useRef } from 'react'
+import { useRef, type ComponentType } from 'react'
+import { bind as _bind, type BoundElement } from './bind.tsx'
 
 /**
  * Props returned for each element in a stylesheet.
@@ -160,3 +161,22 @@ export function useStyles<T extends StylesheetLike>(
 
   return ref.current?.result
 }
+
+/**
+ * A bound stylesheet: each declared element becomes a component that renders the
+ * primitive its `$$type` selects (via the config's `resolveElement`) with the
+ * resolved styles applied, and ALSO carries the raw prop-bag (`.with`/`.style`/
+ * `.className`) for escape-hatch spreading. Keys are exactly the declared
+ * elements — `s.Nope` is a compile error, not `any`.
+ */
+type BoundElementsOf<T> = {
+  [K in keyof InferElements<T>]: ComponentType<Record<string, unknown>> &
+    InferElements<T>[K] &
+    BoundElement
+}
+
+/**
+ * Mod-less module-level binding for a stylesheet with no variants:
+ * `const { Root, Label } = bind(styles)`. The general form is `useBind`.
+ */
+export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundElementsOf<T>
