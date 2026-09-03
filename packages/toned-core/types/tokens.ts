@@ -141,18 +141,38 @@ export type BridgeConfig = {
 }
 
 /** Narrow an input to its two halves. */
-export const isAnimationDefinition = (a: AnimationInput): a is AnimationDefinition =>
-  'keyframes' in a && typeof a.keyframes === 'object' && !Array.isArray(a.keyframes)
+export const isAnimationDefinition = (
+  a: AnimationInput,
+): a is AnimationDefinition =>
+  'keyframes' in a &&
+  typeof a.keyframes === 'object' &&
+  !Array.isArray(a.keyframes)
 
 export type TokenStyleDeclaration = {
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
-  [key: string]: TokenConfig<any, any> | Breakpoints<any> | Record<string, AnimationInput> | Record<string, BridgeConfig> | undefined
+  [key: string]:
+    | TokenConfig<any, any>
+    | Breakpoints<any>
+    | Record<string, AnimationInput>
+    | Record<string, BridgeConfig>
+    | Record<string, string>
+    | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
   /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
   bridges?: Record<string, BridgeConfig>
+  /**
+   * Static state selectors — the attribute/pseudo analogue of breakpoints.
+   * A `states: { open: "[data-state='open']" }` declaration lets a stylesheet
+   * write `':open': { bgColor: 'accent' }`, compiled to the same self-scoped
+   * custom-property toggle machinery as `:hover` (no runtime). Declared states
+   * sit OUTERMOST in the cascade — a `data-state` paint beats `:hover`, which
+   * is what a radix component's "on"/"open" state must do. Alias → selector;
+   * the selector is applied to the element (`._<selector>`).
+   */
+  states?: Record<string, string>
 }
 
 /** Filter out 'breakpoints' key from token style keys */
@@ -189,10 +209,15 @@ export type InlineStyle = TonedTypeRegistry extends { inlineStyle: infer T }
  * Does a token apply to an element of type ET? Untyped elements (ET =
  * undefined) accept everything; tokens without `$types` apply everywhere.
  */
-type TokenAllowedOn<C, ET extends ElementType | undefined> = ET extends ElementType
+type TokenAllowedOn<
+  C,
+  ET extends ElementType | undefined,
+> = ET extends ElementType
   ? Extract<C, { $types: readonly ElementType[] }> extends never
     ? true
-    : Extract<C, { $types: readonly ElementType[] }> extends { $types: infer TS extends readonly ElementType[] }
+    : Extract<C, { $types: readonly ElementType[] }> extends {
+          $types: infer TS extends readonly ElementType[]
+        }
       ? ET extends TS[number]
         ? true
         : false
@@ -202,7 +227,8 @@ type TokenAllowedOn<C, ET extends ElementType | undefined> = ET extends ElementT
 export type TokenStyle<
   S extends TokenStyleDeclaration,
   ET extends ElementType | undefined = undefined,
-> = TokenStyleAllowed<S, ET> & TokenStyleForbidden<S, ET> & { style?: InlineStyle }
+> = TokenStyleAllowed<S, ET> &
+  TokenStyleForbidden<S, ET> & { style?: InlineStyle }
 
 type TokenStyleAllowed<
   S extends TokenStyleDeclaration,
@@ -219,7 +245,9 @@ type TokenStyleAllowed<
   //
   // The `as` clause drops tokens whose `$types` excludes this element's
   // declared `$$type` — they are not offered, and using one is an error.
-  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true ? key : never]: Extract<
+  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true
+    ? key
+    : never]: Extract<
     S[key],
     // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
     TokenConfig<any, unknown>
@@ -245,6 +273,8 @@ type TokenStyleForbidden<
   ET extends ElementType | undefined,
 > = ET extends ElementType
   ? {
-      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false ? key : never]?: never
+      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false
+        ? key
+        : never]?: never
     }
   : {}

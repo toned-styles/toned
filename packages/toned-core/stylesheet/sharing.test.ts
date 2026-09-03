@@ -19,7 +19,7 @@ import { resetWarnings } from '../utils/warn.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent'] as const,
-  resolve: value => ({ backgroundColor: value }),
+  resolve: (value) => ({ backgroundColor: value }),
 })
 
 const system = defineSystem(
@@ -42,7 +42,8 @@ const baseConfig = {
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
-const init = (sheet: any, config: any, state = {}) => sheet[SYMBOL_INIT](config, state)
+const init = (sheet: any, config: any, state = {}) =>
+  sheet[SYMBOL_INIT](config, state)
 
 beforeEach(() => {
   resetWarnings()
@@ -70,8 +71,12 @@ describe('shared compiled matcher', () => {
   })
 
   test('different stylesheets never share', () => {
-    const a = init(system.stylesheet({ root: { bgColor: 'base' } }), { ...baseConfig })
-    const b = init(system.stylesheet({ root: { bgColor: 'accent' } }), { ...baseConfig })
+    const a = init(system.stylesheet({ root: { bgColor: 'base' } }), {
+      ...baseConfig,
+    })
+    const b = init(system.stylesheet({ root: { bgColor: 'accent' } }), {
+      ...baseConfig,
+    })
     expect(a.matcher).not.toBe(b.matcher)
   })
 })
@@ -84,7 +89,11 @@ describe('shared media emitter', () => {
     ;(globalThis as any).window = { matchMedia }
 
     const sheet = system.stylesheet({ root: { bgColor: 'base' } })
-    const runtimeConfig = { ...baseConfig, useMedia: true, mediaMode: 'runtime' as const }
+    const runtimeConfig = {
+      ...baseConfig,
+      useMedia: true,
+      mediaMode: 'runtime' as const,
+    }
     init(sheet, runtimeConfig)
     const callsAfterFirst = matchMedia.mock.calls.length
     expect(callsAfterFirst).toBeGreaterThan(0)
@@ -103,7 +112,9 @@ describe('loud failure modes', () => {
     })
     init(sheet, { ...baseConfig, mediaMode: false as const })
     init(sheet, { ...baseConfig, mediaMode: false as const })
-    const hits = warn.mock.calls.filter(c => String(c[0]).includes('silently dropped'))
+    const hits = warn.mock.calls.filter((c) =>
+      String(c[0]).includes('silently dropped'),
+    )
     expect(hits.length).toBe(1)
   })
 
@@ -113,14 +124,19 @@ describe('loud failure modes', () => {
       ...baseConfig,
       mediaMode: false as const,
     })
-    expect(warn.mock.calls.filter(c => String(c[0]).includes('silently dropped')).length).toBe(0)
+    expect(
+      warn.mock.calls.filter((c) => String(c[0]).includes('silently dropped'))
+        .length,
+    ).toBe(0)
   })
 
   test('resolving under the default config names the missing platform install', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     getConfig().getProps.call({} as never, 'root')
     getConfig().getProps.call({} as never, 'root')
-    const hits = warn.mock.calls.filter(c => String(c[0]).includes('platform config'))
+    const hits = warn.mock.calls.filter((c) =>
+      String(c[0]).includes('platform config'),
+    )
     expect(hits.length).toBe(1)
   })
 
@@ -135,7 +151,10 @@ describe('loud failure modes', () => {
       }),
       { ...baseConfig, pseudoMode: 'css' as const },
     )
-    expect(warn.mock.calls.filter(c => String(c[0]).includes('cross-element')).length).toBe(0)
+    expect(
+      warn.mock.calls.filter((c) => String(c[0]).includes('cross-element'))
+        .length,
+    ).toBe(0)
     // focus: no css channel — runtime handlers, said out loud.
     init(
       system.stylesheet({
@@ -145,6 +164,9 @@ describe('loud failure modes', () => {
       }),
       { ...baseConfig, pseudoMode: 'css' as const },
     )
-    expect(warn.mock.calls.filter(c => String(c[0]).includes('cross-element')).length).toBe(1)
+    expect(
+      warn.mock.calls.filter((c) => String(c[0]).includes('cross-element'))
+        .length,
+    ).toBe(1)
   })
 })

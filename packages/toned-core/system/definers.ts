@@ -56,7 +56,9 @@ export function defineToken<
   // Preserved so TokenStyle can see whether the token declared an alphaChannel
   // and widen its accepted values to `'value/alpha'`.
   const Extra extends TokenAlphaConfig & TokenTypeConfig = {},
->(config: TokenConfig<Values, Result> & Extra): TokenConfig<Values, Result> & Extra {
+>(
+  config: TokenConfig<Values, Result> & Extra,
+): TokenConfig<Values, Result> & Extra {
   return config
 }
 
@@ -80,30 +82,41 @@ export function defineToken<
  * )
  * ```
  */
-export function defineAnimations<const A extends Record<string, AnimationInput>>(
-  animations: A,
-) {
+export function defineAnimations<
+  const A extends Record<string, AnimationInput>,
+>(animations: A) {
   const ms = (v: number | string | undefined) =>
     v === undefined ? undefined : typeof v === 'number' ? `${v}ms` : v
   return {
     animations,
     animation: defineToken({
       values: Object.keys(animations) as (keyof A & string)[],
-      resolve: value => {
+      resolve: (value) => {
         const def = animations[value]
-        const timing = def !== undefined && isAnimationDefinition(def) ? def : undefined
+        const timing =
+          def !== undefined && isAnimationDefinition(def) ? def : undefined
         // Timing compiles INTO the animation's class, so `animation: 'pulse'`
         // is self-contained; a consumer can still override any piece.
         return {
           animationName: `toned_${value}`,
-          ...(timing?.duration !== undefined && { animationDuration: ms(timing.duration) }),
-          ...(timing?.easing !== undefined && { animationTimingFunction: timing.easing }),
-          ...(timing?.delay !== undefined && { animationDelay: ms(timing.delay) }),
+          ...(timing?.duration !== undefined && {
+            animationDuration: ms(timing.duration),
+          }),
+          ...(timing?.easing !== undefined && {
+            animationTimingFunction: timing.easing,
+          }),
+          ...(timing?.delay !== undefined && {
+            animationDelay: ms(timing.delay),
+          }),
           ...(timing?.iterations !== undefined && {
             animationIterationCount: String(timing.iterations),
           }),
-          ...(timing?.direction !== undefined && { animationDirection: timing.direction }),
-          ...(timing?.fillMode !== undefined && { animationFillMode: timing.fillMode }),
+          ...(timing?.direction !== undefined && {
+            animationDirection: timing.direction,
+          }),
+          ...(timing?.fillMode !== undefined && {
+            animationFillMode: timing.fillMode,
+          }),
         }
       },
     }),
@@ -164,7 +177,10 @@ function resolveTokenValue(
   if (tokenCfg.alphaChannel) {
     const parsed = splitAlphaValue(value)
     if (parsed && tokenCfg.values.includes(parsed.base)) {
-      const resolved = tokenCfg.resolve(parsed.base, tokens) as Record<string, unknown>
+      const resolved = tokenCfg.resolve(parsed.base, tokens) as Record<
+        string,
+        unknown
+      >
       // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
       const out: Record<string, any> = {}
       for (const prop in resolved) {
@@ -188,6 +204,7 @@ export function defineSystem<
     breakpoints?: Breakpoints<any>
     animations?: Record<string, AnimationInput>
     bridges?: Record<string, BridgeConfig>
+    states?: Record<string, string>
   },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {
@@ -245,6 +262,13 @@ export function defineSystem<
       return createStylesheet(ref as any, rules)
     }) as StylesheetType<S & C>,
     exec: (execConfig, tokenStyle) => {
+      // Declared states extend the pseudo cascade, OUTERMOST (they win over the
+      // interaction pseudos): a `data-state=on` paint beats `:hover`. Config
+      // order decides precedence among states.
+      const stateOrder = config?.states
+        ? Object.keys(config.states).map((k) => `:${k}` as const)
+        : []
+      const cascadeOrder = [...PSEUDO_CASCADE_ORDER, ...stateOrder]
       // Collect @breakpoint_prop entries for CSS variable mode
       const breakpointOverrides: Record<
         string,
@@ -308,14 +332,19 @@ export function defineSystem<
           continue
         }
 
-        const tokenCfg = system[k] as (TokenConfig<readonly unknown[], {}> & TokenAlphaConfig) | undefined
+        const tokenCfg = system[k] as
+          | (TokenConfig<readonly unknown[], {}> & TokenAlphaConfig)
+          | undefined
 
         // The alpha modifier: `'primary/90'` on a token that declared an
         // alphaChannel. See utils/alpha.ts for the whole mechanism.
         if (tokenCfg?.alphaChannel) {
           const parsed = splitAlphaValue(v)
           if (parsed && tokenCfg.values.includes(parsed.base)) {
-            if (execConfig.useClassName && tokenCfg.values.includes(parsed.base)) {
+            if (
+              execConfig.useClassName &&
+              tokenCfg.values.includes(parsed.base)
+            ) {
               const steps = tokenCfg.alphaSteps ?? DEFAULT_ALPHA_STEPS
               acc.className ??= ''
               acc.className += ` ${k}_${parsed.base}`
@@ -334,13 +363,16 @@ export function defineSystem<
             // Inline path (no className mode, or native): resolve the base and
             // alpha the channel values directly — var() refs route through
             // relative colour syntax, literals compute an rgba.
-            const resolved = tokenCfg.resolve(parsed.base, execConfig.tokens) as Record<
-              string,
-              unknown
-            >
+            const resolved = tokenCfg.resolve(
+              parsed.base,
+              execConfig.tokens,
+            ) as Record<string, unknown>
             for (const prop in resolved) {
               const value = resolved[prop]
-              if (tokenCfg.alphaChannel.includes(prop) && alphaWrappable(value)) {
+              if (
+                tokenCfg.alphaChannel.includes(prop) &&
+                alphaWrappable(value)
+              ) {
                 resolved[prop] = applyAlpha(value, parsed.alpha / 100)
               }
             }
@@ -375,7 +407,8 @@ export function defineSystem<
             const allCssProps = new Set<string>()
             for (const { value } of overrides) {
               if (value && typeof value === 'object') {
-                for (const cssProp in value as Record<string, unknown>) allCssProps.add(cssProp)
+                for (const cssProp in value as Record<string, unknown>)
+                  allCssProps.add(cssProp)
               }
             }
             for (const cssProp of allCssProps) {
@@ -387,17 +420,21 @@ export function defineSystem<
                 acc.style[`--media-${bpName}__${kebabProp}__style`] =
                   `var(--media-${bpName}) ${styleVal[cssProp]}`
               }
-              const baseValue = acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
+              const baseValue =
+                acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
               for (const [bpKey] of sortedBps) {
                 if (
-                  overrides.some(o => {
+                  overrides.some((o) => {
                     const sv = o.value as Record<string, unknown> | null
                     return o.breakpoint === `@${bpKey}` && sv?.[cssProp] != null
                   })
                 ) {
                   const varName = `--media-${bpKey}__${kebabProp}__style`
-                  chain = chain === null ? `var(${varName})` : `var(${varName}, ${chain})`
+                  chain =
+                    chain === null
+                      ? `var(${varName})`
+                      : `var(${varName}, ${chain})`
                 }
               }
               if (chain !== null) acc.style[cssProp] = chain
@@ -420,7 +457,11 @@ export function defineSystem<
             // Generate --media-bp__css-prop custom properties for each override
             for (const { breakpoint, value } of overrides) {
               const bpName = breakpoint.slice(1) // remove @
-              const resolved = resolveTokenValue(system[prop], value, execConfig.tokens)
+              const resolved = resolveTokenValue(
+                system[prop],
+                value,
+                execConfig.tokens,
+              )
               if (!resolved?.[cssProp]) continue
 
               const varName = `--media-${bpName}__${kebabProp}`
@@ -481,7 +522,7 @@ export function defineSystem<
               const baseValue =
                 acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
-              for (const pseudo of PSEUDO_CASCADE_ORDER) {
+              for (const pseudo of cascadeOrder) {
                 if (
                   overrides.some((o) => {
                     const sv = o.value as Record<string, unknown> | null
@@ -506,7 +547,11 @@ export function defineSystem<
           const baseTokenValue = tokenStyle[prop]
           const resolvedBase =
             baseTokenValue != null
-              ? resolveTokenValue(system[prop], baseTokenValue, execConfig.tokens)
+              ? resolveTokenValue(
+                  system[prop],
+                  baseTokenValue,
+                  execConfig.tokens,
+                )
               : null
 
           // Get CSS property names from any override's resolution
@@ -523,7 +568,11 @@ export function defineSystem<
             // Generate --toned_pseudo__css-prop custom properties for each override
             for (const { pseudo, value } of overrides) {
               const pseudoName = pseudo.slice(1) // remove :
-              const resolved = resolveTokenValue(system[prop], value, execConfig.tokens)
+              const resolved = resolveTokenValue(
+                system[prop],
+                value,
+                execConfig.tokens,
+              )
               if (!resolved?.[cssProp]) continue
 
               const varName = `--toned_${pseudoName}__${kebabProp}`
@@ -540,7 +589,7 @@ export function defineSystem<
                   : null
 
             let chain = innerValue
-            for (const pseudo of PSEUDO_CASCADE_ORDER) {
+            for (const pseudo of cascadeOrder) {
               if (overrides.some((o) => o.pseudo === pseudo)) {
                 const pseudoName = pseudo.slice(1)
                 const varName = `--toned_${pseudoName}__${kebabProp}`

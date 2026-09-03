@@ -35,7 +35,12 @@ export default function toned(options: TonedPluginOptions) {
         return css
       }
     },
-    transformIndexHtml(_html: string, ctx: { server?: { moduleGraph: { urlToModuleMap: Map<string, unknown> } } }) {
+    transformIndexHtml(
+      _html: string,
+      ctx: {
+        server?: { moduleGraph: { urlToModuleMap: Map<string, unknown> } }
+      },
+    ) {
       if (!ctx.server) return
 
       const cssLinks = Array.from(ctx.server.moduleGraph.urlToModuleMap.keys())

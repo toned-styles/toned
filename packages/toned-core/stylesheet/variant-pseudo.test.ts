@@ -15,10 +15,14 @@ const bgColor = defineToken({
   alphaChannel: ['backgroundColor'],
 })
 
-const system = defineSystem({ bgColor }, { breakpoints: { __breakpoints: { md: 768 } } })
+const system = defineSystem(
+  { bgColor },
+  { breakpoints: { __breakpoints: { md: 768 } } },
+)
 
 const config = {
-  getTokens: () => new Proxy({}, { get: (_t, p: string) => `var(--${String(p)})` }),
+  getTokens: () =>
+    new Proxy({}, { get: (_t, p: string) => `var(--${String(p)})` }),
   useClassName: false,
   useMedia: false,
   mediaMode: false as const,
@@ -36,7 +40,7 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
     .stylesheet({
       root: { bgColor: 'muted' },
     })
-    .variants<{ variant: 'solid' | 'ghost' }>($ => ({
+    .variants<{ variant: 'solid' | 'ghost' }>(($) => ({
       [$.variant('solid')]: {
         root: { bgColor: 'primary', ':hover': { bgColor: 'accent' } },
       },
@@ -54,7 +58,9 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
 
   test('the variant carries its own hover chain', () => {
     const style = styleFor({ variant: 'solid' })
-    expect(style['--toned_hover__background-color']).toBe('var(--toned_hover) var(--accent)')
+    expect(style['--toned_hover__background-color']).toBe(
+      'var(--toned_hover) var(--accent)',
+    )
     expect(style.backgroundColor).toBe(
       'var(--toned_hover__background-color, var(--primary))',
     )
@@ -62,7 +68,9 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
 
   test('a different variant carries a different hover', () => {
     const style = styleFor({ variant: 'ghost' })
-    expect(style['--toned_hover__background-color']).toBe('var(--toned_hover) var(--muted)')
+    expect(style['--toned_hover__background-color']).toBe(
+      'var(--toned_hover) var(--muted)',
+    )
   })
 
   test('no runtime interaction handlers are armed for self pseudos in css mode', () => {
@@ -118,7 +126,9 @@ describe('css-only group hover (source channel)', () => {
     expect(icon['--toned_src-hover__background-color']).toBe(
       'var(--toned_src-hover) var(--accent)',
     )
-    expect(icon['--toned_hover__background-color']).toBe('var(--toned_hover) var(--primary)')
+    expect(icon['--toned_hover__background-color']).toBe(
+      'var(--toned_hover) var(--primary)',
+    )
     expect(icon.backgroundColor).toBe(
       'var(--toned_hover__background-color, var(--toned_src-hover__background-color, var(--muted)))',
     )
@@ -144,8 +154,62 @@ describe('breakpoint raw-style chains', () => {
     })
     const mediaConfig = { ...config, useMedia: true, mediaMode: 'css' as const }
     // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
-    const style = (sheet as any)[SYMBOL_INIT](mediaConfig, {}).getCurrentStyle('root').style
-    expect(style['--media-md__font-size__style']).toBe('var(--media-md) 0.875rem')
+    const style = (sheet as any)
+      [SYMBOL_INIT](mediaConfig, {})
+      .getCurrentStyle('root').style
+    expect(style['--media-md__font-size__style']).toBe(
+      'var(--media-md) 0.875rem',
+    )
     expect(style.fontSize).toBe('var(--media-md__font-size__style, 1rem)')
+  })
+})
+
+describe('declared states (data-state / attribute selectors)', () => {
+  const stateSystem = defineSystem(
+    { bgColor },
+    {
+      breakpoints: { __breakpoints: { md: 768 } },
+      states: {
+        open: "[data-state='open']",
+        checked: '[data-state="checked"]',
+      },
+    },
+  )
+  const css = generate(stateSystem.system)
+
+  test('each state emits a self-scoped, ungated toggle with nested reset', () => {
+    expect(css).toContain('html {--toned_open: initial;}')
+    expect(css).toContain(
+      "._[data-state='open'] {--toned_open: ;} ._[data-state='open'] ._ {--toned_open: initial;} ._[data-state='open'] ._[data-state='open'] {--toned_open: ;}",
+    )
+    // not hover-gated
+    expect(css).not.toContain('@media (hover: hover) {._[data-state')
+  })
+
+  test("a stylesheet's ':open' key rides the chain, OUTERMOST (beats :hover)", () => {
+    const sheet = stateSystem.stylesheet({
+      root: {
+        bgColor: 'muted',
+        ':hover': { bgColor: 'accent' },
+        ':open': { bgColor: 'primary' },
+      },
+    })
+    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
+    const style = (sheet as any)
+      [SYMBOL_INIT](
+        { ...config, useMedia: true, mediaMode: 'css' as const },
+        {},
+      )
+      .getCurrentStyle('root').style
+    expect(style['--toned_open__background-color']).toBe(
+      'var(--toned_open) var(--primary)',
+    )
+    expect(style['--toned_hover__background-color']).toBe(
+      'var(--toned_hover) var(--accent)',
+    )
+    // open wraps outermost → a data-state=open paint wins over :hover
+    expect(style.backgroundColor).toBe(
+      'var(--toned_open__background-color, var(--toned_hover__background-color, var(--muted)))',
+    )
   })
 })

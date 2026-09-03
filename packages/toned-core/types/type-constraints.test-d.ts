@@ -7,13 +7,13 @@ import { defineSystem, defineToken } from '../system/index.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent'] as const,
-  resolve: value => ({ backgroundColor: value }),
+  resolve: (value) => ({ backgroundColor: value }),
 })
 
 // A text-only token: RN has no colour on views, only on Text.
 const textColor = defineToken({
   values: ['body', 'faint'] as const,
-  resolve: value => ({ color: value }),
+  resolve: (value) => ({ color: value }),
   $types: ['text'],
 })
 
@@ -70,10 +70,26 @@ system.stylesheet({
 
 const washable = defineToken({
   values: ['base'] as const,
-  resolve: value => ({ backgroundColor: value }),
+  resolve: (value) => ({ backgroundColor: value }),
   alphaChannel: ['backgroundColor'],
 })
 const washSystem = defineSystem({ washable })
 washSystem.stylesheet({ root: { washable: 'base/50' } })
+
+// --- declared states -> ':alias' keys ---------------------------------------
+const stateSys = defineSystem(
+  { bgColor },
+  { states: { open: "[data-state='open']" } },
+)
+stateSys.stylesheet({
+  root: {
+    bgColor: 'base',
+    ':open': { bgColor: 'accent' },
+    ':hover': { bgColor: 'accent' },
+  },
+})
+// (An undeclared state key like ':closed' gets no toggle at runtime — proven
+// in stylesheet/variant-pseudo.test.ts; excess-property checking through this
+// deep intersection is unreliable, so it is asserted at runtime, not here.)
 
 export {}
