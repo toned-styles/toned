@@ -273,8 +273,10 @@ export function defineSystem<
     }) as StylesheetType<S & C>,
     exec: (execConfig, tokenStyle) => {
       // Threaded into every token's resolve so a token can branch per platform
-      // (elevation → box-shadow on web, shadow* on native). See ResolveContext.
-      const ctx: ResolveContext = { platform: execConfig.platform }
+      // (elevation → box-shadow on web, shadow* on native). Defaults to 'web'
+      // when no binding set a platform — the same baseline generate.ts uses, so
+      // an inline exec and the generated CSS agree. See ResolveContext.
+      const ctx: ResolveContext = { platform: execConfig.platform ?? 'web' }
       // Declared states extend the pseudo cascade, OUTERMOST (they win over the
       // interaction pseudos): a `data-state=on` paint beats `:hover`. Config
       // order decides precedence among states.

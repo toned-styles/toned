@@ -38,10 +38,15 @@ export type Tokens = Record<string, any>
  * resolve differently per platform where CSS and native genuinely diverge
  * (`elevation` → box-shadow on web, shadow* props on native; also gradients,
  * backdrop-filter, ::selection). Optional and additive — a two-arg resolver is
- * unaffected. `platform` is whatever `Config.platform` carries at exec time
- * (`'web'` during static CSS generation, `'native'` under the RN binding).
+ * unaffected.
+ *
+ * `platform` is always set when a context is passed: it is `Config.platform`
+ * when a binding set one, and defaults to `'web'` otherwise — the SAME value
+ * static CSS generation uses (`generate.ts` resolves with `'web'`). So the
+ * convention a token follows is **branch on `'native'`**; `'web'` is the
+ * baseline both the inline and the generated paths agree on.
  */
-export type ResolveContext = { platform?: import('./config.ts').Platform }
+export type ResolveContext = { platform: import('./config.ts').Platform }
 
 // biome-ignore lint/suspicious/noExplicitAny: const generic requires any[] for tuple inference
 export type TokenConfig<Values extends readonly any[], Result> = {

@@ -110,15 +110,17 @@ function getProps(this: Base, elementKey: string) {
 // react-native dependency (and must not), so it cannot name View/Text/Image
 // itself. The NATIVE HOST supplies the resolver — `@lib/haelo-primitives`
 // installs a `resolveElement` returning its own View/Text/Image via setConfig,
-// exactly as it would override any config field. Until one is installed,
-// `useBind`/`bind` on native throw here rather than render a wrong element.
+// exactly as it would override any config field. `buildBoundMap` calls this
+// LAZILY on first render (not at bind time), so this throws when a bound
+// component actually renders with no host installed — not while a module is
+// merely imported — and any `setConfig` before that first render is in time.
 function resolveElement(type?: string): never {
   throw new Error(
     `useBind/bind on native need a host resolveElement (got $$type ${JSON.stringify(
       type,
-    )}). Install one via setConfig — e.g. @lib/haelo-primitives mapping ` +
-      `view→View, text→Text, image→Image. toned-react ships no native default ` +
-      `because it has no react-native dependency.`,
+    )}). Install one via setConfig before the first bound component renders — ` +
+      `e.g. @lib/haelo-primitives mapping view→View, text→Text, image→Image. ` +
+      `toned-react ships no native default because it has no react-native dependency.`,
   )
 }
 
