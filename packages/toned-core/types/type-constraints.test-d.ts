@@ -41,6 +41,34 @@ system.stylesheet({
   },
 })
 
+// --- inherit: a text token a View may carry as an inheritable value (§2) ------
+// On web this is CSS inheritance (the token emits `color` on the div, which
+// descendants inherit); on native the binding turns it into a Text context
+// default. Marked `inherit`, it is LEGAL on a view despite $types: ['text'].
+const inheritText = defineToken({
+  values: ['body', 'faint'] as const,
+  resolve: (value) => ({ color: value }),
+  $types: ['text'],
+  inherit: true,
+})
+const inheritSys = defineSystem({ bgColor, textColor, inheritText })
+
+inheritSys.stylesheet({
+  // A View provides the inheritable text value — legal because inherit: true.
+  container: { $$type: 'view', inheritText: 'body' },
+  // …and it stays legal on its natural home, a text element.
+  label: { $$type: 'text', inheritText: 'faint' },
+})
+
+// A non-inherit text token is still forbidden on a view (regression guard).
+inheritSys.stylesheet({
+  container: {
+    $$type: 'view',
+    // @ts-expect-error — textColor has no inherit flag; a view cannot take it
+    textColor: 'body',
+  },
+})
+
 // --- '@platform.<name>' keys -------------------------------------------------
 
 system.stylesheet({
