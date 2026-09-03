@@ -115,6 +115,11 @@ export function useStyles<T extends StylesheetLike>(
 
   if (ref.current?.state !== state) {
     ref.current.result.applyState(state)
+    // Record what was applied so a caller holding a STABLE mods object skips
+    // applyState entirely on re-render. (An inline literal still differs by
+    // identity every render; for those, applyState's own value-equality check
+    // is the short-circuit.) Without this line the guard never held for anyone.
+    ref.current.state = state
   }
 
   return ref.current?.result
