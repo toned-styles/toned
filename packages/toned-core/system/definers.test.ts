@@ -523,3 +523,52 @@ describe('defineSystem', () => {
     })
   })
 })
+
+describe('exec() chain fidelity (css pseudo mode, className on)', () => {
+  // biome-ignore lint/suspicious/noExplicitAny: test-side dynamic style shape
+  type AnyStyle = Record<string, any>
+
+  const shadowStep = defineToken({
+    values: ['rest'] as const,
+    resolve: () => ({ boxShadow: '0 1px 2px 0 #000' }),
+  })
+  const ring = defineToken({
+    values: ['focus'] as const,
+    resolve: () => ({ boxShadow: '0 0 0 3px #f00' }),
+  })
+  const borderColor = defineToken({
+    values: ['input'] as const,
+    resolve: () => ({ borderColor: 'var(--input)' }),
+    alphaChannel: ['borderColor'],
+  })
+
+  test('a resting value on ANOTHER token survives as the chain fallback', () => {
+    // In className mode the resting box-shadow is an atomic class, so the
+    // chain built for the state override must dig it out of the OTHER base
+    // token — without that, the resting paint vanishes the moment any state
+    // override touches the property (native-select lost its shadow-xs).
+    const { exec } = defineSystem({ shadowStep, ring })
+    const style = exec(
+      { tokens: {}, useClassName: true },
+      { shadowStep: 'rest', ':focus-visible_ring': 'focus' },
+    ).style as AnyStyle
+    expect(String(style['boxShadow'])).toContain('--toned_focus-visible__box-shadow')
+    expect(String(style['boxShadow'])).toContain('0 1px 2px 0 #000')
+  })
+
+  test('alpha-channel chain values carry the class-fidelity RCS wrapper', () => {
+    // The atomic class paints rgb(from X r g b / calc(alpha * var(…, 1))).
+    // The chain must paint the SAME expression for both the override var and
+    // the resting fallback, or the browser serializes the two forms a hair
+    // apart (a 1/255 alpha shift on every hairline the drain touched).
+    const { exec } = defineSystem({ borderColor })
+    const style = exec(
+      { tokens: {}, useClassName: true },
+      { borderColor: 'input', ':focus-visible_borderColor': 'input' },
+    ).style as AnyStyle
+    const wrapped =
+      'rgb(from var(--input) r g b / calc(alpha * var(--toned-alpha-border-color, 1)))'
+    expect(String(style['--toned_focus-visible__border-color'])).toContain(wrapped)
+    expect(String(style['borderColor'])).toContain(wrapped)
+  })
+})
