@@ -18,6 +18,9 @@ export {
 
 // Re-export types for convenience
 export type {
+  AnimationDefinition,
+  AnimationInput,
+  AnimationKeyframes,
   Breakpoints,
   Config,
   ElementType,

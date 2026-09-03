@@ -13,8 +13,14 @@ describe('pseudo constants', () => {
     )
   })
 
-  test('cascade order runs :hover < :focus < :focus-visible < :active (active outermost)', () => {
-    expect(PSEUDO_CASCADE_ORDER).toEqual([':hover', ':focus', ':focus-visible', ':active'])
+  test('cascade order runs :src-hover < :hover < :focus < :focus-visible < :active', () => {
+    expect(PSEUDO_CASCADE_ORDER).toEqual([
+      ':src-hover',
+      ':hover',
+      ':focus',
+      ':focus-visible',
+      ':active',
+    ])
   })
 
   test('signature separator disambiguates prefix pseudos', () => {

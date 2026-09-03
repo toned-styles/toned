@@ -14,6 +14,9 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   // biome-ignore lint/suspicious/noExplicitAny: dynamic style object
   style?: Record<string, any>
   className?: string
+  /** Present so React re-attaches interaction state on commit — safe to spread. */
+  // biome-ignore lint/suspicious/noExplicitAny: platform node type varies
+  ref?: (node: any) => void
   /**
    * Layer one-off token styles (and plain props) onto this element.
    *
@@ -22,9 +25,35 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
    * has no `getProps` and yields bare elements with no `with`.
    */
   with: (props: TokenStyle<S> | Record<string, unknown> | false | null | undefined) => ElementProps<S>
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic element attributes
-  [key: string]: any
-}
+} & InteractionHandlerProps
+
+/**
+ * The event handlers the platform binding attaches when a stylesheet declares
+ * runtime interactions for an element (react-web: mouse/focus; react-native:
+ * press/hover/focus). Spread them; do not rely on their presence — css pseudo
+ * mode attaches none. Typed explicitly rather than through an index signature
+ * so `s.el.anything` stopped silently typing as `any`.
+ */
+type InteractionHandlerProps = Partial<{
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onMouseEnter: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onMouseLeave: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onMouseDown: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onFocus: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onBlur: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onPressIn: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onPressOut: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onHoverIn: (event: any) => void
+  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  onHoverOut: (event: any) => void
+}>
 
 /** Composition methods on a stylesheet — never element names. */
 type StylesheetMethod = 'variants' | 'extend'

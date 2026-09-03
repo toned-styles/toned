@@ -124,15 +124,27 @@ describe('loud failure modes', () => {
     expect(hits.length).toBe(1)
   })
 
-  test('cross-element pseudo under css pseudo mode says it runs through runtime handlers', () => {
+  test('base-level cross-element :hover compiles to css silently; :focus pairs warn', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const sheet = system.stylesheet({
-      root: { bgColor: 'base' },
-      label: { bgColor: 'base' },
-      'root:hover': { label: { bgColor: 'accent' } },
-    })
-    init(sheet, { ...baseConfig, pseudoMode: 'css' as const })
-    const hits = warn.mock.calls.filter(c => String(c[0]).includes('cross-element'))
-    expect(hits.length).toBe(1)
+    // hover: the source channel handles it — no warning, no handlers.
+    init(
+      system.stylesheet({
+        root: { bgColor: 'base' },
+        label: { bgColor: 'base' },
+        'root:hover': { label: { bgColor: 'accent' } },
+      }),
+      { ...baseConfig, pseudoMode: 'css' as const },
+    )
+    expect(warn.mock.calls.filter(c => String(c[0]).includes('cross-element')).length).toBe(0)
+    // focus: no css channel — runtime handlers, said out loud.
+    init(
+      system.stylesheet({
+        root: { bgColor: 'base' },
+        label: { bgColor: 'base' },
+        'root:focus': { label: { bgColor: 'accent' } },
+      }),
+      { ...baseConfig, pseudoMode: 'css' as const },
+    )
+    expect(warn.mock.calls.filter(c => String(c[0]).includes('cross-element')).length).toBe(1)
   })
 })

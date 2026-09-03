@@ -5,6 +5,7 @@
  * keys) → exec's pseudoOverrides → var(--toned_hover) fallback chains.
  */
 import { describe, expect, test } from 'vitest'
+import { generate } from '../dom/generate.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'
 
@@ -14,7 +15,7 @@ const bgColor = defineToken({
   alphaChannel: ['backgroundColor'],
 })
 
-const system = defineSystem({ bgColor })
+const system = defineSystem({ bgColor }, { breakpoints: { __breakpoints: { md: 768 } } })
 
 const config = {
   getTokens: () => new Proxy({}, { get: (_t, p: string) => `var(--${String(p)})` }),
@@ -93,6 +94,41 @@ describe('css-only pseudo states and the hover gate', () => {
     const style = base.getCurrentStyle('root').style
     expect(style['--toned_focus-visible__background-color']).toBe(
       'var(--toned_focus-visible) var(--accent)',
+    )
+  })
+})
+
+describe('css-only group hover (source channel)', () => {
+  const sheet = system.stylesheet({
+    root: { bgColor: 'primary' },
+    icon: { bgColor: 'muted', ':hover': { bgColor: 'primary' } },
+    'root:hover': { icon: { bgColor: 'accent' } },
+  })
+  // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
+  const base: any = (sheet as any)[SYMBOL_INIT](config, {})
+
+  test('the source carries the marker class, no runtime handlers armed', () => {
+    const root = base.getCurrentStyle('root')
+    expect(root.className).toContain('_s')
+    expect(base.matcher.interactions['root']).toBeUndefined()
+  })
+
+  test('the target rides the src-hover chain below its own hover', () => {
+    const icon = base.getCurrentStyle('icon').style
+    expect(icon['--toned_src-hover__background-color']).toBe(
+      'var(--toned_src-hover) var(--accent)',
+    )
+    expect(icon['--toned_hover__background-color']).toBe('var(--toned_hover) var(--primary)')
+    expect(icon.backgroundColor).toBe(
+      'var(--toned_hover__background-color, var(--toned_src-hover__background-color, var(--muted)))',
+    )
+  })
+
+  test('the generated css declares the channel, hover-gated with nearest-source reset', () => {
+    const css = generate(system.system)
+    expect(css).toContain('--toned_src-hover: initial;')
+    expect(css).toContain(
+      '@media (hover: hover) {._s:hover {--toned_src-hover: ;} ._s:hover ._s {--toned_src-hover: initial;} ._s:hover ._s:hover {--toned_src-hover: ;}}',
     )
   })
 })

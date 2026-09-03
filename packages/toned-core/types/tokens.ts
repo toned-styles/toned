@@ -92,17 +92,47 @@ export type Breakpoints<O extends Record<string, number>> = { __breakpoints: O }
  * One animation's keyframes: step ('from' | 'to' | '50%') to raw CSS
  * properties. Raw on purpose — keyframes are enumerated, system-compiled
  * artifacts (like the tokens), and a var() reference in a value still resolves
- * against the token custom properties at play time.
+ * against the token custom properties at play time (which is also how a
+ * per-instance parameter enters a shared keyframes body:
+ * `transform: 'translateX(var(--enter-x, 0))'`).
  */
 export type AnimationKeyframes = Record<string, Record<string, string | number>>
 
+/**
+ * A full animation: keyframes plus the timing that compiles into the
+ * animation's class, so `animation: 'pulse'` is self-contained. Every field
+ * maps to its CSS property; a bare keyframes record is accepted wherever this
+ * is (name only, timing supplied by the consumer).
+ */
+export type AnimationDefinition = {
+  keyframes: AnimationKeyframes
+  /** animation-duration — a number is milliseconds. */
+  duration?: number | string
+  /** animation-timing-function. */
+  easing?: string
+  /** animation-delay — a number is milliseconds. */
+  delay?: number | string
+  /** animation-iteration-count. */
+  iterations?: number | 'infinite'
+  /** animation-direction. */
+  direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse'
+  /** animation-fill-mode. */
+  fillMode?: 'none' | 'forwards' | 'backwards' | 'both'
+}
+
+export type AnimationInput = AnimationKeyframes | AnimationDefinition
+
+/** Narrow an input to its two halves. */
+export const isAnimationDefinition = (a: AnimationInput): a is AnimationDefinition =>
+  'keyframes' in a && typeof a.keyframes === 'object' && !Array.isArray(a.keyframes)
+
 export type TokenStyleDeclaration = {
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
-  [key: string]: TokenConfig<any, any> | Breakpoints<any> | Record<string, AnimationKeyframes> | undefined
+  [key: string]: TokenConfig<any, any> | Breakpoints<any> | Record<string, AnimationInput> | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
   /** Named animations compiled with the system css — see `defineAnimations`. */
-  animations?: Record<string, AnimationKeyframes>
+  animations?: Record<string, AnimationInput>
 }
 
 /** Filter out 'breakpoints' key from token style keys */

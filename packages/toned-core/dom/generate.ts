@@ -4,6 +4,7 @@
  * @module dom/generate
  */
 
+import { isAnimationDefinition } from '../types/index.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import {
   DEFAULT_ALPHA_STEPS,
@@ -36,7 +37,8 @@ export function generate<const S extends TokenStyleDeclaration>({
   // matching `.animation_<name>` classes come from the `animation` token
   // `defineAnimations` returns, through the ordinary token loop below.
   if (animations) {
-    for (const [name, frames] of Object.entries(animations)) {
+    for (const [name, entry] of Object.entries(animations)) {
+      const frames = isAnimationDefinition(entry) ? entry.keyframes : entry
       let body = ''
       for (const [step, decl] of Object.entries(frames)) {
         let rule = ''
@@ -69,6 +71,15 @@ export function generate<const S extends TokenStyleDeclaration>({
       // an element stuck in its hover style until the next tap elsewhere.
       rules += pseudo === 'hover' ? `@media (hover: hover) {${toggles}}` : toggles
     })
+
+    // The cross-element hover channel: a source element (marker class `_s`)
+    // toggles `--toned_src-hover` for its DOM descendants; a nested source
+    // resets it, so a target answers its NEAREST cross-element source.
+    rootRule += '--toned_src-hover: initial;'
+    rules +=
+      '@media (hover: hover) {._s:hover {--toned_src-hover: ;} ' +
+      '._s:hover ._s {--toned_src-hover: initial;} ' +
+      '._s:hover ._s:hover {--toned_src-hover: ;}}'
 
     for (const [key, value] of Object.entries(bpValues)) {
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
