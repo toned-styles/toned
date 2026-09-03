@@ -197,7 +197,7 @@ describe('bridges', async () => {
   const css = generate(bridgeSystem.system)
 
   test('pseudo-element bridges attach to the element', () => {
-    expect(css).toContain('._::placeholder {color: var(--toned-b-placeholder-color, initial);}')
+    expect(css).toContain('._::placeholder {color: var(--toned-b-placeholder-color, inherit);}')
   })
 
   test('descendant bridges target under the element', () => {
