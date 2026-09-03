@@ -12,6 +12,7 @@ import type {
 } from '../types/index.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
+import { warnOnce } from '../utils/warn.ts'
 import { setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
@@ -38,6 +39,56 @@ const IS_PRODUCTION =
 type ElementStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
+
+/*
+ * Compiled matchers, shared across every Base built from the same rules.
+ *
+ * `flattenRules` + `compile` are pure over `(rules, cssMediaMode,
+ * cssPseudoMode)`, and the bitmask-keyed match cache is instance-independent —
+ * so two Buttons need one matcher, not two compilations (measured ~15.6µs per
+ * instance, paid again per SSR request). Keyed weakly on the rules object (one
+ * per stylesheet, module-lived) and by the two css-mode bits.
+ */
+const MATCHER_CACHE = new WeakMap<object, Map<number, StyleMatcher>>()
+
+function sharedMatcher(
+  rules: BaseRules,
+  cssMediaMode: boolean,
+  cssPseudoMode: boolean,
+): StyleMatcher {
+  let byMode = MATCHER_CACHE.get(rules)
+  if (!byMode) {
+    byMode = new Map()
+    MATCHER_CACHE.set(rules, byMode)
+  }
+  const key = (cssMediaMode ? 1 : 0) | (cssPseudoMode ? 2 : 0)
+  let matcher = byMode.get(key)
+  if (!matcher) {
+    matcher = new StyleMatcher(rules, { cssMediaMode, cssPseudoMode })
+    byMode.set(key, matcher)
+  }
+  return matcher
+}
+
+/*
+ * One media emitter per token system, not per Base.
+ *
+ * `initMedia` registers matchMedia listeners that are never removed, so a
+ * per-Base emitter leaked a listener set per component instance for the page's
+ * life. Shared per system (weakly), with each Base subscribing through a
+ * WeakRef so a garbage-collected instance's subscription self-prunes on the
+ * next media change instead of pinning the Base forever.
+ */
+const MEDIA_CACHE = new WeakMap<object, ReturnType<typeof initMedia>>()
+
+function sharedMedia(ref: TokenSystem<AnyValue>): ReturnType<typeof initMedia> {
+  let emitter = MEDIA_CACHE.get(ref)
+  if (!emitter) {
+    emitter = initMedia(ref)
+    MEDIA_CACHE.set(ref, emitter)
+  }
+  return emitter
+}
 
 // ModState represents the current state of modifiers (variants, media queries, pseudo-states)
 // Kept as AnyValue because keys are dynamic: variant names, breakpoint keys, and element:pseudo combinations
@@ -204,13 +255,19 @@ export class Base {
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
-    this.matcher = new StyleMatcher(rules, {
-      cssMediaMode: mediaMode === 'css',
-      cssPseudoMode: pseudoMode === 'css',
-    })
+    this.matcher = sharedMatcher(rules, mediaMode === 'css', pseudoMode === 'css')
+
+    if (mediaMode === false && this.matcher.hasMediaRules) {
+      warnOnce(
+        'media-disabled',
+        'this stylesheet declares @breakpoint styles, but media handling is off ' +
+          "(useMedia defaults to false) — they will be silently dropped. Set { useMedia: true, mediaMode: 'css' } " +
+          "(or mediaMode: 'runtime') in setConfig.",
+      )
+    }
 
     if (mediaMode === 'runtime') {
-      const mediaEmitter = initMedia(this.ref)
+      const mediaEmitter = sharedMedia(this.ref)
 
       // Merge initial mods state with current media query state
       // Note: Object spread is O(n) but n is small (few variants + breakpoints)
@@ -221,8 +278,17 @@ export class Base {
 
       this.matchStyles()
 
-      mediaEmitter.sub(() => {
-        this.applyState(mediaEmitter.data || {})
+      // Subscribe through a WeakRef: the emitter outlives any one instance, so
+      // a strong `this` here would pin every Base ever mounted. A collected
+      // instance unsubscribes itself on the next media change.
+      const weakSelf = new WeakRef(this)
+      const unsub = mediaEmitter.sub(() => {
+        const self = weakSelf.deref()
+        if (!self) {
+          unsub()
+          return
+        }
+        self.applyState(mediaEmitter.data || {})
       })
     } else {
       // CSS mode or disabled: no runtime media listeners needed
