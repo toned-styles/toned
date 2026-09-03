@@ -9,11 +9,19 @@ import type {
   Breakpoints,
   StylesheetInput,
   StylesheetType,
+  TokenAlphaConfig,
   TokenConfig,
   TokenStyle,
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import {
+  DEFAULT_ALPHA_STEPS,
+  alphaVarName,
+  alphaWrappable,
+  applyAlpha,
+  splitAlphaValue,
+} from '../utils/alpha.ts'
 import { camelToKebab } from '../utils/css.ts'
 import { mergeStyle } from '../utils/mergeStyle.ts'
 import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
@@ -40,7 +48,10 @@ export function defineToken<
   const Values extends readonly any[],
   // Result type is intentionally loose - could be CSSProperties but allows custom token styles
   Result extends {},
->(config: TokenConfig<Values, Result>) {
+  // Preserved so TokenStyle can see whether the token declared an alphaChannel
+  // and widen its accepted values to `'value/alpha'`.
+  const Extra extends TokenAlphaConfig = {},
+>(config: TokenConfig<Values, Result> & Extra): TokenConfig<Values, Result> & Extra {
   return config
 }
 
@@ -80,6 +91,40 @@ export function defineUnit<T>(
  * })
  * ```
  */
+
+/**
+ * Resolve a token value with alpha awareness: `'primary/90'` on an
+ * alpha-channelled token resolves the base and washes the channel values.
+ * Every resolution site (main loop, breakpoint chains, pseudo chains) routes
+ * through this so the modifier works uniformly.
+ */
+function resolveTokenValue(
+  // biome-ignore lint/suspicious/noExplicitAny: internal dynamic token shape
+  tokenCfg: any,
+  value: unknown,
+  tokens: Tokens,
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
+): Record<string, any> | undefined {
+  if (!tokenCfg) return undefined
+  if (tokenCfg.alphaChannel) {
+    const parsed = splitAlphaValue(value)
+    if (parsed && tokenCfg.values.includes(parsed.base)) {
+      const resolved = tokenCfg.resolve(parsed.base, tokens) as Record<string, unknown>
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
+      const out: Record<string, any> = {}
+      for (const prop in resolved) {
+        const propValue = resolved[prop]
+        out[prop] =
+          tokenCfg.alphaChannel.includes(prop) && alphaWrappable(propValue)
+            ? applyAlpha(propValue, parsed.alpha / 100)
+            : propValue
+      }
+      return out
+    }
+  }
+  return tokenCfg.resolve(value, tokens)
+}
+
 export function defineSystem<
   // biome-ignore lint/suspicious/noExplicitAny: generic token system requires flexible types
   const S extends Record<string, TokenConfig<any, any>>,
@@ -204,13 +249,54 @@ export function defineSystem<
           continue
         }
 
-        if (execConfig.useClassName && system[k]?.values.includes(v)) {
+        const tokenCfg = system[k] as (TokenConfig<readonly unknown[], {}> & TokenAlphaConfig) | undefined
+
+        // The alpha modifier: `'primary/90'` on a token that declared an
+        // alphaChannel. See utils/alpha.ts for the whole mechanism.
+        if (tokenCfg?.alphaChannel) {
+          const parsed = splitAlphaValue(v)
+          if (parsed && tokenCfg.values.includes(parsed.base)) {
+            if (execConfig.useClassName && tokenCfg.values.includes(parsed.base)) {
+              const steps = tokenCfg.alphaSteps ?? DEFAULT_ALPHA_STEPS
+              acc.className ??= ''
+              acc.className += ` ${k}_${parsed.base}`
+              if (steps.includes(parsed.alpha)) {
+                // Enumerated step: the static class sets the parameter.
+                acc.className += ` ${k}$${parsed.alpha}`
+              } else {
+                // Off-scale: one inline PARAMETER custom property — never the
+                // painted property, so a caller's className still wins it.
+                for (const prop of tokenCfg.alphaChannel) {
+                  acc.style[alphaVarName(prop)] = String(parsed.alpha / 100)
+                }
+              }
+              continue
+            }
+            // Inline path (no className mode, or native): resolve the base and
+            // alpha the channel values directly — var() refs route through
+            // relative colour syntax, literals compute an rgba.
+            const resolved = tokenCfg.resolve(parsed.base, execConfig.tokens) as Record<
+              string,
+              unknown
+            >
+            for (const prop in resolved) {
+              const value = resolved[prop]
+              if (tokenCfg.alphaChannel.includes(prop) && alphaWrappable(value)) {
+                resolved[prop] = applyAlpha(value, parsed.alpha / 100)
+              }
+            }
+            Object.assign(acc.style, resolved)
+            continue
+          }
+        }
+
+        if (execConfig.useClassName && tokenCfg?.values.includes(v)) {
           acc.className ??= ''
           acc.className += ` ${k}_${v}`
           continue
         }
 
-        Object.assign(acc.style, system[k]?.resolve(v, execConfig.tokens))
+        Object.assign(acc.style, tokenCfg?.resolve(v, execConfig.tokens))
       }
 
       // Process breakpoint overrides into CSS variable fallback chains
@@ -223,7 +309,8 @@ export function defineSystem<
 
         for (const [prop, overrides] of Object.entries(breakpointOverrides)) {
           // Resolve base value (already in acc.style from the token system)
-          const resolvedBase = system[prop]?.resolve(
+          const resolvedBase = resolveTokenValue(
+            system[prop],
             tokenStyle[prop],
             execConfig.tokens,
           )
@@ -237,7 +324,7 @@ export function defineSystem<
             // Generate --media-bp__css-prop custom properties for each override
             for (const { breakpoint, value } of overrides) {
               const bpName = breakpoint.slice(1) // remove @
-              const resolved = system[prop]?.resolve(value, execConfig.tokens)
+              const resolved = resolveTokenValue(system[prop], value, execConfig.tokens)
               if (!resolved?.[cssProp]) continue
 
               const varName = `--media-${bpName}__${kebabProp}`
@@ -323,11 +410,12 @@ export function defineSystem<
           const baseTokenValue = tokenStyle[prop]
           const resolvedBase =
             baseTokenValue != null
-              ? system[prop]?.resolve(baseTokenValue, execConfig.tokens)
+              ? resolveTokenValue(system[prop], baseTokenValue, execConfig.tokens)
               : null
 
           // Get CSS property names from any override's resolution
-          const sampleResolved = system[prop]?.resolve(
+          const sampleResolved = resolveTokenValue(
+            system[prop],
             overrides[0]?.value,
             execConfig.tokens,
           )
@@ -339,7 +427,7 @@ export function defineSystem<
             // Generate --toned_pseudo__css-prop custom properties for each override
             for (const { pseudo, value } of overrides) {
               const pseudoName = pseudo.slice(1) // remove :
-              const resolved = system[prop]?.resolve(value, execConfig.tokens)
+              const resolved = resolveTokenValue(system[prop], value, execConfig.tokens)
               if (!resolved?.[cssProp]) continue
 
               const varName = `--toned_${pseudoName}__${kebabProp}`
