@@ -47,8 +47,14 @@ export function buildBoundMap(
 
   const map: Record<string, BoundElement> = {}
   for (const { key, type } of getInstance().elementDescriptors()) {
-    const El = resolveElement(type)
+    // Resolve the host element LAZILY, on first render, not here. `resolveElement`
+    // can throw (the native seam does until a host installs one), and building
+    // the map runs at module import for `bind()`; a throw there would fault an
+    // import from a component nobody rendered. Deferring it to render keeps the
+    // component identity stable (identity is `Comp`, cached once — not `El`).
+    let El: unknown
     const Comp = ((props?: AnyProps): ReactElement => {
+      if (El === undefined) El = resolveElement(type)
       // `key` is a declared element, so the getter never yields undefined.
       const bag = getInstance()[key]!
       const merged = props ? bag.with(props) : bag
