@@ -43,6 +43,16 @@ export function generate<const S extends TokenStyleDeclaration>({
   // INHERITED properties fall back to `inherit` (an icon with no iconColor
   // keeps inheriting its parent's colour — `initial` painted them black),
   // everything else to `initial`.
+  // A var-name → (bridge, cssProp, selector) index for the token loop below:
+  // DESCENDANT bridges compile class-scoped (the setter class carries the
+  // descendant rule directly), because an always-on `._ <sel>` rule
+  // cascade-WINS over component css even when its parameter is unset — an
+  // unset var's fallback still participates in the cascade, which blew every
+  // un-tokened icon up to its intrinsic size. Their token values are closed
+  // sets, so the class path is total. Pseudo-element bridges keep the
+  // parameter mechanism (they attach to the element itself, tie with
+  // component css at equal specificity, and lose to it on import order).
+  const descendantBridgeVars = new Map<string, { selector: string; cssProp: string }>()
   if (bridges) {
     const INHERITED = new Set([
       'color',
@@ -59,6 +69,15 @@ export function generate<const S extends TokenStyleDeclaration>({
     ])
     let resets = ''
     for (const [name, bridge] of Object.entries(bridges)) {
+      if (!bridge.selector.startsWith(':')) {
+        for (const prop of bridge.properties) {
+          descendantBridgeVars.set(bridgeVarName(name, prop), {
+            selector: bridge.selector,
+            cssProp: camelToKebab(prop),
+          })
+        }
+        continue
+      }
       let rule = ''
       for (const prop of bridge.properties) {
         const varName = bridgeVarName(name, prop)
@@ -66,12 +85,9 @@ export function generate<const S extends TokenStyleDeclaration>({
         const fallback = INHERITED.has(prop) ? 'inherit' : 'initial'
         rule += `${camelToKebab(prop)}: var(${varName}, ${fallback});`
       }
-      const target = bridge.selector.startsWith(':')
-        ? `._${bridge.selector}`
-        : `._ ${bridge.selector}`
-      styles += `${target} {${rule}}`
+      styles += `._${bridge.selector} {${rule}}`
     }
-    styles += `._ {${resets}}`
+    if (resets) styles += `._ {${resets}}`
   }
 
   // Named animations: enumerated and system-compiled, like the tokens. The
@@ -174,9 +190,20 @@ export function generate<const S extends TokenStyleDeclaration>({
       if (!result) return
 
       let cssRule = ''
+      const descendantRules = new Map<string, string>()
 
       for (const cssProp in result) {
         let cssValue = result[cssProp]
+        // Descendant-bridge parameters compile into a class-scoped descendant
+        // rule with the value inlined — see the bridge block above.
+        const descendant = descendantBridgeVars.get(cssProp)
+        if (descendant) {
+          descendantRules.set(
+            descendant.selector,
+            `${descendantRules.get(descendant.selector) ?? ''}${descendant.cssProp}:${cssValue};`,
+          )
+          continue
+        }
         // An alpha-capable colour routes through relative colour syntax with
         // its non-inheriting parameter, so `.bgColor$50` (or an inline
         // parameter) can wash it without a token x alpha rule explosion.
@@ -195,9 +222,10 @@ export function generate<const S extends TokenStyleDeclaration>({
       // runtime emits the unescaped form into className.
       const selector = ruleKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
 
-      cssRule = `.${selector}{${cssRule}}`
-
-      styles += cssRule
+      if (cssRule) styles += `.${selector}{${cssRule}}`
+      for (const [descSelector, body] of descendantRules) {
+        styles += `.${selector} ${descSelector} {${body}}`
+      }
     })
   }
 
