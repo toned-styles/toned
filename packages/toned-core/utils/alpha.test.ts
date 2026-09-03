@@ -168,3 +168,63 @@ describe('defineAnimations', async () => {
     expect(out.className).toContain('animation_fade-in')
   })
 })
+
+describe('bridges', async () => {
+  const { bridgeVarName } = await import('./css.ts')
+
+  const placeholderColor = defineToken({
+    values: ['muted', 'faint'] as const,
+    resolve: (value, tokens) => ({
+      [bridgeVarName('placeholder', 'color')]: tokens[value],
+    }),
+  })
+  const iconSize = defineToken({
+    values: [3, 4, 5] as const,
+    resolve: value => ({
+      [bridgeVarName('icon', 'width')]: `calc(var(--base) * ${value})`,
+      [bridgeVarName('icon', 'height')]: `calc(var(--base) * ${value})`,
+    }),
+  })
+  const bridgeSystem = defineSystem(
+    { bgColor, placeholderColor, iconSize },
+    {
+      bridges: {
+        placeholder: { selector: '::placeholder', properties: ['color'] },
+        icon: { selector: "svg:not([class*='size-'])", properties: ['width', 'height'] },
+      },
+    },
+  )
+  const css = generate(bridgeSystem.system)
+
+  test('pseudo-element bridges attach to the element', () => {
+    expect(css).toContain('._::placeholder {color: var(--toned-b-placeholder-color, initial);}')
+  })
+
+  test('descendant bridges target under the element', () => {
+    expect(css).toContain(
+      "._ svg:not([class*='size-']) {width: var(--toned-b-icon-width, initial);height: var(--toned-b-icon-height, initial);}",
+    )
+  })
+
+  test('the boundary reset stops parameters at component boundaries', () => {
+    expect(css).toContain(
+      '._ {--toned-b-placeholder-color: initial;--toned-b-icon-width: initial;--toned-b-icon-height: initial;}',
+    )
+    // ...and precedes the setter classes, so a setter wins on order.
+    expect(css.indexOf('._ {--toned-b-placeholder-color')).toBeLessThan(
+      css.indexOf('.placeholderColor_muted'),
+    )
+  })
+
+  test('bridge tokens are ordinary tokens — atomic classes and all', () => {
+    expect(css).toContain('.placeholderColor_muted{--toned-b-placeholder-color:var(--muted);}')
+    expect(css).toContain('.iconSize_4{--toned-b-icon-width:calc(var(--base) * 4);--toned-b-icon-height:calc(var(--base) * 4);}')
+    const out = bridgeSystem.exec(
+      { tokens: new Proxy({}, { get: (_t, p: string) => `var(--${String(p)})` }), useClassName: true },
+      // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
+      { placeholderColor: 'muted', iconSize: 4 } as any,
+    )
+    expect(out.className).toContain('placeholderColor_muted')
+    expect(out.className).toContain('iconSize_4')
+  })
+})

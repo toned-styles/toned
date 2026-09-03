@@ -12,7 +12,7 @@ import {
   alphaWrappable,
   withAlphaExpr,
 } from '../utils/alpha.ts'
-import { camelToKebab } from '../utils/css.ts'
+import { bridgeVarName, camelToKebab } from '../utils/css.ts'
 
 const tokens = new Proxy(
   {},
@@ -29,9 +29,31 @@ const tokens = new Proxy(
 export function generate<const S extends TokenStyleDeclaration>({
   breakpoints,
   animations,
+  bridges,
   ...system
 }: S) {
   let styles = ''
+
+  // Bridges: one static parameter-reading rule per target, plus the `._`
+  // boundary reset so a parameter never inherits across component boundaries.
+  // The reset precedes every token class (emitted below), so a setter class
+  // beats it on order at equal specificity; an inline parameter wins outright.
+  if (bridges) {
+    let resets = ''
+    for (const [name, bridge] of Object.entries(bridges)) {
+      let rule = ''
+      for (const prop of bridge.properties) {
+        const varName = bridgeVarName(name, prop)
+        resets += `${varName}: initial;`
+        rule += `${camelToKebab(prop)}: var(${varName}, initial);`
+      }
+      const target = bridge.selector.startsWith(':')
+        ? `._${bridge.selector}`
+        : `._ ${bridge.selector}`
+      styles += `${target} {${rule}}`
+    }
+    styles += `._ {${resets}}`
+  }
 
   // Named animations: enumerated and system-compiled, like the tokens. The
   // matching `.animation_<name>` classes come from the `animation` token
