@@ -54,9 +54,16 @@ export function buildBoundMap(
     // component identity stable (identity is `Comp`, cached once — not `El`).
     let El: unknown
     const Comp = ((props?: AnyProps): ReactElement => {
-      if (El === undefined) El = resolveElement(type)
       // `key` is a declared element, so the getter never yields undefined.
       const bag = getInstance()[key]!
+      // `as` overrides the `$$type`-selected primitive for this render: the
+      // element renders exactly that component/intrinsic, with every other
+      // prop merged through the same with() path. It never reaches the DOM.
+      if (props?.['as'] !== undefined) {
+        const { as, ...rest } = props
+        return createElement(as as never, bag.with(rest))
+      }
+      if (El === undefined) El = resolveElement(type)
       const merged = props ? bag.with(props) : bag
       return createElement(El as never, merged)
     }) as BoundElement

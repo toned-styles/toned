@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 
 import { cleanup, render } from '@testing-library/react'
+// The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
+import * as React from 'react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
-import { createElement } from 'react'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
 import { bind, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
@@ -29,11 +30,9 @@ describe('bind (mod-less)', () => {
     })
     const { Root, Label } = bind(styles)
     const { container } = render(
-      createElement(
-        Root,
-        { 'data-slot': 'x' },
-        createElement(Label, null, 'Save'),
-      ),
+      <Root data-slot="x">
+        <Label>Save</Label>
+      </Root>,
     )
     const root = container.querySelector('[data-slot="x"]') as HTMLElement
     expect(root.tagName).toBe('DIV')
@@ -43,9 +42,7 @@ describe('bind (mod-less)', () => {
   test('caller props merge through with(): className concatenates, data-* passes through', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
     const { Root } = bind(styles)
-    const { container } = render(
-      createElement(Root, { className: 'mine', 'data-slot': 'y' }),
-    )
+    const { container } = render(<Root className="mine" data-slot="y" />)
     const el = container.querySelector('[data-slot="y"]') as HTMLElement
     expect(el.className).toContain('mine')
   })
@@ -60,6 +57,41 @@ describe('bind (mod-less)', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
     const { Root } = bind(styles)
     expect(typeof Root.with).toBe('function')
+  })
+})
+
+describe('as — the per-render element override', () => {
+  test('as="button" renders that intrinsic instead of the $$type primitive', () => {
+    const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
+    const { Root } = bind(styles)
+    const { container } = render(<Root as="button" type="submit" data-slot="z" />)
+    const el = container.querySelector('[data-slot="z"]') as HTMLButtonElement
+    expect(el.tagName).toBe('BUTTON')
+    expect(el.type).toBe('submit')
+  })
+
+  test('as={Comp} renders the component with the merged bag as its props', () => {
+    const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
+    const { Root } = bind(styles)
+    let seen: Record<string, unknown> | undefined
+    const Comp = (props: { className?: string; 'data-x'?: string }) => {
+      seen = props
+      return <section {...props} />
+    }
+    render(<Root as={Comp} className="mine" data-x="y" />)
+    expect(seen?.['data-x']).toBe('y')
+    // the caller's className merges through the same with() path.
+    expect(String(seen?.['className'])).toContain('mine')
+    // `as` itself never reaches the rendered element's props.
+    expect(seen && 'as' in seen).toBe(false)
+  })
+
+  test('pressable $$type resolves to <button> on the default web config', () => {
+    const styles = stylesheet({ Press: { $$type: 'pressable' } })
+    const { Press } = bind(styles)
+    const { container } = render(<Press data-slot="p">go</Press>)
+    const el = container.querySelector('[data-slot="p"]') as HTMLElement
+    expect(el.tagName).toBe('BUTTON')
   })
 })
 
@@ -79,11 +111,15 @@ describe('useBind (hook, mods in the call)', () => {
       const s = useBind(styles, { tone })
       if (firstRoot === undefined) firstRoot = s.Root
       else if (s.Root !== firstRoot) stableAcrossMods = false
-      return createElement(s.Root, { 'data-slot': 'r' }, createElement(s.Label, null, 'x'))
+      return (
+        <s.Root data-slot="r">
+          <s.Label>x</s.Label>
+        </s.Root>
+      )
     }
-    const { rerender, container } = render(createElement(View, { tone: 'a' }))
+    const { rerender, container } = render(<View tone="a" />)
     const a = (container.querySelector('[data-slot="r"]') as HTMLElement).className
-    rerender(createElement(View, { tone: 'b' }))
+    rerender(<View tone="b" />)
     const b = (container.querySelector('[data-slot="r"]') as HTMLElement).className
     expect(stableAcrossMods).toBe(true)
     expect(a).not.toBe(b)

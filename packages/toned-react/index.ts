@@ -4,8 +4,13 @@ import {
   type TokenStyle,
   type TokenStyleDeclaration,
 } from '@toned/core'
-import { useRef, type ComponentType } from 'react'
-import { bind as _bind, useBind as _useBind, type BoundElement } from './bind.tsx'
+import {
+  useRef,
+  type ComponentPropsWithRef,
+  type ElementType as HostElement,
+  type ReactElement,
+} from 'react'
+import { bind as _bind, useBind as _useBind } from './bind.tsx'
 
 /**
  * Props returned for each element in a stylesheet.
@@ -163,16 +168,35 @@ export function useStyles<T extends StylesheetLike>(
 }
 
 /**
+ * A bound element component (`<s.Root/>`).
+ *
+ * Without `as`, it renders the primitive its `$$type` selects through the
+ * config's `resolveElement`. The host element is configuration, unknown
+ * statically, so that signature's props stay open.
+ *
+ * With `as`, it renders exactly that intrinsic or component, and the props are
+ * INFERRED from it: `<s.Root as="button" type="submit"/>` checks against
+ * 'button', `<s.Root as={Comp}/>` against Comp's own props — required props
+ * required, wrong values rejected. The no-`as` signature forbids `as`
+ * entirely, so a mistyped `as` call cannot fall through to the open signature
+ * and silently pass.
+ */
+type BoundCallable = {
+  <As extends HostElement>(
+    props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>,
+  ): ReactElement
+  (props?: { as?: never } & Record<string, unknown>): ReactElement
+}
+
+/**
  * A bound stylesheet: each declared element becomes a component that renders the
- * primitive its `$$type` selects (via the config's `resolveElement`) with the
- * resolved styles applied, and ALSO carries the raw prop-bag (`.with`/`.style`/
- * `.className`) for escape-hatch spreading. Keys are exactly the declared
- * elements — `s.Nope` is a compile error, not `any`.
+ * primitive its `$$type` selects (via the config's `resolveElement`) — or the
+ * `as` target — with the resolved styles applied, and ALSO carries the raw
+ * prop-bag (`.with`/`.style`/`.className`) for escape-hatch spreading. Keys are
+ * exactly the declared elements — `s.Nope` is a compile error, not `any`.
  */
 type BoundElementsOf<T> = {
-  [K in keyof InferElements<T>]: ComponentType<Record<string, unknown>> &
-    InferElements<T>[K] &
-    BoundElement
+  [K in keyof InferElements<T>]: BoundCallable & InferElements<T>[K]
 }
 
 /**

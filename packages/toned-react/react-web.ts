@@ -144,11 +144,13 @@ function getProps(this: Base, elementKey: string) {
 }
 
 // The default web element for each `$$type`. A host (e.g. haelo-primitives)
-// overrides `resolveElement` to render its own View/Text/Image instead.
-const WEB_ELEMENT_BY_TYPE: Record<string, 'div' | 'span' | 'img'> = {
+// overrides `resolveElement` to render its own View/Text/Image/Pressable
+// instead.
+const WEB_ELEMENT_BY_TYPE: Record<string, 'div' | 'span' | 'img' | 'button'> = {
   view: 'div',
   text: 'span',
   image: 'img',
+  pressable: 'button',
 }
 
 export default defineConfig({

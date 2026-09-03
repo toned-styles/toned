@@ -73,8 +73,14 @@ export type TokenAlphaConfig = {
   alphaSteps?: readonly number[]
 }
 
-/** The element types a stylesheet element can declare via `$$type`. */
-export type ElementType = 'view' | 'text' | 'image'
+/**
+ * The element types a stylesheet element can declare via `$$type`. Each maps
+ * to a host primitive through the config's `resolveElement` (View/Text/Image/
+ * Pressable in an RN-vocabulary host; div/span/img/button on the bare web).
+ * For token typing, `pressable` is a view that presses: every view token is
+ * legal on it without tokens having to name both.
+ */
+export type ElementType = 'view' | 'text' | 'image' | 'pressable'
 
 /**
  * The extra shape `defineToken` preserves so element `$$type` declarations can
@@ -246,16 +252,26 @@ type TokenAllowedOn<
         }
       ? ET extends TS[number]
         ? true
-        : // Outside its $types: allowed only if the token is `inherit` AND this
-          // is a view — a view may carry an inheritable value (CSS inheritance
-          // on web, a Text context default on native).
-          C extends { inherit: true }
-          ? ET extends 'view'
+        : // A pressable is a view that presses: view tokens are legal on it.
+          ET extends 'pressable'
+          ? 'view' extends TS[number]
             ? true
-            : false
-          : false
+            : TokenInheritAllows<C, ET>
+          : TokenInheritAllows<C, ET>
       : true
   : true
+
+/**
+ * Outside a token's `$types`: allowed only if the token is `inherit` AND this
+ * element hosts descendants (a view or pressable) — it may carry an
+ * inheritable value (CSS inheritance on web, a Text context default on
+ * native).
+ */
+type TokenInheritAllows<C, ET extends ElementType> = C extends { inherit: true }
+  ? ET extends 'view' | 'pressable'
+    ? true
+    : false
+  : false
 
 export type TokenStyle<
   S extends TokenStyleDeclaration,
