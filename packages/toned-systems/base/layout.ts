@@ -63,6 +63,7 @@ const paddingValues = [
   16,
   20,
   24,
+  32,
   'xxsmal',
   'xsmall',
   'small',
