@@ -7,7 +7,7 @@
  * error, not a silent `any`.
  */
 import { defineSystem, defineToken } from '@toned/core'
-import { useStyles } from './index.ts'
+import { bind, useBind, useStyles } from './index.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent'] as const,
@@ -50,5 +50,39 @@ export function VariantedMods() {
   useStyles(varianted, { tone: 'shouty' })
   // @ts-expect-error — a varianted stylesheet requires its mods
   useStyles(varianted)
+  return null
+}
+
+// useBind/bind share useStyles' contract: the bound set is exactly the declared
+// elements (a component that also carries `.with`), and mods type identically.
+export function BoundPlain() {
+  const s = useBind(plain)
+  s.container.with({ className: 'x' })
+  // @ts-expect-error — no such element was declared
+  s.nope
+  return null
+}
+
+export function BoundVarianted() {
+  const s = useBind(varianted, { tone: 'calm' })
+  s.root
+  // @ts-expect-error — no such element was declared
+  s.typo
+  return null
+}
+
+export function BoundVariantedMods() {
+  // @ts-expect-error — 'shouty' is not a declared tone
+  useBind(varianted, { tone: 'shouty' })
+  // @ts-expect-error — a varianted stylesheet requires its mods
+  useBind(varianted)
+  return null
+}
+
+export function ModlessBind() {
+  const { container } = bind(plain)
+  container.with({ className: 'x' })
+  // @ts-expect-error — no such element was declared
+  bind(plain).nope
   return null
 }
