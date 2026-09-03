@@ -12,6 +12,7 @@ import type {
   StylesheetType,
   TokenAlphaConfig,
   TokenConfig,
+  TokenTypeConfig,
   TokenStyle,
   TokenSystem,
   Tokens,
@@ -24,6 +25,7 @@ import {
   splitAlphaValue,
 } from '../utils/alpha.ts'
 import { camelToKebab } from '../utils/css.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 import { mergeStyle } from '../utils/mergeStyle.ts'
 import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
@@ -51,7 +53,7 @@ export function defineToken<
   Result extends {},
   // Preserved so TokenStyle can see whether the token declared an alphaChannel
   // and widen its accepted values to `'value/alpha'`.
-  const Extra extends TokenAlphaConfig = {},
+  const Extra extends TokenAlphaConfig & TokenTypeConfig = {},
 >(config: TokenConfig<Values, Result> & Extra): TokenConfig<Values, Result> & Extra {
   return config
 }
@@ -200,7 +202,7 @@ export function defineSystem<
 
           return ref.exec(
             { tokens, useClassName: config.useClassName },
-            value as TokenStyle<S & C>,
+            resolvePlatformKeys(value, config.platform) as TokenStyle<S & C>,
           ).style
         },
         get className() {
@@ -209,7 +211,7 @@ export function defineSystem<
 
           return ref.exec(
             { tokens, useClassName: config.useClassName },
-            value as TokenStyle<S & C>,
+            resolvePlatformKeys(value, config.platform) as TokenStyle<S & C>,
           ).className
         },
       }

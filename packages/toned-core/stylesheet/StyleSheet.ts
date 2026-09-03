@@ -12,6 +12,7 @@ import type {
 } from '../types/index.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 import { warnOnce } from '../utils/warn.ts'
 import { setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
@@ -247,6 +248,10 @@ export class Base {
     this.config = config ?? getConfig()
 
     this.ref = ref
+    // '@platform.<name>' keys resolve statically before compilation — matching
+    // blocks merge in (and win over siblings), foreign platforms drop. Memoized
+    // and identity-preserving, so matcher sharing keys on the resolved tree.
+    rules = resolvePlatformKeys(rules, this.config.platform)
     this.rules = rules
 
     this.tokens = this.config.getTokens()

@@ -46,12 +46,29 @@ export type TokenConfig<Values extends readonly any[], Result> = {
   /** Alpha percentages that get a static atomic class (default: 5…95 by 5).
    * Off-scale values still work via an inline parameter custom property. */
   alphaSteps?: readonly number[]
+  /** Element types this token applies to — see `TokenTypeConfig`. */
+  $types?: readonly ElementType[]
 }
 
 /** The extra shape `defineToken` preserves so `TokenStyle` can widen values. */
 export type TokenAlphaConfig = {
   alphaChannel?: readonly string[]
   alphaSteps?: readonly number[]
+}
+
+/** The element types a stylesheet element can declare via `$$type`. */
+export type ElementType = 'view' | 'text' | 'image'
+
+/**
+ * The extra shape `defineToken` preserves so element `$$type` declarations can
+ * constrain a token: a token declaring `$types: ['text']` is OFFERED (and
+ * allowed) only on elements whose `$$type` is 'text' — which is how a
+ * stylesheet stays React-Native-compliant, where text styling exists only on
+ * Text. A token without `$types` is allowed everywhere; an element without
+ * `$$type` accepts everything (untyped elements opt out of enforcement).
+ */
+export type TokenTypeConfig = {
+  $types?: readonly ElementType[]
 }
 
 /**
@@ -91,9 +108,17 @@ export type TokenStyleDeclaration = {
 /** Filter out 'breakpoints' key from token style keys */
 export type TokenKeys<S> = Exclude<keyof S, 'breakpoints'>
 
-/** Inline style object - allows any CSS properties */
-// biome-ignore lint/suspicious/noExplicitAny: CSS properties are dynamic
-export type InlineStyle = any
+import type { TonedTypeRegistry } from '../registry.ts'
+
+/**
+ * Inline style object — what the `style` escape hatch accepts. Tuned by the
+ * host through the `TonedTypeRegistry` (see ../registry.ts): unaugmented it
+ * stays permissive, a platform binding's tuning module narrows it.
+ */
+export type InlineStyle = TonedTypeRegistry extends { inlineStyle: infer T }
+  ? T
+  : // biome-ignore lint/suspicious/noExplicitAny: the unaugmented default is permissive
+    any
 
 /**
  * Style object for a token system - maps token names to their allowed values.
@@ -110,7 +135,29 @@ export type InlineStyle = any
  * }
  * ```
  */
-export type TokenStyle<S extends TokenStyleDeclaration> = Partial<{
+/**
+ * Does a token apply to an element of type ET? Untyped elements (ET =
+ * undefined) accept everything; tokens without `$types` apply everywhere.
+ */
+type TokenAllowedOn<C, ET extends ElementType | undefined> = ET extends ElementType
+  ? Extract<C, { $types: readonly ElementType[] }> extends never
+    ? true
+    : Extract<C, { $types: readonly ElementType[] }> extends { $types: infer TS extends readonly ElementType[] }
+      ? ET extends TS[number]
+        ? true
+        : false
+      : true
+  : true
+
+export type TokenStyle<
+  S extends TokenStyleDeclaration,
+  ET extends ElementType | undefined = undefined,
+> = TokenStyleAllowed<S, ET> & TokenStyleForbidden<S, ET> & { style?: InlineStyle }
+
+type TokenStyleAllowed<
+  S extends TokenStyleDeclaration,
+  ET extends ElementType | undefined,
+> = Partial<{
   // `Extract` first, because on the OPEN system (`S` = TokenStyleDeclaration
   // itself) `S[key]` is the union `TokenConfig | Breakpoints | undefined`, which
   // does not extend `TokenConfig<infer V, unknown>`. Without the Extract that
@@ -119,7 +166,10 @@ export type TokenStyle<S extends TokenStyleDeclaration> = Partial<{
   // and TokenSystem<Concrete> stops being assignable to TokenSystem<open>.
   // Extracting the TokenConfig member keeps the open system permissive while
   // leaving concrete systems exactly as strict as before.
-  [key in TokenKeys<S>]: Extract<
+  //
+  // The `as` clause drops tokens whose `$types` excludes this element's
+  // declared `$$type` — they are not offered, and using one is an error.
+  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true ? key : never]: Extract<
     S[key],
     // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
     TokenConfig<any, unknown>
@@ -131,4 +181,20 @@ export type TokenStyle<S extends TokenStyleDeclaration> = Partial<{
       ? V[number]
       : V[number] | `${V[number] & string}/${number}`
     : never
-}> & { style?: InlineStyle }
+}>
+
+/**
+ * Tokens whose `$types` exclude this element's `$$type`, mapped to
+ * never-valued optionals rather than merely dropped: a dropped key would pass
+ * generic-constraint validation (which checks assignability without
+ * excess-property freshness), while `paddingX?: never` rejects any value with
+ * a readable error.
+ */
+type TokenStyleForbidden<
+  S extends TokenStyleDeclaration,
+  ET extends ElementType | undefined,
+> = ET extends ElementType
+  ? {
+      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false ? key : never]?: never
+    }
+  : {}

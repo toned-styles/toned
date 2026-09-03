@@ -91,5 +91,6 @@ function getProps(this: Base, elementKey: string) {
 
 export default defineConfig({
   ...reactConfig,
+  platform: 'native',
   getProps,
 })

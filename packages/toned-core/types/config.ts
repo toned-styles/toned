@@ -9,9 +9,23 @@ import type { Tokens } from './tokens.ts'
 /**
  * Runtime configuration for the styling system.
  */
+/**
+ * The platforms a stylesheet can address with `'@platform.<name>'` keys.
+ * A key matching the running config's `platform` merges into its parent;
+ * every other platform's key is dropped before compilation.
+ */
+export type Platform = 'web' | 'native'
+
 export type Config = Readonly<{
   /** Returns the token values for style resolution */
   getTokens: () => Tokens
+
+  /**
+   * Which platform this runtime is. Set by the platform binding
+   * (react-web → 'web', react-native → 'native'); resolves
+   * `'@platform.<name>'` stylesheet keys. Unset means no platform keys apply.
+   */
+  platform?: Platform
 
   /** Whether to use CSS class names for static token values */
   useClassName: boolean
