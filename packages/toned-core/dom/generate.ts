@@ -52,6 +52,20 @@ export function generate<const S extends TokenStyleDeclaration>({
           ? `._${selector}`
           : `._ ${selector}`
       stateToggles += `${sel} {${name}: ;} ${sel} ._ {${name}: initial;} ${sel} ${sel} {${name}: ;}`
+
+      // Cross-element source channel: a `_s` source IN this state sets
+      // `--toned_src-<alias>` for its DOM descendants, so a target styled via a
+      // base-level `'source:<alias>'` key answers its NEAREST such source (a
+      // nested `_s` resets it). The state analogue of the `._s:hover` channel
+      // emitted in the breakpoints block — not gated, data-states are always
+      // live. Attribute/pseudo selectors attach to `._s` directly; a descendant
+      // form (`._ sel`) has no single source element to mark, so it is skipped.
+      if (selector.startsWith(':') || selector.startsWith('[')) {
+        const srcName = `--toned_src-${alias}`
+        const ssel = `._s${selector}`
+        stateToggles += `html {${srcName}: initial;}`
+        stateToggles += `${ssel} {${srcName}: ;} ${ssel} ._s {${srcName}: initial;} ${ssel} ${ssel} {${srcName}: ;}`
+      }
     }
     styles += stateToggles
   }
