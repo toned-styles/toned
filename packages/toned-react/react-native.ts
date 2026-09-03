@@ -106,6 +106,22 @@ function getProps(this: Base, elementKey: string) {
   return result
 }
 
+// Unlike web, there is no universal native default: toned-react has no
+// react-native dependency (and must not), so it cannot name View/Text/Image
+// itself. The NATIVE HOST supplies the resolver — `@lib/haelo-primitives`
+// installs a `resolveElement` returning its own View/Text/Image via setConfig,
+// exactly as it would override any config field. Until one is installed,
+// `useBind`/`bind` on native throw here rather than render a wrong element.
+function resolveElement(type?: string): never {
+  throw new Error(
+    `useBind/bind on native need a host resolveElement (got $$type ${JSON.stringify(
+      type,
+    )}). Install one via setConfig — e.g. @lib/haelo-primitives mapping ` +
+      `view→View, text→Text, image→Image. toned-react ships no native default ` +
+      `because it has no react-native dependency.`,
+  )
+}
+
 export default defineConfig({
   ...reactConfig,
   platform: 'native',
@@ -116,4 +132,5 @@ export default defineConfig({
     '--toned-b-selection-color': 'selectionColor',
   },
   getProps,
+  resolveElement,
 })
