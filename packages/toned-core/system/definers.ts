@@ -348,6 +348,36 @@ export function defineSystem<
       for (const [k, v] of Object.entries(tokenStyle)) {
         if (v == null) continue
 
+        // Nested pseudo/state/breakpoint BLOCKS (`':hover': {…}`, `'@md':
+        // {…}`) reach exec un-flattened on the `t()` path — the stylesheet
+        // path flattens them into `':hover_prop'`/`'@md_prop'` keys before
+        // exec ever sees them. Flatten here so both paths agree; before this,
+        // `t()` silently dropped every such block.
+        if (
+          (k[0] === ':' || k[0] === '@') &&
+          !k.includes('_') &&
+          v &&
+          typeof v === 'object'
+        ) {
+          for (const [prop, val] of Object.entries(
+            v as Record<string, unknown>,
+          )) {
+            if (val == null) continue
+            if (k[0] === '@') {
+              breakpointOverrides[prop] ??= []
+              breakpointOverrides[prop].push({
+                breakpoint: k,
+                tokenKey: prop,
+                value: val,
+              })
+            } else {
+              pseudoOverrides[prop] ??= []
+              pseudoOverrides[prop].push({ pseudo: k, tokenKey: prop, value: val })
+            }
+          }
+          continue
+        }
+
         // Handle :pseudo_prop keys from CSS pseudo mode
         if (k[0] === ':' && k.includes('_')) {
           const underscoreIdx = k.indexOf('_')
@@ -501,47 +531,73 @@ export function defineSystem<
             }
             continue
           }
-          // Resolve base value (already in acc.style from the token system)
-          const resolvedBase = resolveForChain(
-            system[prop],
-            tokenStyle[prop],
-            execConfig.tokens,
-            ctx,
-          )
-          if (!resolvedBase) continue
+          // Resolve the base value only when the author DECLARED one. A
+          // media-only prop has no resting half, and resolving `undefined`
+          // through a unit turned it into `calc(var(--base) * NaN)` — which
+          // computes to 0, so an `'@md'`-only max-width collapsed the layout
+          // below the breakpoint. With no base the chain ends OPEN instead
+          // (see below).
+          const hasBase = tokenStyle[prop] !== undefined
+          const resolvedBase = hasBase
+            ? resolveForChain(system[prop], tokenStyle[prop], execConfig.tokens, ctx)
+            : null
+          if (hasBase && !resolvedBase) continue
 
-          // Get CSS property names from the resolved base
-          for (const cssProp in resolvedBase) {
+          const resolvedOverrides = overrides.map((o) => ({
+            breakpoint: o.breakpoint,
+            resolved: resolveForChain(
+              system[prop],
+              o.value,
+              execConfig.tokens,
+              ctx,
+            ),
+          }))
+
+          // CSS property names come from the base AND the overrides, so a
+          // media-only prop still emits its chain.
+          const cssProps = new Set<string>()
+          if (resolvedBase) for (const p in resolvedBase) cssProps.add(p)
+          for (const { resolved } of resolvedOverrides) {
+            if (resolved) for (const p in resolved) cssProps.add(p)
+          }
+
+          for (const cssProp of cssProps) {
             const kebabProp = camelToKebab(cssProp)
-            const baseValue = resolvedBase[cssProp]
 
             // Generate --media-bp__css-prop custom properties for each override
-            for (const { breakpoint, value } of overrides) {
-              const bpName = breakpoint.slice(1) // remove @
-              const resolved = resolveForChain(
-                system[prop],
-                value,
-                execConfig.tokens,
-                ctx,
-              )
+            for (const { breakpoint, resolved } of resolvedOverrides) {
               if (!resolved?.[cssProp]) continue
-
+              const bpName = breakpoint.slice(1) // remove @
               const varName = `--media-${bpName}__${kebabProp}`
               acc.style[varName] = `var(--media-${bpName}) ${resolved[cssProp]}`
             }
 
             // Build fallback chain: highest breakpoint first
             // var(--media-xl__bg, var(--media-lg__bg, var(--media-md__bg, base)))
-            let chain = String(baseValue)
+            // With no resting value the chain ends without a fallback: an
+            // unset var() makes the declaration invalid at computed-value
+            // time, i.e. unset below the breakpoint — the raw-`style` path
+            // above has always worked this way.
+            let chain =
+              resolvedBase?.[cssProp] != null
+                ? String(resolvedBase[cssProp])
+                : null
             for (const [bpKey] of sortedBps) {
               const bpAtKey = `@${bpKey}`
-              if (overrides.some((o) => o.breakpoint === bpAtKey)) {
+              if (
+                resolvedOverrides.some(
+                  (o) => o.breakpoint === bpAtKey && o.resolved?.[cssProp],
+                )
+              ) {
                 const varName = `--media-${bpKey}__${kebabProp}`
-                chain = `var(${varName}, ${chain})`
+                chain =
+                  chain === null
+                    ? `var(${varName})`
+                    : `var(${varName}, ${chain})`
               }
             }
 
-            acc.style[cssProp] = chain
+            if (chain !== null) acc.style[cssProp] = chain
           }
         }
       }

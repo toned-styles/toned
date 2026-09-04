@@ -26,6 +26,10 @@ const lastWrittenValues = new WeakMap<object, Record<string, string>>()
 export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
   if (!curr) return
 
+  // An element with neither branch's API cannot be styled; returning beats
+  // the TypeError the baseline reads below would otherwise throw on it.
+  if (!curr.setNativeProps && !curr.style) return
+
   // React Native path - uses setNativeProps for direct style updates
   // Note: Could be abstracted to config.applyStyles for platform-specific handling
   if (curr.setNativeProps) {

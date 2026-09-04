@@ -59,7 +59,7 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
   test('the variant carries its own hover chain', () => {
     const style = styleFor({ variant: 'solid' })
     expect(style['--toned_hover__background-color']).toBe(
-      'var(--toned_hover) var(--accent)',
+      'var(--toned_hover) rgb(from var(--accent) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
     expect(style.backgroundColor).toBe(
       'var(--toned_hover__background-color, var(--primary))',
@@ -69,7 +69,7 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
   test('a different variant carries a different hover', () => {
     const style = styleFor({ variant: 'ghost' })
     expect(style['--toned_hover__background-color']).toBe(
-      'var(--toned_hover) var(--muted)',
+      'var(--toned_hover) rgb(from var(--muted) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
   })
 
@@ -101,7 +101,7 @@ describe('css-only pseudo states and the hover gate', () => {
     const base = (sheet as any)[SYMBOL_INIT](config, {})
     const style = base.getCurrentStyle('root').style
     expect(style['--toned_focus-visible__background-color']).toBe(
-      'var(--toned_focus-visible) var(--accent)',
+      'var(--toned_focus-visible) rgb(from var(--accent) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
   })
 })
@@ -124,10 +124,10 @@ describe('css-only group hover (source channel)', () => {
   test('the target rides the src-hover chain below its own hover', () => {
     const icon = base.getCurrentStyle('icon').style
     expect(icon['--toned_src-hover__background-color']).toBe(
-      'var(--toned_src-hover) var(--accent)',
+      'var(--toned_src-hover) rgb(from var(--accent) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
     expect(icon['--toned_hover__background-color']).toBe(
-      'var(--toned_hover) var(--primary)',
+      'var(--toned_hover) rgb(from var(--primary) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
     expect(icon.backgroundColor).toBe(
       'var(--toned_hover__background-color, var(--toned_src-hover__background-color, var(--muted)))',
@@ -202,10 +202,10 @@ describe('declared states (data-state / attribute selectors)', () => {
       )
       .getCurrentStyle('root').style
     expect(style['--toned_open__background-color']).toBe(
-      'var(--toned_open) var(--primary)',
+      'var(--toned_open) rgb(from var(--primary) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
     expect(style['--toned_hover__background-color']).toBe(
-      'var(--toned_hover) var(--accent)',
+      'var(--toned_hover) rgb(from var(--accent) r g b / calc(alpha * var(--toned-alpha-background-color, 1)))',
     )
     // open wraps outermost → a data-state=open paint wins over :hover
     expect(style.backgroundColor).toBe(
