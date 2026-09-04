@@ -186,8 +186,11 @@ describe('defineSystem', () => {
     })
   })
 
-  describe('exec() skips pseudo/$ keys', () => {
-    test('keys starting with : are ignored', () => {
+  describe('exec() nested pseudo blocks and $ keys', () => {
+    // Nested pseudo blocks used to be silently ignored here (the stylesheet
+    // path pre-flattens them, so only t() ever hit this) — now exec flattens
+    // them itself, so t() carries pseudo and breakpoint blocks too.
+    test('a nested : block builds the pseudo chain', () => {
       const { exec } = defineSystem({ bgColor })
 
       const result = exec({ tokens: {}, useClassName: false }, {
@@ -195,7 +198,10 @@ describe('defineSystem', () => {
         bgColor: 'primary',
       } as any)
 
-      expect(result.style).toEqual({ backgroundColor: '#007bff' })
+      expect(result.style).toEqual({
+        '--toned_hover__background-color': 'var(--toned_hover) #6c757d',
+        backgroundColor: 'var(--toned_hover__background-color, #007bff)',
+      })
     })
 
     test('keys starting with $ are ignored', () => {
@@ -209,7 +215,7 @@ describe('defineSystem', () => {
       expect(result.style).toEqual({ backgroundColor: '#007bff' })
     })
 
-    test('both : and $ keys are ignored simultaneously', () => {
+    test('a nested : block chains while $ keys stay ignored', () => {
       const { exec } = defineSystem({ bgColor })
 
       const result = exec({ tokens: {}, useClassName: false }, {
@@ -218,7 +224,10 @@ describe('defineSystem', () => {
         bgColor: 'primary',
       } as any)
 
-      expect(result.style).toEqual({ backgroundColor: '#007bff' })
+      expect(result.style).toEqual({
+        '--toned_focus__background-color': 'var(--toned_focus) #6c757d',
+        backgroundColor: 'var(--toned_focus__background-color, #007bff)',
+      })
     })
   })
 
@@ -570,5 +579,56 @@ describe('exec() chain fidelity (css pseudo mode, className on)', () => {
       'rgb(from var(--input) r g b / calc(alpha * var(--toned-alpha-border-color, 1)))'
     expect(String(style['--toned_focus-visible__border-color'])).toContain(wrapped)
     expect(String(style['borderColor'])).toContain(wrapped)
+  })
+})
+
+describe('exec() media chains without a resting value', () => {
+  const makeSystem = () =>
+    defineSystem(
+      {
+        maxWidth: defineToken({
+          values: ['s', 'l'] as const,
+          resolve: (v) => ({ maxWidth: v === 's' ? '20rem' : '40rem' }),
+        }),
+      },
+      { breakpoints: { __breakpoints: { sm: 640, md: 768 } } },
+    )
+
+  test('a media-only prop ends its chain OPEN instead of resolving undefined', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      '@md_maxWidth': 'l',
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expect(style['--media-md__max-width']).toBe('var(--media-md) 40rem')
+    // No fallback: an unset var() is invalid-at-computed-value, i.e. unset
+    // below the breakpoint. Resolving the missing base through a unit used to
+    // produce calc(NaN) here, which computes to 0 and collapsed layouts.
+    expect(style['maxWidth']).toBe('var(--media-md__max-width)')
+    expect(JSON.stringify(style)).not.toContain('NaN')
+  })
+
+  test('a nested breakpoint BLOCK (the t() path) reaches the chain', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      '@md': { maxWidth: 'l' },
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expect(style['--media-md__max-width']).toBe('var(--media-md) 40rem')
+    expect(style['maxWidth']).toBe('var(--media-md__max-width, 20rem)')
+  })
+
+  test('a nested pseudo BLOCK (the t() path) reaches the pseudo chain', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      ':hover': { maxWidth: 'l' },
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expect(String(style['maxWidth'])).toContain('--toned_hover__max-width')
   })
 })
