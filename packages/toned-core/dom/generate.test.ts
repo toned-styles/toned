@@ -372,5 +372,28 @@ describe('generate', () => {
 
       expect(result).toContain('.bgColor_primary{background-color:#007bff;}')
     })
+
+    test('scope prefixes token classes, alpha steps and state toggles, but not html inits', () => {
+      const result = generate(
+        {
+          states: { open: "[data-state='open']" },
+          bgColor: {
+            values: ['primary'],
+            resolve: () => ({ backgroundColor: 'var(--primary)' }),
+            alphaChannel: ['backgroundColor'],
+          },
+        } as any,
+        { scope: '.my-ds' },
+      )
+
+      expect(result).toContain(".my-ds .bgColor_primary{")
+      expect(result).toContain(".my-ds .bgColor\\$50{")
+      expect(result).toContain(".my-ds ._[data-state='open'] {--toned_open: ;}")
+      // Custom-property inits and @property registrations stay global —
+      // idempotent between systems, and a scoped @property is not a thing.
+      expect(result).toContain('html {--toned_open: initial;}')
+      expect(result).toContain('@property --toned-alpha-background-color')
+      expect(result).not.toContain('.my-ds html')
+    })
   })
 })

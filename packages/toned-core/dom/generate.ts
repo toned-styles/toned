@@ -25,14 +25,27 @@ const tokens = new Proxy(
 
 /**
  * Generate CSS from a token style declaration.
+ *
+ * `scope` (an ancestor selector, e.g. `.haelo-ds`) namespaces the emitted
+ * rules so two systems can share one page without their identically-named
+ * atomic classes fighting: a scoped system's classes, alpha steps, state and
+ * pseudo toggles apply only under the scope element, while the `html {}`
+ * custom-property inits, `@property` registrations and `@keyframes` stay
+ * global — they are idempotent inits, not values, and duplicating them is
+ * harmless. An unscoped system is the page's default and wins everywhere
+ * outside the scope; inside it, the scoped rules out-specify it.
  */
-export function generate<const S extends TokenStyleDeclaration>({
-  breakpoints,
-  animations,
-  bridges,
-  states,
-  ...system
-}: S) {
+export function generate<const S extends TokenStyleDeclaration>(
+  {
+    breakpoints,
+    animations,
+    bridges,
+    states,
+    ...system
+  }: S,
+  opts?: { scope?: string },
+) {
+  const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
 
   // Declared state toggles — the attribute analogue of the pseudo toggles
@@ -51,7 +64,7 @@ export function generate<const S extends TokenStyleDeclaration>({
         selector.startsWith(':') || selector.startsWith('[')
           ? `._${selector}`
           : `._ ${selector}`
-      stateToggles += `${sel} {${name}: ;} ${sel} ._ {${name}: initial;} ${sel} ${sel} {${name}: ;}`
+      stateToggles += `${scope}${sel} {${name}: ;} ${scope}${sel} ._ {${name}: initial;} ${scope}${sel} ${sel} {${name}: ;}`
 
       // Cross-element source channel: a `_s` source IN this state sets
       // `--toned_src-<alias>` for its DOM descendants, so a target styled via a
@@ -64,7 +77,7 @@ export function generate<const S extends TokenStyleDeclaration>({
         const srcName = `--toned_src-${alias}`
         const ssel = `._s${selector}`
         stateToggles += `html {${srcName}: initial;}`
-        stateToggles += `${ssel} {${srcName}: ;} ${ssel} ._s {${srcName}: initial;} ${ssel} ${ssel} {${srcName}: ;}`
+        stateToggles += `${scope}${ssel} {${srcName}: ;} ${scope}${ssel} ._s {${srcName}: initial;} ${scope}${ssel} ${ssel} {${srcName}: ;}`
       }
     }
     styles += stateToggles
@@ -124,9 +137,9 @@ export function generate<const S extends TokenStyleDeclaration>({
         const fallback = INHERITED.has(prop) ? 'inherit' : 'initial'
         rule += `${camelToKebab(prop)}: var(${varName}, ${fallback});`
       }
-      styles += `._${bridge.selector} {${rule}}`
+      styles += `${scope}._${bridge.selector} {${rule}}`
     }
-    if (resets) styles += `._ {${resets}}`
+    if (resets) styles += `${scope}._ {${resets}}`
   }
 
   // Named animations: enumerated and system-compiled, like the tokens. The
@@ -161,7 +174,7 @@ export function generate<const S extends TokenStyleDeclaration>({
       const name = `--toned_${pseudo}`
       rootRule += `${name}: initial;`
       // make it work as expected with nested elements
-      const toggles = `._:${pseudo} {${name}: ;} ._:${pseudo} ._ {${name}: initial;} ._:${pseudo} ._:${pseudo} {${name}: ;}`
+      const toggles = `${scope}._:${pseudo} {${name}: ;} ${scope}._:${pseudo} ._ {${name}: initial;} ${scope}._:${pseudo} ._:${pseudo} {${name}: ;}`
       // Hover only exists where the primary input can hover — the same gate
       // every hover utility framework applies. Without it, a touch tap leaves
       // an element stuck in its hover style until the next tap elsewhere.
@@ -174,9 +187,9 @@ export function generate<const S extends TokenStyleDeclaration>({
     // resets it, so a target answers its NEAREST cross-element source.
     rootRule += '--toned_src-hover: initial;'
     rules +=
-      '@media (hover: hover) {._s:hover {--toned_src-hover: ;} ' +
-      '._s:hover ._s {--toned_src-hover: initial;} ' +
-      '._s:hover ._s:hover {--toned_src-hover: ;}}'
+      `@media (hover: hover) {${scope}._s:hover {--toned_src-hover: ;} ` +
+      `${scope}._s:hover ._s {--toned_src-hover: initial;} ` +
+      `${scope}._s:hover ._s:hover {--toned_src-hover: ;}}`
 
     for (const [key, value] of Object.entries(bpValues)) {
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
@@ -215,7 +228,7 @@ export function generate<const S extends TokenStyleDeclaration>({
           .join(';')
         const stepKey = `${key}$${step}`
         const stepSelector = stepKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
-        alphaClasses += `.${stepSelector}{${decl}}`
+        alphaClasses += `${scope}.${stepSelector}{${decl}}`
       }
     }
 
@@ -267,9 +280,9 @@ export function generate<const S extends TokenStyleDeclaration>({
       // runtime emits the unescaped form into className.
       const selector = ruleKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
 
-      if (cssRule) styles += `.${selector}{${cssRule}}`
+      if (cssRule) styles += `${scope}.${selector}{${cssRule}}`
       for (const [descSelector, body] of descendantRules) {
-        styles += `.${selector} ${descSelector} {${body}}`
+        styles += `${scope}.${selector} ${descSelector} {${body}}`
       }
     })
   }
