@@ -413,3 +413,13 @@ describe('token pseudoRules — the vendor pseudo-element channel', () => {
     expect(css).toContain('.scrollbar_none::-webkit-scrollbar{display:none;}')
   })
 })
+
+describe('condition breakpoints — parenthesised values are raw media conditions', () => {
+  test('emits the toggle under the condition, not min-width', () => {
+    const css = generate({
+      breakpoints: { __breakpoints: { sm: 480, pointerCoarse: '(pointer: coarse)' } },
+    } as never)
+    expect(css).toContain('@media (pointer: coarse) { html { --media-pointer-coarse: ; } }')
+    expect(css).toContain('@media (min-width: 480px) { html { --media-sm: ; } }')
+  })
+})
