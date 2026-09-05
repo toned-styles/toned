@@ -548,7 +548,11 @@ export function defineSystem<
               for (const { breakpoint, value } of overrides) {
                 const styleVal = value as Record<string, unknown> | null
                 if (styleVal?.[cssProp] == null) continue
-                const bpName = breakpoint.slice(1)
+                // Kebab the breakpoint name: dom/generate.ts emits the toggle
+                // as `--media-${camelToKebab(key)}`, so a camelCase key
+                // ('pointerCoarse') must chain against the same spelling or
+                // the override can never fire.
+                const bpName = camelToKebab(breakpoint.slice(1))
                 acc.style[`--media-${bpName}__${kebabProp}__style`] =
                   `var(--media-${bpName}) ${styleVal[cssProp]}`
               }
@@ -562,7 +566,7 @@ export function defineSystem<
                     return o.breakpoint === `@${bpKey}` && sv?.[cssProp] != null
                   })
                 ) {
-                  const varName = `--media-${bpKey}__${kebabProp}__style`
+                  const varName = `--media-${camelToKebab(bpKey)}__${kebabProp}__style`
                   chain =
                     chain === null
                       ? `var(${varName})`
@@ -606,10 +610,14 @@ export function defineSystem<
           for (const cssProp of cssProps) {
             const kebabProp = camelToKebab(cssProp)
 
-            // Generate --media-bp__css-prop custom properties for each override
+            // Generate --media-bp__css-prop custom properties for each override.
+            // Kebab the breakpoint name: dom/generate.ts emits the toggle as
+            // `--media-${camelToKebab(key)}`, so a camelCase key
+            // ('pointerCoarse') must chain against the same spelling or the
+            // override can never fire.
             for (const { breakpoint, resolved } of resolvedOverrides) {
               if (!resolved?.[cssProp]) continue
-              const bpName = breakpoint.slice(1) // remove @
+              const bpName = camelToKebab(breakpoint.slice(1)) // remove @
               const varName = `--media-${bpName}__${kebabProp}`
               acc.style[varName] = `var(--media-${bpName}) ${resolved[cssProp]}`
             }
@@ -631,7 +639,7 @@ export function defineSystem<
                   (o) => o.breakpoint === bpAtKey && o.resolved?.[cssProp],
                 )
               ) {
-                const varName = `--media-${bpKey}__${kebabProp}`
+                const varName = `--media-${camelToKebab(bpKey)}__${kebabProp}`
                 chain =
                   chain === null
                     ? `var(${varName})`
