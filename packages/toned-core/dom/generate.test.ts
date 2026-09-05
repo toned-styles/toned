@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { defineToken } from '../system/definers.ts'
 import { generate } from './generate.ts'
 
 describe('generate', () => {
@@ -395,5 +396,20 @@ describe('generate', () => {
       expect(result).toContain('@property --toned-alpha-background-color')
       expect(result).not.toContain('.my-ds html')
     })
+  })
+})
+
+describe('token pseudoRules — the vendor pseudo-element channel', () => {
+  test('emits the pseudo rule against the value class, beside the inline rule', () => {
+    const system = {
+      scrollbar: defineToken({
+        values: ['none'] as const,
+        resolve: () => ({ scrollbarWidth: 'none' }),
+        pseudoRules: () => ({ '::-webkit-scrollbar': { display: 'none' } }),
+      }),
+    }
+    const css = generate(system as never)
+    expect(css).toContain('.scrollbar_none{scrollbar-width:none;}')
+    expect(css).toContain('.scrollbar_none::-webkit-scrollbar{display:none;}')
   })
 })
