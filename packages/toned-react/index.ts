@@ -11,6 +11,7 @@ import {
   type ReactElement,
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
+import { overrideStyles as _overrideStyles, useOverriddenSheet } from './overrides.tsx'
 
 /**
  * Props returned for each element in a stylesheet.
@@ -139,6 +140,9 @@ export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
   state?: object,
 ) {
+  // An ancestor may have overridden this sheet for the subtree (see
+  // overrides.tsx); everything below resolves the derived sheet instead.
+  stylesheet = useOverriddenSheet(stylesheet)
   const ref = useRef<{
     stylesheet: T
     state?: object
@@ -211,6 +215,27 @@ export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundE
  * typed exactly as `useStyles`' — required iff the stylesheet declares them, and
  * only declared values accepted.
  */
+/**
+ * Partial rules accepted as an override of T: any subset of its elements, each
+ * a token style of its system. Nested pseudo/breakpoint blocks are allowed and
+ * deep-merge into the sheet's own.
+ */
+export type StyleOverrideRules<T extends StylesheetLike> = InferMeta<T> extends {
+  system: infer Sys extends TokenStyleDeclaration
+  elements: infer E
+}
+  ? { [K in keyof E as K extends string ? K : never]?: TokenStyle<Sys> }
+  : Record<string, TokenStyle<TokenStyleDeclaration>>
+
+/** Pair a stylesheet with override rules, type-checked against the sheet. */
+export const overrideStyles = _overrideStyles as <T extends StylesheetLike>(
+  sheet: T,
+  rules: StyleOverrideRules<T>,
+) => import('./overrides.tsx').StyleOverrideEntry
+
+export { StyleOverrides } from './overrides.tsx'
+export type { StyleOverrideEntry } from './overrides.tsx'
+
 export const useBind = _useBind as <T extends StylesheetLike>(
   stylesheet: T,
   ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
