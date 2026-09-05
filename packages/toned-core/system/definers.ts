@@ -328,6 +328,36 @@ export function defineSystem<
         ...PSEUDO_CASCADE_ORDER,
         ...stateOrder,
       ]
+      /*
+       * COMPOUND keys (':open:hover') — AND semantics in the css chain mode:
+       * the value var is guarded by the PRODUCT of the parts' space toggles,
+       * so it resolves only when every part is on. Compounds sit OUTSIDE
+       * their constituents in the chain (more specific wins), ordered among
+       * themselves by part count then declaration order. The toggles already
+       * exist per part (generate.ts emits one per state/pseudo), so a
+       * compound needs no new generated css. Runtime pseudo mode does not
+       * track compounds — they are a css-mode capability.
+       */
+      const chainVarName = (pseudo: string): string =>
+        pseudo.slice(1).replaceAll(':', '--')
+      const chainGuard = (pseudo: string): string =>
+        pseudo
+          .slice(1)
+          .split(':')
+          .map((part) => `var(--toned_${part})`)
+          .join(' ')
+      const withCompounds = (
+        overrides: Array<{ pseudo: string }>,
+      ): readonly string[] => {
+        const compounds: string[] = []
+        for (const { pseudo } of overrides) {
+          if (pseudo.indexOf(':', 1) !== -1 && !compounds.includes(pseudo))
+            compounds.push(pseudo)
+        }
+        if (compounds.length === 0) return cascadeOrder
+        compounds.sort((a, b) => a.split(':').length - b.split(':').length)
+        return [...cascadeOrder, ...compounds]
+      }
       // Collect @breakpoint_prop entries for CSS variable mode
       const breakpointOverrides: Record<
         string,
@@ -638,23 +668,20 @@ export function defineSystem<
               for (const { pseudo, value } of overrides) {
                 const styleVal = value as Record<string, unknown> | null
                 if (styleVal?.[cssProp] == null) continue
-                const pseudoName = pseudo.slice(1)
-                const varName = `--toned_${pseudoName}__${kebabProp}__style`
-                acc.style[varName] =
-                  `var(--toned_${pseudoName}) ${styleVal[cssProp]}`
+                const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}__style`
+                acc.style[varName] = `${chainGuard(pseudo)} ${styleVal[cssProp]}`
               }
               const baseValue =
                 acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
-              for (const pseudo of cascadeOrder) {
+              for (const pseudo of withCompounds(overrides)) {
                 if (
                   overrides.some((o) => {
                     const sv = o.value as Record<string, unknown> | null
                     return o.pseudo === pseudo && sv?.[cssProp] != null
                   })
                 ) {
-                  const pseudoName = pseudo.slice(1)
-                  const varName = `--toned_${pseudoName}__${kebabProp}__style`
+                  const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}__style`
                   chain = chain
                     ? `var(${varName}, ${chain})`
                     : `var(${varName})`
@@ -693,7 +720,6 @@ export function defineSystem<
 
             // Generate --toned_pseudo__css-prop custom properties for each override
             for (const { pseudo, value } of overrides) {
-              const pseudoName = pseudo.slice(1) // remove :
               const resolved = resolveForChain(
                 system[prop],
                 value,
@@ -702,9 +728,8 @@ export function defineSystem<
               )
               if (!resolved?.[cssProp]) continue
 
-              const varName = `--toned_${pseudoName}__${kebabProp}`
-              acc.style[varName] =
-                `var(--toned_${pseudoName}) ${resolved[cssProp]}`
+              const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}`
+              acc.style[varName] = `${chainGuard(pseudo)} ${resolved[cssProp]}`
             }
 
             // Build fallback chain: use existing value (e.g. breakpoint chain) or base
@@ -748,10 +773,9 @@ export function defineSystem<
             }
 
             let chain = innerValue
-            for (const pseudo of cascadeOrder) {
+            for (const pseudo of withCompounds(overrides)) {
               if (overrides.some((o) => o.pseudo === pseudo)) {
-                const pseudoName = pseudo.slice(1)
-                const varName = `--toned_${pseudoName}__${kebabProp}`
+                const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}`
                 chain = chain ? `var(${varName}, ${chain})` : `var(${varName})`
               }
             }
