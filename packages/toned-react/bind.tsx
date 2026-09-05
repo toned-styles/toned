@@ -1,5 +1,47 @@
 import { createElement, useRef, type ReactElement } from 'react'
 import { getConfig, SYMBOL_INIT, type Config, type ElementType } from '@toned/core'
+
+/**
+ * What a web intrinsic IMPLIES about the element's nature, for the native
+ * fallback: `as="h2"` names a text element, so native renders the Text
+ * primitive, not the default View. Only tags whose implication is
+ * unambiguous are mapped; a declared `$$type` always wins over inference,
+ * and anything unmapped falls back to it (default 'view'). `button`/`a` are
+ * deliberately NOT mapped to 'pressable': press behavior must be declared,
+ * never inferred from a tag.
+ */
+const TYPE_BY_TAG: Record<string, ElementType> = {
+  h1: 'text',
+  h2: 'text',
+  h3: 'text',
+  h4: 'text',
+  h5: 'text',
+  h6: 'text',
+  p: 'text',
+  span: 'text',
+  label: 'text',
+  legend: 'text',
+  caption: 'text',
+  figcaption: 'text',
+  strong: 'text',
+  em: 'text',
+  b: 'text',
+  i: 'text',
+  s: 'text',
+  u: 'text',
+  small: 'text',
+  mark: 'text',
+  code: 'text',
+  blockquote: 'text',
+  cite: 'text',
+  abbr: 'text',
+  time: 'text',
+  kbd: 'text',
+  samp: 'text',
+  sub: 'text',
+  sup: 'text',
+  img: 'image',
+}
 // Cycle-safe: index.ts imports this module for its typed re-exports, and this
 // line imports back. `useStyles` is a hoisted function declaration, so its
 // binding is live before index.ts finishes evaluating; `useBind` only calls it
@@ -61,17 +103,17 @@ export function buildBoundMap(
       // prop merged through the same with() path. It never reaches the DOM.
       //
       // A STRING `as` is a WEB refinement only: an intrinsic tag has no
-      // meaning on native, so there the element falls back to its `$$type`
-      // primitive. (An element that needs native BEHAVIOR — press, text
-      // input — must say so via `$$type: 'pressable'` etc.; a string `as`
-      // never carries behavior across platforms.) A COMPONENT `as` renders
-      // on every platform — the component is expected to be universal or
-      // platform-split itself.
+      // meaning on native, so there the element falls back to a primitive —
+      // the declared `$$type` first, else what the tag itself implies
+      // (`as="h2"` is a text element → Text; see TYPE_BY_TAG), else View.
+      // Behavior is never inferred: press/input semantics need an explicit
+      // interactive `$$type`. A COMPONENT `as` renders on every platform —
+      // the component is expected to be universal or platform-split itself.
       if (props?.['as'] !== undefined) {
         const { as, ...rest } = props
         if (typeof as === 'string' && config.platform === 'native') {
-          if (El === undefined) El = resolveElement(type ?? 'view')
-          return createElement(El as never, bag.with(rest))
+          const native = resolveElement(type ?? TYPE_BY_TAG[as] ?? 'view')
+          return createElement(native as never, bag.with(rest))
         }
         return createElement(as as never, bag.with(rest))
       }

@@ -80,6 +80,27 @@ describe('bind (mod-less)', () => {
     }
   })
 
+  test('native string-as fallback: the tag INFERS the type when \$\$type is undeclared', () => {
+    // as="h2" is a text element — native renders Text, not the default View.
+    const styles = stylesheet({ Root: { cur: 'pointer' } })
+    const prev = { ...getConfig() }
+    const seen: unknown[] = []
+    setConfig({
+      platform: 'native',
+      resolveElement: (t?: string) => {
+        seen.push(t)
+        return (props: Record<string, unknown>) => React.createElement('x-prim', props)
+      },
+    })
+    try {
+      const { Root } = bind(styles)
+      render(<Root as="h2" data-slot="t" />)
+      expect(seen).toContain('text')
+    } finally {
+      setConfig(prev)
+    }
+  })
+
   test('a COMPONENT as renders on native too', () => {
     const styles = stylesheet({ Root: { $$type: 'view' } })
     const prev = { ...getConfig() }
