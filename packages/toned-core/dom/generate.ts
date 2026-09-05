@@ -195,7 +195,10 @@ export function generate<const S extends TokenStyleDeclaration>(
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
 
       rootRule += `${varName}: initial;`
-      rules += `@media (min-width: ${value}px) { html { ${varName}: ; } }`
+      // A number is pixels; a string ('40rem') passes through, so a system can
+      // declare a rem-based scale that tracks the user's root font size.
+      const width = typeof value === 'number' ? `${value}px` : value
+      rules += `@media (min-width: ${width}) { html { ${varName}: ; } }`
     }
 
     styles += `html {${rootRule}}`

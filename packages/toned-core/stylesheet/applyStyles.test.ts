@@ -100,3 +100,45 @@ describe('setStyles (web) baseline restore', () => {
     expect(cssValue(el, 'color')).toBe('rebeccapurple')
   })
 })
+
+describe('setStyles (web) className ownership', () => {
+  // makeEl plus the classList surface setStyles' className branch uses.
+  function makeClassEl(initial: string) {
+    const el = makeEl() as FakeEl & {
+      className: string
+      classList: { add(cls: string): void; remove(cls: string): void }
+    }
+    el.className = initial
+    el.classList = {
+      add(cls: string) {
+        const parts = el.className.split(' ').filter(Boolean)
+        if (!parts.includes(cls)) parts.push(cls)
+        el.className = parts.join(' ')
+      },
+      remove(cls: string) {
+        el.className = el.className
+          .split(' ')
+          .filter(c => c && c !== cls)
+          .join(' ')
+      },
+    }
+    return el
+  }
+
+  test('swaps only toned-written classes, preserving foreign ones', () => {
+    // The host framework rendered marker + caller classes merged with toned's.
+    const el = makeClassEl('tnd-marker caller-utility _ width_8')
+
+    setStyles(el, { style: {}, className: '_ width_8' })
+    expect(el.className).toBe('tnd-marker caller-utility _ width_8')
+
+    // A later match writes a different toned set (the style-only-diff case the
+    // host framework never repairs): toned removes only its own stale classes.
+    setStyles(el, { style: {}, className: '_ width_12' })
+    const classes = el.className.split(' ')
+    expect(classes).toContain('tnd-marker')
+    expect(classes).toContain('caller-utility')
+    expect(classes).toContain('width_12')
+    expect(classes).not.toContain('width_8')
+  })
+})

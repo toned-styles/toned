@@ -22,6 +22,13 @@ const baselineValues = new WeakMap<object, Record<string, string>>()
 // ownership checks compare against the browser's normalized form. Lets us tell
 // "toned still owns this property" from "another source has since changed it".
 const lastWrittenValues = new WeakMap<object, Record<string, string>>()
+// The className toned last wrote to each element. The attribute also carries
+// classes toned never wrote — marker classes, caller utilities, the host
+// framework's merged className prop — which an imperative write must not
+// clobber: a style-only diff leaves the framework's className prop unchanged,
+// so nothing would ever restore them. Toned therefore swaps only its own
+// previous set for the new one instead of replacing the whole attribute.
+const lastWrittenClasses = new WeakMap<object, string>()
 
 export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
   if (!curr) return
@@ -90,9 +97,18 @@ export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
       lastWrittenValues.set(curr, lastWritten)
     }
     if (styleObject.className) {
-      // Note: This replaces all classNames; preserving non-toned classes would require
-      // tracking which classes were added by toned vs external sources
-      curr.className = styleObject.className
+      const next: string = styleObject.className
+      const prev = lastWrittenClasses.get(curr)
+      if (prev && prev !== next) {
+        const nextPadded = ` ${next} `
+        for (const cls of prev.split(' ')) {
+          if (cls && !nextPadded.includes(` ${cls} `)) curr.classList.remove(cls)
+        }
+      }
+      for (const cls of next.split(' ')) {
+        if (cls) curr.classList.add(cls)
+      }
+      lastWrittenClasses.set(curr, next)
     }
   }
 }

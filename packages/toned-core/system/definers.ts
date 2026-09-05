@@ -482,11 +482,17 @@ export function defineSystem<
 
       // Process breakpoint overrides into CSS variable fallback chains
       const bpValues = config?.breakpoints?.__breakpoints as
-        | Record<string, number>
+        | Record<string, number | string>
         | undefined
       if (bpValues && Object.keys(breakpointOverrides).length > 0) {
-        // Sort breakpoints by pixel value (ascending) for proper cascade
-        const sortedBps = Object.entries(bpValues).sort(([, a], [, b]) => a - b)
+        // Sort breakpoints ascending for proper cascade. Strings are lengths
+        // ('40rem'); rem/em order at 16px per rem — a scale should not mix
+        // units whose order could invert under font scaling.
+        const px = (v: number | string): number =>
+          typeof v === 'number'
+            ? v
+            : Number.parseFloat(v) * (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
+        const sortedBps = Object.entries(bpValues).sort(([, a], [, b]) => px(a) - px(b))
 
         for (const [prop, overrides] of Object.entries(breakpointOverrides)) {
           // Raw `style` inside a breakpoint — the escape-hatch analogue of the
