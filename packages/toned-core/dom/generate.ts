@@ -196,9 +196,14 @@ export function generate<const S extends TokenStyleDeclaration>(
 
       rootRule += `${varName}: initial;`
       // A number is pixels; a string ('40rem') passes through, so a system can
-      // declare a rem-based scale that tracks the user's root font size.
-      const width = typeof value === 'number' ? `${value}px` : value
-      rules += `@media (min-width: ${width}) { html { ${varName}: ; } }`
+      // declare a rem-based scale that tracks the user's root font size. A
+      // parenthesised string is a raw media CONDITION ('(pointer: coarse)') —
+      // the same toggle machinery, gated on the condition instead of a width.
+      const condition =
+        typeof value === 'string' && value.startsWith('(')
+          ? value
+          : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
+      rules += `@media ${condition} { html { ${varName}: ; } }`
     }
 
     styles += `html {${rootRule}}`
