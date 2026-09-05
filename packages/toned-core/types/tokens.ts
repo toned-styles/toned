@@ -65,6 +65,18 @@ export type TokenConfig<Values extends readonly any[], Result> = {
   $types?: readonly ElementType[]
   /** Inheritable on a View — see `TokenInheritConfig`. */
   inherit?: boolean
+  /**
+   * PSEUDO-ELEMENT rules attached to a value's atomic class, emitted by
+   * `generate()` as `.<token>_<value><pseudo> { … }`. The one sanctioned
+   * pseudo-element channel — for vendor surfaces that cannot be real elements
+   * (scrollbars, ::file-selector-button). Web-only by construction: the rules
+   * exist only in the generated css, so a native binding sees the class name
+   * and nothing else. Requires enumerated (unboxed) values.
+   */
+  pseudoRules?: (
+    value: Values[number],
+    tokens: Tokens,
+  ) => Record<string, Record<string, string | number>> | undefined
 }
 
 /** The extra shape `defineToken` preserves so `TokenStyle` can widen values. */

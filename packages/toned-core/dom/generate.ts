@@ -287,6 +287,33 @@ export function generate<const S extends TokenStyleDeclaration>(
       for (const [descSelector, body] of descendantRules) {
         styles += `${scope}.${selector} ${descSelector} {${body}}`
       }
+
+      // PSEUDO-ELEMENT rules attached to this value's atomic class — the one
+      // sanctioned pseudo-element channel (scrollbars, ::file-selector-button:
+      // vendor surfaces that cannot be real elements). Web-only by nature:
+      // they exist ONLY in this generated css, so a native binding sees the
+      // class name and nothing else. Everything else stays real elements.
+      const pseudoRules = (
+        token as {
+          pseudoRules?: (
+            v: unknown,
+            tokens: unknown,
+          ) => Record<string, Record<string, unknown>> | undefined
+        }
+      ).pseudoRules
+      if (pseudoRules) {
+        const perPseudo = pseudoRules(value, tokens)
+        if (perPseudo) {
+          for (const pseudoSel in perPseudo) {
+            let body = ''
+            const props = perPseudo[pseudoSel]!
+            for (const cssProp in props) {
+              body += `${camelToKebab(cssProp)}:${props[cssProp]};`
+            }
+            if (body) styles += `${scope}.${selector}${pseudoSel}{${body}}`
+          }
+        }
+      }
     })
   }
 
