@@ -239,6 +239,15 @@ export const overrideStyles = _overrideStyles as <T extends StylesheetLike>(
 export { StyleOverrides } from './overrides.tsx'
 export type { StyleOverrideEntry } from './overrides.tsx'
 
+/**
+ * An EXPORTABLE stylesheet type for override targeting. A full sheet's
+ * inferred type can exceed TypeScript's declaration-emit limits (TS7056), so
+ * a module exporting its sheet for `overrideStyles` annotates with this —
+ * trading per-element rule typing at foreign call sites for an emittable
+ * declaration. Inside the owning module, `typeof <sheet>` stays fully typed.
+ */
+export type OverridableStylesheet = StylesheetLike
+
 export const useBind = _useBind as <T extends StylesheetLike>(
   stylesheet: T,
   ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
