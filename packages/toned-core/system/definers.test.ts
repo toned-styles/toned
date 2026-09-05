@@ -632,3 +632,56 @@ describe('exec() media chains without a resting value', () => {
     expect(String(style['maxWidth'])).toContain('--toned_hover__max-width')
   })
 })
+
+describe('compound state+pseudo keys (css chain mode)', () => {
+  const makeSystem = () =>
+    defineSystem(
+      {
+        bgColor: defineToken({
+          values: ['a', 'b', 'c', 'd'] as const,
+          resolve: (v) => ({ backgroundColor: `#${v}` }),
+        }),
+      },
+      { states: { open: "[data-state='open']" } },
+    )
+
+  test("':open:hover' emits a var guarded by BOTH space toggles", () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      bgColor: 'a',
+      ':open:hover': { bgColor: 'b' },
+    } as any)
+    expect((result.style as AnyStyle)['--toned_open--hover__background-color']).toBe(
+      'var(--toned_open) var(--toned_hover) #b',
+    )
+    expect((result.style as AnyStyle)['backgroundColor']).toBe(
+      'var(--toned_open--hover__background-color, #a)',
+    )
+  })
+
+  test('a compound sits OUTSIDE its constituents in the chain', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      bgColor: 'a',
+      ':hover': { bgColor: 'b' },
+      ':open': { bgColor: 'c' },
+      ':open:hover': { bgColor: 'd' },
+    } as any)
+    // outermost first: compound over state over pseudo over base
+    expect((result.style as AnyStyle)['backgroundColor']).toBe(
+      'var(--toned_open--hover__background-color, ' +
+        'var(--toned_open__background-color, ' +
+        'var(--toned_hover__background-color, #a)))',
+    )
+  })
+
+  test("compound in the raw `style` escape rides the same guards", () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      ':open:hover': { style: { outlineOffset: '2px' } },
+    } as any)
+    expect(
+      (result.style as AnyStyle)['--toned_open--hover__outline-offset__style'],
+    ).toBe('var(--toned_open) var(--toned_hover) 2px')
+  })
+})
