@@ -5,6 +5,7 @@ import { cleanup, render } from '@testing-library/react'
 import * as React from 'react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
+import { createContext, useContext } from 'react'
 import { overrideStyles, StyleOverrides, useBind, useStyles } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
@@ -112,6 +113,41 @@ describe('StyleOverrides', () => {
       </StyleOverrides>,
     )
     expect(seen).toContain('cur_grab')
+  })
+
+  test('scoped entries: apply only under a matching ambient scope, most specific wins', () => {
+    const ScopeContext = createContext('__root__')
+    setConfig({
+      ...getConfig(),
+      useStyleOverrideScope: () => useContext(ScopeContext),
+    })
+    try {
+      const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
+      const Probe = ({ slot }: { slot: string }) => {
+        const s = useBind(styles)
+        return <s.Root data-slot={slot} />
+      }
+      const entries = [
+        overrideStyles(styles, { Root: { cur: 'grab' } }, { scope: 'checkout' }),
+        overrideStyles(styles, { Root: { cur: 'text' } }, { scope: 'checkout/summary' }),
+      ]
+      const { container } = render(
+        <StyleOverrides value={entries}>
+          <ScopeContext.Provider value="__root__/checkout">
+            <Probe slot="shallow" />
+            <ScopeContext.Provider value="__root__/checkout/summary">
+              <Probe slot="deep" />
+            </ScopeContext.Provider>
+          </ScopeContext.Provider>
+          <Probe slot="outside" />
+        </StyleOverrides>,
+      )
+      expect(classesOf(container.querySelector('[data-slot="shallow"]')!)).toContain('cur_grab')
+      expect(classesOf(container.querySelector('[data-slot="deep"]')!)).toContain('cur_text')
+      expect(classesOf(container.querySelector('[data-slot="outside"]')!)).toContain('cur_pointer')
+    } finally {
+      setConfig({ ...reactWebConfig, useClassName: true, getTokens: () => ({}) })
+    }
   })
 
   test('the derived sheet is cached: stable identity across renders with stable entries', () => {

@@ -76,6 +76,24 @@ export type Config = Readonly<{
    */
   resolveElement?: (type?: ElementType) => unknown
 
+  /**
+   * The ambient SCOPE for stylesheet overrides — the host integration's hook
+   * (React rules apply: it is called unconditionally on every override
+   * resolution, so it must be a hook or a plain stable function). A scoped
+   * override entry (overrideStyles(sheet, rules, { scope })) applies only
+   * where matchStyleOverrideScope(entry.scope, ambient) holds. Unset: scoped
+   * entries never apply.
+   */
+  useStyleOverrideScope?: () => string | null | undefined
+
+  /**
+   * Whether a scoped entry applies at the ambient scope. The default
+   * (overrides.tsx) treats both as '/'-delimited paths and matches when the
+   * entry's scope appears in the ambient path as a contiguous run of whole
+   * segments — 'checkout/summary' applies under '__root__/checkout/summary/x'.
+   */
+  matchStyleOverrideScope?: (scope: string, ambient: string | null | undefined) => boolean
+
   /** Initialize ref handling */
   initRef: () => void
 
