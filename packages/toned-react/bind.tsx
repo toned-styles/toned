@@ -140,7 +140,15 @@ export function reflectBags(map: Record<string, BoundElement>, instance: Instanc
     const comp = map[key]!
     const bag = instance[key]!
     Object.assign(comp, bag)
-    comp.with = bag.with
+    // Non-enumerable, matching the bag's own `with`: a plain assignment made
+    // it enumerable on the COMPONENT, so `{...s.El}` leaked a `with` function
+    // into DOM props (React warns and drops it).
+    Object.defineProperty(comp, 'with', {
+      value: bag.with,
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    })
   }
 }
 
