@@ -59,11 +59,26 @@ export function buildBoundMap(
       // `as` overrides the `$$type`-selected primitive for this render: the
       // element renders exactly that component/intrinsic, with every other
       // prop merged through the same with() path. It never reaches the DOM.
+      //
+      // A STRING `as` is a WEB refinement only: an intrinsic tag has no
+      // meaning on native, so there the element falls back to its `$$type`
+      // primitive. (An element that needs native BEHAVIOR — press, text
+      // input — must say so via `$$type: 'pressable'` etc.; a string `as`
+      // never carries behavior across platforms.) A COMPONENT `as` renders
+      // on every platform — the component is expected to be universal or
+      // platform-split itself.
       if (props?.['as'] !== undefined) {
         const { as, ...rest } = props
+        if (typeof as === 'string' && config.platform === 'native') {
+          if (El === undefined) El = resolveElement(type ?? 'view')
+          return createElement(El as never, bag.with(rest))
+        }
         return createElement(as as never, bag.with(rest))
       }
-      if (El === undefined) El = resolveElement(type)
+      // No `as`, no `$$type`: the default element is a View — the universal
+      // box. `'view'` is resolved here, not left to each host's resolver, so
+      // the default is part of the core contract.
+      if (El === undefined) El = resolveElement(type ?? 'view')
       const merged = props ? bag.with(props) : bag
       return createElement(El as never, merged)
     }) as BoundElement

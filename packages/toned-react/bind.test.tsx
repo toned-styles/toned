@@ -53,6 +53,50 @@ describe('bind (mod-less)', () => {
     expect(map.Root).toBe(map.Root)
   })
 
+  test('no $$type means View: the default element is the universal box', () => {
+    const styles = stylesheet({ Root: { cur: 'pointer' } })
+    const { Root } = bind(styles)
+    const { container } = render(<Root data-slot="d" />)
+    // react-web resolves 'view' to a div; the point is that resolveElement
+    // received 'view', not undefined — the default is core contract.
+    expect((container.querySelector('[data-slot="d"]') as HTMLElement).tagName).toBe('DIV')
+  })
+
+  test('a STRING as is a web refinement: native falls back to the $$type primitive', () => {
+    const styles = stylesheet({ Root: { $$type: 'text', cur: 'pointer' } })
+    // setConfig MUTATES the shared object, so snapshot values, not the reference.
+    const prev = { ...getConfig() }
+    // Simulate a native host: platform 'native', resolver returns a component.
+    const NativeText = (props: Record<string, unknown>) =>
+      React.createElement('x-native-text', props)
+    setConfig({ platform: 'native', resolveElement: () => NativeText })
+    try {
+      const { Root } = bind(styles)
+      const { container } = render(<Root as="h2" data-slot="n" />)
+      const el = container.querySelector('[data-slot="n"]') as HTMLElement
+      expect(el.tagName.toLowerCase()).toBe('x-native-text')
+    } finally {
+      setConfig(prev)
+    }
+  })
+
+  test('a COMPONENT as renders on native too', () => {
+    const styles = stylesheet({ Root: { $$type: 'view' } })
+    const prev = { ...getConfig() }
+    setConfig({ platform: 'native', resolveElement: () => 'div' })
+    try {
+      const Foreign = (props: Record<string, unknown>) =>
+        React.createElement('x-foreign', props)
+      const { Root } = bind(styles)
+      const { container } = render(<Root as={Foreign} data-slot="f" />)
+      expect(
+        (container.querySelector('[data-slot="f"]') as HTMLElement).tagName.toLowerCase(),
+      ).toBe('x-foreign')
+    } finally {
+      setConfig(prev)
+    }
+  })
+
   test('escape hatch: s.Root.with is present on the bound component', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
     const { Root } = bind(styles)
