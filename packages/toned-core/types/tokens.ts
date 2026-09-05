@@ -114,7 +114,7 @@ export type TokenTypeConfig = {
  * }
  * ```
  */
-export type Breakpoints<O extends Record<string, number>> = { __breakpoints: O }
+export type Breakpoints<O extends Record<string, number | string>> = { __breakpoints: O }
 
 /**
  * Token style declaration - the complete system definition.
