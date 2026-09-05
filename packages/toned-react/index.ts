@@ -227,10 +227,13 @@ export type StyleOverrideRules<T extends StylesheetLike> = InferMeta<T> extends 
   ? { [K in keyof E as K extends string ? K : never]?: TokenStyle<Sys> }
   : Record<string, TokenStyle<TokenStyleDeclaration>>
 
-/** Pair a stylesheet with override rules, type-checked against the sheet. */
+/** Pair a stylesheet with override rules, type-checked against the sheet.
+ * `scope` gates the entry on the host's ambient scope channel (see
+ * Config.useStyleOverrideScope — the haelo host feeds symbiote's zone path). */
 export const overrideStyles = _overrideStyles as <T extends StylesheetLike>(
   sheet: T,
   rules: StyleOverrideRules<T>,
+  opts?: { scope?: string },
 ) => import('./overrides.tsx').StyleOverrideEntry
 
 export { StyleOverrides } from './overrides.tsx'
