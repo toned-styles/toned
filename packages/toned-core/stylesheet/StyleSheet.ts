@@ -24,6 +24,7 @@ import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { warnOnce } from '../utils/warn.ts'
 import { setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
+import { inlineConflicts } from './propertyIndex.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import {
   deepMerge,
@@ -287,6 +288,40 @@ export function createStylesheet<
       extensionRules: AnyValue,
       variantsArg?: ($: AnyValue) => AnyValue,
     ) => {
+      /*
+       * Where the extension writes a CSS property some base token also writes
+       * under a DIFFERENT name, its declaration is resolved and moved to the
+       * inline style: both would be atomic classes of equal specificity, and
+       * the winner would be generated-stylesheet order. See propertyIndex.ts.
+       */
+      // Only reachable where a config is installed — module-scope composition
+      // has none, and there the merge behaves exactly as it did before.
+      const conflictTokens = (() => {
+        try {
+          return getConfig().getTokens?.()
+        } catch {
+          return undefined
+        }
+      })()
+      const reconciledExtension: AnyValue = {}
+      for (const key of Object.keys(extensionRules ?? {})) {
+        const extEl = extensionRules[key]
+        const baseEl = (rules as AnyValue)[key]
+        reconciledExtension[key] =
+          baseEl &&
+          extEl &&
+          typeof baseEl === 'object' &&
+          typeof extEl === 'object'
+            ? inlineConflicts(
+                baseEl,
+                extEl,
+                ref.system,
+                conflictTokens,
+                undefined,
+              )
+            : extEl
+      }
+      extensionRules = reconciledExtension
       // Deep merge base rules with extension rules
       const extendedRules = deepMerge(rules as AnyValue, extensionRules)
       // An extension REPLACES the properties it names wherever the sheet
