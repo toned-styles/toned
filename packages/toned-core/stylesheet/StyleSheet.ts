@@ -1,6 +1,5 @@
 import { getConfig } from '../system/config.ts'
 import type {
-  AuthoredElementStyle,
   Config,
   ElementType,
   ExtractElements,
@@ -203,15 +202,11 @@ export function createStylesheet<
   variantRules?: AnyValue,
 ): PreVariantsStylesheet<
   S,
-  // The AUTHORED element type — see the note on StylesheetType. `.variants()`
-  // routes back through here, so both entry points must record the same thing
-  // or an override's typing depends on whether the sheet declared variants.
-  {
-    [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<
-      S,
-      InferElementType<T, K>
-    >
-  },
+  // Element name → its declared `$$type` — see the note on StylesheetType.
+  // `.variants()` routes back through here, so both entry points must record
+  // the same thing or an override's typing depends on whether the sheet
+  // declared variants.
+  { [K in PickString<ExtractElements<T>>]: InferElementType<T, K> },
   PickString<ExtractElements<T>>
 > {
   // Merge base rules with variants - StyleMatcher handles the format directly

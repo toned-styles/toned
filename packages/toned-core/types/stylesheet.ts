@@ -446,7 +446,7 @@ export interface StylesheetWithVariants<
    */
   variants<M extends ModType>(
     callback: VariantsCallback<S, Elements, M>,
-  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, M> &
+  ): Stylesheet<S, Record<Elements, undefined>, M> &
     StylesheetWithVariants<S, Elements, M>
 
   /**
@@ -455,7 +455,7 @@ export interface StylesheetWithVariants<
    */
   variants<M extends ModType>(
     variants: VariantsInput<S, Elements, M>,
-  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, M> &
+  ): Stylesheet<S, Record<Elements, undefined>, M> &
     StylesheetWithVariants<S, Elements, M>
 
   /**
@@ -484,7 +484,7 @@ export interface StylesheetWithVariants<
     >,
   ): Stylesheet<
     S,
-    Record<Elements | PickString<ExtractElements<Extension>>, TokenStyle<S>>,
+    Record<Elements | PickString<ExtractElements<Extension>>, undefined>,
     Mods
   > &
     StylesheetWithVariants<
@@ -513,7 +513,7 @@ export type StylesheetInstance = {
  */
 export type Stylesheet<
   S extends TokenStyleDeclaration,
-  T extends Record<string, object>,
+  T extends Record<string, ElementType | undefined>,
   M extends ModType = never,
 > = {
   [key in keyof T]: ReturnType<TFun<S>>
@@ -559,7 +559,7 @@ export type Stylesheet<
  */
 export type PreVariantsStylesheet<
   S extends TokenStyleDeclaration,
-  T extends Record<string, object>,
+  T extends Record<string, ElementType | undefined>,
   Elements extends string,
 > = Stylesheet<S, T, never> & StylesheetWithVariants<S, Elements>
 
@@ -575,20 +575,17 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
 ) => PreVariantsStylesheet<
   S,
   /*
-   * The AUTHORED element type, not `TokenStyle<S>`.
+   * Element name → the ELEMENT TYPE it declared, and nothing more.
    *
-   * The brand is what `overrideStyles` reads to type its rules, so recording
-   * the narrowed form here is what made an override reject `:focus-visible`
-   * and `@field-group/md` while the stylesheet accepted them. Keeping the
-   * authored type means the two surfaces cannot drift: an override says
-   * exactly what the declaration said, about the elements it declared.
+   * `overrideStyles` reads this to type its rules, and it needs two things
+   * from each element: that the name exists, and which `$$type` constrains
+   * its tokens. It reconstructs `AuthoredElementStyle` from those on demand,
+   * so the two surfaces cannot drift while the brand stays small — recording
+   * the full authored type per element instead pushed the biggest sheets past
+   * what tsc will serialize (TS7056), which is what forced them to be
+   * exported with their typing erased.
    */
-  {
-    [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<
-      S,
-      InferElementType<T, K>
-    >
-  },
+  { [K in PickString<ExtractElements<T>>]: InferElementType<T, K> },
   PickString<ExtractElements<T>>
 >
 
