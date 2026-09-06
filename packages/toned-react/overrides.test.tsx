@@ -346,3 +346,68 @@ describe('StyleOverrides + .variants()', () => {
     expect(classesOf(c.querySelector('[data-slot="r"]')!)).toContain('cur_text')
   })
 })
+
+/*
+ * Two DIFFERENT tokens writing the SAME property. Equal specificity, so
+ * without reconciliation the winner is the order they happen to sit in the
+ * generated stylesheet — which is why call sites were writing the value as a
+ * raw inline style to make it deterministic. The override's declaration is
+ * moved there automatically now; the base token keeps the side it still owns.
+ */
+describe('StyleOverrides + overlapping CSS properties', () => {
+  const { stylesheet: sizing } = defineSystem({
+    padX: defineToken({
+      values: [1, 2, 3] as const,
+      resolve: (v) => ({ paddingLeft: `${v}px`, paddingRight: `${v}px` }),
+    }),
+    padLeft: defineToken({
+      values: [1, 2, 3] as const,
+      resolve: (v) => ({ paddingLeft: `${v}px` }),
+    }),
+    gapper: defineToken({
+      values: [1, 2] as const,
+      resolve: (v) => ({ gap: `${v}px` }),
+    }),
+  })
+
+  const probe = (
+    styles: ReturnType<typeof sizing<{ Root: { $$type: 'view' } }>>,
+    entries: unknown[],
+  ) => {
+    const Probe = () => {
+      const s = useBind(styles)
+      return <s.Root data-slot="r" />
+    }
+    const { container } = render(
+      <StyleOverrides value={entries as never}>
+        <Probe />
+      </StyleOverrides>,
+    )
+    return container.querySelector('[data-slot="r"]') as HTMLElement
+  }
+
+  test("the override's side goes inline; the base token keeps the side it still owns", () => {
+    const styles = sizing({ Root: { $$type: 'view', padX: 3 } })
+    const el = probe(styles, [overrideStyles(styles, { Root: { padLeft: 2 } })])
+    // NOT a class: two classes of equal specificity would tie on padding-left
+    expect(classesOf(el)).not.toContain('padLeft_2')
+    expect(el.style.paddingLeft).toBe('2px')
+    // the base token stays, so the side the override never named is untouched
+    expect(classesOf(el)).toContain('padX_3')
+  })
+
+  test('a token that overlaps nothing stays a class', () => {
+    const styles = sizing({ Root: { $$type: 'view', padX: 3 } })
+    const el = probe(styles, [overrideStyles(styles, { Root: { gapper: 2 } })])
+    expect(classesOf(el)).toContain('gapper_2')
+    expect(el.style.gap).toBe('')
+  })
+
+  test('the same token name is still the deep merge, not an inline', () => {
+    const styles = sizing({ Root: { $$type: 'view', padX: 3 } })
+    const el = probe(styles, [overrideStyles(styles, { Root: { padX: 1 } })])
+    expect(classesOf(el)).toContain('padX_1')
+    expect(classesOf(el)).not.toContain('padX_3')
+    expect(el.style.paddingLeft).toBe('')
+  })
+})
