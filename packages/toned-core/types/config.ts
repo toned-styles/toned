@@ -94,6 +94,19 @@ export type Config = Readonly<{
    */
   matchStyleOverrideScope?: (scope: string, ambient: string | null | undefined) => boolean
 
+  /**
+   * Props that make an element report its own inline width, for the runtime
+   * container-query half (mediaMode 'runtime'): the binding spreads them onto
+   * an element that declares `container: '<name>'` and provides the reported
+   * width to descendant sheets. Platform-owned — react-native answers with an
+   * `onLayout` handler; a web runtime host could answer with a
+   * ResizeObserver-attaching ref. Unset: container elements render unmeasured
+   * and every container condition stays false.
+   */
+  measureContainerProps?: (
+    onSize: (width: number) => void,
+  ) => Record<string, unknown>
+
   /** Initialize ref handling */
   initRef: () => void
 

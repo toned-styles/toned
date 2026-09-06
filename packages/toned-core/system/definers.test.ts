@@ -637,7 +637,7 @@ describe('exec() media chains without a resting value', () => {
       { breakpoints: { __breakpoints: { sm: 640, md: 768 } } },
     )
 
-  test('a media-only prop ends its chain OPEN instead of resolving undefined', () => {
+  test('a media-only prop ends its chain in revert-layer, yielding the cascade below', () => {
     const { exec } = makeSystem()
     const result = exec({ tokens: {}, useClassName: false }, {
       '@md_maxWidth': 'l',
@@ -645,10 +645,12 @@ describe('exec() media chains without a resting value', () => {
 
     const style = result.style as Record<string, unknown>
     expect(style['--media-md__max-width']).toBe('var(--media-md) 40rem')
-    // No fallback: an unset var() is invalid-at-computed-value, i.e. unset
-    // below the breakpoint. Resolving the missing base through a unit used to
-    // produce calc(NaN) here, which computes to 0 and collapsed layouts.
-    expect(style['maxWidth']).toBe('var(--media-md__max-width)')
+    // css-hooks' trick: with every condition off the declaration rolls back
+    // past the style attribute, so a resting ATOMIC CLASS for the property
+    // still applies. (The open-ended chain this replaces computed to unset,
+    // stomping it; resolving the missing base through a unit before that
+    // produced calc(NaN), which computes to 0 and collapsed layouts.)
+    expect(style['maxWidth']).toBe('var(--media-md__max-width, revert-layer)')
     expect(JSON.stringify(style)).not.toContain('NaN')
   })
 
@@ -726,5 +728,91 @@ describe('compound state+pseudo keys (css chain mode)', () => {
     expect(
       (result.style as AnyStyle)['--toned_open--hover__outline-offset__style'],
     ).toBe('var(--toned_open) var(--toned_hover) 2px')
+  })
+})
+
+describe('container-condition chains', () => {
+  const makeCqSystem = () =>
+    defineSystem(
+      {
+        maxWidth: defineToken({
+          values: ['s', 'l'] as const,
+          resolve: (v) => ({ maxWidth: v === 's' ? '20rem' : '40rem' }),
+        }),
+      },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { 'field-group': { md: '28rem' } },
+      },
+    )
+
+  test('an @name/step key chains against the --cq toggle', () => {
+    const { exec } = makeCqSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      '@field-group/md_maxWidth': 'l',
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expect(style['--cq-field-group-md__max-width']).toBe(
+      'var(--cq-field-group-md) 40rem',
+    )
+    expect(style['maxWidth']).toBe(
+      'var(--cq-field-group-md__max-width, 20rem)',
+    )
+  })
+
+  test('a container condition wins OUTERMOST over a media condition', () => {
+    const { exec } = makeCqSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      '@md_maxWidth': 'l',
+      '@field-group/md_maxWidth': 'l',
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    // The container measures the element's own ancestor — more local than any
+    // viewport condition, so its var wraps the media var, not the reverse.
+    expect(style['maxWidth']).toBe(
+      'var(--cq-field-group-md__max-width, var(--media-md__max-width, 20rem))',
+    )
+  })
+
+  test('a container-only prop ends its chain in revert-layer', () => {
+    const { exec } = makeCqSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      '@field-group/md_maxWidth': 'l',
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expect(style['maxWidth']).toBe(
+      'var(--cq-field-group-md__max-width, revert-layer)',
+    )
+  })
+
+  test('container overrides never take the responsive-class path', () => {
+    const system = defineSystem(
+      {
+        maxWidth: defineToken({
+          values: ['s', 'l'] as const,
+          resolve: (v) => ({ maxWidth: v === 's' ? '20rem' : '40rem' }),
+        }),
+      },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { 'field-group': { md: '28rem' } },
+        responsiveTokens: ['maxWidth'],
+      },
+    )
+    const result = system.exec({ tokens: {}, useClassName: true }, {
+      maxWidth: 's',
+      '@field-group/md_maxWidth': 'l',
+    } as any)
+
+    // There is no `@container` atomic class to fall back on — the override
+    // must ride the chain even for an opted, enumerated token.
+    expect(result.className ?? '').not.toContain('field-group')
+    const style = result.style as Record<string, unknown>
+    expect(style['maxWidth']).toContain('--cq-field-group-md__max-width')
   })
 })

@@ -245,6 +245,8 @@ export function defineSystem<
     states?: Record<string, string>
     /** See `TokenStyleDeclaration.responsiveTokens`. */
     responsiveTokens?: readonly string[]
+    /** See `TokenStyleDeclaration.containers`. */
+    containers?: Record<string, Record<string, number | string>>
   },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {
@@ -520,7 +522,10 @@ export function defineSystem<
       const bpValues = config?.breakpoints?.__breakpoints as
         | Record<string, number | string>
         | undefined
-      if (bpValues && Object.keys(breakpointOverrides).length > 0) {
+      const cqValues = config?.containers as
+        | Record<string, Record<string, number | string>>
+        | undefined
+      if ((bpValues || cqValues) && Object.keys(breakpointOverrides).length > 0) {
         // Sort breakpoints ascending for proper cascade. Strings are lengths
         // ('40rem'); rem/em order at 16px per rem — a scale should not mix
         // units whose order could invert under font scaling. A parenthesised
@@ -534,7 +539,34 @@ export function defineSystem<
             : v.startsWith('(')
               ? Number.POSITIVE_INFINITY
               : Number.parseFloat(v) * (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
-        const sortedBps = Object.entries(bpValues).sort(([, a], [, b]) => px(a) - px(b))
+        const sortedBps = Object.entries(bpValues ?? {}).sort(([, a], [, b]) => px(a) - px(b))
+
+        // Container steps join the SAME ordered scale, after every media
+        // entry: a container condition measures the element's own ancestor, so
+        // it is more local than any viewport condition and wins outermost.
+        // Steps sort ascending within a container; containers keep declaration
+        // order. A condition key is the full '<name>/<step>' spelling.
+        const conditionKeys: string[] = sortedBps.map(([k]) => k)
+        for (const [cqName, steps] of Object.entries(cqValues ?? {})) {
+          for (const [stepKey] of Object.entries(steps).sort(
+            ([, a], [, b]) => px(a) - px(b),
+          )) {
+            conditionKeys.push(`${cqName}/${stepKey}`)
+          }
+        }
+
+        // One toggle custom property per condition. Media conditions ride
+        // `--media-<bp>` inits on html; container conditions ride
+        // `--cq-<name>-<step>`, flipped by an `@container <name>` rule on `._`
+        // (both emitted by dom/generate.ts). Kebab both halves: generate
+        // kebabs, so a camelCase key must chain against the same spelling or
+        // the override can never fire.
+        const toggleVarFor = (key: string): string => {
+          const slash = key.indexOf('/')
+          return slash === -1
+            ? `--media-${camelToKebab(key)}`
+            : `--cq-${camelToKebab(key.slice(0, slash))}-${camelToKebab(key.slice(slash + 1))}`
+        }
 
         for (const [prop, overrides] of Object.entries(breakpointOverrides)) {
           // Raw `style` inside a breakpoint — the escape-hatch analogue of the
@@ -554,28 +586,24 @@ export function defineSystem<
               for (const { breakpoint, value } of overrides) {
                 const styleVal = value as Record<string, unknown> | null
                 if (styleVal?.[cssProp] == null) continue
-                // Kebab the breakpoint name: dom/generate.ts emits the toggle
-                // as `--media-${camelToKebab(key)}`, so a camelCase key
-                // ('pointerCoarse') must chain against the same spelling or
-                // the override can never fire.
-                const bpName = camelToKebab(breakpoint.slice(1))
-                acc.style[`--media-${bpName}__${kebabProp}__style`] =
-                  `var(--media-${bpName}) ${styleVal[cssProp]}`
+                const tv = toggleVarFor(breakpoint.slice(1))
+                acc.style[`${tv}__${kebabProp}__style`] =
+                  `var(${tv}) ${styleVal[cssProp]}`
               }
               const baseValue =
                 acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
-              for (const [bpKey] of sortedBps) {
+              for (const condKey of conditionKeys) {
                 if (
                   overrides.some((o) => {
                     const sv = o.value as Record<string, unknown> | null
-                    return o.breakpoint === `@${bpKey}` && sv?.[cssProp] != null
+                    return o.breakpoint === `@${condKey}` && sv?.[cssProp] != null
                   })
                 ) {
-                  const varName = `--media-${camelToKebab(bpKey)}__${kebabProp}__style`
+                  const varName = `${toggleVarFor(condKey)}__${kebabProp}__style`
                   chain =
                     chain === null
-                      ? `var(${varName})`
+                      ? `var(${varName}, revert-layer)`
                       : `var(${varName}, ${chain})`
                 }
               }
@@ -595,6 +623,9 @@ export function defineSystem<
           if (
             execConfig.useClassName &&
             responsive?.includes(prop) &&
+            // Container conditions have no responsive atomic classes — a
+            // container override always rides the chain.
+            overrides.every((o) => !o.breakpoint.includes('/')) &&
             overrides.every((o) =>
               (system[prop] as { values?: readonly unknown[] } | undefined)
                 ?.values?.includes(o.value),
@@ -611,8 +642,8 @@ export function defineSystem<
           // media-only prop has no resting half, and resolving `undefined`
           // through a unit turned it into `calc(var(--base) * NaN)` — which
           // computes to 0, so an `'@md'`-only max-width collapsed the layout
-          // below the breakpoint. With no base the chain ends OPEN instead
-          // (see below).
+          // below the breakpoint. With no base the chain ends in
+          // `revert-layer` instead (see below).
           const hasBase = tokenStyle[prop] !== undefined
           const resolvedBase = hasBase
             ? resolveForChain(system[prop], tokenStyle[prop], execConfig.tokens, ctx)
@@ -640,39 +671,35 @@ export function defineSystem<
           for (const cssProp of cssProps) {
             const kebabProp = camelToKebab(cssProp)
 
-            // Generate --media-bp__css-prop custom properties for each override.
-            // Kebab the breakpoint name: dom/generate.ts emits the toggle as
-            // `--media-${camelToKebab(key)}`, so a camelCase key
-            // ('pointerCoarse') must chain against the same spelling or the
-            // override can never fire.
+            // Generate <toggle>__css-prop custom properties for each override.
             for (const { breakpoint, resolved } of resolvedOverrides) {
               if (!resolved?.[cssProp]) continue
-              const bpName = camelToKebab(breakpoint.slice(1)) // remove @
-              const varName = `--media-${bpName}__${kebabProp}`
-              acc.style[varName] = `var(--media-${bpName}) ${resolved[cssProp]}`
+              const tv = toggleVarFor(breakpoint.slice(1)) // remove @
+              acc.style[`${tv}__${kebabProp}`] = `var(${tv}) ${resolved[cssProp]}`
             }
 
             // Build fallback chain: highest breakpoint first
             // var(--media-xl__bg, var(--media-lg__bg, var(--media-md__bg, base)))
-            // With no resting value the chain ends without a fallback: an
-            // unset var() makes the declaration invalid at computed-value
-            // time, i.e. unset below the breakpoint — the raw-`style` path
-            // above has always worked this way.
+            // With no resting value the chain ends in `revert-layer`
+            // (css-hooks' trick): when every condition is off, the declaration
+            // rolls back past the style attribute to the author layers, so a
+            // resting ATOMIC CLASS for the same property still applies — where
+            // an open-ended chain computed to unset and stomped it.
             let chain =
               resolvedBase?.[cssProp] != null
                 ? String(resolvedBase[cssProp])
                 : null
-            for (const [bpKey] of sortedBps) {
-              const bpAtKey = `@${bpKey}`
+            for (const condKey of conditionKeys) {
+              const condAtKey = `@${condKey}`
               if (
                 resolvedOverrides.some(
-                  (o) => o.breakpoint === bpAtKey && o.resolved?.[cssProp],
+                  (o) => o.breakpoint === condAtKey && o.resolved?.[cssProp],
                 )
               ) {
-                const varName = `--media-${camelToKebab(bpKey)}__${kebabProp}`
+                const varName = `${toggleVarFor(condKey)}__${kebabProp}`
                 chain =
                   chain === null
-                    ? `var(${varName})`
+                    ? `var(${varName}, revert-layer)`
                     : `var(${varName}, ${chain})`
               }
             }

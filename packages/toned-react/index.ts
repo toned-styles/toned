@@ -5,12 +5,14 @@ import {
   type TokenStyleDeclaration,
 } from '@toned/core'
 import {
+  useContext,
   useRef,
   type ComponentPropsWithRef,
   type ElementType as HostElement,
   type ReactElement,
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
+import { ContainerSizesContext } from './containers.tsx'
 import { overrideStyles as _overrideStyles, useOverriddenSheet } from './overrides.tsx'
 
 /**
@@ -143,6 +145,11 @@ export function useStyles<T extends StylesheetLike>(
   // An ancestor may have overridden this sheet for the subtree (see
   // overrides.tsx); everything below resolves the derived sheet instead.
   stylesheet = useOverriddenSheet(stylesheet)
+  // Runtime container queries: the nearest measured ancestor sizes. Read
+  // unconditionally (hooks); folded into the applied state only when the
+  // resolved sheet actually queries a container — containerState answers null
+  // otherwise, and in css mode always (the matcher flattened the keys away).
+  const containerSizes = useContext(ContainerSizesContext)
   const ref = useRef<{
     stylesheet: T
     state?: object
@@ -159,13 +166,23 @@ export function useStyles<T extends StylesheetLike>(
     }
   }
 
-  if (ref.current?.state !== state) {
-    ref.current.result.applyState(state)
+  const cqState = ref.current.result.containerState?.(containerSizes) as
+    | Record<string, boolean>
+    | null
+    | undefined
+  // A container-querying sheet applies a MERGED state each render (a fresh
+  // object, so the identity guard below never holds for it — applyState's own
+  // value-equality check is its short-circuit). Everyone else keeps the
+  // identity fast path untouched.
+  const applied = cqState ? { ...state, ...cqState } : state
+
+  if (ref.current?.state !== applied) {
+    ref.current.result.applyState(applied)
     // Record what was applied so a caller holding a STABLE mods object skips
     // applyState entirely on re-render. (An inline literal still differs by
     // identity every render; for those, applyState's own value-equality check
     // is the short-circuit.) Without this line the guard never held for anyone.
-    ref.current.state = state
+    ref.current.state = applied
   }
 
   return ref.current?.result
@@ -244,6 +261,7 @@ export const overrideStyles = _overrideStyles as <T extends StylesheetLike>(
 ) => import('./overrides.tsx').StyleOverrideEntry
 
 export { StyleOverrides } from './overrides.tsx'
+export { ContainerSizesContext } from './containers.tsx'
 export type { StyleOverrideEntry } from './overrides.tsx'
 
 /**

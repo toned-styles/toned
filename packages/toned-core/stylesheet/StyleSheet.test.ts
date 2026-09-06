@@ -1104,3 +1104,57 @@ describe('elementDescriptors', () => {
     ])
   })
 })
+
+describe('runtime container queries (Base)', () => {
+  // containerState reads the declared containers off the system ref; exec
+  // stays the pass-through stub — `containers` is config, not a token.
+  const cqTokenSystem = {
+    ...(mockTokenSystem as unknown as Record<string, unknown>),
+    system: { containers: { card: { sm: 320, md: '28rem' } } },
+  } as unknown as TokenSystem<typeof testTokens>
+
+  const rules = {
+    Root: { container: 'card', bgColor: 'base' },
+    Label: { bgColor: 'base', '@card/sm': { bgColor: 'blue' } },
+  }
+
+  const make = () =>
+    new Base({
+      ref: cqTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
+    })
+
+  test('containerName reads the resting declaration, and only that', () => {
+    const base = make()
+    expect(base.containerName('Root')).toBe('card')
+    expect(base.containerName('Label')).toBeUndefined()
+  })
+
+  test('containerState maps measured sizes to @name/step mods', () => {
+    const base = make()
+    expect(base.containerState({ card: 400 })).toEqual({ '@card/sm': true })
+    expect(base.containerState({ card: 100 })).toEqual({ '@card/sm': false })
+    // Unmeasured (no provider above, or before first layout): false — the
+    // mobile-first base styles.
+    expect(base.containerState({})).toEqual({ '@card/sm': false })
+  })
+
+  test('a sheet with no container keys answers null', () => {
+    const base = new Base({
+      ref: cqTokenSystem,
+      rules: { Root: { bgColor: 'base' } },
+      config: mockConfig,
+      modsState: {},
+    })
+    expect(base.containerState({ card: 400 })).toBeNull()
+  })
+
+  test('the mod drives matching through applyState like any breakpoint', () => {
+    const base = make()
+    expect(base.getCurrentStyle('Label').style.bgColor).toBe('base')
+    base.applyState({ '@card/sm': true })
+    expect(base.getCurrentStyle('Label').style.bgColor).toBe('blue')
+  })
+})

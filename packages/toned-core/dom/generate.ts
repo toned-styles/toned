@@ -42,6 +42,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     bridges,
     states,
     responsiveTokens,
+    containers,
     ...system
   }: S,
   opts?: { scope?: string },
@@ -234,6 +235,38 @@ export function generate<const S extends TokenStyleDeclaration>(
 
     styles += `html {${rootRule}}`
     styles += rules
+  }
+
+  // Container-condition toggles — the `@container` analogue of the media
+  // toggles above, with one difference: the OFF init sits on `._` ITSELF, not
+  // on html. The on-value is valid-empty and custom properties inherit, so an
+  // html-level init would let an outer element's ON leak into a descendant
+  // whose own nearest same-name container does not match; a per-element init
+  // makes every `._` carry its own answer. The `@container <name>` on-rule
+  // (same specificity, later in source) flips it exactly where css evaluates
+  // the element's NEAREST ancestor container of that name as matching — the
+  // runtime binding mirrors that lookup on native. Chains guard on
+  // `var(--cq-<name>-<step>)`.
+  if (containers) {
+    let cqResets = ''
+    let cqRules = ''
+    for (const [name, steps] of Object.entries(
+      containers as Record<string, Record<string, number | string>>,
+    )) {
+      for (const [step, value] of Object.entries(steps)) {
+        const varName = `--cq-${camelToKebab(name)}-${camelToKebab(step)}`
+        cqResets += `${varName}: initial;`
+        // A number is pixels; a string length passes through; a parenthesised
+        // string is a raw container CONDITION, same as the media scale.
+        const condition =
+          typeof value === 'string' && value.startsWith('(')
+            ? value
+            : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
+        cqRules += `@container ${name} ${condition} { ${scope}._ { ${varName}: ; } }`
+      }
+    }
+    styles += `${scope}._ {${cqResets}}`
+    styles += cqRules
   }
 
   // handle custom tokens
