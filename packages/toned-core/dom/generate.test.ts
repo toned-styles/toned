@@ -3,6 +3,43 @@ import { defineToken } from '../system/definers.ts'
 import { generate } from './generate.ts'
 
 describe('generate', () => {
+  describe('responsive atomic classes', () => {
+    const maxW = {
+      values: ['gutter', '32'],
+      resolve: (value: string) => ({
+        maxWidth: value === 'gutter' ? 'calc(100% - 2rem)' : '32rem',
+      }),
+    }
+
+    test('emits each opted token value again under every width breakpoint, ascending', () => {
+      const result = generate({
+        maxW,
+        breakpoints: { __breakpoints: { md: 768, sm: 480 } },
+        responsiveTokens: ['maxW'],
+      })
+      expect(result).toContain(
+        '@media (min-width: 480px) {.\\@sm\\:maxW_gutter{max-width:calc(100% - 2rem);}.\\@sm\\:maxW_32{max-width:32rem;}}',
+      )
+      expect(result).toContain('@media (min-width: 768px) {.\\@md\\:maxW_gutter')
+      // ascending order: the md classes come after the sm classes, and both
+      // after the resting atomics, so an active breakpoint wins by order
+      expect(result.indexOf('.maxW_gutter{')).toBeLessThan(
+        result.indexOf('\\@sm\\:maxW_gutter'),
+      )
+      expect(result.indexOf('\\@sm\\:maxW_gutter')).toBeLessThan(
+        result.indexOf('\\@md\\:maxW_gutter'),
+      )
+    })
+
+    test('un-opted tokens emit no responsive classes', () => {
+      const result = generate({
+        maxW,
+        breakpoints: { __breakpoints: { sm: 480 } },
+      })
+      expect(result).not.toContain('\\@sm\\:maxW_gutter')
+    })
+  })
+
   describe('token class generation', () => {
     test('generates CSS class for a single token value', () => {
       const result = generate({

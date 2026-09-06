@@ -243,6 +243,8 @@ export function defineSystem<
     animations?: Record<string, AnimationInput>
     bridges?: Record<string, BridgeConfig>
     states?: Record<string, string>
+    /** See `TokenStyleDeclaration.responsiveTokens`. */
+    responsiveTokens?: readonly string[]
   },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {
@@ -577,6 +579,30 @@ export function defineSystem<
             }
             continue
           }
+          // Class mode for the opted tokens (`responsiveTokens` on the
+          // declaration): every override enumerated → responsive atomic
+          // classes from generate()'s media blocks, instead of a chain — the
+          // breakpoint value then loses to a caller's utilities, exactly like
+          // the resting atomic. All-or-nothing per property: a mixed set
+          // (one boxed-primitive escape) keeps the whole chain so the
+          // breakpoint ORDER stays inside one mechanism.
+          const responsive = (config as { responsiveTokens?: readonly string[] })
+            ?.responsiveTokens
+          if (
+            execConfig.useClassName &&
+            responsive?.includes(prop) &&
+            overrides.every((o) =>
+              (system[prop] as { values?: readonly unknown[] } | undefined)
+                ?.values?.includes(o.value),
+            )
+          ) {
+            for (const o of overrides) {
+              acc.className ??= ''
+              acc.className += ` ${o.breakpoint}:${prop}_${o.value}`
+            }
+            continue
+          }
+
           // Resolve the base value only when the author DECLARED one. A
           // media-only prop has no resting half, and resolving `undefined`
           // through a unit turned it into `calc(var(--base) * NaN)` — which

@@ -200,6 +200,7 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
+    | readonly string[]
     | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
@@ -217,10 +218,23 @@ export type TokenStyleDeclaration = {
    * the selector is applied to the element (`._<selector>`).
    */
   states?: Record<string, string>
+  /**
+   * Tokens whose breakpoint overrides compile to RESPONSIVE ATOMIC CLASSES
+   * instead of inline var-fallback chains. A chain rides the element's style
+   * attribute and beats every stylesheet rule — the right winner for state
+   * styling, the wrong one for a responsive default a call site's own utility
+   * class must keep overriding. For a token named here, an enumerated value
+   * under an `'@bp'` key resolves to the class `@bp:token_value`, which
+   * `generate()` emits under the breakpoint's media condition, in the same
+   * layer as (and after) the resting atomics — so it beats the resting value
+   * by order at equal specificity and still loses to the caller's utilities.
+   * Non-enumerated values (boxed-primitive escapes) keep the chain.
+   */
+  responsiveTokens?: readonly string[]
 }
 
 /** Filter out 'breakpoints' key from token style keys */
-export type TokenKeys<S> = Exclude<keyof S, 'breakpoints'>
+export type TokenKeys<S> = Exclude<keyof S, 'breakpoints' | 'responsiveTokens'>
 
 import type { TonedTypeRegistry } from '../registry.ts'
 
