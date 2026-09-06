@@ -1,5 +1,6 @@
 import {
   type AuthoredElementStyle,
+  type ElementType,
   getConfig,
   type ModType,
   SYMBOL_INIT,
@@ -261,9 +262,10 @@ export type StyleOverrideRules<T extends StylesheetLike> =
     elements: infer E
   }
     ? {
-        [K in keyof E as K extends string
-          ? K
-          : never]?: AuthoredElementStyle<Sys>
+        [K in keyof E as K extends string ? K : never]?: AuthoredElementStyle<
+          Sys,
+          E[K] extends ElementType | undefined ? E[K] : undefined
+        >
       } & {
         /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
          * the override's base rules; the matcher resolves them on the derived
@@ -295,9 +297,10 @@ export type StyleOverrideVariantRules<T extends StylesheetLike> =
     elements: infer E
   }
     ? { $compose?: string | string[] } & {
-        [K in keyof E as K extends string
-          ? K
-          : never]?: AuthoredElementStyle<Sys>
+        [K in keyof E as K extends string ? K : never]?: AuthoredElementStyle<
+          Sys,
+          E[K] extends ElementType | undefined ? E[K] : undefined
+        >
       }
     : Record<string, AuthoredElementStyle<TokenStyleDeclaration>>
 
