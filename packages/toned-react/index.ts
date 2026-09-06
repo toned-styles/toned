@@ -1,6 +1,7 @@
 import {
   getConfig,
   SYMBOL_INIT,
+  type AuthoredElementStyle,
   type TokenStyle,
   type TokenStyleDeclaration,
 } from '@toned/core'
@@ -241,7 +242,7 @@ export type StyleOverrideRules<T extends StylesheetLike> = InferMeta<T> extends 
   system: infer Sys extends TokenStyleDeclaration
   elements: infer E
 }
-  ? { [K in keyof E as K extends string ? K : never]?: TokenStyle<Sys> } & {
+  ? { [K in keyof E as K extends string ? K : never]?: AuthoredElementStyle<Sys> } & {
       /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
        * the override's base rules; the matcher resolves them on the derived
        * sheet exactly as on an authored one. */

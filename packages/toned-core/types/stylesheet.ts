@@ -4,7 +4,19 @@
  * @module types/stylesheet
  */
 
+import type { CssOnlyPseudoState, PseudoState } from '../utils/pseudo.ts'
 import type { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
+
+/*
+ * Re-exported so a CONSUMER package can emit a declaration for an exported
+ * stylesheet. A sheet's type has symbol-keyed members, and tsc will only name
+ * those symbols in a `.d.ts` if the emitting file has them in scope, resolved
+ * against the module the type is declared in — this one. Without this the
+ * export fails with TS4023 and the only escape was annotating the sheet
+ * `OverridableStylesheet`, which erases the element, system and variant
+ * typing that every override then loses.
+ */
+export type { SYMBOL_INIT, SYMBOL_REF }
 import type { Config, Platform } from './config.ts'
 import type {
   ElementType,
@@ -71,7 +83,16 @@ type StringOrNumber = string | number | symbol
 export type ModType = Record<string, string | boolean | number>
 
 /** Supported pseudo-class selectors */
-export type Pseudo = ':hover' | ':active' | ':focus'
+/*
+ * Derived from the runtime lists rather than restated, because restating it
+ * drifted: the tracked set was spelled here by hand and the five CSS-ONLY
+ * states (`:focus-visible`, `:focus-within`, and the cross-element channels)
+ * were never added, so a stylesheet writing `':focus-visible'` was accepted
+ * only because StylesheetInput is used as a CONSTRAINT, which does no excess
+ * property checking. `overrideStyles`, which checks its rules for real, then
+ * rejected the very thing every button sheet writes.
+ */
+export type Pseudo = PseudoState | CssOnlyPseudoState
 
 /** Extract string keys from a type */
 export type PickString<K> = K extends string ? K : never
@@ -150,7 +171,7 @@ export type ElementStyleNew<
 }
 
 /** The `$$type` an element declared in the input, if any. */
-type InferElementType<T, K> = K extends keyof T
+export type InferElementType<T, K> = K extends keyof T
   ? T[K] extends { $$type: infer TT extends ElementType }
     ? TT
     : undefined
@@ -199,6 +220,25 @@ type CrossElementSelector<
   | `${Elements}${InferStatePseudos<S>}`
 
 /**
+ * One element's rules, exactly as `StylesheetInput` accepts them.
+ *
+ * The single source for "what may be written about an element": the authoring
+ * surface below and `overrideStyles`' rules type both use THIS, so the two
+ * cannot drift. Re-deriving the pseudo and breakpoint arguments at a second
+ * site is what let overrides reject `:focus-visible` and `@field-group/md`
+ * while the stylesheet accepted them.
+ */
+export type AuthoredElementStyle<
+  S extends TokenStyleDeclaration,
+  ET extends ElementType | undefined = undefined,
+> = ElementStyleNew<
+  S,
+  Pseudo | InferStatePseudos<S>,
+  keyof InferBreakpoints<S> | InferContainerConditions<S>,
+  ET
+>
+
+/**
  * Stylesheet input type - defines elements and cross-element selectors.
  */
 export type StylesheetInput<
@@ -206,12 +246,7 @@ export type StylesheetInput<
   T,
   Elements extends string = PickString<ExtractElements<T>>,
 > = {
-  [K in Elements]?: ElementStyleNew<
-    S,
-    Pseudo | InferStatePseudos<S>,
-    keyof InferBreakpoints<S> | InferContainerConditions<S>,
-    InferElementType<T, K>
-  >
+  [K in Elements]?: AuthoredElementStyle<S, InferElementType<T, K>>
 } & {
   [K in CrossElementSelector<Elements, S>]?: ElementMap<S, Elements>
 } & {
@@ -457,7 +492,7 @@ export type StylesheetInstance = {
  */
 export type Stylesheet<
   S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
+  T extends Record<string, object>,
   M extends ModType = never,
 > = {
   [key in keyof T]: ReturnType<TFun<S>>
@@ -503,7 +538,7 @@ export type Stylesheet<
  */
 export type PreVariantsStylesheet<
   S extends TokenStyleDeclaration,
-  T extends Record<string, TokenStyle<S>>,
+  T extends Record<string, object>,
   Elements extends string,
 > = Stylesheet<S, T, never> & StylesheetWithVariants<S, Elements>
 
@@ -518,7 +553,16 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   style: T,
 ) => PreVariantsStylesheet<
   S,
-  { [K in PickString<ExtractElements<T>>]: TokenStyle<S> },
+  /*
+   * The AUTHORED element type, not `TokenStyle<S>`.
+   *
+   * The brand is what `overrideStyles` reads to type its rules, so recording
+   * the narrowed form here is what made an override reject `:focus-visible`
+   * and `@field-group/md` while the stylesheet accepted them. Keeping the
+   * authored type means the two surfaces cannot drift: an override says
+   * exactly what the declaration said, about the elements it declared.
+   */
+  { [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<S, InferElementType<T, K>> },
   PickString<ExtractElements<T>>
 >
 
