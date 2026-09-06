@@ -13,11 +13,14 @@ describe('pseudo constants', () => {
     )
   })
 
-  test('cascade order runs :src-hover < :hover < :focus < :focus-visible < :active', () => {
+  test('cascade order runs sib < src channels < hover < focus < focus-within < focus-visible < active', () => {
     expect(PSEUDO_CASCADE_ORDER).toEqual([
+      ':sib-hover',
+      ':src-focus-within',
       ':src-hover',
       ':hover',
       ':focus',
+      ':focus-within',
       ':focus-visible',
       ':active',
     ])
