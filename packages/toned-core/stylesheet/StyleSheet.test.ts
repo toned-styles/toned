@@ -1227,3 +1227,30 @@ describe('runtime condition algebra (Base)', () => {
     ]).toContain('card/>=612')
   })
 })
+
+describe("the ':rtl' runtime half (getDirection seam)", () => {
+  const rtlSystem = {
+    ...(mockTokenSystem as unknown as Record<string, unknown>),
+    system: { states: { rtl: ':dir(rtl)' } },
+  } as unknown as TokenSystem<typeof testTokens>
+
+  const make = (getDirection?: () => 'ltr' | 'rtl') =>
+    new Base({
+      ref: rtlSystem,
+      rules: { Root: { bgColor: 'base', ':rtl': { bgColor: 'red' } } },
+      config: { ...mockConfig, getDirection } as typeof mockConfig,
+      modsState: {},
+    })
+
+  test('answers every :rtl mod from the seam', () => {
+    const base = make(() => 'rtl')
+    expect(base.conditionState({})).toEqual({ 'Root:rtl': true })
+    base.applyState(base.conditionState({}) ?? {})
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('red')
+  })
+
+  test('ltr answers false; no seam answers nothing (web half owns it)', () => {
+    expect(make(() => 'ltr').conditionState({})).toEqual({ 'Root:rtl': false })
+    expect(make(undefined).conditionState({})).toBeNull()
+  })
+})

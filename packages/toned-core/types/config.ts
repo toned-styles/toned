@@ -107,6 +107,15 @@ export type Config = Readonly<{
     onSize: (width: number) => void,
   ) => Record<string, unknown>
 
+  /**
+   * The runtime half of the ':rtl' declared state (whose web half is a
+   * `:dir(rtl)` toggle in the generated css): when set, conditionState
+   * answers every `<element>:rtl` mod from it. Host-owned, like
+   * resolveElement — a native binding wires I18nManager here; unset, ':rtl'
+   * never matches at runtime.
+   */
+  getDirection?: () => 'ltr' | 'rtl'
+
   /** Initialize ref handling */
   initRef: () => void
 
