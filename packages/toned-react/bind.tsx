@@ -1,5 +1,13 @@
-import { createElement, useRef, type ReactElement } from 'react'
+import {
+  createElement,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react'
 import { getConfig, SYMBOL_INIT, type Config, type ElementType } from '@toned/core'
+import { ContainerSizesContext } from './containers.tsx'
 
 /**
  * What a web intrinsic IMPLIES about the element's nature, for the native
@@ -95,7 +103,7 @@ export function buildBoundMap(
     // import from a component nobody rendered. Deferring it to render keeps the
     // component identity stable (identity is `Comp`, cached once — not `El`).
     let El: unknown
-    const Comp = ((props?: AnyProps): ReactElement => {
+    const renderCore = (props?: AnyProps): ReactElement => {
       // `key` is a declared element, so the getter never yields undefined.
       const bag = getInstance()[key]!
       // `as` overrides the `$$type`-selected primitive for this render: the
@@ -123,7 +131,53 @@ export function buildBoundMap(
       if (El === undefined) El = resolveElement(type ?? 'view')
       const merged = props ? bag.with(props) : bag
       return createElement(El as never, merged)
-    }) as BoundElement
+    }
+
+    // Runtime container roots (mediaMode 'runtime', an element declaring
+    // `container: '<name>'`): the component measures its own inline size
+    // through the platform's `measureContainerProps` seam and provides the
+    // sizes map to its subtree, shadowing an outer same-name container —
+    // the runtime mirror of the `@container` nearest-ancestor lookup. In css
+    // mode the generated toggles carry all of this, so the plain component
+    // renders with zero extra hooks. Container-ness is static in the rules,
+    // so each element key takes ONE of these branches for its whole life.
+    const containerOf =
+      config.mediaMode === 'runtime'
+        ? (
+            getInstance() as Instance & {
+              containerName?: (k: string) => string | undefined
+            }
+          ).containerName?.(key)
+        : undefined
+
+    const Comp = (
+      containerOf === undefined
+        ? renderCore
+        : (props?: AnyProps): ReactElement => {
+            const parentSizes = useContext(ContainerSizesContext)
+            const [width, setWidth] = useState(0)
+            const sizes = useMemo(
+              () => ({ ...parentSizes, [containerOf]: width }),
+              [parentSizes, width],
+            )
+            // setWidth is stable and the config seam is read once: the
+            // measure props keep one identity for the element's life.
+            // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
+            const measureProps = useMemo(
+              () =>
+                config.measureContainerProps?.((w) =>
+                  setWidth((prev) => (prev === w ? prev : w)),
+                ),
+              [],
+            )
+            const children = createElement(
+              ContainerSizesContext.Provider,
+              { value: sizes },
+              props?.['children'] as never,
+            )
+            return renderCore({ ...props, ...measureProps, children })
+          }
+    ) as BoundElement
     map[key] = Comp
   }
   return map

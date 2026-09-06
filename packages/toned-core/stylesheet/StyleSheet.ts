@@ -366,6 +366,57 @@ export class Base {
     return out
   }
 
+  /**
+   * The container NAME this element declares itself the root of, if any — the
+   * resting `container` declaration, read raw (a container is a structural
+   * fact, so it never varies by variant). The binding uses it to attach
+   * measurement and provide sizes to descendants in runtime mode.
+   */
+  containerName(elementKey: ElementKey): string | undefined {
+    const decl = (
+      this.rules as Record<string, { container?: unknown } | undefined>
+    )[elementKey]?.container
+    return typeof decl === 'string' ? decl : undefined
+  }
+
+  /**
+   * Container-condition mods for the given measured ancestor sizes (px per
+   * container name), or null when this sheet queries none. In css mode the
+   * matcher flattens `'@name/step'` keys away, so this self-gates to runtime
+   * mode. An unmeasured container (no provider above, or before the first
+   * layout) answers false — the mobile-first base styles.
+   */
+  containerState(
+    sizes: Record<string, number>,
+  ): Record<string, boolean> | null {
+    const containers = (
+      this.ref as {
+        system?: { containers?: Record<string, Record<string, number | string>> }
+      }
+    ).system?.containers
+    if (!containers) return null
+    let out: Record<string, boolean> | null = null
+    for (const mod in this.matcher.scheme) {
+      if (mod[0] !== '@') continue
+      const slash = mod.indexOf('/')
+      if (slash === -1) continue
+      const step = containers[mod.slice(1, slash)]?.[mod.slice(slash + 1)]
+      if (step == null) continue
+      // A parenthesised step is a raw css condition — not runtime-evaluable,
+      // so it parses to Infinity and never matches off the web.
+      const stepPx =
+        typeof step === 'number'
+          ? step
+          : step.startsWith('(')
+            ? Number.POSITIVE_INFINITY
+            : Number.parseFloat(step) *
+              (step.endsWith('rem') || step.endsWith('em') ? 16 : 1)
+      out ??= {}
+      out[mod] = (sizes[mod.slice(1, slash)] ?? -1) >= stepPx
+    }
+    return out
+  }
+
   matchStyles() {
     this.modsStylePrev = this.modsStyle
     this.modsStyle = this.matcher.match(this.modsState)

@@ -54,6 +54,42 @@ describe('generate', () => {
     })
   })
 
+  describe('container-condition toggles', () => {
+    test('emits per-element resets and @container flips for every step', () => {
+      const result = generate({
+        containers: { 'field-group': { md: '28rem' }, card: { sm: 320 } },
+      })
+      // The OFF init sits on `._` ITSELF, never html: the on-value is
+      // valid-empty and inherits, so an html init would leak an outer
+      // container's ON into an element whose own nearest same-name container
+      // does not match.
+      expect(result).toContain(
+        '._ {--cq-field-group-md: initial;--cq-card-sm: initial;}',
+      )
+      expect(result).toContain(
+        '@container field-group (min-width: 28rem) { ._ { --cq-field-group-md: ; } }',
+      )
+      expect(result).toContain(
+        '@container card (min-width: 320px) { ._ { --cq-card-sm: ; } }',
+      )
+      // resets precede the flips, so the flip wins at equal specificity
+      expect(result.indexOf('--cq-field-group-md: initial')).toBeLessThan(
+        result.indexOf('@container field-group'),
+      )
+    })
+
+    test('a scoped system scopes both halves', () => {
+      const result = generate(
+        { containers: { card: { sm: 320 } } },
+        { scope: '.ds2' },
+      )
+      expect(result).toContain('.ds2 ._ {--cq-card-sm: initial;}')
+      expect(result).toContain(
+        '@container card (min-width: 320px) { .ds2 ._ { --cq-card-sm: ; } }',
+      )
+    })
+  })
+
   describe('token class generation', () => {
     test('generates CSS class for a single token value', () => {
       const result = generate({

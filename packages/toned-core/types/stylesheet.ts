@@ -18,6 +18,18 @@ type InferBreakpoints<R> = R extends { breakpoints?: Breakpoints<infer X> }
   ? X
   : never
 
+/**
+ * Declared containers (`containers` config) → their `'<name>/<step>'`
+ * condition keys, used exactly like breakpoint keys (`'@card/md': {…}`).
+ */
+type InferContainerConditions<R> = R extends {
+  containers?: infer C extends Record<string, Record<string, number | string>>
+}
+  ? {
+      [N in keyof C & string]: `${N}/${keyof C[N] & string}`
+    }[keyof C & string]
+  : never
+
 /** Declared state aliases (`states` config) → their `:alias` stylesheet keys. */
 type InferStatePseudos<R> = R extends { states?: infer States }
   ? States extends Record<string, string>
@@ -83,7 +95,9 @@ export type TFun<S extends TokenStyleDeclaration> = <D extends TokenStyle<S>[]>(
 export type ElementStyleNew<
   S extends TokenStyleDeclaration,
   AvailablePseudo extends string = Pseudo | InferStatePseudos<S>,
-  AvailableBreakpoints extends StringOrNumber = keyof InferBreakpoints<S>,
+  AvailableBreakpoints extends StringOrNumber =
+    | keyof InferBreakpoints<S>
+    | InferContainerConditions<S>,
   ET extends ElementType | undefined = undefined,
 > = TokenStyle<S, ET> & {
   /**
@@ -168,13 +182,15 @@ export type StylesheetInput<
   [K in Elements]?: ElementStyleNew<
     S,
     Pseudo | InferStatePseudos<S>,
-    keyof InferBreakpoints<S>,
+    keyof InferBreakpoints<S> | InferContainerConditions<S>,
     InferElementType<T, K>
   >
 } & {
   [K in CrossElementSelector<Elements, S>]?: ElementMap<S, Elements>
 } & {
-  [B in keyof InferBreakpoints<S> as `@${B & string}`]?: ElementMap<S, Elements>
+  [B in
+    | (keyof InferBreakpoints<S> & string)
+    | InferContainerConditions<S> as `@${B}`]?: ElementMap<S, Elements>
 } & {
   /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
   [P in Platform as `@platform.${P}`]?: ElementMap<S, Elements>

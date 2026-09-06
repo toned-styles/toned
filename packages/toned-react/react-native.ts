@@ -101,6 +101,17 @@ function getProps(this: Base, elementKey: string) {
   }
 
   surfaceBridgeProps(result)
+
+  // A `container` token's WEB paint (`container-type`/`container-name`) has
+  // no native analogue — the binding measures the element instead (see
+  // measureContainerProps below). RN warns on unknown style props, so both
+  // are stripped rather than passed through.
+  const style = result['style']
+  if (style && typeof style === 'object') {
+    delete (style as Record<string, unknown>)['containerType']
+    delete (style as Record<string, unknown>)['containerName']
+  }
+
   attachWith(result)
 
   return result
@@ -135,4 +146,13 @@ export default defineConfig({
   },
   getProps,
   resolveElement,
+  // The runtime container-query measurement seam: RN reports an element's
+  // laid-out size through onLayout, which fires again only when the size
+  // actually changes — the bounded native mirror of a ResizeObserver.
+  measureContainerProps: (onSize: (width: number) => void) => ({
+    onLayout: (e: { nativeEvent?: { layout?: { width?: number } } }) => {
+      const w = e?.nativeEvent?.layout?.width
+      if (typeof w === 'number') onSize(w)
+    },
+  }),
 })

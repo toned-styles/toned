@@ -129,6 +129,18 @@ export type TokenTypeConfig = {
 export type Breakpoints<O extends Record<string, number | string>> = { __breakpoints: O }
 
 /**
+ * Named size containers — the element-scoped analogue of breakpoints. Each
+ * container names its steps (a number is pixels; a string length passes
+ * through). An element declares itself a container root (on the web, via a
+ * token resolving to `container-type`/`container-name`; on native, the
+ * binding measures it), and any descendant element styles against a step with
+ * an `'@<name>/<step>'` key — compiled to an `@container`-toggled var chain
+ * on the web, resolved at runtime against the nearest measured ancestor on
+ * native.
+ */
+export type Containers = Record<string, Record<string, number | string>>
+
+/**
  * Token style declaration - the complete system definition.
  * Maps token names to their configurations, with optional breakpoints.
  */
@@ -200,6 +212,7 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
+    | Containers
     | readonly string[]
     | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
@@ -231,10 +244,15 @@ export type TokenStyleDeclaration = {
    * Non-enumerated values (boxed-primitive escapes) keep the chain.
    */
   responsiveTokens?: readonly string[]
+  /** Named size containers and their steps — see `Containers`. */
+  containers?: Containers
 }
 
 /** Filter out 'breakpoints' key from token style keys */
-export type TokenKeys<S> = Exclude<keyof S, 'breakpoints' | 'responsiveTokens'>
+export type TokenKeys<S> = Exclude<
+  keyof S,
+  'breakpoints' | 'responsiveTokens' | 'containers'
+>
 
 import type { TonedTypeRegistry } from '../registry.ts'
 
