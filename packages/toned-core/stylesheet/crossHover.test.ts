@@ -3,6 +3,45 @@ import { describe, expect, test } from 'vitest'
 import { resolveCrossHoverCss } from './crossHover.ts'
 
 describe('resolveCrossHoverCss', () => {
+  test('a trailing ~ on the source selects the SIBLING channel', () => {
+    const out = resolveCrossHoverCss({
+      source: {},
+      target: {},
+      'source~:hover': { target: { color: 'red' } },
+    })
+    expect(out.target[':sib-hover_color']).toBe('red')
+    expect(out.source.className).toContain('_s')
+    expect(out['source~:hover']).toBeUndefined()
+  })
+
+  test('the sibling channel carries declared states too', () => {
+    const out = resolveCrossHoverCss(
+      {
+        source: {},
+        target: {},
+        'source~:data-active': { target: { color: 'blue' } },
+      },
+      ['data-active'],
+    )
+    expect(out.target[':sib-data-active_color']).toBe('blue')
+  })
+
+  test('source:focus-within is css-channelable (descendants only)', () => {
+    const out = resolveCrossHoverCss({
+      source: {},
+      target: {},
+      'source:focus-within': { target: { opacity: 1 } },
+    })
+    expect(out.target[':src-focus-within_opacity']).toBe(1)
+    const sib = resolveCrossHoverCss({
+      source: {},
+      target: {},
+      'source~:focus-within': { target: { opacity: 1 } },
+    })
+    // no sibling focus-within channel — left for the runtime path
+    expect(sib['source~:focus-within']).toBeDefined()
+  })
+
   test('rewrites a base-level source:hover into the src-hover channel', () => {
     const out = resolveCrossHoverCss({
       source: { bgColor: 'blue' },

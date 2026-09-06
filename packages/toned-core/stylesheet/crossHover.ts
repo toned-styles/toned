@@ -3,11 +3,15 @@
  * cross-element keys into ordinary element rules BEFORE flattening, so no runtime
  * handlers are armed for them.
  *
- * Two families ride the same mechanism:
+ * The families riding the mechanism:
  * - `'source:hover'` — the group-hover channel. Hover-gated in the system css.
+ * - `'source:focus-within'` — a container's focus revealing a descendant.
  * - `'source:<alias>'` for a DECLARED state (`open`, `checked`, …) — a parent's
  *   data-state styling a descendant (a trigger's `:open` rotating its chevron).
  *   Always live, like the self-state toggles.
+ * - `'source~:hover'` / `'source~:<alias>'` — the SIBLING channel: the toggle
+ *   reaches the source's following siblings (`._s… ~ ._`), the peer-recolor
+ *   combinator (a button's hover recoloring the action beside it).
  *
  * In both cases:
  * - The SOURCE element gains the `_s` marker class (via the `className` entry
@@ -60,29 +64,38 @@ export function resolveCrossHoverCss(
     // Which channel, if any, this suffix maps to. Only a single ':hover' or a
     // single declared-state suffix is CSS-channelable; anything else stays
     // runtime (handled downstream, with its warning).
+    // A trailing '~' on the source name selects the SIBLING channel: the
+    // toggle reaches the source's following siblings (`._s:hover ~ ._`)
+    // instead of its descendants — the peer-recolor combinator.
+    const sibling = sourceName.endsWith('~')
+    const bareSource = sibling ? sourceName.slice(0, -1) : sourceName
+    const prefix = sibling ? 'sib' : 'src'
+
     let channel: string | undefined
-    if (suffix === HOVER) channel = 'src-hover'
+    if (suffix === HOVER) channel = `${prefix}-hover`
+    else if (suffix === ':focus-within' && !sibling)
+      channel = 'src-focus-within'
     else if (
       suffix.indexOf(':', 1) === -1 &&
       stateAliases.includes(suffix.slice(1))
     )
-      channel = `src-${suffix.slice(1)}`
+      channel = `${prefix}-${suffix.slice(1)}`
     if (!channel) continue
 
-    if (!(sourceName in rules)) continue
+    if (!(bareSource in rules)) continue
     const elementMap = rules[key]
     if (!elementMap || typeof elementMap !== 'object') continue
 
     out ??= { ...rules }
     delete out[key]
 
-    const source = { ...(out[sourceName] ?? {}) }
+    const source = { ...(out[bareSource] ?? {}) }
     // One `_s` marker suffices however many channels a source drives (hover +
     // several states), so a multi-channel source does not accumulate duplicates.
     const classes: string = source.className ?? ''
     if (!classes.split(' ').includes('_s'))
       source.className = classes ? `${classes} _s` : '_s'
-    out[sourceName] = source
+    out[bareSource] = source
 
     for (const targetKeyRaw in elementMap) {
       const targetKey = targetKeyRaw.replace(/^\$/, '')
