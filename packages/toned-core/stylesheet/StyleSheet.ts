@@ -196,10 +196,36 @@ export function createStylesheet<
     extend: (extensionRules: AnyValue) => {
       // Deep merge base rules with extension rules
       const extendedRules = deepMerge(rules as AnyValue, extensionRules)
+      // An extension REPLACES the properties it names wherever the sheet
+      // declares them: patch each variant entry's matching element rules too,
+      // so a variant's own value cannot resurrect over an override (a
+      // caller overriding `width` means the WIDTH, not "the width unless a
+      // size variant says otherwise"). Nested pseudo/breakpoint objects
+      // replace wholesale — an override declares its intersections whole.
+      let extendedVariants = variantRules
+      if (variantRules && extensionRules && typeof extensionRules === 'object') {
+        extendedVariants = {}
+        for (const vKey in variantRules) {
+          const vEntry = variantRules[vKey]
+          if (!vEntry || typeof vEntry !== 'object') {
+            extendedVariants[vKey] = vEntry
+            continue
+          }
+          const patched: AnyValue = { ...vEntry }
+          for (const el in extensionRules) {
+            const extEl = extensionRules[el]
+            if (!patched[el] || !extEl || typeof extEl !== 'object') continue
+            const elRule: AnyValue = { ...patched[el] }
+            for (const prop in extEl) elRule[prop] = extEl[prop]
+            patched[el] = elRule
+          }
+          extendedVariants[vKey] = patched
+        }
+      }
       return createStylesheet<S, never, AnyValue>(
         ref,
         extendedRules,
-        variantRules,
+        extendedVariants,
       )
     },
   })
