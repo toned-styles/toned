@@ -15,6 +15,7 @@ const sizeValues = [
   'auto',
   '100%',
   'fit-content',
+  'max-content',
   0,
   0.5,
   1,
@@ -50,7 +51,10 @@ const sizeValues = [
 ] as const
 
 const SizeUnit = (value: Number | String, tokens: Parameters<typeof SpaceUnit>[1]) =>
-  value === 'auto' || value === '100%' || value === 'fit-content'
+  value === 'auto' ||
+  value === '100%' ||
+  value === 'fit-content' ||
+  value === 'max-content'
     ? String(value)
     : SpaceUnit(value, tokens)
 
