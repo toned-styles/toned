@@ -143,6 +143,25 @@ describe('createStylesheet', () => {
   })
 
   describe('extend method', () => {
+    test('extend beats variant values for the properties it names', () => {
+      const rules = { container: { width: 'full' } }
+      const sheet = createStylesheet(mockTokenSystem, rules).variants({
+        '[size=icon]': { container: { width: '9', height: '9' } },
+      })
+      const extended = (sheet as AnyValue).extend({ container: { width: 'fit' } })
+      const base = extended[SYMBOL_INIT](
+        { getProps() {}, getTokens: () => ({}), tokens: {} } as AnyValue,
+        {},
+      )
+      // The derived sheet's variant entry no longer carries the overridden
+      // property — a caller overriding `width` means the width, not "the
+      // width unless a size variant says otherwise" — while untouched
+      // properties survive.
+      expect(base.rules['[size=icon]'].container.width).toBe('fit')
+      expect(base.rules['[size=icon]'].container.height).toBe('9')
+      expect(base.rules.container.width).toBe('fit')
+    })
+
     test('extend method returns new stylesheet', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
