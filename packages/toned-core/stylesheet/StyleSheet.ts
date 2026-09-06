@@ -426,6 +426,8 @@ export class Base {
         media: (name) => this.modsState[`@${name}`] as boolean | undefined,
         containerPx: (name) => sizes[name],
         stepWidth: (c, s) => containers?.[c]?.[s],
+        basePx:
+          (this.ref as { system?: { base?: number } }).system?.base ?? 4,
       })
     }
     if (out) this.lastContainerSizes = sizes

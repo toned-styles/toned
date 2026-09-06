@@ -23,7 +23,8 @@ const { stylesheet } = defineSystem(
       resolve: (v) => ({ width: v === 'narrow' ? '100px' : '400px' }),
     }),
   },
-  { containers: { card: { sm: 320 } } },
+  // sm: 80 units × the default base (4px) = 320px.
+  { containers: { card: { sm: 80 } } },
 )
 
 const cardStyles = stylesheet({ Root: { container: 'card' } })
@@ -113,7 +114,7 @@ describe('runtime container queries (binding)', () => {
     })
     try {
       const hideStyles = stylesheet({
-        Label: { w: 'narrow', [String(cq('card').below(400))]: { style: { display: 'none' } } },
+        Label: { w: 'narrow', [String(cq('card').below(100))]: { style: { display: 'none' } } },
       })
       function HideChild() {
         const s = useBind(hideStyles)

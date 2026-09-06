@@ -9,8 +9,26 @@ export const initMedia = <S extends TokenStyleDeclaration>({
   const w = typeof window === 'undefined' ? null : window
 
   const medias = Object.fromEntries(
-    Object.entries(config?.breakpoints?.__breakpoints ?? {}).map(
-      ([key, value]) => [key, w?.matchMedia(`(min-width: ${value}px)`)],
+    Object.entries(
+      (config?.breakpoints?.__breakpoints ?? {}) as Record<
+        string,
+        number | string
+      >,
+    ).map(
+      // A number is px; a string length passes through as-is (appending px to
+      // '30rem' produced the invalid '30rempx' — every rem breakpoint was
+      // silently dead in runtime mode); a parenthesised string is a raw
+      // condition and IS the query.
+      ([key, value]) => [
+        key,
+        w?.matchMedia(
+          typeof value === 'number'
+            ? `(min-width: ${value}px)`
+            : value.startsWith('(')
+              ? value
+              : `(min-width: ${value})`,
+        ),
+      ],
     ),
   )
 

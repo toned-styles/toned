@@ -30,6 +30,33 @@ type InferContainerConditions<R> = R extends {
     }[keyof C & string]
   : never
 
+/**
+ * The condition-EXPRESSION key shapes: ad-hoc min-widths on DECLARED
+ * container names (`'@card/>=100'` — `'@nope/>=100'` is a compile error),
+ * negations, and compound (`&`) / disjunctive (`|`) expressions — what the
+ * `cq`/`bp`/`not`/`and`/`or` builders serialize to.
+ *
+ * These live at the ROOT level of a stylesheet ONLY, never inside an element
+ * rule. Not a stylistic choice: any pattern-typed member inside the element
+ * style type suppresses excess-property checking for the WHOLE element
+ * literal in stylesheet()'s generic path — a `bogusToken` typo then passes
+ * silently. The root object's keys are open by design (any key is an element
+ * name), so patterns cost nothing there; the element level keeps the closed
+ * enumerated sugar (`'@md'`, `'@card/sm'`) and full typo-safety.
+ */
+type AdHocAtomKeys<R> = R extends {
+  containers?: infer C extends Record<string, Record<string, number | string>>
+}
+  ? { [N in keyof C & string]: `${N}/>=${string}` }[keyof C & string]
+  : never
+
+type ConditionExprKeys<R> =
+  | `@${AdHocAtomKeys<R>}`
+  // Wide on purpose: `not()` cannot statically name the atom it negates.
+  | `@!${string}`
+  | `@${string}&${string}`
+  | `@${string}|${string}`
+
 /** Declared state aliases (`states` config) → their `:alias` stylesheet keys. */
 type InferStatePseudos<R> = R extends { states?: infer States }
   ? States extends Record<string, string>
@@ -113,15 +140,6 @@ export type ElementStyleNew<
   [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S, ET>
 } & {
   /**
-   * Open condition keys — ad-hoc and algebraic expressions the `cq`/`bp`/
-   * `not`/`and`/`or` builders serialize to (`'@card/>=25rem'`,
-   * `'@!card/>=400'`, `'@md&card/>=30rem'`). The enumerated spellings above
-   * stay as the typo-safe sugar; expression keys are validated at resolution
-   * (an undeclared name warns and drops rather than silently painting).
-   */
-  [key: `@${string}`]: TokenStyle<S, ET> | undefined
-} & {
-  /**
    * Platform-conditional styling: the block matching the running config's
    * `platform` merges into this element (winning over siblings); other
    * platforms' blocks are dropped before compilation. See utils/platform.ts.
@@ -201,8 +219,11 @@ export type StylesheetInput<
     | (keyof InferBreakpoints<S> & string)
     | InferContainerConditions<S> as `@${B}`]?: ElementMap<S, Elements>
 } & {
-  /** Open condition keys at the root level — see ElementStyleNew. */
-  [key: `@${string}`]: ElementMap<S, Elements> | undefined
+  /**
+   * Condition-EXPRESSION blocks — see ConditionExprKeys for why these are
+   * root-level only: `[not(cq('card').min(100))]: { Root: { … } }`.
+   */
+  [K in ConditionExprKeys<S>]?: ElementMap<S, Elements>
 } & {
   /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
   [P in Platform as `@platform.${P}`]?: ElementMap<S, Elements>

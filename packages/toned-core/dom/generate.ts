@@ -44,6 +44,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     states,
     responsiveTokens,
     containers,
+    base,
     ...system
   }: S,
   opts?: {
@@ -262,6 +263,10 @@ export function generate<const S extends TokenStyleDeclaration>(
   if (containers || opts?.conditions?.length) {
     let cqResets = ''
     let cqRules = ''
+    // Container NUMBERS ride the universal spacing scale (× base, default
+    // 4px) — the same numeric language as every other token, and the reason
+    // rem never needs to appear: native has no rem, px is the shared floor.
+    const unitPx = (base as number | undefined) ?? 4
     const emitContainerToggle = (
       name: string,
       slug: string,
@@ -269,12 +274,12 @@ export function generate<const S extends TokenStyleDeclaration>(
     ) => {
       const varName = `--cq-${camelToKebab(name)}-${slug}`
       cqResets += `${varName}: initial;${varName}-not: ;`
-      // A number is pixels; a string length passes through; a parenthesised
+      // A string length passes through (web-only escape); a parenthesised
       // string is a raw container CONDITION, same as the media scale.
       const condition =
         typeof value === 'string' && value.startsWith('(')
           ? value
-          : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
+          : `(min-width: ${typeof value === 'number' ? `${value * unitPx}px` : value})`
       cqRules += `@container ${name} ${condition} { ${scope}._ { ${varName}: ; ${varName}-not: initial; } }`
     }
     for (const [name, steps] of Object.entries(

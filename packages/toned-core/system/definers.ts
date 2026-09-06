@@ -5,6 +5,7 @@
  */
 
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
+import { bp, cq } from './conditions.ts'
 import { isAnimationDefinition } from '../types/index.ts'
 import type {
   AnimationInput,
@@ -257,12 +258,17 @@ export function defineSystem<
     responsiveTokens?: readonly string[]
     /** See `TokenStyleDeclaration.containers`. */
     containers?: Record<string, Record<string, number | string>>
+    /** See `TokenStyleDeclaration.base` — px per numeric unit (default 4). */
+    base?: number
   },
 >(system: S, config?: C): TokenSystem<S & C, C> {
   const ref: TokenSystem<S & C, C> = {
     system: { ...system, ...config } as S & C,
     config,
     usedConditions: new Set<string>(),
+    // The generic builders, retyped to this system's declared names.
+    cq: cq as TokenSystem<S & C, C>['cq'],
+    bp: bp as TokenSystem<S & C, C>['bp'],
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
@@ -577,6 +583,9 @@ export function defineSystem<
         // simple atoms, in declaration order: they are declared winners over
         // the ladder.
         const containerOrder = Object.keys(cqValues ?? {})
+        // Container NUMBERS ride the universal base scale; breakpoint numbers
+        // keep their legacy px meaning.
+        const basePx = (config as { base?: number })?.base ?? 4
         const atomRank = (a: ConditionAtom): [number, number, number] =>
           a.container === null
             ? [0, 0, lengthToPx(bpValues![a.step!]!)]
@@ -585,6 +594,7 @@ export function defineSystem<
                 containerOrder.indexOf(a.container),
                 lengthToPx(
                   a.step !== null ? cqValues![a.container]![a.step]! : a.min!,
+                  basePx,
                 ),
               ]
         const simpleKeys: string[] = []
