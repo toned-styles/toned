@@ -146,11 +146,13 @@ describe('createStylesheet', () => {
     test('extend beats variant values for the properties it names', () => {
       const rules = { container: { bgColor: 'base' } }
       const sheet = createStylesheet(mockTokenSystem, rules).variants({
-        '[size=icon]': { container: { bgColor: 'blue', textColor: 'muted' } },
+        '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
       })
-      const extended = (sheet as AnyValue).extend({ container: { bgColor: 'green' } })
+      // biome-ignore lint/suspicious/noExplicitAny: reaching the runtime extend surface
+      const extended = (sheet as any).extend({ container: { bgColor: 'green' } })
       const base = extended[SYMBOL_INIT](
-        { getProps() {}, getTokens: () => ({}), tokens: {} } as AnyValue,
+        // biome-ignore lint/suspicious/noExplicitAny: minimal mock config
+        { getProps() {}, getTokens: () => ({}), tokens: {} } as any,
         {},
       )
       // The derived sheet's variant entry no longer carries the overridden
@@ -158,7 +160,7 @@ describe('createStylesheet', () => {
       // width unless a size variant says otherwise" — while untouched
       // properties survive.
       expect(base.rules['[size=icon]'].container.bgColor).toBe('green')
-      expect(base.rules['[size=icon]'].container.textColor).toBe('muted')
+      expect(base.rules['[size=icon]'].container.textColor).toBe('black')
       expect(base.rules.container.bgColor).toBe('green')
     })
 
