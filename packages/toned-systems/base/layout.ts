@@ -228,6 +228,16 @@ export const marginBottom = defineCssToken('marginBottom', marginValues, MarginU
 export const marginLeft = defineCssToken('marginLeft', marginValues, MarginUnit)
 export const marginRight = defineCssToken('marginRight', marginValues, MarginUnit)
 
+/*
+ * The LOGICAL inline margins, which flip with writing direction where the
+ * physical pair above does not. Same scale, same unit; declared because an
+ * overlapped avatar stack pulls its children together on the inline axis and
+ * had no token for it, so the value rode a raw-style escape with the base
+ * arithmetic written out by hand.
+ */
+export const marginInlineStart = defineCssToken('marginInlineStart', marginValues, MarginUnit)
+export const marginInlineEnd = defineCssToken('marginInlineEnd', marginValues, MarginUnit)
+
 // Sizing lives in sizes.ts (base-relative, enumerated) — the spread order in
 // index.ts lets it own width/height and friends.
 
