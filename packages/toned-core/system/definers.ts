@@ -325,7 +325,11 @@ export function defineSystem<
       // target that also styles its own state keeps the more specific answer —
       // exactly as `:src-hover` sits below `:hover`.
       const srcStateOrder = stateAliases.map((k) => `:src-${k}` as const)
+      // The sibling channels ('source~:<alias>' → ':sib-<alias>' on a
+      // following-sibling target) sit below even the descendant channels.
+      const sibStateOrder = stateAliases.map((k) => `:sib-${k}` as const)
       const cascadeOrder = [
+        ...sibStateOrder,
         ...srcStateOrder,
         ...PSEUDO_CASCADE_ORDER,
         ...stateOrder,
