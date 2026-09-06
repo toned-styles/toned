@@ -21,7 +21,7 @@ export {
   or,
   setConfig,
 } from './system/index.ts'
-export type { Condition } from './system/index.ts'
+export type { Condition, ContainerConditionBuilder } from './system/index.ts'
 
 // Re-export types for convenience
 export type {
