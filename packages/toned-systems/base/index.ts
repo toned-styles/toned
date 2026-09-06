@@ -37,3 +37,16 @@ export const { system, stylesheet, t } = defineSystem(
   },
   config,
 )
+
+/*
+ * The spacing resolver, exported so a token definition can go THROUGH it
+ * rather than restating its arithmetic.
+ *
+ * `resolve` and `pseudoRules` both receive `tokens`, so a token that needs a
+ * spacing step in a value it composes itself can ask for one. Writing
+ * `calc(var(--base) * 2)` by hand instead hardcodes the custom-property
+ * branch, and the whole reason tokens resolve through `tokens[...]` is that a
+ * provider may supply literal values — which is how a system renders where
+ * custom properties do not exist.
+ */
+export { SpaceUnit } from './unit.ts'
