@@ -1,20 +1,26 @@
 import {
-  getConfig,
-  SYMBOL_INIT,
   type AuthoredElementStyle,
+  getConfig,
+  type ModType,
+  SYMBOL_INIT,
   type TokenStyle,
   type TokenStyleDeclaration,
+  type VariantSelector,
 } from '@toned/core'
 import {
-  useContext,
-  useRef,
   type ComponentPropsWithRef,
   type ElementType as HostElement,
   type ReactElement,
+  useContext,
+  useRef,
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
 import { ContainerSizesContext } from './containers.tsx'
-import { overrideStyles as _overrideStyles, useOverriddenSheet } from './overrides.tsx'
+import {
+  overrideStyles as _overrideStyles,
+  type StyleOverrideEntry,
+  useOverriddenSheet,
+} from './overrides.tsx'
 
 /**
  * Props returned for each element in a stylesheet.
@@ -38,10 +44,19 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
    * must still satisfy a consumer whose `value` is required — with() merges
    * className/style/ref/handlers and passes everything else through.
    */
-  with: <P extends TokenStyle<S> | Record<string, unknown> | false | null | undefined>(
+  with: <
+    P extends
+      | TokenStyle<S>
+      | Record<string, unknown>
+      | false
+      | null
+      | undefined,
+  >(
     props: P,
   ) => ElementProps<S> &
-    (P extends Record<string, unknown> ? Omit<P, 'className' | 'style' | 'ref' | 'with'> : {})
+    (P extends Record<string, unknown>
+      ? Omit<P, 'className' | 'style' | 'ref' | 'with'>
+      : {})
 } & InteractionHandlerProps
 
 /**
@@ -225,7 +240,9 @@ type BoundElementsOf<T> = {
  * Mod-less module-level binding for a stylesheet with no variants:
  * `const { Root, Label } = bind(styles)`. The general form is `useBind`.
  */
-export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundElementsOf<T>
+export const bind = _bind as <T extends StylesheetLike>(
+  stylesheet: T,
+) => BoundElementsOf<T>
 
 /**
  * The bound counterpart of `useStyles`: same arguments (mods in the hook call),
@@ -238,32 +255,80 @@ export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundE
  * a token style of its system. Nested pseudo/breakpoint blocks are allowed and
  * deep-merge into the sheet's own.
  */
-export type StyleOverrideRules<T extends StylesheetLike> = InferMeta<T> extends {
-  system: infer Sys extends TokenStyleDeclaration
-  elements: infer E
-}
-  ? { [K in keyof E as K extends string ? K : never]?: AuthoredElementStyle<Sys> } & {
-      /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
-       * the override's base rules; the matcher resolves them on the derived
-       * sheet exactly as on an authored one. */
-      [K in `${keyof E & string}:${string}` | `${keyof E & string}~:${string}`]?: {
-        [T2 in keyof E as T2 extends string ? T2 : never]?: TokenStyle<Sys>
+export type StyleOverrideRules<T extends StylesheetLike> =
+  InferMeta<T> extends {
+    system: infer Sys extends TokenStyleDeclaration
+    elements: infer E
+  }
+    ? {
+        [K in keyof E as K extends string
+          ? K
+          : never]?: AuthoredElementStyle<Sys>
+      } & {
+        /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
+         * the override's base rules; the matcher resolves them on the derived
+         * sheet exactly as on an authored one. */
+        [K in
+          | `${keyof E & string}:${string}`
+          | `${keyof E & string}~:${string}`]?: {
+          [T2 in keyof E as T2 extends string ? T2 : never]?: TokenStyle<Sys>
+        }
       }
-    }
-  : Record<string, TokenStyle<TokenStyleDeclaration>>
+    : Record<string, TokenStyle<TokenStyleDeclaration>>
 
 /** Pair a stylesheet with override rules, type-checked against the sheet.
  * `scope` gates the entry on the host's ambient scope channel (see
  * Config.useStyleOverrideScope — the haelo host feeds symbiote's zone path). */
+/**
+ * What an override may say about one matcher: the sheet's elements, each
+ * taking what the stylesheet's own element rules take.
+ *
+ * Deliberately NOT `StyleOverrideRules`, which also carries the cross-element
+ * channel keys. Those are template-literal keys, and an intersection holding
+ * one accepts any string, which switches excess-property checking off for the
+ * whole object — an unknown element name would then pass here while the
+ * stylesheet rejects it.
+ */
+export type StyleOverrideVariantRules<T extends StylesheetLike> =
+  InferMeta<T> extends {
+    system: infer Sys extends TokenStyleDeclaration
+    elements: infer E
+  }
+    ? { $compose?: string | string[] } & {
+        [K in keyof E as K extends string
+          ? K
+          : never]?: AuthoredElementStyle<Sys>
+      }
+    : Record<string, AuthoredElementStyle<TokenStyleDeclaration>>
+
+/**
+ * An override entry, with the stylesheet's own `.variants()` on it.
+ *
+ * `$` is built from the TARGET sheet's axes, so an override selects on what
+ * the component already passes to `useBind` — there are no new axes to
+ * invent, and one that could be invented would be dead code that type-checks.
+ * A matcher the sheet declared is replaced; one it did not is added.
+ */
+export interface OverrideEntry<T extends StylesheetLike>
+  extends StyleOverrideEntry {
+  variants(
+    callback: (
+      selector: VariantSelector<
+        InferMods<T> extends ModType ? InferMods<T> : never
+      >,
+    ) => Record<string, StyleOverrideVariantRules<T>>,
+  ): OverrideEntry<T>
+}
+
 export const overrideStyles = _overrideStyles as <T extends StylesheetLike>(
   sheet: T,
   rules: StyleOverrideRules<T>,
   opts?: { scope?: string },
-) => import('./overrides.tsx').StyleOverrideEntry
+) => OverrideEntry<T>
 
-export { StyleOverrides } from './overrides.tsx'
 export { ContainerSizesContext } from './containers.tsx'
 export type { StyleOverrideEntry } from './overrides.tsx'
+export { StyleOverrides } from './overrides.tsx'
 
 /**
  * An EXPORTABLE stylesheet type for override targeting. A full sheet's
