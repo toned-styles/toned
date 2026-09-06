@@ -816,3 +816,90 @@ describe('container-condition chains', () => {
     expect(style['maxWidth']).toContain('--cq-field-group-md__max-width')
   })
 })
+
+describe('condition algebra chains (css mode)', () => {
+  const makeSystem = () =>
+    defineSystem(
+      {
+        display: defineToken({
+          values: ['none', 'flex'] as const,
+          resolve: (v) => ({ display: v }),
+        }),
+      },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { card: { sm: 320 } },
+      },
+    )
+
+  test('a negated condition guards on the -not complement toggle', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      '@!card/>=400_display': 'none',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expect(style['--not-cq-card-gte400__display']).toBe(
+      'var(--cq-card-gte400-not) none',
+    )
+    expect(style['display']).toBe(
+      'var(--not-cq-card-gte400__display, revert-layer)',
+    )
+  })
+
+  test('an AND condition guards on the product of its toggles', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@md&card/>=400_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expect(style['--media-md-and-cq-card-gte400__display']).toBe(
+      'var(--media-md) var(--cq-card-gte400) flex',
+    )
+    expect(style['display']).toBe(
+      'var(--media-md-and-cq-card-gte400__display, none)',
+    )
+  })
+
+  test('an OR condition contributes adjacent chain links sharing the value', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@md|card/>=400_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expect(style['--media-md__display']).toBe('var(--media-md) flex')
+    expect(style['--cq-card-gte400__display']).toBe('var(--cq-card-gte400) flex')
+    expect(style['display']).toBe(
+      'var(--cq-card-gte400__display, var(--media-md__display, none))',
+    )
+  })
+
+  test('algebraic conditions sort AFTER the whole simple scale', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@!card/>=400_display': 'flex',
+      '@md_display': 'flex',
+      '@card/sm_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    // media asc, then containers, then algebra outermost
+    expect(style['display']).toBe(
+      'var(--not-cq-card-gte400__display, var(--cq-card-sm__display, var(--media-md__display, none)))',
+    )
+  })
+
+  test('an undeclared container name warns and DROPS the override', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@nope/>=400_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expect(style['display']).toBe('none')
+    expect(
+      Object.keys(style).some((k) => k.includes('nope')),
+    ).toBe(false)
+  })
+})

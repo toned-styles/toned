@@ -64,13 +64,13 @@ describe('generate', () => {
       // container's ON into an element whose own nearest same-name container
       // does not match.
       expect(result).toContain(
-        '._ {--cq-field-group-md: initial;--cq-card-sm: initial;}',
+        '._ {--cq-field-group-md: initial;--cq-field-group-md-not: ;--cq-card-sm: initial;--cq-card-sm-not: ;}',
       )
       expect(result).toContain(
-        '@container field-group (min-width: 28rem) { ._ { --cq-field-group-md: ; } }',
+        '@container field-group (min-width: 28rem) { ._ { --cq-field-group-md: ; --cq-field-group-md-not: initial; } }',
       )
       expect(result).toContain(
-        '@container card (min-width: 320px) { ._ { --cq-card-sm: ; } }',
+        '@container card (min-width: 320px) { ._ { --cq-card-sm: ; --cq-card-sm-not: initial; } }',
       )
       // resets precede the flips, so the flip wins at equal specificity
       expect(result.indexOf('--cq-field-group-md: initial')).toBeLessThan(
@@ -78,14 +78,28 @@ describe('generate', () => {
       )
     })
 
+    test('ad-hoc registered conditions get toggles too', () => {
+      const result = generate(
+        { containers: { card: { sm: 320 } } },
+        { conditions: ['card/>=25rem', 'card/>=400'] },
+      )
+      expect(result).toContain(
+        '@container card (min-width: 25rem) { ._ { --cq-card-gte25rem: ; --cq-card-gte25rem-not: initial; } }',
+      )
+      expect(result).toContain(
+        '@container card (min-width: 400px) { ._ { --cq-card-gte400: ; --cq-card-gte400-not: initial; } }',
+      )
+      expect(result).toContain('--cq-card-gte400: initial;--cq-card-gte400-not: ;')
+    })
+
     test('a scoped system scopes both halves', () => {
       const result = generate(
         { containers: { card: { sm: 320 } } },
         { scope: '.ds2' },
       )
-      expect(result).toContain('.ds2 ._ {--cq-card-sm: initial;}')
+      expect(result).toContain('.ds2 ._ {--cq-card-sm: initial;--cq-card-sm-not: ;}')
       expect(result).toContain(
-        '@container card (min-width: 320px) { .ds2 ._ { --cq-card-sm: ; } }',
+        '@container card (min-width: 320px) { .ds2 ._ { --cq-card-sm: ; --cq-card-sm-not: initial; } }',
       )
     })
   })
@@ -204,7 +218,7 @@ describe('generate', () => {
       })
 
       expect(result).toContain(
-        '@media (min-width: 480px) { html { --media-sm: ; } }',
+        '@media (min-width: 480px) { html { --media-sm: ; --media-sm-not: initial; } }',
       )
     })
 
@@ -219,13 +233,13 @@ describe('generate', () => {
       expect(result).toContain('--media-md: initial;')
       expect(result).toContain('--media-lg: initial;')
       expect(result).toContain(
-        '@media (min-width: 480px) { html { --media-sm: ; } }',
+        '@media (min-width: 480px) { html { --media-sm: ; --media-sm-not: initial; } }',
       )
       expect(result).toContain(
-        '@media (min-width: 768px) { html { --media-md: ; } }',
+        '@media (min-width: 768px) { html { --media-md: ; --media-md-not: initial; } }',
       )
       expect(result).toContain(
-        '@media (min-width: 1024px) { html { --media-lg: ; } }',
+        '@media (min-width: 1024px) { html { --media-lg: ; --media-lg-not: initial; } }',
       )
     })
 
@@ -248,7 +262,7 @@ describe('generate', () => {
 
       expect(result).toContain('--media-small-screen: initial;')
       expect(result).toContain(
-        '@media (min-width: 480px) { html { --media-small-screen: ; } }',
+        '@media (min-width: 480px) { html { --media-small-screen: ; --media-small-screen-not: initial; } }',
       )
     })
   })
@@ -506,7 +520,7 @@ describe('condition breakpoints — parenthesised values are raw media condition
     const css = generate({
       breakpoints: { __breakpoints: { sm: 480, pointerCoarse: '(pointer: coarse)' } },
     } as never)
-    expect(css).toContain('@media (pointer: coarse) { html { --media-pointer-coarse: ; } }')
-    expect(css).toContain('@media (min-width: 480px) { html { --media-sm: ; } }')
+    expect(css).toContain('@media (pointer: coarse) { html { --media-pointer-coarse: ; --media-pointer-coarse-not: initial; } }')
+    expect(css).toContain('@media (min-width: 480px) { html { --media-sm: ; --media-sm-not: initial; } }')
   })
 })

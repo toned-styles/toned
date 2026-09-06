@@ -81,7 +81,11 @@ system.stylesheet({
 
 system.stylesheet({
   root: {
-    // @ts-expect-error — not a declared platform
+    // NOT an error any more: the open condition-key index (`@${string}`,
+    // added for ad-hoc/algebraic condition expressions) admits any '@' key,
+    // so an undeclared platform is no longer caught at the type level — at
+    // runtime resolvePlatformKeys drops a foreign platform block, and a
+    // condition key that fails to parse warns and drops.
     '@platform.ios': { bgColor: 'accent' },
   },
 })

@@ -1106,7 +1106,7 @@ describe('elementDescriptors', () => {
 })
 
 describe('runtime container queries (Base)', () => {
-  // containerState reads the declared containers off the system ref; exec
+  // conditionState reads the declared containers off the system ref; exec
   // stays the pass-through stub — `containers` is config, not a token.
   const cqTokenSystem = {
     ...(mockTokenSystem as unknown as Record<string, unknown>),
@@ -1132,13 +1132,13 @@ describe('runtime container queries (Base)', () => {
     expect(base.containerName('Label')).toBeUndefined()
   })
 
-  test('containerState maps measured sizes to @name/step mods', () => {
+  test('conditionState maps measured sizes to @name/step mods', () => {
     const base = make()
-    expect(base.containerState({ card: 400 })).toEqual({ '@card/sm': true })
-    expect(base.containerState({ card: 100 })).toEqual({ '@card/sm': false })
+    expect(base.conditionState({ card: 400 })).toEqual({ '@card/sm': true })
+    expect(base.conditionState({ card: 100 })).toEqual({ '@card/sm': false })
     // Unmeasured (no provider above, or before first layout): false — the
     // mobile-first base styles.
-    expect(base.containerState({})).toEqual({ '@card/sm': false })
+    expect(base.conditionState({})).toEqual({ '@card/sm': false })
   })
 
   test('a sheet with no container keys answers null', () => {
@@ -1148,7 +1148,7 @@ describe('runtime container queries (Base)', () => {
       config: mockConfig,
       modsState: {},
     })
-    expect(base.containerState({ card: 400 })).toBeNull()
+    expect(base.conditionState({ card: 400 })).toBeNull()
   })
 
   test('the mod drives matching through applyState like any breakpoint', () => {
@@ -1156,5 +1156,72 @@ describe('runtime container queries (Base)', () => {
     expect(base.getCurrentStyle('Label').style.bgColor).toBe('base')
     base.applyState({ '@card/sm': true })
     expect(base.getCurrentStyle('Label').style.bgColor).toBe('blue')
+  })
+})
+
+describe('runtime condition algebra (Base)', () => {
+  const cqTokenSystem = {
+    ...(mockTokenSystem as unknown as Record<string, unknown>),
+    system: { containers: { card: { sm: 320 } } },
+    usedConditions: new Set<string>(),
+  } as unknown as TokenSystem<typeof testTokens>
+
+  test('negated and compound expressions evaluate against sizes AND media mods', () => {
+    const base = new Base({
+      ref: cqTokenSystem,
+      rules: {
+        Root: {
+          bgColor: 'base',
+          '@!card/>=400': { bgColor: 'red' },
+          '@md&card/>=400': { bgColor: 'blue' },
+        },
+      },
+      config: mockConfig,
+      modsState: { '@md': true },
+    })
+    expect(base.conditionState({ card: 200 })).toEqual({
+      '@!card/>=400': true,
+      '@md&card/>=400': false,
+    })
+    expect(base.conditionState({ card: 500 })).toEqual({
+      '@!card/>=400': false,
+      '@md&card/>=400': true,
+    })
+    // an unmeasured container is width 0 — the below-condition holds
+    expect(base.conditionState({})).toEqual({
+      '@!card/>=400': true,
+      '@md&card/>=400': false,
+    })
+  })
+
+  test('a MEDIA change re-evaluates compound conditions from the last sizes', () => {
+    const base = new Base({
+      ref: cqTokenSystem,
+      rules: {
+        Root: { bgColor: 'base', '@md&card/>=400': { bgColor: 'blue' } },
+      },
+      config: mockConfig,
+      modsState: {},
+    })
+    // useStyles path: evaluate, apply
+    base.applyState(base.conditionState({ card: 500 }) ?? {})
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('base')
+    // the sharedMedia sub path: only the media mod arrives — the compound
+    // must refresh from the remembered sizes
+    base.applyState({ '@md': true })
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('blue')
+    base.applyState({ '@md': false })
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('base')
+  })
+
+  test('createStylesheet registers ad-hoc atoms on the system ref', () => {
+    const sheet = createStylesheet(cqTokenSystem, {
+      Root: { bgColor: 'base', '@!card/>=612': { bgColor: 'red' } },
+    })
+    expect(sheet).toBeDefined()
+    expect([
+      ...(cqTokenSystem as unknown as { usedConditions: Set<string> })
+        .usedConditions,
+    ]).toContain('card/>=612')
   })
 })

@@ -147,7 +147,7 @@ export function useStyles<T extends StylesheetLike>(
   stylesheet = useOverriddenSheet(stylesheet)
   // Runtime container queries: the nearest measured ancestor sizes. Read
   // unconditionally (hooks); folded into the applied state only when the
-  // resolved sheet actually queries a container — containerState answers null
+  // resolved sheet actually queries a condition — conditionState answers null
   // otherwise, and in css mode always (the matcher flattened the keys away).
   const containerSizes = useContext(ContainerSizesContext)
   const ref = useRef<{
@@ -166,7 +166,7 @@ export function useStyles<T extends StylesheetLike>(
     }
   }
 
-  const cqState = ref.current.result.containerState?.(containerSizes) as
+  const cqState = ref.current.result.conditionState?.(containerSizes) as
     | Record<string, boolean>
     | null
     | undefined

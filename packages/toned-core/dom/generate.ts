@@ -12,6 +12,7 @@ import {
   alphaWrappable,
   withAlphaExpr,
 } from '../utils/alpha.ts'
+import { atomSlug, parseConditionKey } from '../utils/conditions.ts'
 import { bridgeVarName, camelToKebab } from '../utils/css.ts'
 
 const tokens = new Proxy(
@@ -45,7 +46,15 @@ export function generate<const S extends TokenStyleDeclaration>(
     containers,
     ...system
   }: S,
-  opts?: { scope?: string },
+  opts?: {
+    scope?: string
+    /**
+     * Ad-hoc condition ATOMS to emit toggles for (canonical `name/>=len`
+     * spellings) — the union a generator script collects from the system
+     * ref's `usedConditions` after importing every stylesheet module.
+     */
+    conditions?: readonly string[]
+  },
 ) {
   const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
@@ -221,7 +230,10 @@ export function generate<const S extends TokenStyleDeclaration>(
     for (const [key, value] of Object.entries(bpValues)) {
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
 
-      rootRule += `${varName}: initial;`
+      // Each condition carries a COMPLEMENT toggle beside the positive one:
+      // `-not` is valid-empty exactly when the positive is invalid, which is
+      // what lets a chain guard on `not(condition)` (see utils/conditions.ts).
+      rootRule += `${varName}: initial;${varName}-not: ;`
       // A number is pixels; a string ('40rem') passes through, so a system can
       // declare a rem-based scale that tracks the user's root font size. A
       // parenthesised string is a raw media CONDITION ('(pointer: coarse)') —
@@ -230,7 +242,7 @@ export function generate<const S extends TokenStyleDeclaration>(
         typeof value === 'string' && value.startsWith('(')
           ? value
           : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
-      rules += `@media ${condition} { html { ${varName}: ; } }`
+      rules += `@media ${condition} { html { ${varName}: ; ${varName}-not: initial; } }`
     }
 
     styles += `html {${rootRule}}`
@@ -247,23 +259,44 @@ export function generate<const S extends TokenStyleDeclaration>(
   // the element's NEAREST ancestor container of that name as matching — the
   // runtime binding mirrors that lookup on native. Chains guard on
   // `var(--cq-<name>-<step>)`.
-  if (containers) {
+  if (containers || opts?.conditions?.length) {
     let cqResets = ''
     let cqRules = ''
+    const emitContainerToggle = (
+      name: string,
+      slug: string,
+      value: number | string,
+    ) => {
+      const varName = `--cq-${camelToKebab(name)}-${slug}`
+      cqResets += `${varName}: initial;${varName}-not: ;`
+      // A number is pixels; a string length passes through; a parenthesised
+      // string is a raw container CONDITION, same as the media scale.
+      const condition =
+        typeof value === 'string' && value.startsWith('(')
+          ? value
+          : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
+      cqRules += `@container ${name} ${condition} { ${scope}._ { ${varName}: ; ${varName}-not: initial; } }`
+    }
     for (const [name, steps] of Object.entries(
-      containers as Record<string, Record<string, number | string>>,
+      (containers ?? {}) as Record<string, Record<string, number | string>>,
     )) {
       for (const [step, value] of Object.entries(steps)) {
-        const varName = `--cq-${camelToKebab(name)}-${camelToKebab(step)}`
-        cqResets += `${varName}: initial;`
-        // A number is pixels; a string length passes through; a parenthesised
-        // string is a raw container CONDITION, same as the media scale.
-        const condition =
-          typeof value === 'string' && value.startsWith('(')
-            ? value
-            : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
-        cqRules += `@container ${name} ${condition} { ${scope}._ { ${varName}: ; } }`
+        emitContainerToggle(name, camelToKebab(step), value)
       }
+    }
+    // AD-HOC condition atoms — min-widths used at stylesheet call sites on
+    // declared container names, registered by createStylesheet on the system
+    // ref and passed here by the generator script (which must import the
+    // stylesheet modules first). Sorted for deterministic output.
+    for (const atomKey of [...(opts?.conditions ?? [])].sort()) {
+      const expr = parseConditionKey(atomKey)
+      const atom = expr?.[0]?.[0]
+      if (!atom || atom.container === null || atom.step !== null) continue
+      emitContainerToggle(
+        atom.container,
+        atomSlug(atom).slice(`cq-${camelToKebab(atom.container)}-`.length),
+        atom.min!,
+      )
     }
     styles += `${scope}._ {${cqResets}}`
     styles += cqRules

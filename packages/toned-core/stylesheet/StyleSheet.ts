@@ -11,6 +11,12 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import {
+  collectAdHocConditions,
+  evalExpr,
+  isSimpleExpr,
+  parseConditionKey,
+} from '../utils/conditions.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -118,6 +124,13 @@ export function createStylesheet<
 > {
   // Merge base rules with variants - StyleMatcher handles the format directly
   const mergedRules = mergeRules(rules, variantRules)
+
+  // Register the ad-hoc condition atoms this sheet uses on the system ref, so
+  // a css generator that imports the stylesheet modules can emit exactly the
+  // toggles in use (see utils/conditions.ts).
+  if (ref.usedConditions) {
+    collectAdHocConditions(mergedRules, ref.usedConditions)
+  }
 
   class LocalBase extends Base {}
 
@@ -379,14 +392,20 @@ export class Base {
     return typeof decl === 'string' ? decl : undefined
   }
 
+  /** The container sizes last fed to conditionState — see applyState. */
+  private lastContainerSizes: Record<string, number> | null = null
+
   /**
-   * Container-condition mods for the given measured ancestor sizes (px per
-   * container name), or null when this sheet queries none. In css mode the
-   * matcher flattens `'@name/step'` keys away, so this self-gates to runtime
-   * mode. An unmeasured container (no provider above, or before the first
-   * layout) answers false — the mobile-first base styles.
+   * Condition mods for the given measured ancestor sizes (px per container
+   * name), or null when this sheet holds no condition the runtime must
+   * evaluate here. In css mode the matcher flattens `'@…'` keys away, so this
+   * self-gates to runtime mode. Pure simple breakpoint atoms (`'@md'`) are
+   * skipped — sharedMedia owns those mods and the two channels must never
+   * fight over one key. Everything else (container atoms, and any algebraic
+   * expression) evaluates through utils/conditions.ts: an unmeasured
+   * container acts as width 0 — the mobile-first base styles.
    */
-  containerState(
+  conditionState(
     sizes: Record<string, number>,
   ): Record<string, boolean> | null {
     const containers = (
@@ -394,26 +413,22 @@ export class Base {
         system?: { containers?: Record<string, Record<string, number | string>> }
       }
     ).system?.containers
-    if (!containers) return null
     let out: Record<string, boolean> | null = null
     for (const mod in this.matcher.scheme) {
       if (mod[0] !== '@') continue
-      const slash = mod.indexOf('/')
-      if (slash === -1) continue
-      const step = containers[mod.slice(1, slash)]?.[mod.slice(slash + 1)]
-      if (step == null) continue
-      // A parenthesised step is a raw css condition — not runtime-evaluable,
-      // so it parses to Infinity and never matches off the web.
-      const stepPx =
-        typeof step === 'number'
-          ? step
-          : step.startsWith('(')
-            ? Number.POSITIVE_INFINITY
-            : Number.parseFloat(step) *
-              (step.endsWith('rem') || step.endsWith('em') ? 16 : 1)
+      const body = mod.slice(1)
+      if (body.startsWith('platform.')) continue
+      const expr = parseConditionKey(body)
+      if (!expr) continue
+      if (isSimpleExpr(expr) && expr[0]![0]!.container === null) continue
       out ??= {}
-      out[mod] = (sizes[mod.slice(1, slash)] ?? -1) >= stepPx
+      out[mod] = evalExpr(expr, {
+        media: (name) => this.modsState[`@${name}`] as boolean | undefined,
+        containerPx: (name) => sizes[name],
+        stepWidth: (c, s) => containers?.[c]?.[s],
+      })
     }
+    if (out) this.lastContainerSizes = sizes
     return out
   }
 
@@ -677,6 +692,15 @@ export class Base {
     }
 
     Object.assign(this.modsState, modsState)
+
+    // A media change (the sharedMedia sub calls straight in here) must also
+    // refresh any ALGEBRAIC condition mods that reference breakpoint atoms —
+    // they were computed against the previous media state. Recompute from the
+    // last measured sizes; conditionState never calls back into applyState.
+    if (this.lastContainerSizes) {
+      const conditions = this.conditionState(this.lastContainerSizes)
+      if (conditions) Object.assign(this.modsState, conditions)
+    }
 
     this.matchStyles()
 

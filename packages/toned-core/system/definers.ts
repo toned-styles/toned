@@ -28,8 +28,18 @@ import {
   splitAlphaValue,
   withAlphaExpr,
 } from '../utils/alpha.ts'
+import {
+  clauseGuard,
+  clauseSlug,
+  isSimpleExpr,
+  lengthToPx,
+  parseConditionKey,
+  type ConditionAtom,
+  type ConditionExpr,
+} from '../utils/conditions.ts'
 import { camelToKebab } from '../utils/css.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
+import { warnOnce } from '../utils/warn.ts'
 import { mergeStyle } from '../utils/mergeStyle.ts'
 import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
@@ -252,6 +262,7 @@ export function defineSystem<
   const ref: TokenSystem<S & C, C> = {
     system: { ...system, ...config } as S & C,
     config,
+    usedConditions: new Set<string>(),
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
@@ -526,47 +537,67 @@ export function defineSystem<
         | Record<string, Record<string, number | string>>
         | undefined
       if ((bpValues || cqValues) && Object.keys(breakpointOverrides).length > 0) {
-        // Sort breakpoints ascending for proper cascade. Strings are lengths
-        // ('40rem'); rem/em order at 16px per rem — a scale should not mix
-        // units whose order could invert under font scaling. A parenthesised
-        // value is a raw media CONDITION ('(pointer: coarse)') — orthogonal to
-        // width, so it sorts OUTERMOST (Infinity): a condition override wins
-        // over any width override on the same property, and conditions among
-        // themselves keep declaration order (a stable sort preserves it).
-        const px = (v: number | string): number =>
-          typeof v === 'number'
-            ? v
-            : v.startsWith('(')
-              ? Number.POSITIVE_INFINITY
-              : Number.parseFloat(v) * (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
-        const sortedBps = Object.entries(bpValues ?? {}).sort(([, a], [, b]) => px(a) - px(b))
-
-        // Container steps join the SAME ordered scale, after every media
-        // entry: a container condition measures the element's own ancestor, so
-        // it is more local than any viewport condition and wins outermost.
-        // Steps sort ascending within a container; containers keep declaration
-        // order. A condition key is the full '<name>/<step>' spelling.
-        const conditionKeys: string[] = sortedBps.map(([k]) => k)
-        for (const [cqName, steps] of Object.entries(cqValues ?? {})) {
-          for (const [stepKey] of Object.entries(steps).sort(
-            ([, a], [, b]) => px(a) - px(b),
-          )) {
-            conditionKeys.push(`${cqName}/${stepKey}`)
+        // Parse every distinct condition key once (see utils/conditions.ts for
+        // the model: DNF over breakpoint / container-step / ad-hoc min-width
+        // atoms). A key that does not parse, or that names an undeclared
+        // breakpoint or container, is dropped WITH a warning — a typo must
+        // never silently paint nothing.
+        const exprByKey = new Map<string, ConditionExpr>()
+        const atomDeclared = (a: ConditionAtom): boolean =>
+          a.container === null
+            ? a.step! in (bpValues ?? {})
+            : a.container in (cqValues ?? {}) &&
+              (a.step === null || a.step in cqValues![a.container]!)
+        for (const overrides of Object.values(breakpointOverrides)) {
+          for (const o of overrides) {
+            const body = o.breakpoint.slice(1)
+            if (exprByKey.has(body)) continue
+            const expr = parseConditionKey(body)
+            if (!expr || !expr.every((clause) => clause.every(atomDeclared))) {
+              warnOnce(
+                `condition:${body}`,
+                `the condition key '@${body}' names an undeclared breakpoint or ` +
+                  `container (or does not parse) — the override is dropped. ` +
+                  `Container NAMES must be declared in the system's ` +
+                  `\`containers\`; only their condition VALUES are free.`,
+              )
+              continue
+            }
+            exprByKey.set(body, expr)
           }
         }
 
-        // One toggle custom property per condition. Media conditions ride
-        // `--media-<bp>` inits on html; container conditions ride
-        // `--cq-<name>-<step>`, flipped by an `@container <name>` rule on `._`
-        // (both emitted by dom/generate.ts). Kebab both halves: generate
-        // kebabs, so a camelCase key must chain against the same spelling or
-        // the override can never fire.
-        const toggleVarFor = (key: string): string => {
-          const slash = key.indexOf('/')
-          return slash === -1
-            ? `--media-${camelToKebab(key)}`
-            : `--cq-${camelToKebab(key.slice(0, slash))}-${camelToKebab(key.slice(slash + 1))}`
+        // ORDER: simple positive atoms keep the familiar scale — media
+        // ascending (a parenthesised raw condition sorts outermost among
+        // them), then containers in declaration order with their widths
+        // ascending, declared steps and ad-hoc atoms interleaved by width.
+        // A container condition measures the element's own ancestor, so it is
+        // more local than any viewport condition and wins outermost.
+        // Algebraic expressions (negated, AND-ed or OR-ed) come after ALL
+        // simple atoms, in declaration order: they are declared winners over
+        // the ladder.
+        const containerOrder = Object.keys(cqValues ?? {})
+        const atomRank = (a: ConditionAtom): [number, number, number] =>
+          a.container === null
+            ? [0, 0, lengthToPx(bpValues![a.step!]!)]
+            : [
+                1,
+                containerOrder.indexOf(a.container),
+                lengthToPx(
+                  a.step !== null ? cqValues![a.container]![a.step]! : a.min!,
+                ),
+              ]
+        const simpleKeys: string[] = []
+        const complexKeys: string[] = []
+        for (const [body, expr] of exprByKey) {
+          ;(isSimpleExpr(expr) ? simpleKeys : complexKeys).push(body)
         }
+        simpleKeys.sort((a, b) => {
+          const ra = atomRank(exprByKey.get(a)![0]![0]!)
+          const rb = atomRank(exprByKey.get(b)![0]![0]!)
+          return ra[0] - rb[0] || ra[1] - rb[1] || ra[2] - rb[2]
+        })
+        const orderedKeys = [...simpleKeys, ...complexKeys]
 
         for (const [prop, overrides] of Object.entries(breakpointOverrides)) {
           // Raw `style` inside a breakpoint — the escape-hatch analogue of the
@@ -583,24 +614,33 @@ export function defineSystem<
             }
             for (const cssProp of allCssProps) {
               const kebabProp = camelToKebab(cssProp)
+              // One parameter var per OR-clause (its guard is the product of
+              // the clause's toggle vars); the clauses of one condition sit
+              // adjacent in the chain sharing the value — OR is free in a
+              // fallback chain.
               for (const { breakpoint, value } of overrides) {
                 const styleVal = value as Record<string, unknown> | null
                 if (styleVal?.[cssProp] == null) continue
-                const tv = toggleVarFor(breakpoint.slice(1))
-                acc.style[`${tv}__${kebabProp}__style`] =
-                  `var(${tv}) ${styleVal[cssProp]}`
+                const expr = exprByKey.get(breakpoint.slice(1))
+                if (!expr) continue
+                for (const clause of expr) {
+                  acc.style[`--${clauseSlug(clause)}__${kebabProp}__style`] =
+                    `${clauseGuard(clause)} ${styleVal[cssProp]}`
+                }
               }
               const baseValue =
                 acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
-              for (const condKey of conditionKeys) {
+              for (const condKey of orderedKeys) {
                 if (
-                  overrides.some((o) => {
+                  !overrides.some((o) => {
                     const sv = o.value as Record<string, unknown> | null
                     return o.breakpoint === `@${condKey}` && sv?.[cssProp] != null
                   })
-                ) {
-                  const varName = `${toggleVarFor(condKey)}__${kebabProp}__style`
+                )
+                  continue
+                for (const clause of exprByKey.get(condKey)!) {
+                  const varName = `--${clauseSlug(clause)}__${kebabProp}__style`
                   chain =
                     chain === null
                       ? `var(${varName}, revert-layer)`
@@ -623,9 +663,17 @@ export function defineSystem<
           if (
             execConfig.useClassName &&
             responsive?.includes(prop) &&
-            // Container conditions have no responsive atomic classes — a
-            // container override always rides the chain.
-            overrides.every((o) => !o.breakpoint.includes('/')) &&
+            // Only simple positive BREAKPOINT atoms have responsive atomic
+            // classes — container conditions and algebraic expressions always
+            // ride the chain.
+            overrides.every((o) => {
+              const expr = exprByKey.get(o.breakpoint.slice(1))
+              return (
+                expr !== undefined &&
+                isSimpleExpr(expr) &&
+                expr[0]![0]!.container === null
+              )
+            }) &&
             overrides.every((o) =>
               (system[prop] as { values?: readonly unknown[] } | undefined)
                 ?.values?.includes(o.value),
@@ -671,16 +719,24 @@ export function defineSystem<
           for (const cssProp of cssProps) {
             const kebabProp = camelToKebab(cssProp)
 
-            // Generate <toggle>__css-prop custom properties for each override.
+            // One parameter var per OR-clause of each override's condition,
+            // guarded by the product of the clause's toggle vars (AND is the
+            // same product guard compound pseudo keys use; NOT rides the
+            // `-not` complement toggle inside the guard).
             for (const { breakpoint, resolved } of resolvedOverrides) {
               if (!resolved?.[cssProp]) continue
-              const tv = toggleVarFor(breakpoint.slice(1)) // remove @
-              acc.style[`${tv}__${kebabProp}`] = `var(${tv}) ${resolved[cssProp]}`
+              const expr = exprByKey.get(breakpoint.slice(1))
+              if (!expr) continue
+              for (const clause of expr) {
+                acc.style[`--${clauseSlug(clause)}__${kebabProp}`] =
+                  `${clauseGuard(clause)} ${resolved[cssProp]}`
+              }
             }
 
             // Build fallback chain: highest breakpoint first
             // var(--media-xl__bg, var(--media-lg__bg, var(--media-md__bg, base)))
-            // With no resting value the chain ends in `revert-layer`
+            // A multi-clause condition contributes adjacent links sharing its
+            // value. With no resting value the chain ends in `revert-layer`
             // (css-hooks' trick): when every condition is off, the declaration
             // rolls back past the style attribute to the author layers, so a
             // resting ATOMIC CLASS for the same property still applies — where
@@ -689,14 +745,16 @@ export function defineSystem<
               resolvedBase?.[cssProp] != null
                 ? String(resolvedBase[cssProp])
                 : null
-            for (const condKey of conditionKeys) {
+            for (const condKey of orderedKeys) {
               const condAtKey = `@${condKey}`
               if (
-                resolvedOverrides.some(
+                !resolvedOverrides.some(
                   (o) => o.breakpoint === condAtKey && o.resolved?.[cssProp],
                 )
-              ) {
-                const varName = `${toggleVarFor(condKey)}__${kebabProp}`
+              )
+                continue
+              for (const clause of exprByKey.get(condKey)!) {
+                const varName = `--${clauseSlug(clause)}__${kebabProp}`
                 chain =
                   chain === null
                     ? `var(${varName}, revert-layer)`
