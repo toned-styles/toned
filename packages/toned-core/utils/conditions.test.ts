@@ -52,21 +52,23 @@ describe('condition grammar', () => {
 })
 
 describe('runtime evaluation', () => {
+  // Numbers ride the base scale: sm=80 units and >=100 are 320px / 400px.
   const env = (cardPx: number | undefined, md: boolean | undefined) => ({
     media: () => md,
     containerPx: () => cardPx,
-    stepWidth: (_c: string, s: string) => (s === 'sm' ? 320 : undefined),
+    stepWidth: (_c: string, s: string) => (s === 'sm' ? 80 : undefined),
+    basePx: 4,
   })
 
   test('an unmeasured container acts as width 0 — before negation', () => {
-    const below = parseConditionKey('!card/>=400')!
+    const below = parseConditionKey('!card/>=100')!
     expect(evalExpr(below, env(undefined, undefined))).toBe(true)
     expect(evalExpr(below, env(200, undefined))).toBe(true)
     expect(evalExpr(below, env(400, undefined))).toBe(false)
   })
 
   test('AND, OR and mixed media atoms', () => {
-    const mixed = parseConditionKey('md&card/>=400')!
+    const mixed = parseConditionKey('md&card/>=100')!
     expect(evalExpr(mixed, env(500, true))).toBe(true)
     expect(evalExpr(mixed, env(500, false))).toBe(false)
     expect(evalExpr(mixed, env(300, true))).toBe(false)

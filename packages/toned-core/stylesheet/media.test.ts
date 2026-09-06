@@ -372,3 +372,35 @@ describe('initMedia', () => {
     })
   })
 })
+
+describe('query construction per breakpoint value shape', () => {
+  test('numbers get px; string lengths pass VERBATIM; parenthesised strings ARE the query', () => {
+    const queries: string[] = []
+    const originalWindow = g.window
+    g.window = {
+      matchMedia: (q: string) => {
+        queries.push(q)
+        return createMockMediaQueryList(q, false)
+      },
+    }
+    try {
+      initMedia({
+        system: {},
+        config: {
+          breakpoints: {
+            __breakpoints: { sm: 480, md: '30rem', coarse: '(pointer: coarse)' },
+          },
+        },
+      } as unknown as TokenSystem<TokenStyleDeclaration>)
+      // Appending px to a string produced '(min-width: 30rempx)' — every rem
+      // breakpoint was silently dead in runtime mode.
+      expect(queries).toEqual([
+        '(min-width: 480px)',
+        '(min-width: 30rem)',
+        '(pointer: coarse)',
+      ])
+    } finally {
+      g.window = originalWindow
+    }
+  })
+})

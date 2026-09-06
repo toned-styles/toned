@@ -142,12 +142,18 @@ export function clauseGuard(clause: ConditionClause): string {
 }
 
 /**
- * A length in px for runtime comparison and scale sorting. A parenthesised
- * string is a raw css condition — not runtime-evaluable, so Infinity (never
- * matches off the web, sorts outermost on it).
+ * A length in px for runtime comparison and scale sorting. A NUMBER is
+ * multiplied by `unitPx` — for CONTAINER widths that is the system's `base`
+ * (default 4px), so numeric values ride the same universal spacing scale as
+ * every other numeric token (`min(100)` is 400px exactly as `gap: 2` is
+ * 8px); rem does not exist on native. Breakpoint numbers keep their legacy
+ * px meaning (`unitPx` 1). A parenthesised string is a raw css condition —
+ * not runtime-evaluable, so Infinity (never matches off the web, sorts
+ * outermost on it); other strings are css lengths (rem/em at 16px per rem,
+ * a web-only escape).
  */
-export function lengthToPx(value: number | string): number {
-  if (typeof value === 'number') return value
+export function lengthToPx(value: number | string, unitPx = 1): number {
+  if (typeof value === 'number') return value * unitPx
   if (value.startsWith('(')) return Number.POSITIVE_INFINITY
   return (
     Number.parseFloat(value) *
@@ -162,6 +168,8 @@ export type ConditionEnv = {
   containerPx: (name: string) => number | undefined
   /** A declared container step's width, undefined for an unknown step. */
   stepWidth: (container: string, step: string) => number | string | undefined
+  /** px per numeric unit for container widths — the system's `base` (4). */
+  basePx: number
 }
 
 /**
@@ -183,7 +191,7 @@ export function evalExpr(expr: ConditionExpr, env: ConditionEnv): boolean {
             : atom.min!
         truth =
           width !== undefined &&
-          (env.containerPx(atom.container) ?? 0) >= lengthToPx(width)
+          (env.containerPx(atom.container) ?? 0) >= lengthToPx(width, env.basePx)
       }
       return atom.negated ? !truth : truth
     }),

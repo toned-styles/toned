@@ -1110,7 +1110,7 @@ describe('runtime container queries (Base)', () => {
   // stays the pass-through stub — `containers` is config, not a token.
   const cqTokenSystem = {
     ...(mockTokenSystem as unknown as Record<string, unknown>),
-    system: { containers: { card: { sm: 320, md: '28rem' } } },
+    system: { containers: { card: { sm: 80, md: '28rem' } } },
   } as unknown as TokenSystem<typeof testTokens>
 
   const rules = {
@@ -1162,7 +1162,9 @@ describe('runtime container queries (Base)', () => {
 describe('runtime condition algebra (Base)', () => {
   const cqTokenSystem = {
     ...(mockTokenSystem as unknown as Record<string, unknown>),
-    system: { containers: { card: { sm: 320 } } },
+    // sm: 80 units × the default base (4px) = 320px — container numbers
+    // ride the universal spacing scale.
+    system: { containers: { card: { sm: 80 } } },
     usedConditions: new Set<string>(),
   } as unknown as TokenSystem<typeof testTokens>
 
@@ -1172,25 +1174,25 @@ describe('runtime condition algebra (Base)', () => {
       rules: {
         Root: {
           bgColor: 'base',
-          '@!card/>=400': { bgColor: 'red' },
-          '@md&card/>=400': { bgColor: 'blue' },
+          '@!card/>=100': { bgColor: 'red' },
+          '@md&card/>=100': { bgColor: 'blue' },
         },
       },
       config: mockConfig,
       modsState: { '@md': true },
     })
     expect(base.conditionState({ card: 200 })).toEqual({
-      '@!card/>=400': true,
-      '@md&card/>=400': false,
+      '@!card/>=100': true,
+      '@md&card/>=100': false,
     })
     expect(base.conditionState({ card: 500 })).toEqual({
-      '@!card/>=400': false,
-      '@md&card/>=400': true,
+      '@!card/>=100': false,
+      '@md&card/>=100': true,
     })
     // an unmeasured container is width 0 — the below-condition holds
     expect(base.conditionState({})).toEqual({
-      '@!card/>=400': true,
-      '@md&card/>=400': false,
+      '@!card/>=100': true,
+      '@md&card/>=100': false,
     })
   })
 
@@ -1198,7 +1200,7 @@ describe('runtime condition algebra (Base)', () => {
     const base = new Base({
       ref: cqTokenSystem,
       rules: {
-        Root: { bgColor: 'base', '@md&card/>=400': { bgColor: 'blue' } },
+        Root: { bgColor: 'base', '@md&card/>=100': { bgColor: 'blue' } },
       },
       config: mockConfig,
       modsState: {},

@@ -81,14 +81,65 @@ system.stylesheet({
 
 system.stylesheet({
   root: {
-    // NOT an error any more: the open condition-key index (`@${string}`,
-    // added for ad-hoc/algebraic condition expressions) admits any '@' key,
-    // so an undeclared platform is no longer caught at the type level — at
-    // runtime resolvePlatformKeys drops a foreign platform block, and a
-    // condition key that fails to parse warns and drops.
+    // @ts-expect-error — not a declared platform. The condition-expression
+    // keys are SHAPED patterns (`/>=`, `!`, `&`, `|`), not an open
+    // `@${string}`, so platform typos stay compile errors.
     '@platform.ios': { bgColor: 'accent' },
   },
 })
+
+// --- condition-expression keys ----------------------------------------------
+
+const cqSystem = defineSystem(
+  { bgColor },
+  {
+    breakpoints: { __breakpoints: { md: 768 } },
+    containers: { card: { sm: 80 } },
+  },
+)
+
+cqSystem.stylesheet({
+  root: {
+    bgColor: 'base',
+    // enumerated sugar stays typed at the ELEMENT level
+    '@md': { bgColor: 'accent' },
+    '@card/sm': { bgColor: 'accent' },
+  },
+  // condition EXPRESSIONS are root-level blocks — ad-hoc widths on declared
+  // names, negation, algebra, and the system's typed builders as computed keys
+  '@card/>=100': { root: { bgColor: 'accent' } },
+  '@!card/>=100': { root: { bgColor: 'accent' } },
+  '@md&card/>=100': { root: { bgColor: 'accent' } },
+  [cqSystem.cq('card').min(100)]: { root: { bgColor: 'accent' } },
+  [cqSystem.cq('card').below(100)]: { root: { bgColor: 'accent' } },
+})
+
+// (A hand-written '@nope/>=100' on an UNDECLARED container is not a compile
+// error at the root level — root keys are open by design, since any key is a
+// legal element name. The typed path is the builder (cq('nope') errors below);
+// a hand-written undeclared name warns and drops at resolution.)
+
+cqSystem.stylesheet({
+  root: {
+    // @ts-expect-error — expressions never sit INSIDE an element rule: a
+    // pattern-typed member there would suppress excess-property checking for
+    // the whole element literal (bogusToken would pass silently)
+    '@card/>=100': { bgColor: 'accent' },
+  },
+})
+
+cqSystem.stylesheet({
+  root: {
+    // @ts-expect-error — and the closed element level still catches typos
+    bogusToken: 'base',
+  },
+})
+
+// @ts-expect-error — the typed builder rejects an undeclared container name
+cqSystem.cq('nope')
+
+// @ts-expect-error — and an undeclared breakpoint name
+cqSystem.bp('mdd')
 
 // --- alpha modifier value widening -------------------------------------------
 

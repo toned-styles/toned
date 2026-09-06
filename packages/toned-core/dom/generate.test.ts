@@ -57,7 +57,7 @@ describe('generate', () => {
   describe('container-condition toggles', () => {
     test('emits per-element resets and @container flips for every step', () => {
       const result = generate({
-        containers: { 'field-group': { md: '28rem' }, card: { sm: 320 } },
+        containers: { 'field-group': { md: '28rem' }, card: { sm: 80 } },
       })
       // The OFF init sits on `._` ITSELF, never html: the on-value is
       // valid-empty and inherits, so an html init would leak an outer
@@ -80,21 +80,22 @@ describe('generate', () => {
 
     test('ad-hoc registered conditions get toggles too', () => {
       const result = generate(
-        { containers: { card: { sm: 320 } } },
-        { conditions: ['card/>=25rem', 'card/>=400'] },
+        { containers: { card: { sm: 80 } } },
+        { conditions: ['card/>=25rem', 'card/>=100'] },
       )
       expect(result).toContain(
         '@container card (min-width: 25rem) { ._ { --cq-card-gte25rem: ; --cq-card-gte25rem-not: initial; } }',
       )
+      // 100 units × the default base (4px) = 400px
       expect(result).toContain(
-        '@container card (min-width: 400px) { ._ { --cq-card-gte400: ; --cq-card-gte400-not: initial; } }',
+        '@container card (min-width: 400px) { ._ { --cq-card-gte100: ; --cq-card-gte100-not: initial; } }',
       )
-      expect(result).toContain('--cq-card-gte400: initial;--cq-card-gte400-not: ;')
+      expect(result).toContain('--cq-card-gte100: initial;--cq-card-gte100-not: ;')
     })
 
     test('a scoped system scopes both halves', () => {
       const result = generate(
-        { containers: { card: { sm: 320 } } },
+        { containers: { card: { sm: 80 } } },
         { scope: '.ds2' },
       )
       expect(result).toContain('.ds2 ._ {--cq-card-sm: initial;--cq-card-sm-not: ;}')

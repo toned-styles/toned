@@ -214,6 +214,7 @@ export type TokenStyleDeclaration = {
     | Record<string, string>
     | Containers
     | readonly string[]
+    | number
     | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
@@ -246,12 +247,18 @@ export type TokenStyleDeclaration = {
   responsiveTokens?: readonly string[]
   /** Named size containers and their steps — see `Containers`. */
   containers?: Containers
+  /**
+   * px per numeric unit — the universal spacing scale's base (default 4, the
+   * same `--base` numeric tokens multiply). Container condition NUMBERS ride
+   * it, so `min(100)` is 400px exactly as `gap: 2` is 8px, on every platform.
+   */
+  base?: number
 }
 
 /** Filter out 'breakpoints' key from token style keys */
 export type TokenKeys<S> = Exclude<
   keyof S,
-  'breakpoints' | 'responsiveTokens' | 'containers'
+  'breakpoints' | 'responsiveTokens' | 'containers' | 'base'
 >
 
 import type { TonedTypeRegistry } from '../registry.ts'
