@@ -144,11 +144,11 @@ describe('createStylesheet', () => {
 
   describe('extend method', () => {
     test('extend beats variant values for the properties it names', () => {
-      const rules = { container: { width: 'full' } }
+      const rules = { container: { bgColor: 'base' } }
       const sheet = createStylesheet(mockTokenSystem, rules).variants({
-        '[size=icon]': { container: { width: '9', height: '9' } },
+        '[size=icon]': { container: { bgColor: 'blue', textColor: 'muted' } },
       })
-      const extended = (sheet as AnyValue).extend({ container: { width: 'fit' } })
+      const extended = (sheet as AnyValue).extend({ container: { bgColor: 'green' } })
       const base = extended[SYMBOL_INIT](
         { getProps() {}, getTokens: () => ({}), tokens: {} } as AnyValue,
         {},
@@ -157,9 +157,9 @@ describe('createStylesheet', () => {
       // property — a caller overriding `width` means the width, not "the
       // width unless a size variant says otherwise" — while untouched
       // properties survive.
-      expect(base.rules['[size=icon]'].container.width).toBe('fit')
-      expect(base.rules['[size=icon]'].container.height).toBe('9')
-      expect(base.rules.container.width).toBe('fit')
+      expect(base.rules['[size=icon]'].container.bgColor).toBe('green')
+      expect(base.rules['[size=icon]'].container.textColor).toBe('muted')
+      expect(base.rules.container.bgColor).toBe('green')
     })
 
     test('extend method returns new stylesheet', () => {
