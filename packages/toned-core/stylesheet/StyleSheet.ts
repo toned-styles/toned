@@ -430,6 +430,19 @@ export class Base {
           (this.ref as { system?: { base?: number } }).system?.base ?? 4,
       })
     }
+    // The ':rtl' declared state's runtime half: every `<element>:rtl` mod
+    // answers the host's getDirection seam (unset means never matched — the
+    // web half is the generated `:dir(rtl)` toggle and needs no runtime).
+    const dir = (
+      this.config as { getDirection?: () => 'ltr' | 'rtl' }
+    ).getDirection?.()
+    if (dir !== undefined) {
+      for (const mod in this.matcher.scheme) {
+        if (!mod.endsWith(':rtl')) continue
+        out ??= {}
+        out[mod] = dir === 'rtl'
+      }
+    }
     if (out) this.lastContainerSizes = sizes
     return out
   }
