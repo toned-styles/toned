@@ -7,6 +7,9 @@
 export type { TokenSystem } from './system/index.ts'
 // System definition and configuration
 export {
+  and,
+  bp,
+  cq,
   defineAnimations,
   defineConfig,
   defineSystem,
@@ -14,8 +17,11 @@ export {
   defineUnit,
   definePalette,
   getConfig,
+  not,
+  or,
   setConfig,
 } from './system/index.ts'
+export type { Condition } from './system/index.ts'
 
 // Re-export types for convenience
 export type {

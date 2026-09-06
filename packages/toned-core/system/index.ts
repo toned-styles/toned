@@ -19,3 +19,5 @@ export {
   defineToken,
   defineUnit,
 } from './definers.ts'
+export { and, bp, cq, not, or } from './conditions.ts'
+export type { Condition } from './conditions.ts'

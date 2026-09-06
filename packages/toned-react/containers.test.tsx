@@ -11,7 +11,7 @@
 import { act, cleanup, render } from '@testing-library/react'
 // The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
 import * as React from 'react'
-import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
+import { cq, defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { afterEach, describe, expect, test } from 'vitest'
 import { bind, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
@@ -93,6 +93,45 @@ describe('runtime container queries (binding)', () => {
     try {
       const { container } = render(<Child />)
       expect(label(container).style.width).toBe('100px')
+    } finally {
+      setConfig(prev)
+    }
+  })
+
+  test('the css-hooks example, runtime: below(400) hides, measuring past it reveals', () => {
+    const prev = { ...getConfig() }
+    const sizeReporters: Array<(w: number) => void> = []
+    setConfig({
+      ...reactWebConfig,
+      useClassName: false,
+      mediaMode: 'runtime',
+      getTokens: () => ({}),
+      measureContainerProps: (onSize) => {
+        sizeReporters.push(onSize)
+        return {}
+      },
+    })
+    try {
+      const hideStyles = stylesheet({
+        Label: { w: 'narrow', [String(cq('card').below(400))]: { style: { display: 'none' } } },
+      })
+      function HideChild() {
+        const s = useBind(hideStyles)
+        return <s.Label data-slot="h" />
+      }
+      const { Root } = bind(cardStyles)
+      const { container } = render(
+        <Root>
+          <HideChild />
+        </Root>,
+      )
+      const el = () => container.querySelector('[data-slot="h"]') as HTMLElement
+      // unmeasured acts as width 0 — below(400) holds, hidden
+      expect(el().style.display).toBe('none')
+      act(() => sizeReporters[0]!(500))
+      expect(el().style.display).not.toBe('none')
+      act(() => sizeReporters[0]!(300))
+      expect(el().style.display).toBe('none')
     } finally {
       setConfig(prev)
     }

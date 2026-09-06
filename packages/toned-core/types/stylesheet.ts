@@ -113,6 +113,15 @@ export type ElementStyleNew<
   [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S, ET>
 } & {
   /**
+   * Open condition keys — ad-hoc and algebraic expressions the `cq`/`bp`/
+   * `not`/`and`/`or` builders serialize to (`'@card/>=25rem'`,
+   * `'@!card/>=400'`, `'@md&card/>=30rem'`). The enumerated spellings above
+   * stay as the typo-safe sugar; expression keys are validated at resolution
+   * (an undeclared name warns and drops rather than silently painting).
+   */
+  [key: `@${string}`]: TokenStyle<S, ET> | undefined
+} & {
+  /**
    * Platform-conditional styling: the block matching the running config's
    * `platform` merges into this element (winning over siblings); other
    * platforms' blocks are dropped before compilation. See utils/platform.ts.
@@ -191,6 +200,9 @@ export type StylesheetInput<
   [B in
     | (keyof InferBreakpoints<S> & string)
     | InferContainerConditions<S> as `@${B}`]?: ElementMap<S, Elements>
+} & {
+  /** Open condition keys at the root level — see ElementStyleNew. */
+  [key: `@${string}`]: ElementMap<S, Elements> | undefined
 } & {
   /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
   [P in Platform as `@platform.${P}`]?: ElementMap<S, Elements>

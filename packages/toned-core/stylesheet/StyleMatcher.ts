@@ -46,6 +46,19 @@ type Config = {
 
 const WILDCARD = '*' as const
 
+/**
+ * The listKey encoding joins `key=value` pairs with `|`, and both delimiters
+ * legally occur inside condition mod keys (`'@card/>=400'`, OR expressions).
+ * Percent-escape them (and `%` itself) so the encoding round-trips.
+ */
+function escapeListKeyPart(part: string): string {
+  return part.replace(/%/g, '%25').replace(/=/g, '%3D').replace(/\|/g, '%7C')
+}
+
+function unescapeListKeyPart(part: string): string {
+  return part.replace(/%7C/g, '|').replace(/%3D/g, '=').replace(/%25/g, '%')
+}
+
 type MatcherScheme = Record<string, Set<ModValue>>
 
 type MatcherList = Record<string, { rule: StyleRules }>
@@ -326,13 +339,17 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
         }
       }
 
-      // Build listKey using modIndex order
+      // Build listKey using modIndex order. Key and value are ESCAPED: the
+      // encoding's own delimiters (`=`, `|`) legally occur inside condition
+      // mod keys (`'@card/>=400'`, an OR expression), and unescaped they made
+      // compile() parse the rule as an empty mask — a rule that matched
+      // EVERYTHING.
       let listKey = ''
       let first = true
       for (const key of modIndex.keys()) {
         if (!first) listKey += '|'
         first = false
-        listKey += `${key}=${selector.get(key) || WILDCARD}`
+        listKey += `${escapeListKeyPart(key)}=${escapeListKeyPart(String(selector.get(key) || WILDCARD))}`
       }
 
       list[listKey] ??= { rule: selectorRule }
@@ -567,7 +584,13 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
 
       const conditions = ruleStr.split('|')
       for (const condition of conditions) {
-        const [property, value = '*'] = condition.split('=')
+        // Symmetric to the escaped listKey encoding above: split on the FIRST
+        // `=` only, then unescape both halves.
+        const eq = condition.indexOf('=')
+        const property = unescapeListKeyPart(
+          eq === -1 ? condition : condition.slice(0, eq),
+        )
+        const value = eq === -1 ? '*' : unescapeListKeyPart(condition.slice(eq + 1))
 
         // Skip wildcards (unspecified optional variants use * too)
         if (value === WILDCARD) continue

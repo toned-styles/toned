@@ -41,6 +41,13 @@ export type TokenSystem<
   /** Optional system configuration (breakpoints, etc.) */
   config?: SystemConfig
 
+  /**
+   * Ad-hoc condition atoms (`name/>=len`) used by stylesheets of this system —
+   * registered at stylesheet creation, read by a css generator script so the
+   * static system css carries a toggle for every condition actually in use.
+   */
+  usedConditions?: Set<string>
+
   /** Create a stylesheet with element definitions */
   stylesheet: StylesheetType<S>
 
