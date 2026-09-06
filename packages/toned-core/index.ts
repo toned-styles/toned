@@ -37,6 +37,8 @@ export type {
   Pseudo,
   ResolveContext,
   Stylesheet,
+  AuthoredElementStyle,
+  ElementStyleNew,
   StylesheetInput,
   StylesheetType,
   TokenConfig,

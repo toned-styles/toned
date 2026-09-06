@@ -19,6 +19,8 @@ export type { Config, Platform } from './config.ts'
 export type {
   ElementMap,
   StylesheetInstance,
+  AuthoredElementStyle,
+  InferElementType,
   ElementStyleNew,
   ExtractElements,
   ExtractNamedStyles,
