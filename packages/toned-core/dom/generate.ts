@@ -41,6 +41,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     animations,
     bridges,
     states,
+    responsiveTokens,
     ...system
   }: S,
   opts?: { scope?: string },
@@ -320,6 +321,52 @@ export function generate<const S extends TokenStyleDeclaration>(
         }
       }
     })
+  }
+
+  // Responsive atomic classes for the opted tokens (see `responsiveTokens` on
+  // the declaration type): every enumerated value again, under each width
+  // breakpoint's media condition. Emitted AFTER the resting atomics so an
+  // active breakpoint class beats the resting value by order at equal
+  // specificity — and, unlike a chain, still loses to a caller's utilities.
+  // Ascending width order so a larger breakpoint's block wins the same way;
+  // raw media CONDITIONS ('(pointer: coarse)') sort last, as in the chains.
+  if (responsiveTokens && breakpoints) {
+    const px = (v: number | string): number =>
+      typeof v === 'number'
+        ? v
+        : v.startsWith('(')
+          ? Number.POSITIVE_INFINITY
+          : Number.parseFloat(v) * (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
+    const sorted = Object.entries(
+      breakpoints.__breakpoints as Record<string, number | string>,
+    ).sort(([, a], [, b]) => px(a) - px(b))
+    for (const [bpKey, bpValue] of sorted) {
+      const condition =
+        typeof bpValue === 'string' && bpValue.startsWith('(')
+          ? bpValue
+          : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
+      let block = ''
+      for (const key of responsiveTokens) {
+        // biome-ignore lint/suspicious/noExplicitAny: same structural narrowing as the token loop
+        const token = system[key] as any
+        if (!token || !('values' in token) || !('resolve' in token)) continue
+        // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
+        token.values.forEach((value: any) => {
+          if (value instanceof Number || value instanceof String) return
+          const result = token.resolve(value, tokens, { platform: 'web' })
+          if (!result) return
+          let cssRule = ''
+          for (const cssProp in result) {
+            cssRule += `${camelToKebab(cssProp)}:${result[cssProp]};`
+          }
+          if (!cssRule) return
+          const ruleKey = `@${bpKey}:${key}_${value}`
+          const selector = ruleKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
+          block += `${scope}.${selector}{${cssRule}}`
+        })
+      }
+      if (block) styles += `@media ${condition} {${block}}`
+    }
   }
 
   // `inherits: false` is load-bearing: an unregistered custom property

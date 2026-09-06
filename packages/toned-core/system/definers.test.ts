@@ -110,6 +110,49 @@ describe('defineSystem', () => {
   })
 
   describe('exec() with className mode', () => {
+    test('a responsive token breakpoint override becomes a class, not a chain', () => {
+      const maxW = defineToken({
+        values: ['gutter', '32'] as const,
+        resolve: (value: string) => ({
+          maxWidth: value === 'gutter' ? 'calc(100% - 2rem)' : '32rem',
+        }),
+      })
+      const { exec } = defineSystem(
+        { maxW },
+        {
+          breakpoints: { __breakpoints: { sm: 640 } },
+          responsiveTokens: ['maxW'],
+        },
+      )
+      const result = exec(
+        { tokens: {}, useClassName: true },
+        { maxW: 'gutter', '@sm': { maxW: '32' } } as any,
+      )
+      expect(result.className).toContain('maxW_gutter')
+      expect(result.className).toContain('@sm:maxW_32')
+      // no chain rides the inline style
+      expect(result.style).toEqual({})
+    })
+
+    test('an un-opted token keeps the breakpoint chain', () => {
+      const maxW = defineToken({
+        values: ['gutter', '32'] as const,
+        resolve: (value: string) => ({
+          maxWidth: value === 'gutter' ? 'calc(100% - 2rem)' : '32rem',
+        }),
+      })
+      const { exec } = defineSystem(
+        { maxW },
+        { breakpoints: { __breakpoints: { sm: 640 } } },
+      )
+      const result = exec(
+        { tokens: {}, useClassName: true },
+        { maxW: 'gutter', '@sm': { maxW: '32' } } as any,
+      )
+      const style = result.style as Record<string, unknown>
+      expect(String(style['maxWidth'] ?? '')).toContain('var(--media-sm__max-width')
+    })
+
     test('generates className strings for known token values', () => {
       const { exec } = defineSystem({ bgColor, textColor })
 
