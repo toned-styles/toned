@@ -3,6 +3,20 @@ import { defineToken } from '../system/definers.ts'
 import { generate } from './generate.ts'
 
 describe('generate', () => {
+  describe('sibling and focus-within channels', () => {
+    test('the system css carries sibling-hover, focus-within and sibling-state toggles', () => {
+      const result = generate({
+        breakpoints: { __breakpoints: { sm: 480 } },
+        states: { 'data-active': '[data-active]' },
+      })
+      expect(result).toContain('._s:hover ~ ._ {--toned_sib-hover: ;}')
+      expect(result).toContain('._s:focus-within {--toned_src-focus-within: ;}')
+      expect(result).toContain("._s[data-active] ~ ._ {--toned_sib-data-active: ;}")
+      // focus-within joins the self pseudo toggles too
+      expect(result).toContain('._:focus-within {--toned_focus-within: ;}')
+    })
+  })
+
   describe('responsive atomic classes', () => {
     const maxW = {
       values: ['gutter', '32'],

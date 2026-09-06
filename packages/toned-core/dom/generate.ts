@@ -79,6 +79,14 @@ export function generate<const S extends TokenStyleDeclaration>(
         const ssel = `._s${selector}`
         stateToggles += `html {${srcName}: initial;}`
         stateToggles += `${scope}${ssel} {${srcName}: ;} ${scope}${ssel} ._s {${srcName}: initial;} ${scope}${ssel} ${ssel} {${srcName}: ;}`
+
+        // SIBLING source channel: the same state on a `_s` source toggles
+        // `--toned_sib-<alias>` on its FOLLOWING SIBLINGS (the `~` combinator
+        // the sidebar's peer-recolor css used), self-scoped: a sibling's own
+        // subtree resets, so only the sibling element itself answers.
+        const sibName = `--toned_sib-${alias}`
+        stateToggles += `html {${sibName}: initial;}`
+        stateToggles += `${scope}${ssel} ~ ._ {${sibName}: ;} ${scope}${ssel} ~ ._ ._ {${sibName}: initial;}`
       }
     }
     styles += stateToggles
@@ -166,7 +174,7 @@ export function generate<const S extends TokenStyleDeclaration>(
 
     // The runtime-tracked states plus the css-only enhancements (:focus-visible
     // has no JS event and no native analogue — the browser decides it).
-    const PSEUDO_STATES = ['hover', 'focus', 'focus-visible', 'active']
+    const PSEUDO_STATES = ['hover', 'focus', 'focus-visible', 'focus-within', 'active']
 
     let rootRule = ''
     let rules = ''
@@ -191,6 +199,23 @@ export function generate<const S extends TokenStyleDeclaration>(
       `@media (hover: hover) {${scope}._s:hover {--toned_src-hover: ;} ` +
       `${scope}._s:hover ._s {--toned_src-hover: initial;} ` +
       `${scope}._s:hover ._s:hover {--toned_src-hover: ;}}`
+
+    // Its focus-within twin (a container's focus revealing a descendant —
+    // sidebar's row actions): pure css, no JS event, never hover-gated.
+    rootRule += '--toned_src-focus-within: initial;'
+    rules +=
+      `${scope}._s:focus-within {--toned_src-focus-within: ;} ` +
+      `${scope}._s:focus-within ._s {--toned_src-focus-within: initial;} ` +
+      `${scope}._s:focus-within ._s:focus-within {--toned_src-focus-within: ;}`
+
+    // The SIBLING hover channel: a hovered source toggles
+    // `--toned_sib-hover` on its FOLLOWING SIBLINGS (`~`), self-scoped to the
+    // sibling element itself — the peer-recolor shape (`.button:hover ~
+    // .action`) the descendant channel cannot say.
+    rootRule += '--toned_sib-hover: initial;'
+    rules +=
+      `@media (hover: hover) {${scope}._s:hover ~ ._ {--toned_sib-hover: ;} ` +
+      `${scope}._s:hover ~ ._ ._ {--toned_sib-hover: initial;}}`
 
     for (const [key, value] of Object.entries(bpValues)) {
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
