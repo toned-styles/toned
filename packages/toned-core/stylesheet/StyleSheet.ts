@@ -18,9 +18,9 @@ import {
   isSimpleExpr,
   parseConditionKey,
 } from '../utils/conditions.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
-import { resolvePlatformKeys } from '../utils/platform.ts'
 import { warnOnce } from '../utils/warn.ts'
 import { setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
@@ -110,6 +110,88 @@ function sharedMedia(ref: TokenSystem<AnyValue>): ReturnType<typeof initMedia> {
 // Kept as AnyValue because keys are dynamic: variant names, breakpoint keys, and element:pseudo combinations
 type ModState = AnyValue
 
+/** The element keys of a rules object — selectors, pseudo keys and the
+ * variants symbol are not elements. */
+function elementNamesOf(rules: AnyValue): Set<string> {
+  const variantSymbolStr = SYMBOL_VARIANTS.toString()
+  const names = new Set<string>()
+  for (const key in rules as object) {
+    if (
+      key[0] !== '[' &&
+      !key.includes(':') &&
+      key !== 'prototype' &&
+      key !== variantSymbolStr
+    ) {
+      names.add(key)
+    }
+  }
+  return names
+}
+
+/**
+ * Merge an override's variant rules into a sheet's own table.
+ *
+ * THE KEY ORDER IS THE SHEET'S, and that is the whole reason this is resolved
+ * here rather than where the override was written. A matcher key is built by
+ * concatenating axes in a fixed order — `[size=sm][variant=ghost]` — so an
+ * override that spelled `$.variant('ghost').size('sm')` would otherwise
+ * generate a different string, and ADD a matcher where it meant to REPLACE
+ * one. Seeding the selector with the sheet's axes first makes the two agree
+ * however the override is written.
+ *
+ * Where a matcher exists in both, the override's element rules merge onto the
+ * sheet's, property by property, so an override changes what it names and
+ * leaves the rest of that matcher standing. A matcher only the override has
+ * is appended.
+ */
+function mergeOverrideVariants(
+  sheetVariants: AnyValue,
+  variantsArg: ($: AnyValue) => AnyValue,
+  baseElements: Set<string>,
+): AnyValue {
+  const existing = sheetVariants ?? {}
+  const preliminary = variantsArg(createVariantSelector([]))
+  const orderedKeys = [
+    ...new Set([
+      ...extractOrderedKeys(existing),
+      ...extractOrderedKeys(preliminary),
+    ]),
+  ]
+  const incoming = processVariantRules(
+    variantsArg(createVariantSelector(orderedKeys)),
+    baseElements,
+  )
+
+  const merged: AnyValue = { ...existing }
+  for (const key in incoming) {
+    const before = merged[key]
+    const after = incoming[key]
+    if (
+      !before ||
+      typeof before !== 'object' ||
+      !after ||
+      typeof after !== 'object'
+    ) {
+      merged[key] = after
+      continue
+    }
+    const entry: AnyValue = { ...before }
+    for (const el in after) {
+      const incomingEl = after[el]
+      const existingEl = entry[el]
+      entry[el] =
+        existingEl &&
+        typeof existingEl === 'object' &&
+        incomingEl &&
+        typeof incomingEl === 'object'
+          ? { ...existingEl, ...incomingEl }
+          : incomingEl
+    }
+    merged[key] = entry
+  }
+  return merged
+}
+
 export function createStylesheet<
   S extends TokenStyleDeclaration,
   _Mods extends ModType,
@@ -123,7 +205,12 @@ export function createStylesheet<
   // The AUTHORED element type — see the note on StylesheetType. `.variants()`
   // routes back through here, so both entry points must record the same thing
   // or an override's typing depends on whether the sheet declared variants.
-  { [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<S, InferElementType<T, K>> },
+  {
+    [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<
+      S,
+      InferElementType<T, K>
+    >
+  },
   PickString<ExtractElements<T>>
 > {
   // Merge base rules with variants - StyleMatcher handles the format directly
@@ -187,21 +274,7 @@ export function createStylesheet<
         const $ = createVariantSelector<M>(orderedKeys as (keyof M)[])
         const rawRules = variantsArg($)
 
-        // Collect base element names
-        const baseElements = new Set<string>()
-        for (const key in rules as object) {
-          if (
-            key[0] !== '[' &&
-            !key.includes(':') &&
-            key !== 'prototype' &&
-            key !== SYMBOL_VARIANTS.toString()
-          ) {
-            baseElements.add(key)
-          }
-        }
-
-        // Process $compose
-        newVariantRules = processVariantRules(rawRules, baseElements)
+        newVariantRules = processVariantRules(rawRules, elementNamesOf(rules))
       } else {
         // Legacy object-based API
         newVariantRules = variantsArg
@@ -210,7 +283,10 @@ export function createStylesheet<
       return createStylesheet<S, M, T>(ref, rules, newVariantRules)
     },
     // Add extend method for composition
-    extend: (extensionRules: AnyValue) => {
+    extend: (
+      extensionRules: AnyValue,
+      variantsArg?: ($: AnyValue) => AnyValue,
+    ) => {
       // Deep merge base rules with extension rules
       const extendedRules = deepMerge(rules as AnyValue, extensionRules)
       // An extension REPLACES the properties it names wherever the sheet
@@ -220,7 +296,11 @@ export function createStylesheet<
       // size variant says otherwise"). Nested pseudo/breakpoint objects
       // replace wholesale — an override declares its intersections whole.
       let extendedVariants = variantRules
-      if (variantRules && extensionRules && typeof extensionRules === 'object') {
+      if (
+        variantRules &&
+        extensionRules &&
+        typeof extensionRules === 'object'
+      ) {
         extendedVariants = {}
         for (const vKey in variantRules) {
           const vEntry = variantRules[vKey]
@@ -239,7 +319,14 @@ export function createStylesheet<
           extendedVariants[vKey] = patched
         }
       }
-      return createStylesheet<S, never, AnyValue>(
+      if (variantsArg) {
+        extendedVariants = mergeOverrideVariants(
+          extendedVariants,
+          variantsArg,
+          elementNamesOf(extendedRules),
+        )
+      }
+      return createStylesheet<S, _Mods, AnyValue>(
         ref,
         extendedRules,
         extendedVariants,
@@ -414,7 +501,9 @@ export class Base {
   ): Record<string, boolean> | null {
     const containers = (
       this.ref as {
-        system?: { containers?: Record<string, Record<string, number | string>> }
+        system?: {
+          containers?: Record<string, Record<string, number | string>>
+        }
       }
     ).system?.containers
     let out: Record<string, boolean> | null = null
@@ -430,8 +519,7 @@ export class Base {
         media: (name) => this.modsState[`@${name}`] as boolean | undefined,
         containerPx: (name) => sizes[name],
         stepWidth: (c, s) => containers?.[c]?.[s],
-        basePx:
-          (this.ref as { system?: { base?: number } }).system?.base ?? 4,
+        basePx: (this.ref as { system?: { base?: number } }).system?.base ?? 4,
       })
     }
     // The ':rtl' declared state's runtime half: every `<element>:rtl` mod

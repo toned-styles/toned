@@ -7,11 +7,11 @@
  * error, not a silent `any`.
  */
 import { defineSystem, defineToken } from '@toned/core'
-import { bind, useBind, useStyles } from './index.ts'
+import { bind, overrideStyles, useBind, useStyles } from './index.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent'] as const,
-  resolve: value => ({ backgroundColor: value }),
+  resolve: (value) => ({ backgroundColor: value }),
 })
 
 const system = defineSystem({ bgColor })
@@ -23,7 +23,7 @@ const plain = system.stylesheet({
 
 const varianted = system
   .stylesheet({ root: { bgColor: 'base' } })
-  .variants<{ tone: 'calm' | 'loud' }>($ => ({
+  .variants<{ tone: 'calm' | 'loud' }>(($) => ({
     [$.tone('loud')]: { root: { bgColor: 'accent' } },
   }))
 
@@ -106,3 +106,51 @@ export function ModlessBind() {
   bind(plain).nope
   return null
 }
+
+/*
+ * `overrideStyles` says what the stylesheet says, about the elements the
+ * target declared. Each `@ts-expect-error` below is a rule that used to be
+ * unenforceable, because a sheet exported for overriding was type-erased.
+ */
+const overridable = system
+  .stylesheet({ root: { bgColor: 'base' }, icon: { bgColor: 'accent' } })
+  .variants<{ size: 'sm' | 'lg' }>(($) => ({
+    [$.size('sm')]: { root: { bgColor: 'accent' } },
+  }))
+
+// Base rules: the nested blocks the stylesheet accepts, an override accepts.
+overrideStyles(overridable, {
+  root: { bgColor: 'accent', ':hover': { bgColor: 'base' } },
+})
+
+// @ts-expect-error — an element the sheet never declared
+overrideStyles(overridable, { nope: { bgColor: 'base' } })
+
+// @ts-expect-error — a value the token does not have
+overrideStyles(overridable, { root: { bgColor: 'nope' } })
+
+// Variants: the sheet's own axes, replacing a matcher or adding one.
+overrideStyles(overridable, {}).variants(($) => ({
+  [$.size('sm')]: { root: { bgColor: 'base' } },
+  [$.size('lg')]: { icon: { ':hover': { bgColor: 'accent' } } },
+}))
+
+overrideStyles(overridable, {}).variants(($) => ({
+  // @ts-expect-error — a value the axis does not have
+  [$.size('xl')]: { root: { bgColor: 'base' } },
+}))
+
+overrideStyles(overridable, {}).variants(($) => ({
+  // @ts-expect-error — an axis the sheet does not declare
+  [$.tone('quiet')]: { root: { bgColor: 'base' } },
+}))
+
+// @ts-expect-error — an unknown element inside a matcher
+overrideStyles(overridable, {}).variants(($) => ({
+  [$.size('sm')]: { nope: { bgColor: 'base' } },
+}))
+
+// @ts-expect-error — a bad token value inside a matcher
+overrideStyles(overridable, {}).variants(($) => ({
+  [$.size('sm')]: { root: { bgColor: 'nope' } },
+}))

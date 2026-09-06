@@ -17,10 +17,11 @@ import type { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
  * typing that every override then loses.
  */
 export type { SYMBOL_INIT, SYMBOL_REF }
+
 import type { Config, Platform } from './config.ts'
 import type {
-  ElementType,
   Breakpoints,
+  ElementType,
   TokenStyle,
   TokenStyleDeclaration,
 } from './tokens.ts'
@@ -419,6 +420,10 @@ export type VariantsCallback<
 export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
+  /** The axes declared so far. Carried so `extend` can hand them back rather
+   * than collapsing to `never`, which is what stopped an override from
+   * selecting on the axes its target sheet already had. */
+  Mods extends ModType = never,
 > {
   /**
    * Define variants using a callback with type-safe selector proxy
@@ -439,19 +444,19 @@ export interface StylesheetWithVariants<
    * }))
    * ```
    */
-  variants<Mods extends ModType>(
-    callback: VariantsCallback<S, Elements, Mods>,
-  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods> &
-    StylesheetWithVariants<S, Elements>
+  variants<M extends ModType>(
+    callback: VariantsCallback<S, Elements, M>,
+  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, M> &
+    StylesheetWithVariants<S, Elements, M>
 
   /**
    * Define variants using an object (legacy API)
    * @deprecated Use callback-based API for better type safety
    */
-  variants<Mods extends ModType>(
-    variants: VariantsInput<S, Elements, Mods>,
-  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, Mods> &
-    StylesheetWithVariants<S, Elements>
+  variants<M extends ModType>(
+    variants: VariantsInput<S, Elements, M>,
+  ): Stylesheet<S, Record<Elements, TokenStyle<S>>, M> &
+    StylesheetWithVariants<S, Elements, M>
 
   /**
    * Compose a new stylesheet by deep-merging additional rules into this one.
@@ -465,12 +470,28 @@ export interface StylesheetWithVariants<
    */
   extend<Extension extends StylesheetInput<S, Extension>>(
     rules: Extension,
+    /**
+     * Variant rules to merge into the sheet's own table, over the SHEET's
+     * axes. A matcher the sheet declared is replaced; one it did not is
+     * added. Resolved against the sheet's own key order, so
+     * `$.size('sm').variant('ghost')` names the same matcher here as it does
+     * there regardless of the order it is written in.
+     */
+    variants?: VariantsCallback<
+      S,
+      Elements | PickString<ExtractElements<Extension>>,
+      Mods
+    >,
   ): Stylesheet<
     S,
     Record<Elements | PickString<ExtractElements<Extension>>, TokenStyle<S>>,
-    never
+    Mods
   > &
-    StylesheetWithVariants<S, Elements | PickString<ExtractElements<Extension>>>
+    StylesheetWithVariants<
+      S,
+      Elements | PickString<ExtractElements<Extension>>,
+      Mods
+    >
 }
 
 /**
@@ -562,7 +583,12 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
    * authored type means the two surfaces cannot drift: an override says
    * exactly what the declaration said, about the elements it declared.
    */
-  { [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<S, InferElementType<T, K>> },
+  {
+    [K in PickString<ExtractElements<T>>]: AuthoredElementStyle<
+      S,
+      InferElementType<T, K>
+    >
+  },
   PickString<ExtractElements<T>>
 >
 
