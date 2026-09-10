@@ -57,6 +57,23 @@ export const breakpoints = defineBreakpoints({
         values when the viewport matches.
       </p>
 
+      <h2 {...s.h2}>Using Breakpoints Inline</h2>
+      <p>
+        The <code {...s.code}>t</code> utility accepts the same{' '}
+        <code {...s.code}>@</code> blocks, so a one-off style can be responsive
+        without defining a stylesheet:
+      </p>
+      <CodeBlock>{`import { t } from '@toned/systems/base'
+
+function Panel() {
+  return <div {...t({ paddingX: 2, '@md': { paddingX: 4 } })} />
+}`}</CodeBlock>
+      <p>
+        Inline blocks require <code {...s.code}>mediaMode: 'css'</code> -- see
+        below. They are also one level deep, so the root-level and variant forms
+        further down this page apply to stylesheets only.
+      </p>
+
       <h2 {...s.h2}>Media Modes</h2>
       <p>
         The <code {...s.code}>mediaMode</code> option in your config controls
@@ -76,16 +93,27 @@ export const breakpoints = defineBreakpoints({
     useClassName: true,
     useMedia: true,
     mediaMode: 'css',
+    pseudoMode: 'css',
   }),
 )`}</CodeBlock>
 
       <h3 {...s.h3}>JavaScript Mode</h3>
       <p>
         When <code {...s.code}>mediaMode</code> is not set to{' '}
-        <code {...s.code}>'css'</code>, breakpoints are evaluated at runtime
-        using JavaScript <code {...s.code}>window.matchMedia</code>. This mode
-        is useful for React Native or environments where CSS media queries are
-        not available.
+        <code {...s.code}>'css'</code>, breakpoints in a{' '}
+        <strong>stylesheet</strong> are evaluated at runtime using JavaScript{' '}
+        <code {...s.code}>window.matchMedia</code>. This mode is useful for
+        React Native or environments where CSS media queries are not available.
+      </p>
+      <p>
+        Inline <code {...s.code}>t</code> blocks have no runtime equivalent:
+        they compile to CSS custom properties, which only a browser reads. Under
+        any mode other than <code {...s.code}>'css'</code> an inline{' '}
+        <code {...s.code}>@</code> block is dropped, the base token value still
+        applies, and a development-only warning explains why. Where you need
+        responsive styling on React Native, use{' '}
+        <a href="/api/stylesheet">stylesheet</a> with{' '}
+        <a href="/api/use-styles">useStyles</a> instead.
       </p>
 
       <h2 {...s.h2}>Root-Level Breakpoints</h2>

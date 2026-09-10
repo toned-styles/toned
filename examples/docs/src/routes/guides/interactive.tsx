@@ -14,7 +14,8 @@ function GuideInteractive() {
       <h1 {...s.h1}>Interactive Styles</h1>
       <p>
         toned-styles supports hover, focus, and active states using
-        colon-prefixed keys inside element definitions. On the web with{' '}
+        colon-prefixed keys -- inside a stylesheet element definition, or inline
+        with <code {...s.code}>t</code>. On the web with{' '}
         <code {...s.code}>pseudoMode: 'css'</code>, these work entirely through
         CSS with no JavaScript event listeners.
       </p>
@@ -121,14 +122,52 @@ function GuideInteractive() {
   },
 })`}</CodeBlock>
 
+      <h2 {...s.h2}>Inline Interactive Styles</h2>
+      <p>
+        The <code {...s.code}>t</code> utility accepts the same colon-prefixed
+        keys, so a one-off element can be interactive without a stylesheet:
+      </p>
+      <CodeBlock>{`import { t } from '@toned/systems/base'
+
+function Tag() {
+  return (
+    <span
+      {...t({
+        bgColor: 'surface',
+        ':hover': { bgColor: 'action' },
+        '@md': { paddingX: 4 },
+      })}
+    />
+  )
+}`}</CodeBlock>
+      <p>
+        Inline blocks are one level deep, so the cross-element and variant forms
+        above remain stylesheet-only. They also require{' '}
+        <code {...s.code}>pseudoMode: 'css'</code> (and{' '}
+        <code {...s.code}>mediaMode: 'css'</code> for the{' '}
+        <code {...s.code}>@</code> form), because they compile to the custom
+        property chains described below. Under any other mode the block is
+        dropped, the base token value still applies, and a development-only
+        warning names the option that would enable it.
+      </p>
+
       <h2 {...s.h2}>React Native</h2>
       <p>
         React Native does not have CSS pseudo-classes. On native platforms,
         interactive states are handled through React Native's{' '}
         <code {...s.code}>Pressable</code> component. The same{' '}
         <code {...s.code}>:hover</code> and <code {...s.code}>:active</code>{' '}
-        keys work in both environments, but the runtime behaviour adapts to each
-        platform's capabilities.
+        keys work in both environments when they are declared in a{' '}
+        <a href="/api/stylesheet">stylesheet</a> and read with{' '}
+        <a href="/api/use-styles">useStyles</a> -- the runtime behaviour adapts
+        to each platform's capabilities.
+      </p>
+      <p>
+        Inline <code {...s.code}>t</code> blocks are the exception. They have no
+        native equivalent, since they rely on CSS custom properties, so on React
+        Native they are dropped and the style degrades to its non-interactive
+        base. Use a stylesheet for anything interactive that has to run on
+        native.
       </p>
 
       <h2 {...s.h2}>Advanced: How It Works</h2>
@@ -161,6 +200,16 @@ function GuideInteractive() {
         mechanism that powers responsive breakpoints with{' '}
         <code {...s.code}>--media-md</code>, just triggered by CSS
         pseudo-classes instead of <code {...s.code}>@media</code> queries.
+      </p>
+      <p>
+        Inline <code {...s.code}>t</code> styles emit the identical chain, just
+        as element style properties rather than a generated class. A style
+        carrying both a breakpoint and a pseudo override resolves to a single
+        nested chain, with the interaction outermost so it wins:{' '}
+        <code {...s.code}>
+          padding: var(--toned_hover__padding, var(--media-md__padding, 8px))
+        </code>
+        .
       </p>
     </article>
   )

@@ -56,6 +56,7 @@ export default setConfig(
     useClassName: true,
     useMedia: true,
     mediaMode: 'css',
+    pseudoMode: 'css',
   }),
 )`}</CodeBlock>
       <p>
@@ -147,7 +148,13 @@ import { system } from '@toned/systems/base'
 inject(system)  // inserts <style> tag in the DOM
 
 export default setConfig(
-  defineConfig({ ...reactConfig, useClassName: true, useMedia: true, mediaMode: 'css' }),
+  defineConfig({
+    ...reactConfig,
+    useClassName: true,
+    useMedia: true,
+    mediaMode: 'css',
+    pseudoMode: 'css',
+  }),
 )`}</CodeBlock>
       <p>
         With this approach, use <code {...s.code}>generate(system)</code> in
