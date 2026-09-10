@@ -4,6 +4,7 @@
  * @module types/system
  */
 
+import type { Config } from './config.ts'
 import type { StylesheetType, TFun } from './stylesheet.ts'
 import type {
   Breakpoints,
@@ -11,6 +12,28 @@ import type {
   TokenStyleDeclaration,
   Tokens,
 } from './tokens.ts'
+
+/**
+ * Runtime inputs for {@link TokenSystem.exec}.
+ *
+ * The modes are required: breakpoint and pseudo overrides compile to CSS custom
+ * properties, so `exec` has to know whether the active runtime actually
+ * consumes them. Callers holding a {@link Config} should derive these with
+ * `resolveModes`.
+ */
+export type ExecConfig = {
+  /** Token values for style resolution */
+  tokens: Tokens
+
+  /** Whether to emit class names for static token values */
+  useClassName?: boolean
+
+  /** Breakpoint overrides only apply under `'css'` */
+  mediaMode: Config['mediaMode']
+
+  /** Pseudo-state overrides only apply under `'css'` */
+  pseudoMode: Config['pseudoMode']
+}
 
 /**
  * Complete token system - returned from defineSystem().
@@ -49,10 +72,7 @@ export type TokenSystem<
 
   /** Execute token style resolution */
   exec: (
-    config: {
-      tokens: Tokens
-      useClassName?: boolean
-    },
+    config: ExecConfig,
     tokenStyle: TokenStyle<S>,
   ) => { style: object; className?: string }
 }

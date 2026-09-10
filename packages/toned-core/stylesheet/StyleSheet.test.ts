@@ -1013,3 +1013,78 @@ describe('redundant write elision (multi-instance)', () => {
     expect(b.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
 })
+
+describe('exec config forwarding', () => {
+  // `exec` gates breakpoint/pseudo chains on the media/pseudo modes, so it must
+  // see the same normalized values the constructor hands to StyleMatcher.
+  const capturingBase = (config: Config) => {
+    const seen: Record<string, unknown>[] = []
+    const ref = {
+      ...mockTokenSystem,
+      exec: (execConfig: unknown, tokenStyle: unknown) => {
+        seen.push(execConfig as Record<string, unknown>)
+        return { style: tokenStyle as object, className: '' }
+      },
+    } as unknown as TokenSystem<TokenStyleDeclaration>
+
+    const base = new Base({
+      ref,
+      rules: { container: { bgColor: 'blue' } },
+      config,
+    })
+
+    return { base, seen }
+  }
+
+  const withoutModes = (over: Partial<Config> = {}) =>
+    ({
+      ...mockConfig,
+      mediaMode: undefined,
+      pseudoMode: undefined,
+      ...over,
+    }) as unknown as Config
+
+  test('normalizes an absent pseudoMode to runtime', () => {
+    const { base, seen } = capturingBase(withoutModes())
+
+    base.getCurrentStyle('container')
+
+    expect(seen.at(-1)).toMatchObject({ pseudoMode: 'runtime' })
+  })
+
+  test('normalizes an absent mediaMode using useMedia', () => {
+    const off = capturingBase(withoutModes({ useMedia: false }))
+    off.base.getCurrentStyle('container')
+    expect(off.seen.at(-1)).toMatchObject({ mediaMode: false })
+
+    const on = capturingBase(withoutModes({ useMedia: true }))
+    on.base.getCurrentStyle('container')
+    expect(on.seen.at(-1)).toMatchObject({ mediaMode: 'runtime' })
+  })
+
+  test('passes explicit modes through unchanged', () => {
+    const { base, seen } = capturingBase({
+      ...mockConfig,
+      mediaMode: 'css',
+      pseudoMode: 'css',
+    })
+
+    base.getCurrentStyle('container')
+
+    expect(seen.at(-1)).toMatchObject({ mediaMode: 'css', pseudoMode: 'css' })
+  })
+
+  test('never forwards an undefined mode', () => {
+    const { base, seen } = capturingBase(withoutModes())
+
+    base.getCurrentStyle('container')
+    base.getRestingStyle('container')
+
+    for (const execConfig of seen) {
+      expect(execConfig).toHaveProperty('mediaMode')
+      expect(execConfig).toHaveProperty('pseudoMode')
+      expect(execConfig['mediaMode']).not.toBeUndefined()
+      expect(execConfig['pseudoMode']).not.toBeUndefined()
+    }
+  })
+})
