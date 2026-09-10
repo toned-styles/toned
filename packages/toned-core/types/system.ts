@@ -16,10 +16,17 @@ import type {
 /**
  * Runtime inputs for {@link TokenSystem.exec}.
  *
- * The modes are required: breakpoint and pseudo overrides compile to CSS custom
- * properties, so `exec` has to know whether the active runtime actually
- * consumes them. Callers holding a {@link Config} should derive these with
- * `resolveModes`.
+ * Breakpoint and pseudo overrides compile to CSS custom properties, so `exec`
+ * has to know whether the active runtime consumes them. The mode fields are
+ * optional and resolved through `resolveModes`, the same rule a {@link Config}
+ * uses — so an `ExecConfig` assembled by hand defaults exactly as one spread
+ * from a config would, and `useMedia` alone is enough to describe the media
+ * behaviour.
+ *
+ * Omitting them can never mean `'css'`, which matters: `'css'` is an assertion
+ * that the target consumes custom properties, and it is false on React Native.
+ * The conservative default drops the overrides, keeps the base token values and
+ * warns, rather than emitting `var()` strings a native runtime cannot read.
  */
 export type ExecConfig = {
   /** Token values for style resolution */
@@ -27,13 +34,7 @@ export type ExecConfig = {
 
   /** Whether to emit class names for static token values */
   useClassName?: boolean
-
-  /** Breakpoint overrides only apply under `'css'` */
-  mediaMode: Config['mediaMode']
-
-  /** Pseudo-state overrides only apply under `'css'` */
-  pseudoMode: Config['pseudoMode']
-}
+} & Partial<Pick<Config, 'mediaMode' | 'pseudoMode' | 'useMedia'>>
 
 /**
  * Complete token system - returned from defineSystem().

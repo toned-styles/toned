@@ -348,8 +348,13 @@ export function defineSystem<
         | undefined
 
       if (hasBreakpointOverrides) {
-        if (execConfig.mediaMode !== 'css') {
-          warnModeUnsupported('breakpoint', 'mediaMode', execConfig.mediaMode)
+        // Resolved rather than read raw, so a hand-assembled ExecConfig
+        // defaults the same way a Config does. Only reached when there is
+        // something to gate, so the common path allocates nothing.
+        const { mediaMode } = resolveModes(execConfig)
+
+        if (mediaMode !== 'css') {
+          warnModeUnsupported('breakpoint', 'mediaMode', mediaMode)
         } else if (!bpValues) {
           warnOnce(
             'Ignored breakpoint overrides; base token values still apply. ' +
@@ -375,12 +380,10 @@ export function defineSystem<
       // Pseudo-state overrides, applied after breakpoints so an interaction
       // outranks a media query for the same property.
       if (hasPseudoOverrides) {
-        if (execConfig.pseudoMode !== 'css') {
-          warnModeUnsupported(
-            'pseudo-state',
-            'pseudoMode',
-            execConfig.pseudoMode,
-          )
+        const { pseudoMode } = resolveModes(execConfig)
+
+        if (pseudoMode !== 'css') {
+          warnModeUnsupported('pseudo-state', 'pseudoMode', pseudoMode)
         } else {
           applyChains(
             'pseudo-state',

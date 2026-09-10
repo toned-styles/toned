@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { Config, ExecConfig } from '../types/index.ts'
 import { __resetWarnings } from '../utils/warnOnce.ts'
-import { getConfig, setConfig } from './config.ts'
+import { getConfig, resolveModes, setConfig } from './config.ts'
 import { defineSystem, defineToken, defineUnit } from './definers.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: test helper for dynamic style access
@@ -1388,5 +1388,165 @@ describe('exec() unit suffixing through selector chains', () => {
 
     expect(style).toEqual({ padding: 8 })
     warn.mockRestore()
+  })
+})
+
+describe('exec() mode resolution across platform setups', () => {
+  // The modes are optional on ExecConfig and resolved through `resolveModes`,
+  // the same rule a Config uses — so a hand-assembled config behaves like one
+  // spread from a Config, and an omitted mode can never mean 'css'.
+
+  const padding = defineToken({
+    values: ['small', 'large'] as const,
+    resolve: (v) => ({ padding: v === 'small' ? 8 : 24 }),
+  })
+
+  const textColor = defineToken({
+    values: ['base', 'muted'] as const,
+    resolve: (v) => ({ color: v === 'base' ? '#000' : '#888' }),
+  })
+
+  const breakpoints = { __breakpoints: { md: 768 } }
+  const make = () => defineSystem({ padding, textColor }, { breakpoints })
+
+  /** Carries one breakpoint override and one pseudo override. */
+  const responsive = {
+    padding: 'small',
+    textColor: 'base',
+    '@md_padding': 'large',
+    ':hover_textColor': 'muted',
+  } as AnyStyle
+
+  /** A chain was emitted for this property, rather than the base value. */
+  const chained = (value: unknown) => String(value).includes('var(')
+
+  const run = (over: Omit<Partial<ExecConfig>, 'tokens'>) => {
+    __resetWarnings()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const style = make().exec({ tokens: {}, ...over }, responsive)
+      .style as AnyStyle
+
+    const warnings = warn.mock.calls.map((call) => String(call[0])).join(' ')
+    warn.mockRestore()
+
+    return {
+      style,
+      warnings,
+      media: chained(style['padding']),
+      pseudo: chained(style['color']),
+    }
+  }
+
+  test('web: css for both, both emitted, nothing warned', () => {
+    const { style, media, pseudo, warnings } = run({
+      mediaMode: 'css',
+      pseudoMode: 'css',
+    })
+
+    expect(media).toBe(true)
+    expect(pseudo).toBe(true)
+    expect(style['padding']).toBe('var(--media-md__padding, 8px)')
+    expect(style['color']).toBe('var(--toned_hover__color, #000)')
+    expect(warnings).toBe('')
+  })
+
+  test('native: both dropped, base values kept in their native form', () => {
+    const { style, media, pseudo } = run({
+      mediaMode: false,
+      pseudoMode: 'runtime',
+    })
+
+    expect(media).toBe(false)
+    expect(pseudo).toBe(false)
+    // A number, not an '8px' string — React Native would reject that.
+    expect(style).toEqual({ padding: 8, color: '#000' })
+  })
+
+  test('nothing configured behaves as native, not as web', () => {
+    // The default that matters. An ExecConfig carrying only tokens must not
+    // act as though the target reads CSS custom properties.
+    const bare = run({})
+    const native = run({ mediaMode: false, pseudoMode: 'runtime' })
+
+    expect(bare.style).toEqual(native.style)
+    expect(bare.style).toEqual({ padding: 8, color: '#000' })
+  })
+
+  test('useMedia alone selects runtime media, which still emits nothing', () => {
+    const { style, media } = run({ useMedia: true })
+
+    expect(media).toBe(false)
+    expect(style['padding']).toBe(8)
+  })
+
+  test('an explicit mediaMode outranks useMedia', () => {
+    expect(run({ useMedia: false, mediaMode: 'css' }).media).toBe(true)
+    expect(run({ useMedia: true, mediaMode: false }).media).toBe(false)
+  })
+
+  test('css media with runtime pseudo resolves each independently', () => {
+    // The shape a web app that drives interaction in JS would use.
+    const { style, media, pseudo } = run({ mediaMode: 'css' })
+
+    expect(media).toBe(true)
+    expect(pseudo).toBe(false)
+    expect(style['padding']).toBe('var(--media-md__padding, 8px)')
+    expect(style['color']).toBe('#000')
+  })
+
+  test('runtime media with css pseudo resolves the other way round', () => {
+    const { style, media, pseudo } = run({ pseudoMode: 'css' })
+
+    expect(media).toBe(false)
+    expect(pseudo).toBe(true)
+    expect(style['padding']).toBe(8)
+    expect(style['color']).toBe('var(--toned_hover__color, #000)')
+  })
+
+  test('no partial config can resolve to css', () => {
+    const partials: Omit<Partial<ExecConfig>, 'tokens'>[] = [
+      {},
+      { useMedia: true },
+      { useMedia: false },
+      { useClassName: true },
+      { mediaMode: 'runtime' },
+      { pseudoMode: 'runtime' },
+      { mediaMode: false, pseudoMode: false },
+    ]
+
+    for (const partial of partials) {
+      const { style, media, pseudo } = run(partial)
+
+      expect(media).toBe(false)
+      expect(pseudo).toBe(false)
+      for (const key of Object.keys(style)) {
+        expect(key.startsWith('--')).toBe(false)
+      }
+    }
+  })
+
+  test('a dropped override names the option that would enable it', () => {
+    const { warnings } = run({})
+
+    expect(warnings).toContain('mediaMode')
+    expect(warnings).toContain('pseudoMode')
+  })
+
+  test('a config spread in behaves as resolveModes on that config', () => {
+    // The parity that stops a hand-built ExecConfig drifting from a Config.
+    const configs: Partial<Config>[] = [
+      { useMedia: true },
+      { useMedia: true, mediaMode: 'css' },
+      { mediaMode: false, pseudoMode: 'css' },
+      { useMedia: false, mediaMode: 'runtime', pseudoMode: 'runtime' },
+    ]
+
+    for (const config of configs) {
+      const spread = run(config)
+      const explicit = run(resolveModes(config))
+
+      expect(spread.style).toEqual(explicit.style)
+    }
   })
 })
