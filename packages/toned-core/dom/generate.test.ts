@@ -248,21 +248,51 @@ describe('generate', () => {
       expect(result).toContain('.spacing_4{padding:4px;}')
       expect(result).toContain('.spacing_8{padding:8px;}')
     })
+
+    test('unit-suffixes a resolver that returns a bare number', () => {
+      // A resolver written for React Native returns lengths as numbers. A
+      // static class has no later step that would add the unit, and
+      // `padding:8;` is an invalid declaration the browser drops.
+      const result = generate({
+        spacing: {
+          values: [1, 2],
+          resolve: (value: number) => ({ padding: value * 4 }),
+        },
+      })
+
+      expect(result).toContain('.spacing_1{padding:4px;}')
+      expect(result).toContain('.spacing_2{padding:8px;}')
+    })
+
+    test('leaves a bare number on a unitless property alone', () => {
+      const result = generate({
+        weight: {
+          values: ['bold'],
+          resolve: () => ({ fontWeight: 700, opacity: 1 }),
+        },
+      })
+
+      expect(result).toContain('.weight_bold{font-weight:700;opacity:1;}')
+    })
   })
 
   describe('handles empty system', () => {
-    test('returns empty string when no tokens are provided', () => {
+    test('emits no token classes when no tokens are provided', () => {
       const result = generate({})
 
-      expect(result).toBe('')
+      // The pseudo toggles are infrastructure and always emitted; what an
+      // empty system must not produce is class rules.
+      expect(result).not.toContain('._token')
+      expect(result).not.toContain('{background')
+      expect(result.replace(/^html \{[^}]*\}/, '')).not.toContain('--media-')
     })
 
-    test('returns empty string when tokens have no values or resolve', () => {
+    test('emits no token classes when tokens have no values or resolve', () => {
       const result = generate({
         notAToken: undefined,
       })
 
-      expect(result).toBe('')
+      expect(result).toBe(generate({}))
     })
   })
 
@@ -338,5 +368,25 @@ describe('generate', () => {
 
       expect(result).toContain('.bgColor_primary{background-color:#007bff;}')
     })
+  })
+})
+
+describe('pseudo-state variables without breakpoints', () => {
+  test('emits the toggles for a system that declares no breakpoints', () => {
+    // pseudoMode: 'css' does not depend on media queries, so the toggles it
+    // reads must not depend on a breakpoints config either.
+    const result = generate({})
+
+    expect(result).toContain('--toned_hover: initial;')
+    expect(result).toContain('--toned_focus: initial;')
+    expect(result).toContain('--toned_active: initial;')
+    expect(result).toContain('._:hover {--toned_hover: ;}')
+  })
+
+  test('emits no media variables for a system that declares no breakpoints', () => {
+    const result = generate({})
+
+    expect(result).not.toContain('--media-')
+    expect(result).not.toContain('@media')
   })
 })
