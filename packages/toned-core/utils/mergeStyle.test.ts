@@ -67,6 +67,17 @@ describe('toStyleMap', () => {
     expect(toStyleMap(null)).toBeUndefined()
     expect(toStyleMap(undefined)).toBeUndefined()
   })
+
+  test('skips a registered RN style ID rather than spreading it', () => {
+    // StyleSheet.create() hands back opaque numbers. Only RN's own flatten can
+    // resolve them; spreading one contributes nothing, so it must not disturb
+    // the entries around it.
+    expect(toStyleMap([1, { top: 1 }, 2])).toEqual({ top: 1 })
+  })
+
+  test('never spreads a string into character-indexed properties', () => {
+    expect(toStyleMap(['ab', { top: 1 }])).toEqual({ top: 1 })
+  })
 })
 
 describe('mergeStyle with arrays', () => {

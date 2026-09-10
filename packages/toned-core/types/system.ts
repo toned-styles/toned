@@ -27,6 +27,14 @@ import type {
  * that the target consumes custom properties, and it is false on React Native.
  * The conservative default drops the overrides, keeps the base token values and
  * warns, rather than emitting `var()` strings a native runtime cannot read.
+ *
+ * The type is strictly wider than the `{ tokens, useClassName }` it replaced, so
+ * every existing call still compiles. The *runtime* contract did narrow, though:
+ * `exec` used to emit breakpoint chains whenever the system declared
+ * breakpoints, with no mode check at all, so a caller passing only `{ tokens }`
+ * and relying on that now gets the base values and a dev warning instead. Such a
+ * caller was already asserting a browser target implicitly; it now has to say so
+ * with `mediaMode: 'css'` / `pseudoMode: 'css'`.
  */
 export type ExecConfig = {
   /** Token values for style resolution */

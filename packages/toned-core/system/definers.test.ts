@@ -1259,7 +1259,10 @@ describe('exec() unit suffixing through selector chains', () => {
 
   const inset = defineToken({
     values: ['none', 'far'] as const,
-    resolve: (v) => ({ top: v === 'none' ? 0 : 12, left: v === 'none' ? 0 : 12 }),
+    resolve: (v) => ({
+      top: v === 'none' ? 0 : 12,
+      left: v === 'none' ? 0 : 12,
+    }),
   })
 
   const breakpoints = { __breakpoints: { sm: 480, md: 768 } }
@@ -1271,7 +1274,7 @@ describe('exec() unit suffixing through selector chains', () => {
     // change for every non-responsive style.
     const { exec } = make()
 
-    const style = exec(execCfg(), { padding: 'small' }) .style as AnyStyle
+    const style = exec(execCfg(), { padding: 'small' }).style as AnyStyle
 
     expect(style['padding']).toBe(8)
   })
@@ -1478,6 +1481,19 @@ describe('exec() mode resolution across platform setups', () => {
 
     expect(media).toBe(false)
     expect(style['padding']).toBe(8)
+  })
+
+  test('a pre-mode caller loses its chains, and is told why', () => {
+    // Pins the one behavioural narrowing: exec used to emit breakpoint chains
+    // for any system that declared breakpoints, with no mode check. A direct
+    // caller passing only tokens was asserting a browser target implicitly;
+    // it now has to say so. The base values survive and the reason is logged,
+    // so the regression is visible rather than silent.
+    const { style, warnings } = run({})
+
+    expect(style).toEqual({ padding: 8, color: '#000' })
+    expect(warnings).toContain("mediaMode: 'css'")
+    expect(warnings).toContain("pseudoMode: 'css'")
   })
 
   test('an explicit mediaMode outranks useMedia', () => {

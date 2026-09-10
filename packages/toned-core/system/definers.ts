@@ -51,6 +51,10 @@ function execConfigFrom(config: Config): ExecConfig {
  * need `mediaMode`/`pseudoMode: 'css'`. Under any other mode the keys are
  * dropped and the base token values still apply, which degrades to the
  * non-responsive style rather than emitting unparseable `var()` strings.
+ *
+ * Deferred rather than interpolated eagerly: this fires under the *default*
+ * config, on the render path, so building the string here would cost every
+ * production render of every React Native style that carries a block.
  */
 function warnModeUnsupported(
   kind: 'breakpoint' | 'pseudo-state',
@@ -58,7 +62,8 @@ function warnModeUnsupported(
   active: Config['mediaMode'] | Config['pseudoMode'],
 ) {
   warnOnce(
-    `Ignored ${kind} overrides; base token values still apply. They compile ` +
+    () =>
+      `Ignored ${kind} overrides; base token values still apply. They compile ` +
       `to CSS custom properties, so they need ${option}: 'css' — the active ` +
       `config is ${option}: ${JSON.stringify(active)}. On React Native, use ` +
       'stylesheet() with useStyles() instead.',
@@ -285,13 +290,15 @@ export function defineSystem<
             // is far more useful than reporting 'screen_padding' as a token.
             if (!order.includes(selector)) {
               warnOnce(
-                `Ignored the ${kind} override '${selector}'; base token ` +
+                () =>
+                  `Ignored the ${kind} override '${selector}'; base token ` +
                   'values still apply. This system supports ' +
                   `${order.join(', ')}.`,
               )
             } else if (prop !== 'style' && prop[0] !== '$' && !system[prop]) {
               warnOnce(
-                `Ignored the ${kind} override '${selector}_${prop}'; base ` +
+                () =>
+                  `Ignored the ${kind} override '${selector}_${prop}'; base ` +
                   `token values still apply. '${prop}' is not a token of this ` +
                   'system. Selector blocks are one level deep, so a selector ' +
                   'nested inside one lands here too.',
