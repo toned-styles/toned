@@ -7,6 +7,8 @@
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import type {
   Breakpoints,
+  Config,
+  ExecConfig,
   StylesheetInput,
   StylesheetType,
   TokenConfig,
@@ -15,12 +17,58 @@ import type {
   Tokens,
 } from '../types/index.ts'
 import { camelToKebab } from '../utils/css.ts'
-import { mergeStyle } from '../utils/mergeStyle.ts'
+import { mergeStyle, toStyleMap } from '../utils/mergeStyle.ts'
 import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
+import { flattenSelectorBlocks } from '../utils/selectorBlocks.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
-import { getConfig } from './config.ts'
+import { type VarChainLink, writeVarChain } from '../utils/varChain.ts'
+import { warnOnce } from '../utils/warnOnce.ts'
+import { getConfig, resolveModes } from './config.ts'
 
 export type { TokenSystem }
+
+/** One conditional override collected from a `'@bp_prop'` / `':pseudo_prop'` key. */
+type Override = { selector: string; value: unknown }
+
+/** `'style'` and its per-selector forms, `'@md_style'` and `':hover_style'`. */
+function isStyleKey(key: string): boolean {
+  return key === 'style' || key.endsWith('_style')
+}
+
+/** Build exec inputs from the active runtime config. */
+function execConfigFrom(config: Config): ExecConfig {
+  return {
+    tokens: config.getTokens(),
+    useClassName: config.useClassName,
+    ...resolveModes(config),
+  }
+}
+
+/**
+ * Explain that overrides were collected but could not be emitted.
+ *
+ * Breakpoint and pseudo overrides compile to CSS custom properties, so they
+ * need `mediaMode`/`pseudoMode: 'css'`. Under any other mode the keys are
+ * dropped and the base token values still apply, which degrades to the
+ * non-responsive style rather than emitting unparseable `var()` strings.
+ *
+ * Deferred rather than interpolated eagerly: this fires under the *default*
+ * config, on the render path, so building the string here would cost every
+ * production render of every React Native style that carries a block.
+ */
+function warnModeUnsupported(
+  kind: 'breakpoint' | 'pseudo-state',
+  option: 'mediaMode' | 'pseudoMode',
+  active: Config['mediaMode'] | Config['pseudoMode'],
+) {
+  warnOnce(
+    () =>
+      `Ignored ${kind} overrides; base token values still apply. They compile ` +
+      `to CSS custom properties, so they need ${option}: 'css' — the active ` +
+      `config is ${option}: ${JSON.stringify(active)}. On React Native, use ` +
+      'stylesheet() with useStyles() instead.',
+  )
+}
 
 /**
  * Define a token with its possible values and resolution function.
@@ -92,17 +140,25 @@ export function defineSystem<
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
-        const src = (SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v) as Record<
-          string,
-          unknown
-        > & { style?: unknown }
-        // Deep-merge the `style` object so later arguments extend earlier
-        // entries instead of replacing them. A shallow copy would drop style
-        // props set by earlier arguments.
-        const prevStyle = value.style
-        Object.assign(value, src)
-        const mergedStyle = mergeStyle(prevStyle, src.style)
-        if (mergedStyle !== undefined) value.style = mergedStyle
+        // A previous t() result already stores a flattened style; only
+        // caller-authored objects carry nested '@bp' / ':pseudo' blocks.
+        // Flattening before the merge is what makes repeated arguments for the
+        // same selector compose instead of replacing each other wholesale.
+        const src = (
+          SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : flattenSelectorBlocks(v)
+        ) as Record<string, unknown> & { style?: unknown }
+
+        // Raw style maps are the only object-valued keys, and a later argument
+        // extends one rather than replacing it. Computing the merges first lets
+        // a single assign carry the symbol-keyed internals across too.
+        const merged: Record<string, unknown> = {}
+        for (const key of Object.keys(src)) {
+          if (!isStyleKey(key)) continue
+          const combined = mergeStyle(value[key], src[key])
+          if (combined !== undefined) merged[key] = combined
+        }
+
+        Object.assign(value, src, merged)
       }
 
       if (SYMBOL_REF in value) {
@@ -114,20 +170,14 @@ export function defineSystem<
         [SYMBOL_STYLE]: value,
         [SYMBOL_ACCESS]: { ref, value },
         get style() {
-          const config = getConfig()
-          const tokens = config.getTokens()
-
           return ref.exec(
-            { tokens, useClassName: config.useClassName },
+            execConfigFrom(getConfig()),
             value as TokenStyle<S & C>,
           ).style
         },
         get className() {
-          const config = getConfig()
-          const tokens = config.getTokens()
-
           return ref.exec(
-            { tokens, useClassName: config.useClassName },
+            execConfigFrom(getConfig()),
             value as TokenStyle<S & C>,
           ).className
         },
@@ -141,17 +191,11 @@ export function defineSystem<
       return createStylesheet(ref as any, rules)
     }) as StylesheetType<S & C>,
     exec: (execConfig, tokenStyle) => {
-      // Collect @breakpoint_prop entries for CSS variable mode
-      const breakpointOverrides: Record<
-        string,
-        Array<{ breakpoint: string; tokenKey: string; value: unknown }>
-      > = {}
-
-      // Collect :pseudo_prop entries for CSS pseudo mode
-      const pseudoOverrides: Record<
-        string,
-        Array<{ pseudo: string; tokenKey: string; value: unknown }>
-      > = {}
+      // '@bp_prop' / ':pseudo_prop' keys, grouped by the property they target.
+      const breakpointOverrides: Record<string, Override[]> = {}
+      const pseudoOverrides: Record<string, Override[]> = {}
+      let hasBreakpointOverrides = false
+      let hasPseudoOverrides = false
 
       const acc: { style: Record<string, unknown>; className?: string } = {
         style: {},
@@ -161,46 +205,33 @@ export function defineSystem<
       for (const [k, v] of Object.entries(tokenStyle)) {
         if (v == null) continue
 
-        // Handle :pseudo_prop keys from CSS pseudo mode
-        if (k[0] === ':' && k.includes('_')) {
-          const underscoreIdx = k.indexOf('_')
-          const pseudo = k.slice(0, underscoreIdx) // e.g. ':hover'
-          const prop = k.slice(underscoreIdx + 1) // e.g. 'bgColor'
+        // Selector overrides join on the first underscore, as StyleMatcher
+        // writes them: ':hover' + '_' + 'bgColor', '@md' + '_' + 'padding'.
+        const underscoreIdx = k.indexOf('_')
+        const isPseudo = k[0] === ':'
 
-          pseudoOverrides[prop] ??= []
-          pseudoOverrides[prop].push({
-            pseudo,
-            tokenKey: prop,
-            value: v,
-          })
+        if (underscoreIdx > 0 && (isPseudo || k[0] === '@')) {
+          const target = isPseudo ? pseudoOverrides : breakpointOverrides
+          const prop = k.slice(underscoreIdx + 1)
+
+          target[prop] ??= []
+          target[prop].push({ selector: k.slice(0, underscoreIdx), value: v })
+
+          if (isPseudo) hasPseudoOverrides = true
+          else hasBreakpointOverrides = true
           continue
         }
 
-        if (k[0] === ':' || k[0] === '$') continue
+        if (isPseudo || k[0] === '$') continue
 
         if (k === 'style') {
-          Object.assign(acc.style, v)
+          Object.assign(acc.style, toStyleMap(v))
           continue
         }
 
         if (k === 'className') {
           acc.className ??= ''
           acc.className += ` ${v}`
-          continue
-        }
-
-        // Handle @breakpoint_prop keys from CSS media mode
-        if (k[0] === '@' && k.includes('_')) {
-          const underscoreIdx = k.indexOf('_')
-          const breakpoint = k.slice(0, underscoreIdx) // e.g. '@sm'
-          const prop = k.slice(underscoreIdx + 1) // e.g. 'bgColor'
-
-          breakpointOverrides[prop] ??= []
-          breakpointOverrides[prop].push({
-            breakpoint,
-            tokenKey: prop,
-            value: v,
-          })
           continue
         }
 
@@ -213,161 +244,160 @@ export function defineSystem<
         Object.assign(acc.style, system[k]?.resolve(v, execConfig.tokens))
       }
 
-      // Process breakpoint overrides into CSS variable fallback chains
-      const bpValues = config?.breakpoints?.__breakpoints as
-        | Record<string, number>
-        | undefined
-      if (bpValues && Object.keys(breakpointOverrides).length > 0) {
-        // Sort breakpoints by pixel value (ascending) for proper cascade
-        const sortedBps = Object.entries(bpValues).sort(([, a], [, b]) => a - b)
+      /**
+       * Turn one group of overrides into CSS custom property chains.
+       *
+       * `order` lists selector keys lowest priority first and is walked in that
+       * order, so each link lands outside the previous one and the last match
+       * wins. `prefixOf` maps a selector to its space-toggle name, which also
+       * namespaces the values it guards.
+       *
+       * Links are collected per CSS property, not per token prop: two props can
+       * resolve to the same property, and a raw `style` block always can. That
+       * is what keeps `order` — rather than the caller's key order — deciding
+       * which override ends up outermost.
+       */
+      const applyChains = (
+        kind: 'breakpoint' | 'pseudo-state',
+        overridesByProp: Record<string, Override[]>,
+        order: readonly string[],
+        prefixOf: (selector: string) => string,
+      ) => {
+        // Token props first, raw `style` last, so within one selector the
+        // escape hatch sits outside the token chain and wins there — without
+        // ever outranking a higher-priority selector.
+        const props = Object.entries(overridesByProp).sort(
+          ([a], [b]) => Number(a === 'style') - Number(b === 'style'),
+        )
 
-        for (const [prop, overrides] of Object.entries(breakpointOverrides)) {
-          // Resolve base value (already in acc.style from the token system)
-          const resolvedBase = system[prop]?.resolve(
-            tokenStyle[prop],
-            execConfig.tokens,
-          )
-          if (!resolvedBase) continue
+        const resolve = (prop: string, value: unknown) =>
+          prop === 'style'
+            ? toStyleMap(value)
+            : system[prop]?.resolve(value, execConfig.tokens)
 
-          // Get CSS property names from the resolved base
-          for (const cssProp in resolvedBase) {
-            const kebabProp = camelToKebab(cssProp)
-            const baseValue = resolvedBase[cssProp]
+        // Resolve the base values, and report overrides that cannot contribute.
+        // Token resolvers need not handle an absent value, so only a base the
+        // caller actually set is resolved. Bases matter because className mode
+        // keeps them out of acc.style.
+        const bases: Record<string, unknown> = {}
+        for (const [prop, overrides] of props) {
+          const baseValue = prop === 'style' ? null : tokenStyle[prop]
+          if (baseValue != null) Object.assign(bases, resolve(prop, baseValue))
 
-            // Generate --media-bp__css-prop custom properties for each override
-            for (const { breakpoint, value } of overrides) {
-              const bpName = breakpoint.slice(1) // remove @
-              const resolved = system[prop]?.resolve(value, execConfig.tokens)
-              if (!resolved?.[cssProp]) continue
-
-              const varName = `--media-${bpName}__${kebabProp}`
-              acc.style[varName] = `var(--media-${bpName}) ${resolved[cssProp]}`
+          for (const { selector } of overrides) {
+            // Check the selector before the prop: a breakpoint named
+            // `small_screen` splits into the selector '@small', and naming that
+            // is far more useful than reporting 'screen_padding' as a token.
+            if (!order.includes(selector)) {
+              warnOnce(
+                () =>
+                  `Ignored the ${kind} override '${selector}'; base token ` +
+                  'values still apply. This system supports ' +
+                  `${order.join(', ')}.`,
+              )
+            } else if (prop !== 'style' && prop[0] !== '$' && !system[prop]) {
+              warnOnce(
+                () =>
+                  `Ignored the ${kind} override '${selector}_${prop}'; base ` +
+                  `token values still apply. '${prop}' is not a token of this ` +
+                  'system. Selector blocks are one level deep, so a selector ' +
+                  'nested inside one lands here too.',
+              )
             }
-
-            // Build fallback chain: highest breakpoint first
-            // var(--media-xl__bg, var(--media-lg__bg, var(--media-md__bg, base)))
-            let chain = String(baseValue)
-            for (const [bpKey] of sortedBps) {
-              const bpAtKey = `@${bpKey}`
-              if (overrides.some((o) => o.breakpoint === bpAtKey)) {
-                const varName = `--media-${bpKey}__${kebabProp}`
-                chain = `var(${varName}, ${chain})`
-              }
-            }
-
-            acc.style[cssProp] = chain
           }
+        }
+
+        // Walking `order` outermost-last means insertion order is already the
+        // cascade. Keying within a property collapses two token props that
+        // resolve to it the way their base values merge — last wins — instead
+        // of nesting a variable inside its own fallback.
+        const links = new Map<string, Map<string, VarChainLink>>()
+        for (const selector of order) {
+          for (const [prop, overrides] of props) {
+            const override = overrides.find((o) => o.selector === selector)
+            if (!override) continue
+
+            const suffix = prop === 'style' ? '__style' : undefined
+            for (const [cssProp, value] of Object.entries(
+              resolve(prop, override.value) ?? {},
+            )) {
+              const forProp = links.get(cssProp) ?? new Map()
+              links.set(cssProp, forProp)
+              forProp.set(selector + (suffix ?? ''), {
+                prefix: prefixOf(selector),
+                value,
+                suffix,
+              })
+            }
+          }
+        }
+
+        for (const [cssProp, forProp] of links) {
+          // Prefer whatever is already accumulated: pseudo chains compose on
+          // top of breakpoint chains for the same property. A null chain means
+          // nothing linked, so the base is left exactly as it was — still a
+          // number, for `applyStyles` to unit-suffix as usual.
+          const chain = writeVarChain(
+            acc.style,
+            cssProp,
+            acc.style[cssProp] ?? bases[cssProp],
+            [...forProp.values()],
+          )
+
+          if (chain !== null) acc.style[cssProp] = chain
         }
       }
 
-      // Process pseudo-state overrides into CSS variable fallback chains
-      // Priority: :active > :focus > :hover (active outermost in chain)
-      if (Object.keys(pseudoOverrides).length > 0) {
-        // Process token-backed props first and raw `style` last. When a pseudo
-        // override sets the same CSS property via both a token and raw `style`,
-        // this makes precedence deterministic instead of depending on object key
-        // order: the raw style wins (escape hatch) and composes on top of the
-        // token's fallback chain. Style-derived custom properties use a distinct
-        // `__style` namespace so they never overwrite a token's `--toned_*` var.
-        const pseudoEntries = Object.entries(pseudoOverrides)
-        const orderedPseudoEntries = [
-          ...pseudoEntries.filter(([prop]) => prop !== 'style'),
-          ...pseudoEntries.filter(([prop]) => prop === 'style'),
-        ]
+      // Breakpoint overrides. Anything collected but not emitted is reported
+      // rather than dropped in silence — the base token values still apply.
+      const bpValues = config?.breakpoints?.__breakpoints as
+        | Record<string, number>
+        | undefined
 
-        for (const [prop, overrides] of orderedPseudoEntries) {
-          // Special handling for 'style' prop (raw CSS, not token-resolvable)
-          if (prop === 'style') {
-            const allCssProps = new Set<string>()
-            for (const { value } of overrides) {
-              if (value && typeof value === 'object') {
-                for (const cssProp in value as Record<string, unknown>)
-                  allCssProps.add(cssProp)
-              }
-            }
-            for (const cssProp of allCssProps) {
-              const kebabProp = camelToKebab(cssProp)
-              for (const { pseudo, value } of overrides) {
-                const styleVal = value as Record<string, unknown> | null
-                if (styleVal?.[cssProp] == null) continue
-                const pseudoName = pseudo.slice(1)
-                const varName = `--toned_${pseudoName}__${kebabProp}__style`
-                acc.style[varName] =
-                  `var(--toned_${pseudoName}) ${styleVal[cssProp]}`
-              }
-              const baseValue =
-                acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
-              let chain = baseValue
-              for (const pseudo of PSEUDO_CASCADE_ORDER) {
-                if (
-                  overrides.some((o) => {
-                    const sv = o.value as Record<string, unknown> | null
-                    return o.pseudo === pseudo && sv?.[cssProp] != null
-                  })
-                ) {
-                  const pseudoName = pseudo.slice(1)
-                  const varName = `--toned_${pseudoName}__${kebabProp}__style`
-                  chain = chain
-                    ? `var(${varName}, ${chain})`
-                    : `var(${varName})`
-                }
-              }
-              if (chain) {
-                acc.style[cssProp] = chain
-              }
-            }
-            continue
-          }
+      if (hasBreakpointOverrides) {
+        // Resolved rather than read raw, so a hand-assembled ExecConfig
+        // defaults the same way a Config does. Only reached when there is
+        // something to gate, so the common path allocates nothing.
+        const { mediaMode } = resolveModes(execConfig)
 
-          // Resolve base value if it exists
-          const baseTokenValue = tokenStyle[prop]
-          const resolvedBase =
-            baseTokenValue != null
-              ? system[prop]?.resolve(baseTokenValue, execConfig.tokens)
-              : null
-
-          // Get CSS property names from any override's resolution
-          const sampleResolved = system[prop]?.resolve(
-            overrides[0]?.value,
-            execConfig.tokens,
+        if (mediaMode !== 'css') {
+          warnModeUnsupported('breakpoint', 'mediaMode', mediaMode)
+        } else if (!bpValues) {
+          warnOnce(
+            'Ignored breakpoint overrides; base token values still apply. ' +
+              'This system declares no breakpoints — pass them to ' +
+              'defineSystem(tokens, { breakpoints }).',
           )
-          if (!sampleResolved) continue
+        } else {
+          // Ascending pixel value, so the widest breakpoint wins. Toggle names
+          // are kebab-cased to match the `@media` rules `dom/generate.ts`
+          // emits; a camelCase breakpoint would otherwise reference a custom
+          // property that is never declared.
+          applyChains(
+            'breakpoint',
+            breakpointOverrides,
+            Object.entries(bpValues)
+              .sort(([, a], [, b]) => a - b)
+              .map(([key]) => `@${key}`),
+            (selector) => `media-${camelToKebab(selector.slice(1))}`,
+          )
+        }
+      }
 
-          for (const cssProp in sampleResolved) {
-            const kebabProp = camelToKebab(cssProp)
+      // Pseudo-state overrides, applied after breakpoints so an interaction
+      // outranks a media query for the same property.
+      if (hasPseudoOverrides) {
+        const { pseudoMode } = resolveModes(execConfig)
 
-            // Generate --toned_pseudo__css-prop custom properties for each override
-            for (const { pseudo, value } of overrides) {
-              const pseudoName = pseudo.slice(1) // remove :
-              const resolved = system[prop]?.resolve(value, execConfig.tokens)
-              if (!resolved?.[cssProp]) continue
-
-              const varName = `--toned_${pseudoName}__${kebabProp}`
-              acc.style[varName] =
-                `var(--toned_${pseudoName}) ${resolved[cssProp]}`
-            }
-
-            // Build fallback chain: use existing value (e.g. breakpoint chain) or base
-            const innerValue =
-              acc.style[cssProp] != null
-                ? String(acc.style[cssProp])
-                : resolvedBase?.[cssProp] != null
-                  ? String(resolvedBase[cssProp])
-                  : null
-
-            let chain = innerValue
-            for (const pseudo of PSEUDO_CASCADE_ORDER) {
-              if (overrides.some((o) => o.pseudo === pseudo)) {
-                const pseudoName = pseudo.slice(1)
-                const varName = `--toned_${pseudoName}__${kebabProp}`
-                chain = chain ? `var(${varName}, ${chain})` : `var(${varName})`
-              }
-            }
-
-            if (chain) {
-              acc.style[cssProp] = chain
-            }
-          }
+        if (pseudoMode !== 'css') {
+          warnModeUnsupported('pseudo-state', 'pseudoMode', pseudoMode)
+        } else {
+          applyChains(
+            'pseudo-state',
+            pseudoOverrides,
+            PSEUDO_CASCADE_ORDER,
+            (selector) => `toned_${selector.slice(1)}`,
+          )
         }
       }
 

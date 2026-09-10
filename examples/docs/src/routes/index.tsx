@@ -63,6 +63,7 @@ export default setConfig(
     useClassName: true,
     useMedia: true,
     mediaMode: 'css',
+    pseudoMode: 'css',
   }),
 )`}</CodeBlock>
       <p>
