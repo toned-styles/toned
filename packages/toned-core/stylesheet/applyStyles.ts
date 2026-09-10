@@ -4,8 +4,7 @@
  * @module stylesheet/applyStyles
  */
 
-import { camelToKebab } from '../utils/css.ts'
-import { unitlessNumbers } from './unitlessNumbers.ts'
+import { camelToKebab, withCssUnit } from '../utils/css.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
 type AnyValue = any
@@ -65,11 +64,7 @@ export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
           if (live !== lastWritten[key]) baselines[key] = live
         }
         const v = styleObject.style[key]
-        if (typeof v === 'number' && !unitlessNumbers.has(key)) {
-          result[key] = `${v}px`
-        } else {
-          result[key] = v
-        }
+        result[key] = withCssUnit(key, v)
         currentKeys.add(key)
       }
 
