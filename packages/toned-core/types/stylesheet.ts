@@ -39,6 +39,35 @@ type Merge<D extends any[]> = D extends [infer First, ...infer Rest]
   : Record<string, never>
 
 /**
+ * A token style plus the nested `':pseudo'` and `'@breakpoint'` blocks that both
+ * `t()` and `stylesheet()` accept.
+ *
+ * Breakpoint keys are derived from the system's `breakpoints` config, so a
+ * system declaring `{ sm, md, lg }` offers exactly `'@sm' | '@md' | '@lg'`.
+ * Nested blocks are plain {@link TokenStyle}, which is what stops breakpoints
+ * nesting inside breakpoints while still allowing a raw `style` escape hatch
+ * inside either kind of block.
+ *
+ * @example
+ * ```ts
+ * const style: TokenStyleWithSelectors<System> = {
+ *   bgColor: 'primary',
+ *   ':hover': { bgColor: 'secondary' },
+ *   '@sm': { padding: 4, style: { gridTemplateColumns: '1fr 1fr' } }
+ * }
+ * ```
+ */
+export type TokenStyleWithSelectors<
+  S extends TokenStyleDeclaration,
+  AvailablePseudo extends string = Pseudo,
+  AvailableBreakpoints extends StringOrNumber = keyof InferBreakpoints<S>,
+> = TokenStyle<S> & {
+  [P in AvailablePseudo]?: TokenStyle<S>
+} & {
+  [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S>
+}
+
+/**
  * The `t()` function type - creates styled objects from token values.
  *
  * @template S - The token style declaration
@@ -47,9 +76,12 @@ type Merge<D extends any[]> = D extends [infer First, ...infer Rest]
  * ```ts
  * const { t } = defineSystem({ bgColor, padding })
  * const style = t({ bgColor: 'primary', padding: 2 })
+ * const responsive = t({ padding: 2, '@md': { padding: 4 } })
  * ```
  */
-export type TFun<S extends TokenStyleDeclaration> = <D extends TokenStyle<S>[]>(
+export type TFun<S extends TokenStyleDeclaration> = <
+  D extends TokenStyleWithSelectors<S>[],
+>(
   ...values: [...D]
 ) => Merge<D> & {
   /** @internal */
@@ -76,13 +108,9 @@ export type ElementStyleNew<
   S extends TokenStyleDeclaration,
   AvailablePseudo extends string = Pseudo,
   AvailableBreakpoints extends StringOrNumber = keyof InferBreakpoints<S>,
-> = TokenStyle<S> & {
+> = TokenStyleWithSelectors<S, AvailablePseudo, AvailableBreakpoints> & {
   /** Element type hint for React Native */
   $$type?: 'view' | 'text' | 'image'
-} & {
-  [P in AvailablePseudo]?: TokenStyle<S>
-} & {
-  [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S>
 }
 
 /** Extract element names from stylesheet input (excluding selectors) */

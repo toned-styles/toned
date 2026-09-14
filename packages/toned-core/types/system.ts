@@ -4,6 +4,7 @@
  * @module types/system
  */
 
+import type { Config } from './config.ts'
 import type { StylesheetType, TFun } from './stylesheet.ts'
 import type {
   Breakpoints,
@@ -11,6 +12,37 @@ import type {
   TokenStyleDeclaration,
   Tokens,
 } from './tokens.ts'
+
+/**
+ * Runtime inputs for {@link TokenSystem.exec}.
+ *
+ * Breakpoint and pseudo overrides compile to CSS custom properties, so `exec`
+ * has to know whether the active runtime consumes them. The mode fields are
+ * optional and resolved through `resolveModes`, the same rule a {@link Config}
+ * uses — so an `ExecConfig` assembled by hand defaults exactly as one spread
+ * from a config would, and `useMedia` alone is enough to describe the media
+ * behaviour.
+ *
+ * Omitting them can never mean `'css'`, which matters: `'css'` is an assertion
+ * that the target consumes custom properties, and it is false on React Native.
+ * The conservative default drops the overrides, keeps the base token values and
+ * warns, rather than emitting `var()` strings a native runtime cannot read.
+ *
+ * The type is strictly wider than the `{ tokens, useClassName }` it replaced, so
+ * every existing call still compiles. The *runtime* contract did narrow, though:
+ * `exec` used to emit breakpoint chains whenever the system declared
+ * breakpoints, with no mode check at all, so a caller passing only `{ tokens }`
+ * and relying on that now gets the base values and a dev warning instead. Such a
+ * caller was already asserting a browser target implicitly; it now has to say so
+ * with `mediaMode: 'css'` / `pseudoMode: 'css'`.
+ */
+export type ExecConfig = {
+  /** Token values for style resolution */
+  tokens: Tokens
+
+  /** Whether to emit class names for static token values */
+  useClassName?: boolean
+} & Partial<Pick<Config, 'mediaMode' | 'pseudoMode' | 'useMedia'>>
 
 /**
  * Complete token system - returned from defineSystem().
@@ -49,10 +81,7 @@ export type TokenSystem<
 
   /** Execute token style resolution */
   exec: (
-    config: {
-      tokens: Tokens
-      useClassName?: boolean
-    },
+    config: ExecConfig,
     tokenStyle: TokenStyle<S>,
   ) => { style: object; className?: string }
 }

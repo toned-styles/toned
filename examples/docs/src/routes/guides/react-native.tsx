@@ -107,6 +107,17 @@ export const cardStyles = stylesheet({
         than CSS <code {...s.code}>@media</code> rules.
       </p>
       <p>
+        <strong>Inline selector blocks</strong> -- The{' '}
+        <code {...s.code}>'@breakpoint'</code> and{' '}
+        <code {...s.code}>':pseudo'</code> blocks that{' '}
+        <code {...s.code}>t</code> accepts compile to CSS custom properties, so
+        they do not apply on native. The block is dropped, the base token value
+        still applies, and a development-only warning explains why. Declare
+        responsive and interactive styles in a{' '}
+        <a href="/api/stylesheet">stylesheet</a> and read them with{' '}
+        <a href="/api/use-styles">useStyles</a>, which works on both platforms.
+      </p>
+      <p>
         <strong>style escape hatch</strong> -- When using the{' '}
         <code {...s.code}>style</code> property, prefer numeric values for
         dimensions (e.g. <code {...s.code}>padding: 24</code> instead of{' '}

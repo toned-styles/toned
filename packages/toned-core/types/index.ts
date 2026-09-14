@@ -25,6 +25,7 @@ export type {
   StylesheetType,
   StylesheetWithVariants,
   TFun,
+  TokenStyleWithSelectors,
   VariantElementStyle,
   VariantKey,
   VariantSelector,
@@ -33,7 +34,7 @@ export type {
   VariantsInput,
 } from './stylesheet.ts'
 // System types
-export type { TokenSystem } from './system.ts'
+export type { ExecConfig, TokenSystem } from './system.ts'
 // Token types
 export type {
   Breakpoints,

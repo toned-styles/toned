@@ -52,3 +52,20 @@ export function setConfig(newConfig: Partial<typeof config>) {
 export function defineConfig(newConfig: Partial<typeof config>) {
   return Object.assign({}, config, newConfig)
 }
+
+/**
+ * Resolve the media and pseudo handling modes of a config.
+ *
+ * `Config` declares both as required, but configs are assembled by hand and by
+ * `Partial` overrides, so either can arrive undefined. Everything that branches
+ * on a mode — `StyleMatcher`'s flattening and `exec`'s custom property chains —
+ * must agree on the answer, so they all read it from here.
+ */
+export function resolveModes(
+  config: Partial<Pick<Config, 'mediaMode' | 'pseudoMode' | 'useMedia'>>,
+): Pick<Config, 'mediaMode' | 'pseudoMode'> {
+  return {
+    mediaMode: config.mediaMode ?? (config.useMedia ? 'runtime' : false),
+    pseudoMode: config.pseudoMode ?? 'runtime',
+  }
+}
