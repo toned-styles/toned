@@ -31,17 +31,21 @@ export function camelToKebab(str: string): string {
  * here rather than at each of those points.
  *
  * Non-numbers pass through untouched, which covers values that already carry a
- * unit, `var()` chains, and keywords.
+ * unit, `var()` chains, and keywords. So do custom properties, whose value is
+ * arbitrary text rather than a typed length.
  *
  * @example
  * ```ts
  * withCssUnit('padding', 8)    // '8px'
  * withCssUnit('opacity', 0.5)  // 0.5   — unitless property
  * withCssUnit('padding', '1em') // '1em' — already has a unit
+ * withCssUnit('--gap', 8)      // 8     — custom property
  * ```
  */
 export function withCssUnit(cssProp: string, value: unknown): unknown {
-  return typeof value === 'number' && !unitlessNumbers.has(cssProp)
+  return typeof value === 'number' &&
+    !cssProp.startsWith('--') &&
+    !unitlessNumbers.has(cssProp)
     ? `${value}px`
     : value
 }

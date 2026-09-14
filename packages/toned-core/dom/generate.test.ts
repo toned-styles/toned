@@ -274,6 +274,19 @@ describe('generate', () => {
 
       expect(result).toContain('.weight_bold{font-weight:700;opacity:1;}')
     })
+
+    test('leaves a bare number on a custom property alone', () => {
+      // A custom property holds arbitrary text, so `--gap:8px` would change
+      // what the value means to whatever reads it.
+      const result = generate({
+        gap: {
+          values: [2],
+          resolve: (value: number) => ({ '--gap': value * 4 }),
+        },
+      })
+
+      expect(result).toContain('.gap_2{--gap:8;}')
+    })
   })
 
   describe('handles empty system', () => {

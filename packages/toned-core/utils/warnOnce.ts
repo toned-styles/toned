@@ -17,13 +17,11 @@ const warned = new Set<string>()
  * breakpoints or tokens — so both are heard, while one system repeating the
  * same problem is heard once.
  *
- * Pass a thunk whenever the message interpolates anything. The production check
- * happens before it is called, so the string is never assembled in a build that
- * would not print it — which matters because the callers sit on the render
- * path and warn about the *default* config, not an exotic one. A plain string
- * is fine for a fixed message: a literal costs nothing to pass.
- *
- * Silent in production builds.
+ * Pass a thunk whenever the message interpolates anything. It is skipped
+ * wherever {@link IS_PRODUCTION} resolves true — SSR, and any bundler that
+ * substitutes `process.env.NODE_ENV` — and costs nothing where it does not.
+ * Note that the thunk still runs on each call in a browser bundle, since the
+ * text is the dedupe key; it defers the build, it does not eliminate it.
  */
 export function warnOnce(message: string | (() => string)) {
   if (IS_PRODUCTION) return

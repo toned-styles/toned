@@ -76,4 +76,12 @@ describe('withCssUnit', () => {
     // Only real numbers carry the implicit unit; a string is already CSS text.
     expect(withCssUnit('padding', '8')).toBe('8')
   })
+
+  test('leaves custom properties alone', () => {
+    // A custom property holds arbitrary text, not a typed length, so the
+    // implicit px does not apply — matching how React treats them.
+    expect(withCssUnit('--gap', 8)).toBe(8)
+    expect(withCssUnit('--ratio', 0)).toBe(0)
+    expect(withCssUnit('--media-md__padding', 16)).toBe(16)
+  })
 })

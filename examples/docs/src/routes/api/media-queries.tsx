@@ -73,6 +73,12 @@ function Panel() {
         below. They are also one level deep, so the root-level and variant forms
         further down this page apply to stylesheets only.
       </p>
+      <p>
+        Give the property a base value, as <code {...s.code}>paddingX: 2</code>{' '}
+        does above. A block with no base compiles to a fallback-less chain, so
+        below the breakpoint the property resolves to its initial value rather
+        than to whatever a class or an inherited rule set.
+      </p>
 
       <h2 {...s.h2}>Media Modes</h2>
       <p>

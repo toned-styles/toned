@@ -9,17 +9,13 @@
  *
  * Reads through `globalThis` with optional chaining, which is safe wherever
  * `process` does not exist — an unbundled browser module, or a library build
- * that leaves `process.env.NODE_ENV` for the consumer to substitute.
+ * that leaves `process.env.NODE_ENV` for the consumer to substitute. A bare
+ * `process.env.NODE_ENV` would throw a ReferenceError in that second case.
  *
- * Verified against `vite build`: an app build folds this whole expression to a
- * constant, so the dev-only branches it guards are dropped. The two obvious
- * alternatives are both worse. A bare `process.env.NODE_ENV` is substituted
- * too, but throws a ReferenceError in a library build. Adding a
- * `typeof process !== 'undefined'` guard defeats the substitution and leaves a
- * runtime check that is false in every browser, so warnings would ship *and*
- * fire in production.
- *
- * A bundler that substitutes neither simply leaves the runtime read, which
- * evaluates false and keeps the warnings on — noisy, never broken.
+ * Bundlers do not fold this form: Vite's define plugin matches the literal
+ * `process.env`, which `process?.env` is not, so it skips the module. The read
+ * therefore survives into the bundle and evaluates false in a browser, where
+ * `process` is undefined — meaning dev warnings still print in production.
+ * Noisy, never broken, and the reason `warnOnce` takes a thunk.
  */
 export const IS_PRODUCTION = globalThis.process?.env?.NODE_ENV === 'production'

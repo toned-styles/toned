@@ -192,10 +192,9 @@ export function defineSystem<
     }) as StylesheetType<S & C>,
     exec: (execConfig, tokenStyle) => {
       // '@bp_prop' / ':pseudo_prop' keys, grouped by the property they target.
-      const breakpointOverrides: Record<string, Override[]> = {}
-      const pseudoOverrides: Record<string, Override[]> = {}
-      let hasBreakpointOverrides = false
-      let hasPseudoOverrides = false
+      // Created on first use, so a style with no overrides allocates neither.
+      let breakpointOverrides: Record<string, Override[]> | undefined
+      let pseudoOverrides: Record<string, Override[]> | undefined
 
       const acc: { style: Record<string, unknown>; className?: string } = {
         style: {},
@@ -211,14 +210,18 @@ export function defineSystem<
         const isPseudo = k[0] === ':'
 
         if (underscoreIdx > 0 && (isPseudo || k[0] === '@')) {
-          const target = isPseudo ? pseudoOverrides : breakpointOverrides
           const prop = k.slice(underscoreIdx + 1)
+          const override = { selector: k.slice(0, underscoreIdx), value: v }
 
-          target[prop] ??= []
-          target[prop].push({ selector: k.slice(0, underscoreIdx), value: v })
-
-          if (isPseudo) hasPseudoOverrides = true
-          else hasBreakpointOverrides = true
+          if (isPseudo) {
+            pseudoOverrides ??= {}
+            pseudoOverrides[prop] ??= []
+            pseudoOverrides[prop].push(override)
+          } else {
+            breakpointOverrides ??= {}
+            breakpointOverrides[prop] ??= []
+            breakpointOverrides[prop].push(override)
+          }
           continue
         }
 
@@ -244,18 +247,15 @@ export function defineSystem<
         Object.assign(acc.style, system[k]?.resolve(v, execConfig.tokens))
       }
 
+      if (!breakpointOverrides && !pseudoOverrides) return acc
+
       /**
        * Turn one group of overrides into CSS custom property chains.
        *
-       * `order` lists selector keys lowest priority first and is walked in that
-       * order, so each link lands outside the previous one and the last match
-       * wins. `prefixOf` maps a selector to its space-toggle name, which also
-       * namespaces the values it guards.
-       *
-       * Links are collected per CSS property, not per token prop: two props can
-       * resolve to the same property, and a raw `style` block always can. That
-       * is what keeps `order` — rather than the caller's key order — deciding
-       * which override ends up outermost.
+       * `order` lists selector keys lowest priority first, so each link lands
+       * outside the previous one and the last match wins. Links are keyed per
+       * CSS property rather than per token prop, which is what keeps `order` —
+       * not the caller's key order — deciding what ends up outermost.
        */
       const applyChains = (
         kind: 'breakpoint' | 'pseudo-state',
@@ -350,15 +350,13 @@ export function defineSystem<
 
       // Breakpoint overrides. Anything collected but not emitted is reported
       // rather than dropped in silence — the base token values still apply.
-      const bpValues = config?.breakpoints?.__breakpoints as
-        | Record<string, number>
-        | undefined
-
-      if (hasBreakpointOverrides) {
+      if (breakpointOverrides) {
         // Resolved rather than read raw, so a hand-assembled ExecConfig
-        // defaults the same way a Config does. Only reached when there is
-        // something to gate, so the common path allocates nothing.
+        // defaults the same way a Config does.
         const { mediaMode } = resolveModes(execConfig)
+        const bpValues = config?.breakpoints?.__breakpoints as
+          | Record<string, number>
+          | undefined
 
         if (mediaMode !== 'css') {
           warnModeUnsupported('breakpoint', 'mediaMode', mediaMode)
@@ -386,7 +384,7 @@ export function defineSystem<
 
       // Pseudo-state overrides, applied after breakpoints so an interaction
       // outranks a media query for the same property.
-      if (hasPseudoOverrides) {
+      if (pseudoOverrides) {
         const { pseudoMode } = resolveModes(execConfig)
 
         if (pseudoMode !== 'css') {

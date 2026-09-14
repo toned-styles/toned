@@ -220,4 +220,16 @@ describe('writeVarChain unit handling', () => {
     expect(style['--media-md__padding']).toBe('var(--media-md) auto')
     expect(chain).toBe('var(--media-md__padding, calc(var(--base) * 2))')
   })
+
+  test('leaves a numeric custom property unitless at both levels', () => {
+    const style: Record<string, unknown> = {}
+
+    // Reachable through a raw style block: `'@md': { style: { '--gap': 8 } }`.
+    const chain = writeVarChain(style, '--gap', 4, [
+      { prefix: 'media-md', value: 8 },
+    ])
+
+    expect(style['--media-md__--gap']).toBe('var(--media-md) 8')
+    expect(chain).toBe('var(--media-md__--gap, 4)')
+  })
 })

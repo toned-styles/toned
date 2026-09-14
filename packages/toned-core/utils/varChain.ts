@@ -53,6 +53,12 @@ export type VarChainLink = {
  * @returns The chain, or `null` when no link contributed — in which case
  *   `style` is untouched and the caller should leave `base` exactly as it is,
  *   rather than replace a number with its string form.
+ *
+ * Note that a chain built with no base has no fallback, so while every toggle
+ * is off the declaration is invalid at computed-value time and the property
+ * resolves to `unset` — its initial value, not "no declaration". That clears
+ * anything a class or an inherited rule supplied. Give the property a base
+ * value whenever another rule might also set it.
  */
 export function writeVarChain(
   style: Record<string, unknown>,
