@@ -32,8 +32,8 @@ This is a **synthetic 42-cell calendar-shaped workload**, not the complete HQ
 Calendar component. It measures fresh 43-part stylesheet authoring, normalization
 and first controller compilation separately from shared controller construction;
 a selected/reset transition across 42 hosts; repeated identical updates; actual
-`useStyles` React mounts/updates/hover events in happy-dom; retained heap after
-disposing 5,000 controllers; and a representative exported 42-part consumer's
+`useStyles` React mounts/updates/hover events in happy-dom; WeakRef retention of
+5,000 disposed controllers; and a representative exported 42-part consumer's
 typecheck and declaration emission.
 
 The second React workload mirrors HQ Calendar's `dayButtonEntry -> StyleOverrides
@@ -52,17 +52,17 @@ comparison. It does not measure
 browser layout, GPU work, mobile devices or the whole application's import graph.
 Construction reports the median of five warm batches; React mounting discards its
 first run and reports the median of five subsequent mounts; typechecking reports
-the median of three fresh compiler processes. Garbage collection is forced before
-and after the disposal sample, but allocator retention/GC timing still make that
-measurement evidence rather than a leak verdict. A separate sample holds only
+the median of three fresh compiler processes. The disposal sample holds only
 WeakRefs to 5,000 disposed controllers, advances to another event-loop job, then
-forces GC and reports how many targets remain. That count is observational too;
+forces GC and reports how many targets remain. That count is observational;
 it checks this disposal workload, not arbitrary application retention. Current
 controllers additionally must share one actual portable plan as well as one
 compatibility matcher. The evidence directory retains both SSR outputs and the
 generated CSS so size changes can be inspected directly.
 
-On macOS arm64/Bun 1.3.14, a 2026-09-16 run reported:
+On macOS arm64/Bun 1.3.14, the 2026-09-16 run before round-three review
+fixes reported the following. These timing rows describe that measured revision;
+the current-only gate below is rerun separately after review fixes.
 
 | Measurement | Checkpoint | Current |
 | --- | ---: | ---: |
@@ -83,7 +83,6 @@ On macOS arm64/Bun 1.3.14, a 2026-09-16 run reported:
 | Plain inferred exported sheet declaration emit | TS4023 | Pass |
 | Consumer declaration bytes | 129,460* | 48,602 |
 | Emitted declaration closure bytes / files | 215,917 / 30* | 205,772 / 71 |
-| Retained heap delta after disposal, bytes | 0 | 0 |
 | Retained disposed controllers / WeakRef samples | 0 / 5,000 | 0 / 5,000 |
 
 *The checkpoint cannot emit the plain inferred export: it requires the documented
@@ -109,7 +108,8 @@ current invokes it once. The 42-child update used to rebuild all 42 current
 variants because a 32-entry cache could not retain the siblings. Raising its bound
 to 64 reduces factory calls to the two changed entries; the regression assertion
 fails at 32. This is a measured reduction in work, even though timings do not show
-a blanket speedup. Current CSS includes interaction toggles even without viewport breakpoints
+a blanket speedup. Current CSS includes interaction toggles even without viewport
+breakpoints
 (the checkpoint accidentally omitted them for this fixture) and negated-state
 channels. Its complete fixture stylesheet is therefore larger while SSR markup is
 unchanged after unused generated parameter slots are pruned; the smaller historical
@@ -117,19 +117,25 @@ stylesheet is not an equivalent-capability target. Typecheck timing
 varies substantially on the shared machine. Stable counts and the 64 KiB inferred
 consumer declaration budget are stronger release checks than noisy timings.
 
-The independently repeated current-only gate also passed: one matcher and one
-portable plan, 42/0/42 writes, 84 resolver calls, two changed override derivations,
+The current-only gate rerun after round-three review fixes also passed: one
+matcher and one portable plan, 42/0/42 writes, 84 resolver calls, two changed
+override derivations,
 zero styling renders, and a 48,602-byte inferred consumer declaration. Both runs
-observed zero retained targets out of 5,000 disposed-controller WeakRefs and a zero
-heap delta. These are clean results for the measured disposal sample, not a proof
+observed zero retained targets out of 5,000 disposed-controller WeakRefs. These
+are clean results for the measured disposal sample, not a proof
 that arbitrary native host integrations or application ownership cannot retain
-objects. The complete source declaration closure is now 205,772 bytes across 71
+objects. An earlier revision also reported a zero `process.memoryUsage().heapUsed`
+delta; that metric has been removed because Bun 1.3.14's same-job readings did not
+track live JS object allocation. It was not credible evidence of retained heap.
+The complete source declaration closure in that rerun is 205,855 bytes across 71
 files; the consumer declaration reduction remains about 62%.
 
 `node benchmarks/completion.mjs --current-only` requires no historical checkout
 and is suitable for CI. It fails if a current consumer stops typechecking, if 42
-controllers stop sharing one matcher and one portable plan, if a transition writes other than once per
+controllers stop sharing one matcher and one portable plan, if a transition writes
+other than once per
 host, if an identical state writes again, if resolver calls exceed the two changed
 transitions per host, if an imperative styling interaction causes a React render,
 if a 42-child selection move derives more than the two changed override entries,
-or if the exported consumer fails declaration emission or exceeds 64 KiB. No absolute wall-clock or heap threshold is enforced.
+or if the exported consumer fails declaration emission or exceeds 64 KiB. No
+absolute wall-clock or heap threshold is enforced.

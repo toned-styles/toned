@@ -5,6 +5,7 @@ import { compileWebRules, isWebRules } from './rules.ts'
 export function collectWebRules(
   input: unknown,
   namespace: string,
+  scope?: string,
 ): ReadonlyMap<string, string> {
   const artifacts = new Map<string, string>()
   const visited = new WeakSet<object>()
@@ -16,7 +17,7 @@ export function collectWebRules(
         throw new Error(
           'Toned: $webRules is a separate selector extension; put state/descendant selectors in its &-anchored rules, not around it as a portable condition',
         )
-      const artifact = compileWebRules(value, namespace)
+      const artifact = compileWebRules(value, namespace, scope)
       const previous = artifacts.get(artifact.className)
       if (previous !== undefined && previous !== artifact.css)
         throw new Error('Toned: webRules content identity collision')

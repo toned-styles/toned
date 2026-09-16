@@ -45,7 +45,9 @@ describe('typed grid declarations', () => {
         areas: [['x']],
       }),
     ).toThrow('track count')
-    expect(() => dp(-1)).toThrow('invalid')
+    expect(() =>
+      defineGrid('negative-track', { columns: [dp(-1)], areas: [['body']] }),
+    ).toThrow('invalid')
     expect(() => resolveGrid(grid(), 'native')).toThrow('@platform web')
   })
   it('isolates repeated instances and verifies definition identity and host parentage', () => {

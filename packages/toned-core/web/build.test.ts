@@ -48,3 +48,25 @@ it('preserves opaque selector references through immutable style snapshots', () 
   const declaration = immutableSnapshot({ $webRules: extension })
   expect(declaration.$webRules).toBe(extension)
 })
+
+it('scopes each selector rule without prefixing multiline declaration values', () => {
+  const ui = defineSystem({ id: 'scoped-extension', tokens: {} })
+  const sheet = ui.stylesheet({
+    Root: {
+      '@platform web': {
+        $webRules: webRules({
+          '&': { display: 'grid', gridTemplateAreas: '"a b"\n"c d"' },
+          '& > span': { opacity: 0.5 },
+        }),
+      },
+    },
+  })
+  const artifact = buildStyles(ui, { sheets: [sheet], scope: '.scope' })
+  const className = artifact.manifest.extensions![0]
+  expect(artifact.css).toContain(
+    `.scope .${className}{display:grid;grid-template-areas:"a b"\n"c d";}`,
+  )
+  expect(artifact.css).toContain(`.scope .${className} > span{opacity:0.5;}`)
+  expect(artifact.css).not.toContain('.scope "c d"')
+  assertBuildArtifact(artifact)
+})

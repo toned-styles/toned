@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createNativeRenderer } from '../server/index.ts'
+import { cssVariablesBackend } from '../backends/index.ts'
+import { buildStyles } from '../build/index.ts'
+import { createNativeRenderer, createRenderer } from '../server/index.ts'
 import { RULE_LAYERS } from '../stylesheet/rule-protocol.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
@@ -10,6 +12,7 @@ import {
   foldOperations,
   resolvePlan,
 } from './plan.ts'
+import { conditionPredicate } from './predicates.ts'
 
 const gapResolver = vi.fn((value: number) => ({ gap: value }))
 const system = () =>
@@ -235,4 +238,40 @@ it('snapshots authored values while deeply freezing compiler-owned shared metada
   )!.predicate
   expect(Object.isFrozen(state)).toBe(true)
   if (state.op === 'atom') expect(Object.isFrozen(state.fact)).toBe(true)
+})
+
+it('undefined resolver fields inherit previous values across backends and explanations', () => {
+  const ui = defineSystem({
+    id: 'undefined-fields',
+    tokens: {
+      gap: defineToken({ values: [4], resolve: (value) => ({ gap: value }) }),
+      maybe: defineToken({
+        values: ['a'],
+        resolve: () => ({ gap: undefined, opacity: 1 }),
+      }),
+    },
+  })
+  const sheet = ui.stylesheet({ Root: { gap: 4, maybe: 'a' } })
+  const native = createNativeRenderer(ui, { tokens: {} })
+  const web = createRenderer(ui, {
+    backend: cssVariablesBackend,
+    manifest: buildStyles(ui, { sheets: [sheet] }).manifest,
+    tokens: {},
+  })
+  expect(native.resolve(sheet).Root.style).toEqual({ gap: 4, opacity: 1 })
+  expect(web.resolve(sheet).Root.className).toBeTruthy()
+  expect(buildStyles(ui, { sheets: [sheet] }).css).toContain('gap:4px')
+  expect(web.explain(sheet).parts['Root']!['gap']!.value).toBe(4)
+  expect(native.explain(sheet).parts['Root']!['gap']!.winner.token).toBe('gap')
+})
+
+it('rejects unknown platforms in authored and compiled predicates', () => {
+  expect(() => conditionPredicate('@platform.ios')).toThrow(
+    'unknown platform ios',
+  )
+  const ui = system()
+  for (const platform of ['web', 'native'] as const)
+    expect(() =>
+      compileRules(ui, { Root: { '@platform.ios': { gap: 4 } } }, platform),
+    ).toThrow('unknown platform ios')
 })

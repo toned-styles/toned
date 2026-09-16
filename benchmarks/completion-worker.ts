@@ -364,15 +364,7 @@ writeFileSync(join(evidenceDirectory, `${version}-generated.css`), css)
 assert.ok(ssr_inline_bytes > 0 && ssr_css_bytes > 0 && generated_css_bytes > 0)
 assert.equal(document.body.childElementCount, 0)
 await window.happyDOM.close()
-Bun.gc(true)
-const heapBefore = process.memoryUsage().heapUsed
-for (let i = 0; i < 5000; i++) {
-  const base = create()
-  base.dispose?.()
-}
 sink = undefined
-Bun.gc(true)
-const retained_heap_delta_bytes = process.memoryUsage().heapUsed - heapBefore
 // Weak references independently sample object retention. Advance to a new job
 // before forcing GC: weak targets created in this job are kept alive by design.
 const disposedSamples: WeakRef<object>[] = []
@@ -414,9 +406,8 @@ console.log(
     mount_renders,
     update_renders,
     interaction_renders,
-    retained_heap_delta_bytes,
     disposed_controller_samples: disposedSamples.length,
     retained_disposed_controllers,
-    note: 'Heap delta is observational; GC timing and runtime allocator retention are not a leak verdict.',
+    note: 'WeakRef retention samples disposed controllers after a new job and forced GC; it does not prove application-wide leak freedom. Bun process.memoryUsage().heapUsed is not used.',
   }),
 )

@@ -198,3 +198,43 @@ test('native host topology and semantic state callbacks drive the same relation 
   bHost()
   expect(unsubscribed).toBe(true)
 })
+
+test('programmatic focus drives relational focus-visible without synthetic change events', () => {
+  const local = defineSystem({ id: 'focus-relations', tokens: {} })
+  const base = new Base({
+    ref: local,
+    config: {
+      ...getConfig(),
+      platform: 'web',
+      useClassName: false,
+      mediaMode: false,
+      pseudoMode: 'runtime',
+    },
+    rules: {
+      Root: { style: { opacity: 1 } },
+      Item: {},
+      [WHEN_RULES]: [
+        {
+          predicate: local.q.part('Root').has('Item', 'focus-visible'),
+          rules: { Root: { style: { opacity: 0.5 } } },
+        },
+      ],
+    },
+  })
+  const root = document.createElement('div'),
+    item = document.createElement('input'),
+    input = item
+  root.append(item)
+  document.body.append(root)
+  const detachRoot = base.attach('Root', root, { style: { opacity: 1 } })
+  const detachItem = base.attach('Item', item, {})
+  const stop = base.mount()
+  input.focus()
+  expect(root.style.opacity).toBe('0.5')
+  input.blur()
+  expect(root.style.opacity).toBe('1')
+  detachItem()
+  detachRoot()
+  stop()
+  root.remove()
+})

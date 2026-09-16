@@ -11,6 +11,39 @@ export type WebRules = Readonly<{
   rules: Readonly<Record<`&${string}`, WebRuleStyle>>
 }>
 
+/** A comma is a selector-list separator only outside functions, attributes and strings. */
+function isAnchoredSelector(selector: string): boolean {
+  if (!selector.startsWith('&')) return false
+  const stack: string[] = []
+  let quote = ''
+  let escaped = false
+  for (const char of selector) {
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (char === '\\') {
+      escaped = true
+      continue
+    }
+    if (quote) {
+      if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'") {
+      quote = char
+      continue
+    }
+    if (char === '{' || char === '}' || (char === ',' && !stack.length))
+      return false
+    if (char === '(') stack.push(')')
+    else if (char === '[') stack.push(']')
+    else if ((char === ')' || char === ']') && stack.pop() !== char)
+      return false
+  }
+  return !quote && !escaped && !stack.length
+}
+
 /** Explicit CSS-only selectors anchored to the owning part. Selector order is cascade order. */
 export function webRules<
   const Input extends Record<`&${string}`, WebRuleStyle>,
@@ -23,9 +56,9 @@ export function webRules<
 ): WebRules {
   const rules: Record<`&${string}`, WebRuleStyle> = {}
   for (const [selector, style] of Object.entries(input)) {
-    // One anchored selector per rule. Comma lists can leak outside the owning
-    // part; write separate entries instead. At-rules belong in typed queries.
-    if (!selector.startsWith('&') || /[{},]/.test(selector))
+    // One anchored selector per rule, including nested selector lists.
+    // Top-level lists need separate entries; at-rules belong in typed queries.
+    if (!isAnchoredSelector(selector))
       throw new Error(
         `Toned: webRules selector must be one anchored selector: ${selector}`,
       )
@@ -76,6 +109,7 @@ function anchorSelector(selector: string, className: string): string {
 export function compileWebRules(
   value: WebRules,
   namespace = 'toned',
+  scope?: string,
 ): { className: string; css: string } {
   if (!isWebRules(value))
     throw new Error('Toned: $webRules must be constructed with webRules()')
@@ -102,7 +136,7 @@ export function compileWebRules(
             `${camelToKebab(key)}:${serializeCssValue(key, value)};`,
         )
         .join('')
-      return `${anchorSelector(selector, className)}{${declarations}}`
+      return `${scope ? `${scope} ` : ''}${anchorSelector(selector, className)}{${declarations}}`
     })
     .join('\n')
   return { className, css }

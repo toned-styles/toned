@@ -1,6 +1,7 @@
 import { resolveCssPlan } from '../backends/css/plan.ts'
 import { compileRules, foldOperations, resolvePlan } from '../core/plan.ts'
 import { resolveTokenStyle } from '../core/resolve.ts'
+import { gridRegistrations } from '../grid/validation.ts'
 import {
   createHostIntegration,
   eventState,
@@ -571,7 +572,9 @@ export class Base {
       states = [
         ...new Set<string>([
           ...PSEUDO_STATES,
-          ...Object.keys(this.matcher.interactions[part] ?? {}),
+          ...Object.keys(this.matcher.interactions[part] ?? {}).filter(
+            (state) => state !== ':rtl',
+          ),
         ]),
       ]
       this.trackedStateCache.set(part, states)
@@ -585,7 +588,7 @@ export class Base {
         Object.values(this.matcher.interactions).flatMap((states) =>
           Object.keys(states)
             .map((state) => state.slice(1))
-            .filter((state) => !eventState(state)),
+            .filter((state) => state !== 'rtl' && !eventState(state)),
         ),
       ),
     ]
@@ -830,7 +833,10 @@ export class Base {
       this.syncRelationFacts()
       this.matchStyles()
     }
-    const detachHost = this.host.attach(node, this.rules[elementKey] ?? {})
+    const detachHost = this.host.attach(
+      node,
+      gridRegistrations(this.rules)[elementKey] ?? {},
+    )
     // Callback refs are commit work too. A child layout effect can dispatch
     // an event before its parent's layout effect, so its candidate must already
     // know the previously committed interaction state.

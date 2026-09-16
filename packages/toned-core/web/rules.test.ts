@@ -15,7 +15,7 @@ test('webRules emits anchored selectors and preserves CSS numeric serialization'
     className,
   )
 })
-test('declarations are immutable and unanchored selectors cannot escape the owning part', () => {
+test('declarations are immutable and top-level selector lists must use separate anchors', () => {
   const input = { '&::after': { opacity: 1 } }
   const value = webRules(input)
   input['&::after'].opacity = 0
@@ -39,4 +39,29 @@ test('anchors nesting selectors without changing quoted attribute ampersands', (
   )
   expect(artifact.css).toContain('[data-value="A&B"]')
   expect(artifact.css).toContain(`.${artifact.className}[`)
+})
+
+test('nested selector lists and quoted commas remain one anchored selector', () => {
+  const value = webRules({
+    '&:is(:hover, :focus)': { opacity: 0.5 },
+    '&:not(a, b)': { color: 'red' },
+    '&[data-x="a,b"]': { color: 'blue' },
+    '& ~ *': { opacity: 0.25 },
+  })
+  const { className, css } = compileWebRules(value)
+  expect(css).toContain(`.${className}:is(:hover, :focus){`)
+  expect(css).toContain(`.${className}:not(a, b){`)
+  expect(css).toContain(`.${className}[data-x="a,b"]{`)
+  // Anchoring is a selector identity contract, not a descendant-only sandbox.
+  expect(css).toContain(`.${className} ~ *{`)
+  for (const selector of [
+    '&:is(:hover, :focus), body',
+    '&[data-x="a,b"], body',
+    '&:is(:hover',
+  ] as const) {
+    const input: Record<`&${string}`, { opacity: 0 }> = {
+      [selector]: { opacity: 0 },
+    }
+    expect(() => webRules(input)).toThrow(/anchored/)
+  }
 })

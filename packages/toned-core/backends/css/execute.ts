@@ -17,7 +17,7 @@ import { nativeBackend } from '../native.ts'
 import { resolveCssPlan } from './plan.ts'
 
 /** Decode the historical flattened spelling only at the direct-exec boundary.
- * The result goes through the same cached declaration compiler as stylesheets;
+ * The result goes through the same declaration compiler as stylesheets;
  * there is no separate matcher, resolver, or field cascade in this adapter. */
 function expand(key: string, value: unknown): Record<string, unknown> {
   if ((key[0] === ':' || key[0] === '@') && key.includes('_')) {
@@ -72,32 +72,24 @@ export function createCssExecutor<
   S extends TokenStyleDeclaration,
   C extends SystemOptions,
 >(system: S, config?: C, id?: string) {
-  // A facade has no registry or host state. Its immutable system identity lets
-  // compileRules reuse the exact same plan for repeated immutable input objects.
+  // The public facade accepts mutable inputs, including nested caller style
+  // objects passed through t(). Recompile each call to observe their current values.
   const reference = {
     id,
     system: { ...system, ...config },
   } as unknown as TokenSystem<S & C>
-  const cache = new WeakMap<object, Map<string, Record<string, unknown>>>()
   return function execute(
     execConfig: Parameters<TokenSystem<S & C>['exec']>[0],
     tokenStyle: TokenStyle<S & C>,
     unnamespaced = false,
   ) {
     const platform = execConfig.platform ?? 'web'
-    let platforms = cache.get(tokenStyle)
-    if (!platforms) {
-      platforms = new Map()
-      cache.set(tokenStyle, platforms)
-    }
-    let rules = platforms.get(platform)
-    if (!rules) {
-      const prepared = resolvePlatformKeys(
-        { Root: normalizeDeclarations(tokenStyle) },
-        platform,
-      )
-      rules = { Root: declaration(prepared.Root as Record<string, unknown>) }
-      platforms.set(platform, rules)
+    const prepared = resolvePlatformKeys(
+      { Root: normalizeDeclarations(tokenStyle) },
+      platform,
+    )
+    const rules = {
+      Root: declaration(prepared.Root as Record<string, unknown>),
     }
     const plan = compileRules(reference, rules, platform)
     if (platform === 'native') {
@@ -112,7 +104,10 @@ export function createCssExecutor<
       reference,
       execConfig.tokens,
       {},
-      { useClassName: execConfig.useClassName, namespace: !unnamespaced },
+      {
+        useClassName: execConfig.useClassName,
+        namespace: !unnamespaced,
+      },
     )['Root']!
   }
 }

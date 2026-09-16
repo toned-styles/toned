@@ -244,3 +244,66 @@ it('native color capability rejects browser color functions while retaining nati
     )
   }
 })
+
+it('native numeric fields reject CSS unit strings before reaching a renderer', async () => {
+  const { nativeBackend } = await import('./native.ts')
+  const fields = [
+    'fontSize',
+    'borderRadius',
+    'borderWidth',
+    'lineHeight',
+    'letterSpacing',
+    'elevation',
+    'shadowOpacity',
+    'shadowRadius',
+    'opacity',
+    'flex',
+    'flexGrow',
+    'flexShrink',
+    'zIndex',
+    'aspectRatio',
+    'borderBottomLeftRadius',
+    'borderBottomRightRadius',
+    'borderBottomWidth',
+    'borderLeftWidth',
+    'borderRightWidth',
+    'borderTopLeftRadius',
+    'borderTopRightRadius',
+    'borderTopWidth',
+    'borderStartWidth',
+    'borderEndWidth',
+  ]
+  for (const field of fields) {
+    for (const value of ['12px', '1rem', '1.5em', '2vh', '25%'])
+      expect(() =>
+        nativeBackend.resolve({ style: { [field]: value } }),
+      ).toThrow(`${field} requires a finite number`)
+    expect(nativeBackend.resolve({ style: { [field]: 2 } }).style[field]).toBe(
+      2,
+    )
+  }
+  expect(() =>
+    nativeBackend.resolve({ style: { fontWeight: '200px' } }),
+  ).toThrow('fontWeight')
+  expect(
+    nativeBackend.resolve({ style: { fontWeight: '200' } }).style['fontWeight'],
+  ).toBe('200')
+  expect(() =>
+    nativeBackend.resolve({
+      style: { shadowOffset: { width: '1px', height: 2 } },
+    }),
+  ).toThrow('shadowOffset.width')
+  expect(
+    nativeBackend.resolve({
+      style: {
+        width: '25%',
+        marginLeft: 'auto',
+        transform: [{ rotate: '45deg' }],
+      },
+    }).style,
+  ).toEqual({
+    width: '25%',
+    marginLeft: 'auto',
+    transform: [{ rotate: '45deg' }],
+  })
+})
