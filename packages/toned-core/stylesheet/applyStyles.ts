@@ -1,4 +1,4 @@
-/** Owned, differential host patches. Host bindings record declarative baselines at commit. */
+/** Differential host patches with per-controller requests and committed declarations. */
 import { camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
 
@@ -57,14 +57,15 @@ const hostProps = (output: Style): Style =>
 
 // Attachment order defines precedence. An event does not promote its owner
 // over another controller; removing a request reveals the surviving owner.
-function aggregate(entry: HostOwnership): Style {
+function aggregate(entry: HostOwnership, releasing?: object): Style {
   const style: Style = {}
   const props: Style = {}
   const classes = new Set<string>()
-  for (const request of entry.owners.values()) {
-    Object.assign(style, request.output['style'], request.caller['style'])
-    Object.assign(props, hostProps(request.output), hostProps(request.caller))
-    for (const source of [request.output, request.caller])
+  for (const [owner, request] of entry.owners) {
+    const output = owner === releasing ? request.declarative : request.output
+    Object.assign(style, output['style'], request.caller['style'])
+    Object.assign(props, hostProps(output), hostProps(request.caller))
+    for (const source of [output, request.caller])
       for (const name of (source['className'] ?? '')
         .split(/\s+/)
         .filter(Boolean))
@@ -92,6 +93,9 @@ export function recordHostCommit(
     ...hostProps(toned),
     ...hostProps(caller),
     style: { ...toned['style'], ...caller['style'] },
+    className: [toned['className'], caller['className']]
+      .filter(Boolean)
+      .join(' '),
   }
   // A new owner starts with the declaration React just installed. Existing
   // imperative requests survive until its layout-phase reconciliation.
@@ -129,21 +133,33 @@ export function recordHostCommit(
   ])
 }
 
+/**
+ * Callback-ref cleanup runs before React mutates host props. Restore this
+ * controller's committed declaration now, so React's old-to-new prop diff can
+ * remove imperative-only additions and preserve unchanged declarative values.
+ * Other controllers keep their current requests until their own cleanup.
+ */
+export function prepareHostRelease(host: Host, owner: object): void {
+  if (!host || host.setNativeProps) return
+  const entry = ownership.get(host)
+  if (!entry?.owners.has(owner)) return
+  writeStyles(host, aggregate(entry, owner), entry.state)
+}
+
 /** Called only for a completed ref detachment, never a render or ref handoff. */
 export function releaseHost(host: Host, owner: object): void {
   const entry = ownership.get(host)
   if (!entry || !entry.owners.delete(owner)) return
-  // Native refs provide no mounted-state inspection. Once its final controller
-  // detached, do not send a patch to a possibly destroyed native view.
-  if (
-    !entry.owners.size &&
-    (host.setNativeProps || host.isConnected === false)
-  ) {
+  // React may have reused a still-connected host and already written its new
+  // declaration. Even an identical value now belongs to that new caller. Final
+  // detachment must therefore drop bookkeeping without another host mutation;
+  // prepareHostRelease already removed imperative-only effects before takeover.
+  // Native refs likewise provide no safe mounted-state inspection here.
+  if (!entry.owners.size) {
     ownership.delete(host)
     return
   }
   writeStyles(host, aggregate(entry), entry.state)
-  if (!entry.owners.size) ownership.delete(host)
 }
 
 export const setStyles = (
@@ -162,7 +178,7 @@ function writeStyles(host: Host, output: Style, state: Ownership): void {
   const patch: Style = {}
   for (const key in state.previous) {
     if (key in next) continue
-    if (host.setNativeProps) patch[key] = state.baseline[key] ?? null
+    if (host.setNativeProps) patch[key] = null
     else if (read(host, key) === state.previous[key]) {
       const value = serializeCssValue(key, state.baseline[key])
       if (read(host, key) !== value) patch[key] = value

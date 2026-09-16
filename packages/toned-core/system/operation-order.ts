@@ -1,6 +1,7 @@
-import type { TokenOperation } from '../stylesheet/matcher/normalizeRules.ts'
-
-const OPERATIONS = Symbol.for('@toned/operations')
+import {
+  TOKEN_OPERATIONS,
+  type TokenOperation,
+} from '../stylesheet/rule-protocol.ts'
 type Style = Record<string, unknown>
 type Resolve = (declaration: Record<string, unknown>) => Style
 
@@ -53,7 +54,7 @@ export function applyOperationOrder(
           declaration[key] = value
         }
       }
-      Object.defineProperty(declaration, OPERATIONS, { value: group })
+      Object.defineProperty(declaration, TOKEN_OPERATIONS, { value: group })
       ordered = resolve(declaration as Record<string, unknown>)
     }
   } else {
@@ -112,7 +113,7 @@ export function applyConditionalOrder(
       value: output,
       layer: pending[0]!.layer - 1,
     }
-    Object.defineProperty(declaration, OPERATIONS, {
+    Object.defineProperty(declaration, TOKEN_OPERATIONS, {
       value: [prior, ...pending],
     })
     output = resolve(declaration as Record<string, unknown>)

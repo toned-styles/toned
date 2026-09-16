@@ -99,14 +99,29 @@ a system must use the same namespace; `namespaceCss` in the system subpath can
 namespace a generated palette. Application-provided external CSS is not discovered. Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
 The build manifest records ad-hoc conditions and the exact static system schema,
-including named query thresholds. A pure web renderer rejects a changed schema
+including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema
 or an undeclared condition with a regeneration instruction; it never injects a rule.
 
 `@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
 explicit optional development tool. The old `dom` entry remains compatible.
 The Vite plugin serves `virtual:toned.css`; import it explicitly, supply watched
-`inputs`, and use a fresh `conditions` collector for declaration changes. It no
-longer inserts an extra style node into HTML implicitly.
+`inputs`, and pass the complete system ref with a `sheets` collector, e.g.
+`toned({ system: ui, sheets: () => [button], inputs: ['./button.ts'] })`.
+It delegates to the same build path and exposes the paired manifest through
+`virtual:toned.manifest` (a default export). Both modules share one collection per
+build or watched invalidation. The older raw `system.system` option remains
+compatible, but requires an explicit namespace `id` and condition collector;
+it cannot collect sheets or check their runtime namespace.
+It no longer inserts an extra style node into HTML implicitly.
+
+Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
+checks the original generated asset's fingerprint before publication; after
+minification, hash the final delivery bytes in the application's asset pipeline.
+The pure renderer does not fetch or inspect served stylesheets, and a manifest
+alone cannot prove which asset a browser loaded. The fingerprint is a content
+identifier for accidental drift, not a security digest. Changes inside `resolve`
+or `pseudoRules` functions require rebuilding assets; schema checks track function
+presence, not function source or captured values.
 
 ## Pure server and alternative output
 

@@ -22,7 +22,7 @@ const system = defineSystem({
 })
 const sheet = system
   .stylesheet({ Root: { opacity: 0, ':hover': { opacity: 0.5 } } })
-  .variants<{ on: boolean }>($ => ({
+  .variants<{ on: boolean }>(($) => ({
     [$.on(true)]: { Root: { opacity: 1 } },
   }))
 const blocker = new Promise<never>(() => {})
@@ -179,7 +179,9 @@ test('renderer configs are isolated between simultaneous provider trees', () => 
       <ConfigProvider config={{ ...config, getTokens: () => ({ ink: 'red' }) }}>
         <View id="red" />
       </ConfigProvider>
-      <ConfigProvider config={{ ...config, getTokens: () => ({ ink: 'blue' }) }}>
+      <ConfigProvider
+        config={{ ...config, getTokens: () => ({ ink: 'blue' }) }}
+      >
         <View id="blue" />
       </ConfigProvider>
     </>,
@@ -194,7 +196,9 @@ test('an opt-in render scope exposes new bound styles to child layout effects', 
   const measured: string[] = []
   function Measure() {
     React.useLayoutEffect(() => {
-      measured.push((document.querySelector('[data-measure]') as HTMLElement).style.opacity)
+      measured.push(
+        (document.querySelector('[data-measure]') as HTMLElement).style.opacity,
+      )
     })
     return null
   }
@@ -296,7 +300,14 @@ test('composed bound components keep independent ownership on the same host', ()
   }
   function View({ tick }: { tick: number }) {
     const s = useBind(outer)
-    return <s.Label as={Inner} className="caller" data-testid="composed" data-tick={tick} />
+    return (
+      <s.Label
+        as={Inner}
+        className="caller"
+        data-testid="composed"
+        data-tick={tick}
+      />
+    )
   }
   const view = render(<View tick={0} />)
   const target = view.getByTestId('composed')

@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { defineToken } from '../system/index.ts'
+import { defineSystem, defineToken } from '../system/index.ts'
 import type { Config, TokenSystem } from '../types/index.ts'
 import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
@@ -1270,4 +1270,29 @@ describe("the ':rtl' runtime half (getDirection seam)", () => {
     expect(make(() => 'ltr').conditionState({})).toEqual({ 'Root:rtl': false })
     expect(make(undefined).conditionState({})).toBeNull()
   })
+})
+
+test('Base chooses legacy parent precedence or descriptor source order and keeps their plans separate', () => {
+  const rules = {
+    container: {},
+    label: {},
+    '[accent]': {
+      container: { ':hover': { $label: { textColor: 'white' } } },
+      label: { textColor: 'black' },
+    },
+  }
+  const legacy = new Base({
+    ref: defineSystem(testTokens),
+    rules,
+    config: mockConfig,
+  })
+  const descriptor = new Base({
+    ref: defineSystem({ id: 'precedence', tokens: testTokens }),
+    rules,
+    config: mockConfig,
+  })
+  const state = { accent: true, 'container:hover': true }
+  expect(legacy.matcher.match(state).label.textColor).toBe('white')
+  expect(descriptor.matcher.match(state).label.textColor).toBe('black')
+  expect(descriptor.matcher).not.toBe(legacy.matcher)
 })

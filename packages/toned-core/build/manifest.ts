@@ -1,6 +1,50 @@
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import { adHocAtoms, parseConditionKey } from '../utils/conditions.ts'
 
+export type BuildManifest = Readonly<{
+  version: 1
+  systemId: string
+  /** Exact static schema, including named thresholds and token vocabulary. */
+  definition: string
+  /** Ad-hoc condition atoms. Named conditions belong to definition. */
+  conditions: readonly string[]
+  fingerprint: string
+}>
+
+export type BuildArtifact = Readonly<{ css: string; manifest: BuildManifest }>
+
+/** Stable content identifier, not a security hash or an equality shortcut. */
+export function fingerprint(text: string): string {
+  let hash = 2166136261
+  for (let i = 0; i < text.length; i++)
+    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
+  return (hash >>> 0).toString(36)
+}
+
+export function assertManifestConditions(
+  manifest: BuildManifest,
+  rules: unknown,
+): void {
+  const needed = new Set<string>()
+  collectManifestConditions(rules, needed)
+  const emitted = new Set(manifest.conditions)
+  for (const atom of needed) {
+    if (!emitted.has(atom))
+      throw new Error(
+        `Toned manifest ${manifest.systemId}: undeclared condition ${atom}; add the stylesheet to buildStyles({ sheets }) and regenerate CSS`,
+      )
+  }
+}
+
+/** Check an emitted asset against its manifest before publishing the pair.
+ * This detects accidental drift; the fingerprint is not a security digest. */
+export function assertBuildArtifact({ css, manifest }: BuildArtifact): void {
+  if (fingerprint(css) !== manifest.fingerprint)
+    throw new Error(
+      'Toned build: CSS asset does not match its manifest fingerprint',
+    )
+}
+
 /** Structural identity is compared exactly, never through the CSS content hash.
  * Function implementations still require the normal build/asset version pipeline. */
 export function systemDefinition(system: TokenStyleDeclaration): string {
@@ -19,6 +63,13 @@ export function systemDefinition(system: TokenStyleDeclaration): string {
           values: token.values,
           properties: 'properties' in token ? token.properties : undefined,
           dynamic: 'dynamic' in token ? token.dynamic : undefined,
+          $types: '$types' in token ? token.$types : undefined,
+          inherit: 'inherit' in token ? token.inherit : undefined,
+          alphaChannel:
+            'alphaChannel' in token ? token.alphaChannel : undefined,
+          alphaSteps: 'alphaSteps' in token ? token.alphaSteps : undefined,
+          pseudoRules:
+            'pseudoRules' in token && typeof token.pseudoRules === 'function',
         },
       ],
     ]
