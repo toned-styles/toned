@@ -2,33 +2,27 @@ import type { QueryPredicate } from '../../system/queries.ts'
 import { mergeStyle } from '../../utils/mergeStyle.ts'
 import { warnOnce } from '../../utils/warn.ts'
 import { resolveCrossHoverCss } from '../crossHover.ts'
+import {
+  RULE_LAYERS,
+  type RuleObject,
+  TOKEN_OPERATIONS,
+  type TokenOperation,
+  WHEN_RULES,
+  type WhenRule,
+} from '../rule-protocol.ts'
 import { unescapeSelectorPart } from '../variantSelector.ts'
 
-export const WHEN_RULES = Symbol.for('@toned/when')
-export const RULE_LAYERS = Symbol.for('@toned/layers')
-export const CONDITIONAL_RULES = Symbol.for('@toned/conditionalRules')
-export const TOKEN_OPERATIONS = Symbol.for('@toned/operations')
-export interface TokenOperation {
-  readonly key: string
-  readonly value: unknown
-  readonly layer: number
-  readonly conditional?: ConditionalRule
-}
-export interface WhenRule {
-  readonly predicate: QueryPredicate
-  readonly rules: RuleObject
-}
-export interface ConditionalRule {
-  readonly predicate: QueryPredicate
-  readonly style: RuleObject
-  readonly part: string
-  readonly order: number
-}
+export {
+  CONDITIONAL_RULES,
+  type ConditionalRule,
+  RULE_LAYERS,
+  type RuleObject,
+  TOKEN_OPERATIONS,
+  type TokenOperation,
+  WHEN_RULES,
+  type WhenRule,
+} from '../rule-protocol.ts'
 
-// The authoring grammar is dynamic at this boundary; the compiler consumes the
-// structured conditions below and never reparses a selector during an update.
-// biome-ignore lint/suspicious/noExplicitAny: authoring syntax boundary
-export type RuleObject = Record<string, any>
 export type Conditions = ReadonlyMap<string, readonly string[]>
 export interface NormalizedRule {
   readonly conditions: Conditions
@@ -166,6 +160,7 @@ export function normalizeRules(
     cssMediaMode: boolean
     cssPseudoMode: boolean
     stateAliases?: readonly string[]
+    sourceOrder?: boolean
   },
 ) {
   const elementSet = new Set<string>()
@@ -178,6 +173,7 @@ export function normalizeRules(
   let hasMediaRules = false
   let conditionDepth = 0
   let predicate: QueryPredicate | undefined
+  let deferred: Array<() => void> = []
   let predicateIdentity = ''
   const conditionIdentities = new WeakMap<object, string>()
   const layers: RuleObject[] = [
@@ -265,9 +261,17 @@ export function normalizeRules(
     }
     const next = constrain(base, extra)
     if (next) {
-      conditionDepth++
-      apply(next)
-      conditionDepth--
+      const visit = () => {
+        conditionDepth++
+        apply(next)
+        conditionDepth--
+      }
+      // Legacy declarations specialize their complete parent rule, including
+      // later sibling parts. Only nested traversal is deferred: overlapping
+      // sibling variants still execute in declaration order, without a global
+      // specificity sort. Explicit descriptors and .when use occurrence order.
+      if (!options.sourceOrder && !predicate) deferred.push(visit)
+      else visit()
     }
   }
 
@@ -337,6 +341,8 @@ export function normalizeRules(
   }
 
   const walk = (conditions: Conditions, node: RuleObject, prefix = '') => {
+    const parentDeferred = deferred
+    deferred = []
     for (const key in node) {
       if (key[0] === '[') {
         withConditions(conditions, parseVariantSelector(key), (next) =>
@@ -371,6 +377,8 @@ export function normalizeRules(
         walkElement(conditions, key.replace(/^\$/, ''), node[key], prefix)
       }
     }
+    for (const visit of deferred) visit()
+    deferred = parentDeferred
   }
 
   const registerPredicate = (query: QueryPredicate): void => {

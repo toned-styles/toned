@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { defineSystem, defineToken } from '../../system/definers.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
-import { RULE_LAYERS, TOKEN_OPERATIONS } from './normalizeRules.ts'
+import { RULE_LAYERS, TOKEN_OPERATIONS, WHEN_RULES } from './normalizeRules.ts'
 
 describe('collision-free matcher plans', () => {
   for (const count of [31, 32, 33, 63, 64, 65]) {
@@ -252,10 +252,13 @@ describe('normalized rule occurrences', () => {
     })
   })
 
-  test('source order also applies to fields around nested conditional blocks', () => {
-    const matcher = new StyleMatcher({
-      '[active]': { Root: { ':hover': { color: 'nested' }, color: 'later' } },
-    })
+  test('descriptor source order also applies to fields around nested conditional blocks', () => {
+    const matcher = new StyleMatcher(
+      {
+        '[active]': { Root: { ':hover': { color: 'nested' }, color: 'later' } },
+      },
+      { sourceOrder: true },
+    )
     expect(matcher.match({ active: true, 'Root:hover': true }).Root.color).toBe(
       'later',
     )
@@ -366,4 +369,71 @@ describe('normalized rule occurrences', () => {
       expect(matcher.match(props).Root ?? {}).toEqual(expected)
     }
   })
+})
+
+describe('legacy runtime condition precedence', () => {
+  for (const [query, fact] of [
+    [':hover', 'Root:hover'],
+    ['@md', '@md'],
+  ] as const) {
+    for (const sourceOrder of [false, true]) {
+      test(`${query} specializes later sibling defaults only in legacy mode (sourceOrder=${sourceOrder})`, () => {
+        const rules = {
+          Root: {},
+          Label: {},
+          '[variant=accent]': {
+            Root: {
+              [query]: {
+                $Root: { paint: 'active' },
+                $Label: { paint: 'active-label' },
+              },
+            },
+            Label: { paint: 'default-label' },
+          },
+        }
+        const active: {
+          variant: 'accent'
+          'Root:hover'?: boolean
+          '@md'?: boolean
+        } = {
+          variant: 'accent',
+          [fact]: true,
+        }
+        const matcher = new StyleMatcher(rules, { sourceOrder })
+        expect(matcher.match({ variant: 'accent' }).Label.paint).toBe(
+          'default-label',
+        )
+        expect(matcher.match(active).Root.paint).toBe('active')
+        expect(matcher.match(active).Label.paint).toBe(
+          sourceOrder ? 'default-label' : 'active-label',
+        )
+        expect(matcher.match({ [fact]: true }).Label.paint).toBeUndefined()
+
+        const override = new StyleMatcher(
+          {
+            ...rules,
+            [RULE_LAYERS]: [{ Label: { paint: 'override' } }],
+          },
+          { sourceOrder },
+        )
+        expect(override.match(active).Label.paint).toBe('override')
+
+        const guarded = new StyleMatcher(
+          {
+            ...rules,
+            [WHEN_RULES]: [
+              {
+                predicate: { op: 'atom', key: '[emphasis]' },
+                rules: { Label: { paint: 'guarded' } },
+              },
+            ],
+          },
+          { sourceOrder },
+        )
+        expect(guarded.match({ ...active, emphasis: true }).Label.paint).toBe(
+          'guarded',
+        )
+      })
+    }
+  }
 })

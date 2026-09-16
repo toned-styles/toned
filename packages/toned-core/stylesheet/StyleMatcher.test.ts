@@ -221,7 +221,7 @@ describe('style matcher with pseudo', () => {
           },
         },
         "label": {
-          "textColor": "on_action",
+          "textColor": "on_action_secondary",
         },
       }
     `)

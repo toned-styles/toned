@@ -12,20 +12,22 @@ import {
 } from './matcher/bitset.ts'
 import {
   applyOperations,
-  CONDITIONAL_RULES,
-  type ConditionalRule,
   type Conditions,
   type NormalizedRule,
   normalizeRules,
-  type RuleObject,
-  TOKEN_OPERATIONS,
-  type TokenOperation,
 } from './matcher/normalizeRules.ts'
 import {
   compilePredicate,
   evaluatePredicate,
   type PredicatePlan,
 } from './matcher/predicate.ts'
+import {
+  CONDITIONAL_RULES,
+  type ConditionalRule,
+  type RuleObject,
+  TOKEN_OPERATIONS,
+  type TokenOperation,
+} from './rule-protocol.ts'
 
 const DEFAULT_CACHE_MAX = 1024
 
@@ -88,6 +90,8 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
       cacheMax?: number
       stateAliases?: readonly string[]
       platform?: 'web' | 'native'
+      /** Explicit descriptors resolve nested declarations in source order. */
+      sourceOrder?: boolean
     },
   ) {
     this.cssMediaMode = options?.cssMediaMode ?? false
@@ -101,6 +105,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
       cssMediaMode: this.cssMediaMode,
       cssPseudoMode: this.cssPseudoMode,
       stateAliases: options?.stateAliases,
+      sourceOrder: options?.sourceOrder,
     })
     this.scheme = normalized.scheme
     this.list = normalized.list

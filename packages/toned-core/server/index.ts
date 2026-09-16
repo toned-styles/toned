@@ -4,7 +4,7 @@ import type { OutputBackend, ResolvedProps } from '../backends/index.ts'
 import { cssVariablesBackend, nativeBackend } from '../backends/index.ts'
 import type { BuildManifest } from '../build/index.ts'
 import {
-  collectManifestConditions,
+  assertManifestConditions,
   systemDefinition,
 } from '../build/manifest.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
@@ -41,7 +41,6 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     )
   const tokens = immutableSnapshot(options.tokens)
   const matchers = new WeakMap<object, StyleMatcher>()
-  const emitted = new Set(options.manifest?.conditions ?? [])
   return Object.freeze({
     backend,
     resolve<T extends object>(
@@ -79,15 +78,10 @@ export function createRenderer<S extends TokenStyleDeclaration>(
             throw new Error(
               'Toned web renderer: a pre-generated CSS manifest is required',
             )
-          const needed = new Set<string>()
-          collectManifestConditions(rules, needed)
-          for (const atom of needed)
-            if (!emitted.has(atom))
-              throw new Error(
-                `Toned manifest: undeclared condition ${atom}; include this sheet in buildStyles and regenerate CSS`,
-              )
+          assertManifestConditions(options.manifest, rules)
         }
         matcher = new StyleMatcher(rules, {
+          sourceOrder: !!system.id,
           platform: backend.platform,
           cssMediaMode: backend.browserConditions,
           cssPseudoMode: backend.browserConditions,

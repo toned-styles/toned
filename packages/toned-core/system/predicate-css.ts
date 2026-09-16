@@ -1,13 +1,10 @@
 import { atomSlug, parseConditionKey } from '../utils/conditions.ts'
 import type { QueryPredicate } from './queries.ts'
 
-export const CONDITIONAL_RULES = Symbol.for('@toned/conditionalRules')
-export type ConditionalRule = {
-  predicate: QueryPredicate
-  style: Record<string, unknown>
-  part: string
-  order: number
-}
+export {
+  CONDITIONAL_RULES,
+  type ConditionalRule,
+} from '../stylesheet/rule-protocol.ts'
 
 /** Compile an AST to custom-property guards without exponential DNF expansion.
  * A true guard is valid whitespace; a false guard is guaranteed-invalid. AND

@@ -17,7 +17,12 @@ import {
 
 export type { SystemDefinition, SystemOptions } from './definition.ts'
 
-import type { TokenOperation } from '../stylesheet/matcher/normalizeRules.ts'
+import {
+  CONDITIONAL_RULES,
+  type ConditionalRule,
+  TOKEN_OPERATIONS,
+  type TokenOperation,
+} from '../stylesheet/rule-protocol.ts'
 import type {
   AnimationInput,
   ResolveContext,
@@ -61,11 +66,7 @@ import {
   applyConditionalOrder,
   applyOperationOrder,
 } from './operation-order.ts'
-import {
-  CONDITIONAL_RULES,
-  type ConditionalRule,
-  compilePredicateGuard,
-} from './predicate-css.ts'
+import { compilePredicateGuard } from './predicate-css.ts'
 import { createQueries } from './queries.ts'
 
 export type { TokenSystem }
@@ -1034,7 +1035,7 @@ export function defineSystem<
       }
 
       const operations = (tokenStyle as Record<symbol, unknown>)[
-        Symbol.for('@toned/operations')
+        TOKEN_OPERATIONS
       ] as readonly TokenOperation[] | undefined
       const resolveOrdered = (declaration: Record<string, unknown>) =>
         execute(

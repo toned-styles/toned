@@ -1,32 +1,15 @@
 /** Build-only CSS generation. This entry imports no DOM injector or React hook. */
-import { generate } from '../dom/generate.ts'
+import { generateArtifact } from './artifact.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
-import { collectManifestConditions, systemDefinition } from './manifest.ts'
+import { collectManifestConditions } from './manifest.ts'
+import type { BuildArtifact } from './manifest.ts'
+export { assertManifestConditions, assertBuildArtifact } from './manifest.ts'
+export type { BuildManifest, BuildArtifact } from './manifest.ts'
 
 export { generate } from '../dom/generate.ts'
 export type { GeneratePaletteOptions } from '../dom/palette.ts'
 export { generatePalette } from '../dom/palette.ts'
-
-export type BuildManifest = Readonly<{
-  version: 1
-  systemId: string
-  /** Exact static schema, including named thresholds and token vocabulary. */
-  definition: string
-  /** Ad-hoc condition atoms. Named conditions belong to definition. */
-  conditions: readonly string[]
-  fingerprint: string
-}>
-
-export type BuildArtifact = Readonly<{ css: string; manifest: BuildManifest }>
-
-/** Stable content identifier, not a security hash or an equality shortcut. */
-function fingerprint(text: string): string {
-  let hash = 2166136261
-  for (let i = 0; i < text.length; i++)
-    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
-  return (hash >>> 0).toString(36)
-}
 
 export function buildStyles<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,
@@ -52,40 +35,9 @@ export function buildStyles<S extends TokenStyleDeclaration>(
     throw new Error(
       'Toned build: systemId must match the runtime system namespace',
     )
-  if (
-    options.layer &&
-    !/^[a-zA-Z_][\w-]*(?:\.[a-zA-Z_][\w-]*)*$/.test(options.layer)
-  )
-    throw new Error('Toned build: layer must be a CSS layer name')
-  const output = generate(system.system, {
-    scope: options.scope,
+  return generateArtifact(system.system, {
+    ...options,
+    systemId: system.id,
     conditions,
-    ...(systemId === 'legacy' ? {} : { id: systemId }),
   })
-  const css = options.layer
-    ? `@layer ${options.layer} {\n${output}\n}\n`
-    : output
-  const manifest = Object.freeze({
-    version: 1 as const,
-    systemId,
-    definition: systemDefinition(system.system),
-    conditions,
-    fingerprint: fingerprint(css),
-  })
-  return Object.freeze({ css, manifest })
-}
-
-export function assertManifestConditions(
-  manifest: BuildManifest,
-  rules: unknown,
-): void {
-  const needed = new Set<string>()
-  collectManifestConditions(rules, needed)
-  const emitted = new Set(manifest.conditions)
-  for (const atom of needed) {
-    if (!emitted.has(atom))
-      throw new Error(
-        `Toned manifest ${manifest.systemId}: undeclared condition ${atom}; add the stylesheet to buildStyles({ sheets }) and regenerate CSS`,
-      )
-  }
 }

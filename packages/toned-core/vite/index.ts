@@ -1,13 +1,24 @@
 import { resolve } from 'node:path'
 import type { Plugin } from 'vite'
-import { generate } from '../dom/generate.ts'
-import type { TokenStyleDeclaration } from '../types/index.ts'
+import { buildStyles } from '../build/index.ts'
+import { generateArtifact } from '../build/artifact.ts'
+import type { BuildArtifact } from '../build/manifest.ts'
+import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
 const VIRTUAL_ID = 'virtual:toned.css'
 const RESOLVED_ID = '\0virtual:toned.css'
+const MANIFEST_ID = 'virtual:toned.manifest'
+const RESOLVED_MANIFEST_ID = '\0virtual:toned.manifest'
 
-export interface TonedPluginOptions {
-  system: TokenStyleDeclaration
+export interface TonedPluginOptions<
+  S extends TokenStyleDeclaration = TokenStyleDeclaration,
+> {
+  /** Prefer the complete system ref, which carries its runtime namespace. */
+  system: S | TokenSystem<S>
+  /** Explicit sheets, including lazy declarations; recollect on watched changes. */
+  sheets?:
+    | readonly object[]
+    | (() => readonly object[] | Promise<readonly object[]>)
   /**
    * Wrap the generated stylesheet in a CSS cascade layer.
    *
@@ -29,22 +40,39 @@ export interface TonedPluginOptions {
     | (() => readonly string[] | Promise<readonly string[]>)
 }
 
-export default function toned(options: TonedPluginOptions): Plugin {
+export default function toned<S extends TokenStyleDeclaration>(
+  options: TonedPluginOptions<S>,
+): Plugin {
   let inputs = new Set<string>()
-  const render = async () => {
+  let artifact: Promise<BuildArtifact> | undefined
+  const render = async (): Promise<BuildArtifact> => {
     const conditions =
       typeof options.conditions === 'function'
         ? await options.conditions()
         : options.conditions
-    const generated = generate(options.system, {
-      id: options.id,
-      scope: options.scope,
+    const sheets =
+      typeof options.sheets === 'function'
+        ? await options.sheets()
+        : (options.sheets ?? [])
+    const shared = {
       conditions,
-    })
-    return options.layer
-      ? `@layer ${options.layer} {\n${generated}\n}`
-      : generated
+      scope: options.scope,
+      layer: options.layer,
+      systemId: options.id,
+    }
+    if (typeof options.system.exec === 'function')
+      return buildStyles(options.system as TokenSystem<S>, {
+        ...shared,
+        sheets,
+      })
+    if (sheets.length)
+      throw new Error(
+        'Toned Vite: sheet collection requires the complete system ref',
+      )
+    // Legacy raw declarations do not carry their namespace; id remains explicit.
+    return generateArtifact(options.system as S, shared)
   }
+  const collect = () => (artifact ??= render())
 
   return {
     name: 'toned',
@@ -54,22 +82,30 @@ export default function toned(options: TonedPluginOptions): Plugin {
       )
     },
     buildStart() {
+      artifact = undefined
       for (const file of inputs) this.addWatchFile(file)
     },
     resolveId(id: string) {
       if (id === VIRTUAL_ID) return RESOLVED_ID
+      if (id === MANIFEST_ID) return RESOLVED_MANIFEST_ID
     },
     async load(id: string) {
       if (id === RESOLVED_ID) {
-        return render()
+        return (await collect()).css
       }
+      if (id === RESOLVED_MANIFEST_ID)
+        return `export default ${JSON.stringify((await collect()).manifest)}`
     },
     handleHotUpdate(ctx) {
       if (!inputs.has(ctx.file)) return
-      const module = ctx.server.moduleGraph.getModuleById(RESOLVED_ID)
-      if (!module) return
-      ctx.server.moduleGraph.invalidateModule(module)
-      return [module]
+      artifact = undefined
+      const modules = [RESOLVED_ID, RESOLVED_MANIFEST_ID].flatMap((id) => {
+        const module = ctx.server.moduleGraph.getModuleById(id)
+        if (!module) return []
+        ctx.server.moduleGraph.invalidateModule(module)
+        return [module]
+      })
+      return modules
     },
   }
 }

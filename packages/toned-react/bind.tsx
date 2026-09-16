@@ -1,4 +1,9 @@
-import { type Config, type ElementType, getConfig, SYMBOL_INIT } from '@toned/core'
+import {
+  type Config,
+  type ElementType,
+  getConfig,
+  SYMBOL_INIT,
+} from '@toned/core'
 import {
   type Context,
   createContext,
@@ -135,7 +140,11 @@ function buildBoundElement(
   function RenderCore(props: AnyProps = {}): ReactElement {
     // `key` is a declared element, so the getter never yields undefined.
     const snapshot = useContext(renderContext)
-    const committed = useSyncExternalStore(subscribeToInstance, getInstance, getInstance)
+    const committed = useSyncExternalStore(
+      subscribeToInstance,
+      getInstance,
+      getInstance,
+    )
     const instance = snapshot ?? committed
     useLayoutEffect(() => {
       // Module-level bind has no owning hook; the mounted host supplies its
@@ -202,7 +211,10 @@ function buildBoundElement(
           // measure props keep one identity for the element's life.
           // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
           const measureProps = useMemo(
-            () => config.measureContainerProps?.(w => setWidth(prev => (prev === w ? prev : w))),
+            () =>
+              config.measureContainerProps?.((w) =>
+                setWidth((prev) => (prev === w ? prev : w)),
+              ),
             [config],
           )
           const children = createElement(
@@ -221,7 +233,10 @@ function buildBoundElement(
 }
 
 /** Publish compatibility accessors only from a commit (or module-level bind). */
-export function reflectBags(map: Record<string, BoundElement>, instance: Instance): void {
+export function reflectBags(
+  map: Record<string, BoundElement>,
+  instance: Instance,
+): void {
   for (const key in map) {
     const comp = map[key]!
     const bag = instance[key]!
@@ -250,7 +265,10 @@ export function reflectBags(map: Record<string, BoundElement>, instance: Instanc
 export function bind(styles: StylesheetLike): Record<string, BoundElement> {
   const config = getConfig()
   const instance = styles[SYMBOL_INIT](config, undefined) as Instance
-  const map = buildBoundMap(() => instance, (instance as AnyProps)['config'] ?? config)
+  const map = buildBoundMap(
+    () => instance,
+    (instance as AnyProps)['config'] ?? config,
+  )
   reflectBags(map, instance)
   return map
 }
@@ -266,10 +284,9 @@ export function useBind(
   ...mods: [] | [AnyProps]
 ): Record<string, BoundElement> {
   // useStyles supplies a private render candidate; publication happens below.
-  const instance = (useStyles as unknown as (s: StylesheetLike, m?: AnyProps) => Instance)(
-    styles,
-    mods[0],
-  )
+  const instance = (
+    useStyles as unknown as (s: StylesheetLike, m?: AnyProps) => Instance
+  )(styles, mods[0])
 
   const config = useRuntimeConfig()
   // The candidate is the initial snapshot only; later candidates publish below.
@@ -285,7 +302,7 @@ export function useBind(
     store.map = buildBoundMap(
       () => store.current,
       (instance as AnyProps)['config'] ?? config,
-      listener => {
+      (listener) => {
         store.listeners.add(listener)
         return () => {
           store.listeners.delete(listener)
@@ -317,6 +334,10 @@ export function useBind(
     ...store.map,
     $props: props as any,
     $scope: ((children: ReactNode) =>
-      createElement(store.context.Provider, { value: instance }, children)) as any,
+      createElement(
+        store.context.Provider,
+        { value: instance },
+        children,
+      )) as any,
   }
 }

@@ -97,6 +97,12 @@ host mutations and before paint. Suspended renders cannot publish variants,
 theme values, refs, or subscriptions. Events continue to update the committed
 controller and patch hosts directly, without rendering React.
 
+Web callback-ref cleanup restores the departing controller's last committed
+declaration before React mutates replacement props. This clears interaction-only
+styles that React never declared. Deferred final release only drops bookkeeping,
+so a reused DOM node keeps its new caller's styles and classes, including values
+identical to the old declaration. Surviving controllers retain their own requests.
+
 Bare bound components refresh from the committed store in layout, before paint.
 When child layout effects must measure the new styles during that same commit,
 use the optional render scope:

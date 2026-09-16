@@ -26,9 +26,15 @@ import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { warnOnce } from '../utils/warn.ts'
-import { recordHostCommit, releaseHost, setStyles } from './applyStyles.ts'
+import {
+  prepareHostRelease,
+  recordHostCommit,
+  releaseHost,
+  setStyles,
+} from './applyStyles.ts'
 import { initMedia } from './media.ts'
 import { registerStylesheetPlan } from './plans.ts'
+import { RULE_LAYERS, WHEN_RULES } from './rule-protocol.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import {
   deepMerge,
@@ -75,6 +81,7 @@ function sharedMatcher(
   cssPseudoMode: boolean,
   stateAliases: readonly string[],
   platform?: 'web' | 'native',
+  sourceOrder = false,
 ): StyleMatcher {
   let byMode = MATCHER_CACHE.get(rules)
   if (!byMode) {
@@ -84,7 +91,8 @@ function sharedMatcher(
   const key =
     (cssMediaMode ? 1 : 0) |
     (cssPseudoMode ? 2 : 0) |
-    (platform === 'native' ? 4 : platform === 'web' ? 8 : 0)
+    (platform === 'native' ? 4 : platform === 'web' ? 8 : 0) |
+    (sourceOrder ? 16 : 0)
   let matcher = byMode.get(key)
   if (!matcher) {
     // stateAliases are constant for a given rules object (one system per
@@ -94,6 +102,7 @@ function sharedMatcher(
       cssPseudoMode,
       stateAliases,
       platform,
+      sourceOrder,
     })
     byMode.set(key, matcher)
   }
@@ -103,11 +112,11 @@ function sharedMatcher(
 /*
  * One media emitter per token system, not per Base.
  *
- * `initMedia` registers matchMedia listeners that are never removed, so a
- * per-Base emitter leaked a listener set per component instance for the page's
- * life. Shared per system (weakly), with each Base subscribing through a
- * WeakRef so a garbage-collected instance's subscription self-prunes on the
- * next media change instead of pinning the Base forever.
+ * The emitter connects matchMedia listeners on its first subscription and
+ * disconnects after the last unsubscribe. Each committed Base subscribes
+ * strongly; balanced mount/unmount calls dispose the last mount and release
+ * its subscription. The weak cache shares query objects without making
+ * unmounted systems permanent roots.
  */
 const MEDIA_CACHE = new WeakMap<object, ReturnType<typeof initMedia>>()
 
@@ -145,13 +154,9 @@ function elementNamesOf(rules: AnyValue): Set<string> {
 /**
  * Merge an override's variant rules into a sheet's own table.
  *
- * THE KEY ORDER IS THE SHEET'S, and that is the whole reason this is resolved
- * here rather than where the override was written. A matcher key is built by
- * concatenating axes in a fixed order — `[size=sm][variant=ghost]` — so an
- * override that spelled `$.variant('ghost').size('sm')` would otherwise
- * generate a different string, and ADD a matcher where it meant to REPLACE
- * one. Seeding the selector with the sheet's axes first makes the two agree
- * however the override is written.
+ * Selector keys sort their axes and values canonically. The sheet and an
+ * override therefore agree whether a caller writes $.size('sm').variant('ghost')
+ * or $.variant('ghost').size('sm'); no sheet-specific axis seeding is required.
  *
  * Where a matcher exists in both, the override's element rules merge onto the
  * sheet's, property by property, so an override changes what it names and
@@ -225,12 +230,12 @@ export function createStylesheet<
   // Merge base rules with variants - StyleMatcher handles the format directly
   const mergedRules = { ...mergeRules(rules, variantRules) }
   if (whenRules.length)
-    Object.defineProperty(mergedRules, Symbol.for('@toned/when'), {
+    Object.defineProperty(mergedRules, WHEN_RULES, {
       value: whenRules,
       enumerable: true,
     })
   if (overrideLayers.length)
-    Object.defineProperty(mergedRules, Symbol.for('@toned/layers'), {
+    Object.defineProperty(mergedRules, RULE_LAYERS, {
       value: overrideLayers,
       enumerable: true,
     })
@@ -473,6 +478,7 @@ export class Base {
       pseudoMode === 'css',
       stateAliases,
       this.config.platform,
+      !!this.ref.id,
     )
 
     if (mediaMode === false && this.matcher.hasMediaRules) {
@@ -597,6 +603,8 @@ export class Base {
       attached = false
       detachGrid?.()
       refs.delete(node)
+      if (ATTACHMENTS.get(node)?.get(this.family)?.generation === generation)
+        prepareHostRelease(node, this.family)
       // React detaches and reattaches callback refs in one commit. Retain
       // transient facts through that handoff, then discard true unmounts.
       queueMicrotask(() => {
