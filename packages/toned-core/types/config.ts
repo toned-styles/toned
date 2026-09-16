@@ -18,6 +18,9 @@ import type { ElementType, Tokens } from './tokens.ts'
 export type Platform = 'web' | 'native'
 
 export type Config = Readonly<{
+  /** Native host writes require an explicitly integrated renderer adapter. */
+  nativeHost?: import('../stylesheet/native-host.ts').NativeHostAdapter
+
   /** Explicit output adapter; host platform must agree. */
   backend?: OutputBackend
 

@@ -1,5 +1,5 @@
 import type { GridArea, GridDefinition } from './index.ts'
-import { createGridScope } from './index.ts'
+import { createGridScope, sameGridFamily } from './index.ts'
 
 export interface GridHostElement {
   parentElement: GridHostElement | null
@@ -17,7 +17,7 @@ function connect(element: GridHostElement, strict: boolean): void {
   const binding = bindings.get(element)
   if (!binding?.area) return
   const parent = element.parentElement && bindings.get(element.parentElement)
-  if (!parent?.scope || parent.scope.grid !== binding.area.grid) {
+  if (!parent?.scope || !sameGridFamily(parent.scope.grid, binding.area.grid)) {
     binding.detachArea?.()
     delete binding.detachArea
     if (strict) {

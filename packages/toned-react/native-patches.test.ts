@@ -1,3 +1,17 @@
+import type { NativeHostAdapter } from '@toned/core/stylesheet'
+
+const fixtureNativeHost: NativeHostAdapter = {
+  id: 'toned-react-test/merge-patch',
+  renderer: 'custom',
+  version: '1',
+  accepts: (host) =>
+    typeof (host as { setNativeProps?: unknown }).setNativeProps === 'function',
+  patch: (host, props) =>
+    (host as { setNativeProps(props: unknown): void }).setNativeProps(props),
+  resetStyle: () => null,
+  resetProp: () => null,
+}
+
 import { defineSystem } from '@toned/core'
 import { Base } from '@toned/core/stylesheet'
 import { describe, expect, test } from 'vitest'
@@ -16,6 +30,7 @@ function setup() {
     },
     config: {
       ...native,
+      nativeHost: fixtureNativeHost,
       getTokens: () => ({}),
       useClassName: false,
       mediaMode: false,
@@ -45,6 +60,23 @@ describe('native host patch contract', () => {
 
   test('unsupported refs fail at the native binding boundary', () => {
     const { props } = setup()
-    expect(() => props.ref({})).toThrow(/setNativeProps/)
+    expect(() => props.ref({})).toThrow(/Host rejected/)
   })
+})
+
+test('the default native binding rejects unsupported backend values even for legacy systems', () => {
+  expect(() =>
+    new Base({
+      ref: defineSystem({}),
+      config: { ...native, getTokens: () => ({}) },
+      rules: { Root: { style: { color: 'rgb(from red r g b / 50%)' } } },
+    }).getCurrentStyle('Root'),
+  ).toThrow(/CSS-only value/)
+  expect(() =>
+    new Base({
+      ref: defineSystem({}),
+      config: { ...native, getTokens: () => ({}) },
+      rules: { Root: { style: { cursor: 'pointer' } } },
+    }).getCurrentStyle('Root'),
+  ).toThrow(/unsupported style field cursor/)
 })

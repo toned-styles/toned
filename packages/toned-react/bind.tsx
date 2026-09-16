@@ -8,16 +8,20 @@ import {
   type Context,
   createContext,
   createElement,
+  type ForwardedRef,
+  forwardRef,
   type ReactElement,
   type ReactNode,
   useContext,
   useLayoutEffect,
   useMemo,
-  useState,
   useSyncExternalStore,
 } from 'react'
-import { ContainerSizesContext } from './containers.tsx'
+import { ContainerSizesStore } from './container-store.ts'
+import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
+import { addWith } from './host-props.ts'
 import { useRuntimeConfig } from './runtime-config.ts'
+import { controllerOf, elementProps } from './style-view.ts'
 
 /**
  * What a web intrinsic IMPLIES about the element's nature, for the native
@@ -84,6 +88,7 @@ export type BoundElement = ((props?: AnyProps) => ReactElement) & Bag
 const EmptyRenderContext = createContext<Instance | null>(null)
 
 type Instance = Record<string, Bag> & {
+  config: Config
   elementDescriptors: () => Array<{ key: string; type?: ElementType }>
 }
 
@@ -137,7 +142,11 @@ function buildBoundElement(
   // import from a component nobody rendered. Deferring it to render keeps the
   // component identity stable (identity is `Comp`, cached once — not `El`).
   let El: unknown
-  function RenderCore(props: AnyProps = {}): ReactElement {
+  function RenderCore(
+    props: AnyProps = {},
+    forwardedRef?: ForwardedRef<unknown>,
+  ): ReactElement {
+    if (forwardedRef) props = { ...props, ref: forwardedRef }
     // `key` is a declared element, so the getter never yields undefined.
     const snapshot = useContext(renderContext)
     const committed = useSyncExternalStore(
@@ -152,7 +161,7 @@ function buildBoundElement(
       if (!subscribe) return (instance as AnyProps)['mount']?.()
       ;(instance as AnyProps)['validateHosts']?.()
     }, [instance, subscribe])
-    const bag = instance[key]!
+    const bag = elementProps(instance, key) as Bag
     // `as` overrides the `$$type`-selected primitive for this render: the
     // element renders exactly that component/intrinsic, with every other
     // prop merged through the same with() path. It never reaches the DOM.
@@ -197,39 +206,65 @@ function buildBoundElement(
         ).containerName?.(key)
       : undefined
 
-  const Comp = (
+  const MeasuredHost = forwardRef(RenderCore)
+  const Comp =
     containerOf === undefined
-      ? RenderCore
-      : (props?: AnyProps): ReactElement => {
-          const parentSizes = useContext(ContainerSizesContext)
-          const [width, setWidth] = useState(0)
-          const sizes = useMemo(
-            () => ({ ...parentSizes, [containerOf]: width }),
-            [parentSizes, width],
-          )
-          // setWidth is stable and the config seam is read once: the
-          // measure props keep one identity for the element's life.
-          // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
-          const measureProps = useMemo(
-            () =>
-              config.measureContainerProps?.((w) =>
-                setWidth((prev) => (prev === w ? prev : w)),
-              ),
-            [config],
-          )
-          const children = createElement(
-            ContainerSizesContext.Provider,
-            { value: sizes },
-            props?.['children'] as never,
-          )
-          return createElement<AnyProps>(RenderCore, {
-            ...props,
-            ...measureProps,
-            children,
-          })
-        }
-  ) as BoundElement
-  return Comp
+      ? MeasuredHost
+      : forwardRef<unknown, AnyProps>(
+          function ContainerPart(props, ref): ReactElement {
+            const legacy = useContext(ContainerSizesContext)
+            const parent = useContext(ContainerStoreContext)
+            // containerOf belongs to this component factory and cannot change
+            // during the lifetime of a mounted ContainerPart.
+            const ownMeasurement = useMemo(
+              () => new ContainerSizesStore(undefined, { [containerOf]: 0 }),
+              [],
+            )
+            const scope = useMemo(
+              () => ({
+                store: new ContainerSizesStore(parent?.store, {
+                  ...(parent?.legacy === legacy ? {} : legacy),
+                  [containerOf]: ownMeasurement.snapshot()[containerOf]!,
+                }),
+                legacy,
+              }),
+              [parent, legacy, ownMeasurement],
+            )
+            useLayoutEffect(() => {
+              const sync = () =>
+                scope.store.set(
+                  containerOf,
+                  ownMeasurement.snapshot()[containerOf]!,
+                )
+              const stop = ownMeasurement.subscribe(sync)
+              sync()
+              return stop
+            }, [scope, ownMeasurement])
+            // Measurement facts update the stable store directly. React is only
+            // involved when the actual parent scope or host config changes.
+            // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
+            const measureProps = useMemo(
+              () =>
+                config.measureContainerProps?.((width) =>
+                  ownMeasurement.set(containerOf, width),
+                ),
+              [config, ownMeasurement, containerOf],
+            )
+            const children = createElement(
+              ContainerStoreContext.Provider,
+              { value: scope },
+              props?.['children'] as never,
+            )
+            const measuredProps = addWith({ ...measureProps })['withProps'](
+              ref ? { ...props, ref } : props,
+            )
+            return createElement<AnyProps>(MeasuredHost, {
+              ...measuredProps,
+              children,
+            })
+          },
+        )
+  return Comp as unknown as BoundElement
 }
 
 /** Publish compatibility accessors only from a commit (or module-level bind). */
@@ -239,7 +274,7 @@ export function reflectBags(
 ): void {
   for (const key in map) {
     const comp = map[key]!
-    const bag = instance[key]!
+    const bag = elementProps(instance, key) as Bag
     if (!bag)
       throw new Error(
         `[toned] Bound part ${key} has no prop accessor; available parts: ${Object.getOwnPropertyNames(Object.getPrototypeOf(instance)).join(', ')}`,
@@ -284,9 +319,12 @@ export function useBind(
   ...mods: [] | [AnyProps]
 ): Record<string, BoundElement> {
   // useStyles supplies a private render candidate; publication happens below.
-  const instance = (
-    useStyles as unknown as (s: StylesheetLike, m?: AnyProps) => Instance
-  )(styles, mods[0])
+  const instance = controllerOf(
+    (useStyles as unknown as (s: StylesheetLike, m?: AnyProps) => object)(
+      styles,
+      mods[0],
+    ),
+  ) as Instance
 
   const config = useRuntimeConfig()
   // The candidate is the initial snapshot only; later candidates publish below.
@@ -327,7 +365,7 @@ export function useBind(
     Object.defineProperty(props, key, {
       enumerable: true,
       // Each access binds a different host to this same render snapshot.
-      get: () => instance[key]!,
+      get: () => elementProps(instance, key) as Bag,
     })
   Object.freeze(props)
   return {

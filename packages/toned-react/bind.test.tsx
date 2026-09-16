@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 
 import { cleanup, render } from '@testing-library/react'
+import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 // The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
 import * as React from 'react'
-import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
 import { bind, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
@@ -59,7 +59,9 @@ describe('bind (mod-less)', () => {
     const { container } = render(<Root data-slot="d" />)
     // react-web resolves 'view' to a div; the point is that resolveElement
     // received 'view', not undefined — the default is core contract.
-    expect((container.querySelector('[data-slot="d"]') as HTMLElement).tagName).toBe('DIV')
+    expect(
+      (container.querySelector('[data-slot="d"]') as HTMLElement).tagName,
+    ).toBe('DIV')
   })
 
   test('a STRING as is a web refinement: native falls back to the $$type primitive', () => {
@@ -80,7 +82,7 @@ describe('bind (mod-less)', () => {
     }
   })
 
-  test('native string-as fallback: the tag INFERS the type when \$\$type is undeclared', () => {
+  test('native string-as fallback: the tag INFERS the type when $$type is undeclared', () => {
     // as="h2" is a text element — native renders Text, not the default View.
     const styles = stylesheet({ Root: { cur: 'pointer' } })
     const prev = { ...getConfig() }
@@ -89,7 +91,8 @@ describe('bind (mod-less)', () => {
       platform: 'native',
       resolveElement: (t?: string) => {
         seen.push(t)
-        return (props: Record<string, unknown>) => React.createElement('x-prim', props)
+        return (props: Record<string, unknown>) =>
+          React.createElement('x-prim', props)
       },
     })
     try {
@@ -106,12 +109,15 @@ describe('bind (mod-less)', () => {
     const prev = { ...getConfig() }
     setConfig({ platform: 'native', resolveElement: () => 'div' })
     try {
-      const Foreign = (props: Record<string, unknown>) =>
-        React.createElement('x-foreign', props)
+      const Foreign = React.forwardRef((props: Record<string, unknown>, ref) =>
+        React.createElement('x-foreign', { ...props, ref }),
+      )
       const { Root } = bind(styles)
       const { container } = render(<Root as={Foreign} data-slot="f" />)
       expect(
-        (container.querySelector('[data-slot="f"]') as HTMLElement).tagName.toLowerCase(),
+        (
+          container.querySelector('[data-slot="f"]') as HTMLElement
+        ).tagName.toLowerCase(),
       ).toBe('x-foreign')
     } finally {
       setConfig(prev)
@@ -129,7 +135,9 @@ describe('as — the per-render element override', () => {
   test('as="button" renders that intrinsic instead of the $$type primitive', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
     const { Root } = bind(styles)
-    const { container } = render(<Root as="button" type="submit" data-slot="z" />)
+    const { container } = render(
+      <Root as="button" type="submit" data-slot="z" />,
+    )
     const el = container.querySelector('[data-slot="z"]') as HTMLButtonElement
     expect(el.tagName).toBe('BUTTON')
     expect(el.type).toBe('submit')
@@ -139,10 +147,13 @@ describe('as — the per-render element override', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
     const { Root } = bind(styles)
     let seen: Record<string, unknown> | undefined
-    const Comp = (props: { className?: string; 'data-x'?: string }) => {
+    const Comp = React.forwardRef<
+      HTMLElement,
+      { className?: string; 'data-x'?: string }
+    >((props, ref) => {
       seen = props
-      return <section {...props} />
-    }
+      return <section {...props} ref={ref} />
+    })
     render(<Root as={Comp} className="mine" data-x="y" />)
     expect(seen?.['data-x']).toBe('y')
     // the caller's className merges through the same with() path.
@@ -183,9 +194,11 @@ describe('useBind (hook, mods in the call)', () => {
       )
     }
     const { rerender, container } = render(<View tone="a" />)
-    const a = (container.querySelector('[data-slot="r"]') as HTMLElement).className
+    const a = (container.querySelector('[data-slot="r"]') as HTMLElement)
+      .className
     rerender(<View tone="b" />)
-    const b = (container.querySelector('[data-slot="r"]') as HTMLElement).className
+    const b = (container.querySelector('[data-slot="r"]') as HTMLElement)
+      .className
     expect(stableAcrossMods).toBe(true)
     expect(a).not.toBe(b)
   })

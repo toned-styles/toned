@@ -239,7 +239,7 @@ test('a scoped bound child that suspends cannot leak its candidate styles', asyn
   expect(view.getByTestId('target').style.opacity).toBe('0')
 })
 
-test('an explicit Tailwind backend patches classes through a mounted host without rendering React', () => {
+test('an unbuilt Tailwind profile cannot mount without validated CSS delivery', () => {
   install()
   const backend = createTailwindBackend({
     id: 'test-utilities',
@@ -249,24 +249,17 @@ test('an explicit Tailwind backend patches classes through a mounted host withou
       { field: 'opacity', value: 1, utility: 'opacity-100' },
     ],
   })
-  let renders = 0
   function View() {
-    renders++
     const s = useStyles(sheet, { on: false })
     return <div {...s.Root} data-testid="utility" />
   }
-  const view = render(
-    <ConfigProvider config={{ ...getConfig(), backend }}>
-      <View />
-    </ConfigProvider>,
-  )
-  const target = view.getByTestId('utility')
-  expect(target.className).toBe('opacity-0')
-  fireEvent.mouseEnter(target)
-  expect(target.className).toBe('opacity-50')
-  fireEvent.mouseLeave(target)
-  expect(target.className).toBe('opacity-0')
-  expect(renders).toBe(1)
+  expect(() =>
+    render(
+      <ConfigProvider config={{ ...getConfig(), backend }}>
+        <View />
+      </ConfigProvider>,
+    ),
+  ).toThrow('requires a validated build artifact')
 })
 
 test('scoped bound styles render on the server and hydrate without runtime CSS insertion', async () => {
@@ -294,10 +287,13 @@ test('composed bound components keep independent ownership on the same host', ()
   install()
   setConfig({ useClassName: true })
   const outer = defineSystem({}).stylesheet({ Label: {} })
-  function Inner(props: React.ComponentProps<'label'>) {
+  const Inner = React.forwardRef<
+    HTMLLabelElement,
+    React.ComponentProps<'label'>
+  >((props, ref) => {
     const s = useBind(sheet, { on: false })
-    return <s.Root as="label" {...props} />
-  }
+    return <s.Root as="label" {...props} ref={ref} />
+  })
   function View({ tick }: { tick: number }) {
     const s = useBind(outer)
     return (

@@ -45,3 +45,17 @@ test('committed mismatched identity and wrapper placement still fail', () => {
   detachChild()
   detachChild()
 })
+
+test('a responsive layout preserves registration with original family areas', () => {
+  const first = definition()
+  const alternate = first.variant({ columns: [fr(2)], areas: [['body']] })
+  const { parent, child } = tree()
+  const detachChild = attachGridElement(child, { area: first.area('body') })
+  const detachParent = attachGridElement(parent, { grid: alternate })
+  expect(() => validateGridElement(child)).not.toThrow()
+  detachParent()
+  const reattachParent = attachGridElement(parent, { grid: first })
+  expect(() => validateGridElement(child)).not.toThrow()
+  detachChild()
+  reattachParent()
+})

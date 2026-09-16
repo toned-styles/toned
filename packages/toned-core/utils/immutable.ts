@@ -1,9 +1,10 @@
 import { isGrid, isGridArea } from '../grid/index.ts'
+import { isWebRules } from '../web/rules.ts'
 
 /** Snapshot declaration data without altering opaque runtime values or functions. */
 export function immutableSnapshot<T>(value: T): T {
   // These immutable references identify a layout owner; cloning changes meaning.
-  if (isGrid(value) || isGridArea(value)) return value
+  if (isGrid(value) || isGridArea(value) || isWebRules(value)) return value
   if (Array.isArray(value))
     return Object.freeze(value.map(immutableSnapshot)) as T
   if (

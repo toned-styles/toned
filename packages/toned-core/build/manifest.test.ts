@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { createWebRenderer } from '../server/index.ts'
-import { defineSystem } from '../system/definers.ts'
+import { defineSystem, defineToken } from '../system/definers.ts'
 import {
   assertBuildArtifact,
   assertManifestConditions,
@@ -104,4 +104,18 @@ test('an explicitly named legacy system still gets its namespace', () => {
   }).resolve(sheet)
   expect(artifact.css).toContain('.legacy--opacity_0')
   expect(props.Root.className).toContain('legacy--opacity_0')
+})
+
+test('distinguishes anonymous legacy output from the explicit legacy namespace', () => {
+  const token = defineToken({
+    values: [1],
+    resolve: (value) => ({ gap: value }),
+  })
+  const anonymous = defineSystem({ gap: token })
+  const named = defineSystem({ id: 'legacy', tokens: { gap: token } })
+  const manifest = buildStyles(anonymous, { sheets: [] }).manifest
+  expect(manifest.namespace).toBe(null)
+  expect(() => createWebRenderer(named, { manifest, tokens: {} })).toThrow(
+    'namespace',
+  )
 })

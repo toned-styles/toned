@@ -1,6 +1,7 @@
 /** Differential host patches with per-controller requests and committed declarations. */
 import { camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
+import { nativeHostAdapter } from './native-host.ts'
 
 type Host = any
 type Style = Record<string, any>
@@ -84,6 +85,11 @@ export function recordHostCommit(
   owner: object = DEFAULT_OWNER,
 ) {
   if (!host) return
+  const native = nativeHostAdapter(host)
+  if (!native && !host.style)
+    throw new Error(
+      '[toned/native] Register a declared native host adapter before committing styles',
+    )
   const entry = stateFor(host)
   const state = entry.state
   const request = requestFor(entry, owner)
@@ -102,14 +108,14 @@ export function recordHostCommit(
   if (!Object.keys(previousDeclaration).length) request.output = toned
   const nextDeclaration = request.declarative['style']
   for (const key in { ...previousDeclaration['style'], ...nextDeclaration }) {
-    if (host.setNativeProps) {
+    if (native) {
       // React skips unchanged props, but a changed resting value really did
       // replace the imperative value. Invalidate that comparison baseline.
       if (
         !(key in state.previous) ||
         !Object.is(previousDeclaration['style']?.[key], nextDeclaration[key])
       )
-        state.previous[key] = nextDeclaration[key] ?? null
+        state.previous[key] = nextDeclaration[key] ?? native.resetStyle(key)
     } else {
       const live = read(host, key)
       if (state.previous[key] !== live) delete state.desired[key]
@@ -120,7 +126,7 @@ export function recordHostCommit(
     ...hostProps(previousDeclaration),
     ...hostProps(request.declarative),
   }) {
-    const value = request.declarative[key] ?? null
+    const value = request.declarative[key] ?? native?.resetProp(key) ?? null
     if (
       !(key in state.nativeProps) ||
       !Object.is(previousDeclaration[key], value)
@@ -140,7 +146,7 @@ export function recordHostCommit(
  * Other controllers keep their current requests until their own cleanup.
  */
 export function prepareHostRelease(host: Host, owner: object): void {
-  if (!host || host.setNativeProps) return
+  if (!host) return
   const entry = ownership.get(host)
   if (!entry?.owners.has(owner)) return
   writeStyles(host, aggregate(entry, owner), entry.state)
@@ -167,18 +173,23 @@ export const setStyles = (
   output: Style = {},
   owner: object = DEFAULT_OWNER,
 ) => {
-  if (!host || (!host.setNativeProps && !host.style)) return
+  if (!host) return
+  if (!nativeHostAdapter(host) && !host.style)
+    throw new Error(
+      '[toned/native] Register a declared native host adapter before writing styles',
+    )
   const entry = stateFor(host)
   requestFor(entry, owner).output = output
   writeStyles(host, aggregate(entry), entry.state)
 }
 
 function writeStyles(host: Host, output: Style, state: Ownership): void {
+  const native = nativeHostAdapter(host)
   const next = output['style'] ?? {}
   const patch: Style = {}
   for (const key in state.previous) {
     if (key in next) continue
-    if (host.setNativeProps) patch[key] = null
+    if (native) patch[key] = native.resetStyle(key)
     else if (read(host, key) === state.previous[key]) {
       const value = serializeCssValue(key, state.baseline[key])
       if (read(host, key) !== value) patch[key] = value
@@ -187,10 +198,8 @@ function writeStyles(host: Host, output: Style, state: Ownership): void {
   const previous: Style = {}
   const desired: Style = {}
   for (const key in next) {
-    const value = host.setNativeProps
-      ? next[key]
-      : serializeCssValue(key, next[key])
-    if (host.setNativeProps) {
+    const value = native ? next[key] : serializeCssValue(key, next[key])
+    if (native) {
       if (!(key in state.previous) || !Object.is(state.previous[key], value))
         patch[key] = value
     } else {
@@ -207,7 +216,7 @@ function writeStyles(host: Host, output: Style, state: Ownership): void {
     desired[key] = value
   }
   const nativePatch: Style = {}
-  if (host.setNativeProps) {
+  if (native) {
     const props = Object.fromEntries(
       Object.entries(output).filter(
         ([key]) => key !== 'style' && key !== 'className',
@@ -215,7 +224,7 @@ function writeStyles(host: Host, output: Style, state: Ownership): void {
     )
     for (const key in state.nativeProps)
       if (!(key in props)) {
-        const reset = null
+        const reset = native.resetProp(key)
         if (!Object.is(state.nativeProps[key], reset)) nativePatch[key] = reset
       }
     for (const key in props) {
@@ -225,14 +234,14 @@ function writeStyles(host: Host, output: Style, state: Ownership): void {
     }
     state.nativeProps = props
     if (Object.keys(patch).length) nativePatch['style'] = patch
-    if (Object.keys(nativePatch).length) host.setNativeProps(nativePatch)
+    if (Object.keys(nativePatch).length) native.patch(host, nativePatch)
   } else if (Object.keys(patch).length) {
     for (const key in patch) {
       if (key.startsWith('--')) host.style.setProperty(key, patch[key])
       else host.style[key] = patch[key]
     }
   }
-  if (!host.setNativeProps) {
+  if (!native) {
     for (const key in previous) previous[key] = read(host, key)
     const classes = new Set<string>(
       (output['className'] ?? '').split(/\s+/).filter(Boolean),

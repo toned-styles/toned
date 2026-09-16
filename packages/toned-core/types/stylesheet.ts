@@ -20,7 +20,9 @@ export type { SYMBOL_INIT, SYMBOL_REF }
 
 import type { GridArea, GridDefinition } from '../grid/index.ts'
 import type { QueryBuilder, QueryPredicate } from '../system/queries.ts'
+import type { WebRules } from '../web/rules.ts'
 export declare const DEFAULT_KIND: unique symbol
+export type DefaultSystemKind = { readonly [DEFAULT_KIND]: 'view' }
 
 import type { Config, Platform } from './config.ts'
 import type {
@@ -36,14 +38,14 @@ type InferBreakpoints<R> = R extends { media: infer M }
   ? M
   : R extends { breakpoints?: Breakpoints<infer X> }
     ? X
-    : never
+    : {}
 
 /**
  * Declared containers (`containers` config) → their `'<name>/<step>'`
  * condition keys, used exactly like breakpoint keys (`'@card/md': {…}`).
  */
 type InferContainerConditions<R> = R extends {
-  containers?: infer C extends Record<string, Record<string, number | string>>
+  containers?: infer C extends Record<string, Record<string, unknown>>
 }
   ? {
       [N in keyof C & string]: `${N}/${keyof C[N] & string}`
@@ -56,21 +58,18 @@ type InferContainerConditions<R> = R extends {
  * negations, and compound (`&`) / disjunctive (`|`) expressions — what the
  * `cq`/`bp`/`not`/`and`/`or` builders serialize to.
  *
- * These live at the ROOT level of a stylesheet ONLY, never inside an element
- * rule. Not a stylistic choice: any pattern-typed member inside the element
- * style type suppresses excess-property checking for the WHOLE element
- * literal in stylesheet()'s generic path — a `bogusToken` typo then passes
- * silently. The root object's keys are open by design (any key is an element
- * name), so patterns cost nothing there; the element level keeps the closed
- * enumerated sugar (`'@md'`, `'@card/sm'`) and full typo-safety.
+ * These also compose inside element rules. ValidateDeclaration checks the
+ * actual inferred keys recursively, so a pattern key cannot suppress token
+ * typo checks on the surrounding object.
  */
 type AdHocAtomKeys<R> = R extends {
-  containers?: infer C extends Record<string, Record<string, number | string>>
+  containers?: infer C extends Record<string, Record<string, unknown>>
 }
   ? { [N in keyof C & string]: `${N}/>=${string}` }[keyof C & string]
   : never
 
 type ConditionExprKeys<R> =
+  | `@>=${number}px`
   | `@${AdHocAtomKeys<R>}`
   // Wide on purpose: `not()` cannot statically name the atom it negates.
   | `@!${string}`
@@ -133,7 +132,10 @@ type Merge<D extends any[]> = D extends [infer First, ...infer Rest]
  */
 export type TFun<S extends TokenStyleDeclaration> = <D extends TokenStyle<S>[]>(
   ...values: [...D]
-) => Merge<D> & {
+) => Merge<D> & ResolvedTokenStyle<S>
+
+/** Public name for inferred shorthand/part bags during declaration emission. */
+export interface ResolvedTokenStyle<S extends TokenStyleDeclaration> {
   /** @internal */
   [SYMBOL_REF]: TokenSystem<S>
   /** Resolved inline styles */
@@ -202,7 +204,7 @@ export type ElementStyleNew<
     false
   >
 } & {
-  [K in InferContainerAliases<S>]?: ElementStyleNew<
+  [K in InferContainerAliases<S> | ConditionExprKeys<S>]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
@@ -243,10 +245,12 @@ export type ElementStyleNew<
     Parts,
     false
   >
-} & (Host extends 'web' ? { $grid?: GridDefinition; $area?: GridArea } : {})
+} & (Host extends 'web'
+    ? { $grid?: GridDefinition; $area?: GridArea; $webRules?: WebRules }
+    : {})
 
 type InferContainerAliases<S> = S extends {
-  containers?: infer C extends Record<string, Record<string, number | string>>
+  containers?: infer C extends Record<string, Record<string, unknown>>
 }
   ? {
       [N in keyof C & string]: `@container ${N} ${keyof C[N] & string}`
@@ -635,6 +639,7 @@ export interface StylesheetWithVariants<
     Elements,
     undefined
   >,
+  Defaults extends object = {},
 > {
   /** Advanced boolean rules are validated separately from element keys. */
   when<
@@ -652,8 +657,8 @@ export interface StylesheetWithVariants<
           >
         : never
     },
-  ): Stylesheet<S, Kinds, Mods> &
-    StylesheetWithVariants<S, Elements, Mods, Kinds>
+  ): Stylesheet<S, Kinds, Mods, Defaults> &
+    StylesheetWithVariants<S, Elements, Mods, Kinds, Defaults>
 
   /**
    * Define variants using a callback with type-safe selector proxy
@@ -675,12 +680,21 @@ export interface StylesheetWithVariants<
    * ```
    */
   /** Fully checked factory; the second call infers the actual return keys. */
-  variants<M extends ModType>(): <const Rules extends Record<string, unknown>>(
+  variants<M extends ModType>(): <
+    const Rules extends Record<string, unknown>,
+    const D extends Partial<M> = {},
+  >(
     callback: (
       $: VariantSelector<M>,
       q: QueryBuilder<S, Elements>,
     ) => Rules & CheckedVariantRules<S, Elements, Rules, Kinds>,
-  ) => Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
+    options?: {
+      defaults: D & {
+        [K in keyof D]: K extends keyof M ? Exclude<M[K], undefined> : never
+      }
+    },
+  ) => Stylesheet<S, Kinds, M, D> &
+    StylesheetWithVariants<S, Elements, M, Kinds, D>
 
   variants<M extends ModType>(
     callback: VariantsCallback<S, Elements, M, Kinds>,
@@ -726,12 +740,13 @@ export interface StylesheetWithVariants<
       Mods,
       ExtendKinds<Kinds, Extension>
     >,
-  ): Stylesheet<S, ExtendKinds<Kinds, Extension>, Mods> &
+  ): Stylesheet<S, ExtendKinds<Kinds, Extension>, Mods, Defaults> &
     StylesheetWithVariants<
       S,
       Elements | PickString<ExtractElements<Extension>>,
       Mods,
-      ExtendKinds<Kinds, Extension>
+      ExtendKinds<Kinds, Extension>,
+      Defaults
     >
 }
 
@@ -756,9 +771,18 @@ export type Stylesheet<
   S extends TokenStyleDeclaration,
   T extends Record<string, ElementType | undefined>,
   M extends ModType = never,
+  Defaults extends object = {},
 > = {
   [key in keyof T]: ReturnType<TFun<S>>
-} & {
+} & StylesheetMetadata<S, T, M, Defaults>
+
+/** Named metadata boundary keeps exported inferred sheets declaration-emittable. */
+export interface StylesheetMetadata<
+  S extends TokenStyleDeclaration,
+  T extends Record<string, ElementType | undefined>,
+  M extends ModType = never,
+  Defaults extends object = {},
+> {
   /** @internal */
   [SYMBOL_REF]: TokenSystem<S>
   /**
@@ -792,7 +816,7 @@ export type Stylesheet<
    * has no runtime value, so consumers cannot import it under
    * verbatimModuleSyntax. Optional and never assigned — type domain only.
    */
-  readonly __toned__?: { system: S; elements: T; mods: M }
+  readonly __toned__?: { system: S; elements: T; mods: M; defaults: Defaults }
 }
 
 /**

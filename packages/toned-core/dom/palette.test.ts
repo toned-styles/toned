@@ -13,10 +13,11 @@ const palette = definePalette(
     },
     // a bare string is theme-invariant
     radius: '12px',
-    // a partial map falls back to the default theme where a key is missing
+    // a partial map falls back to the explicitly selected theme where a key is missing
     ring: { dark: '#7f96ff' },
   },
   {
+    fallbackTheme: 'dark',
     themes: {
       light: { default: true, colorScheme: 'light' },
       dark: { colorScheme: 'dark' },
@@ -69,8 +70,8 @@ describe('generatePalette', () => {
     expect(css).toContain('--background: #0b0c10;')
   })
 
-  test('a partial map falls back to the default theme value', () => {
-    // `ring` has only a dark key → :root uses the default (dark) fallback
+  test('a partial map falls back to the explicitly selected theme value', () => {
+    // `ring` has only a dark key → :root uses the declared dark fallback
     const css = generatePalette(palette)
     // in the dark scope ring is its dark value; on :root it falls back to the
     // same (no light key), so both carry #7f96ff
@@ -84,4 +85,30 @@ describe('generatePalette', () => {
     // guarded so a manual choice wins
     expect(withMedia).toContain(':root:not([data-theme]):not(.light) {')
   })
+})
+
+test('incomplete palettes fail before generating undefined CSS', () => {
+  const themes = { light: { default: true }, dark: {} }
+  expect(() => definePalette({ ink: { dark: '#123' } }, { themes })).toThrow(
+    /ink.*light/,
+  )
+  expect(() =>
+    definePalette(
+      { ink: { dark: '#123' } },
+      { themes, fallbackTheme: 'light' },
+    ),
+  ).toThrow(/ink.*light/)
+  expect(() =>
+    definePalette(
+      { ink: { dark: '#123' } },
+      { themes, fallbackTheme: 'missing' },
+    ),
+  ).toThrow(/fallback theme/)
+  const palette = definePalette(
+    { ink: { dark: '#123' } },
+    { themes, fallbackTheme: 'dark' },
+  )
+  expect(generatePalette(palette)).not.toContain('undefined')
+  expect(generatePalette(palette).match(/--ink: #123;/g)).toHaveLength(2)
+  expect(Object.isFrozen(palette.tokens)).toBe(true)
 })

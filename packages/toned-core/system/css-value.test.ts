@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
 import { WHEN_RULES } from '../stylesheet/matcher/normalizeRules.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
@@ -10,7 +11,6 @@ const base = { width: 1, padding: 0, opacity: 1, lineHeight: 1 }
 const numeric = defineToken({
   values: ['small'],
   resolve: () => ({ ...raw, height: '2rem', '--ratio': 2 }),
-  pseudoRules: () => ({ '::before': { width: 2, lineHeight: 1.25 } }),
 })
 const system = defineSystem(
   { numeric },
@@ -38,24 +38,16 @@ for (const condition of [':hover', '@md'])
         { tokens: {}, useClassName: false },
         declaration as any,
       ).style as Record<string, unknown>
-      const parameters = Object.entries(output).filter(([key]) =>
-        key.startsWith('--'),
-      )
-      expect(parameters.find(([key]) => key.includes('__width'))?.[1]).toMatch(
-        / 2px$/,
-      )
-      expect(
-        parameters.find(([key]) => key.includes('__padding'))?.[1],
-      ).toMatch(/ 4px$/)
-      expect(
-        parameters.find(([key]) => key.includes('__opacity'))?.[1],
-      ).toMatch(/ 0.5$/)
-      expect(
-        parameters.find(([key]) => key.includes('__line-height'))?.[1],
-      ).toMatch(/ 1.25$/)
-      expect(output['width']).toContain(', 1px)')
-      expect(output['padding']).toContain(', 0px)')
-      expect(output['lineHeight']).toContain(', 1)')
+      const toggle = condition === ':hover' ? '--toned_hover' : '--media-md'
+      for (const [field, inactive, active] of [
+        ['width', '1px', '2px'],
+        ['padding', '0px', '4px'],
+        ['opacity', '1', '0.5'],
+        ['lineHeight', '1', '1.25'],
+      ]) {
+        expect(cssTestValue(output, field!, { [toggle]: false })).toBe(inactive)
+        expect(cssTestValue(output, field!, { [toggle]: true })).toBe(active)
+      }
     })
 
 test('advanced .when serializes portable raw fields without changing native resolver values', () => {
@@ -71,11 +63,17 @@ test('advanced .when serializes portable raw fields without changing native reso
   const matcher = new StyleMatcher(rules, { cssPseudoMode: true })
   const output = system.exec({ tokens: {} }, matcher.match({}).Root)
     .style as Record<string, unknown>
-  expect(output['--toned-rule-0-0-width']).toMatch(/ 2px$/)
-  expect(output['--toned-rule-0-0-padding']).toMatch(/ 4px$/)
-  expect(output['--toned-rule-0-0-opacity']).toMatch(/ 0.5$/)
-  expect(output['--toned-rule-0-0-line-height']).toMatch(/ 1.25$/)
-  expect(output['width']).toContain(', 1px)')
+  for (const [field, inactive, active] of [
+    ['width', '1px', '2px'],
+    ['padding', '0px', '4px'],
+    ['opacity', '1', '0.5'],
+    ['lineHeight', '1', '1.25'],
+  ]) {
+    expect(cssTestValue(output, field!, { '--toned_hover': false })).toBe(
+      inactive,
+    )
+    expect(cssTestValue(output, field!, { '--toned_hover': true })).toBe(active)
+  }
   const runtime = new StyleMatcher(rules, { platform: 'native' })
   expect(
     system.exec(
@@ -87,7 +85,10 @@ test('advanced .when serializes portable raw fields without changing native reso
 
 test('atomic, responsive, pseudo-element and animation output serialize the same fields', () => {
   const css = generate({
-    numeric,
+    numeric: {
+      ...numeric,
+      pseudoRules: () => ({ '::before': { width: 2, lineHeight: 1.25 } }),
+    },
     responsiveTokens: ['numeric'],
     breakpoints: { __breakpoints: { md: 768 } },
     animations: {
@@ -104,4 +105,22 @@ test('atomic, responsive, pseudo-element and animation output serialize the same
   expect(css).toContain(
     '@keyframes toned_grow {from {width:2px;opacity:0;}to {width:4px;opacity:1;}}',
   )
+})
+
+test('a guarded token with an opaque selector effect fails explicitly instead of discarding the effect', () => {
+  const effect = defineToken({
+    values: ['small'],
+    resolve: () => raw,
+    pseudoRules: () => ({ '::before': { width: 2, lineHeight: 1.25 } }),
+  })
+  const ui = defineSystem(
+    { effect },
+    { breakpoints: { __breakpoints: { md: 768 } } },
+  )
+  for (const condition of [':hover', '@md'])
+    expect(() =>
+      ui.exec({ tokens: {}, useClassName: false }, {
+        [condition]: { effect: 'small' },
+      } as any),
+    ).toThrow('$pseudoRules cannot be conditional')
 })

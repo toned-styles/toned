@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'vitest'
 import { generate } from '../dom/generate.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
-import { alphaLiteral, splitAlphaValue } from './alpha.ts'
+import { alpha, alphaLiteral, splitAlphaValue } from './alpha.ts'
 
 const bgColor = defineToken({
   values: ['primary', 'card', 'transparent'] as const,
@@ -48,8 +48,11 @@ describe('splitAlphaValue', () => {
     expect(splitAlphaValue('primary')).toBeNull()
     expect(splitAlphaValue('primary/')).toBeNull()
     expect(splitAlphaValue('/90')).toBeNull()
-    expect(splitAlphaValue('primary/0')).toBeNull()
-    expect(splitAlphaValue('primary/100')).toBeNull()
+    expect(splitAlphaValue('primary/0')).toEqual({ base: 'primary', alpha: 0 })
+    expect(splitAlphaValue('primary/100')).toEqual({
+      base: 'primary',
+      alpha: 100,
+    })
     expect(splitAlphaValue('primary/abc')).toBeNull()
     expect(splitAlphaValue(4)).toBeNull()
   })
@@ -248,4 +251,23 @@ describe('bridges', async () => {
     expect(out.className).toContain('placeholderColor_muted')
     expect(out.className).toContain('iconSize_4')
   })
+})
+
+test('canonical alpha validates fractions and resolves both endpoints on web and native literals', () => {
+  expect(alpha('primary', 0.29)).toBe('primary/29')
+  for (const invalid of [-0.1, 1.1, Number.NaN, Number.POSITIVE_INFINITY])
+    expect(() => alpha('primary', invalid)).toThrow(/fraction/)
+  for (const fraction of [0, 1]) {
+    const value = alpha('primary', fraction)
+    const web = exec({ bgColor: value }, true)
+    expect(web.className).toContain('bgColor_primary')
+    expect(web.style['--toned-alpha-background-color']).toBe(String(fraction))
+    const native = system.exec(
+      { tokens: { primary: '#ff000080' }, useClassName: false },
+      { bgColor: value },
+    ) as any
+    expect(native.style.backgroundColor).toBe(
+      `rgba(255, 0, 0, ${fraction ? 0.502 : 0})`,
+    )
+  }
 })

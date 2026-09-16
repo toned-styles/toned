@@ -2,8 +2,8 @@
 import { generate } from '../dom/generate.ts'
 import { validateSystemId } from '../system/namespace.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { fingerprint, systemDefinition } from './manifest.ts'
 import type { BuildArtifact } from './manifest.ts'
+import { fingerprint, systemDefinition } from './manifest.ts'
 
 export function generateArtifact(
   system: TokenStyleDeclaration,
@@ -37,6 +37,7 @@ export function generateArtifact(
     manifest: Object.freeze({
       version: 1 as const,
       systemId,
+      namespace: options.systemId ?? null,
       definition: systemDefinition(system),
       conditions,
       fingerprint: fingerprint(css),

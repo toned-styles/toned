@@ -14,3 +14,9 @@ import { createContext } from 'react'
  * the same lookup with no JS.
  */
 export const ContainerSizesContext = createContext<Record<string, number>>({})
+
+/** Stable runtime measurement scope; updates notify committed controllers. */
+export const ContainerStoreContext = createContext<{
+  store: import('./container-store.ts').ContainerSizesStore
+  legacy: Record<string, number>
+} | null>(null)

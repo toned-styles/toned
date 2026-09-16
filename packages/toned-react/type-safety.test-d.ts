@@ -6,7 +6,7 @@
  * elements the stylesheet DECLARED — a typo'd element name is a compile
  * error, not a silent `any`.
  */
-import { defineSystem, defineToken } from '@toned/core'
+import { alpha, defineSystem, defineToken, overrideSheet } from '@toned/core'
 import { bind, overrideStyles, useBind, useStyles } from './index.ts'
 
 const bgColor = defineToken({
@@ -191,3 +191,107 @@ overrideStyles(overridable, {}).variants(($, q) => ({
 overrideStyles(overridable, (q) => ({
   root: { [q.state('hover')]: { bgColor: 'base' }, bgClor: 'base' },
 }))
+
+export function CompletionContracts() {
+  // Defaulted axes may be omitted; non-defaulted axes stay required.
+  const defaultedSheet = system
+    .stylesheet({ Root: {} })
+    .variants<{ size: 's' | 'm'; tone: 'quiet' | 'accent' }>()(
+    ($) => ({ [$.size('s')]: { Root: {} } }),
+    { defaults: { size: 'm' } },
+  )
+  useStyles(defaultedSheet, { variants: { tone: 'quiet' } })
+  useStyles(defaultedSheet, { tone: 'quiet', size: undefined })
+  // @ts-expect-error tone has no default
+  useStyles(defaultedSheet, { variants: {} })
+  // @ts-expect-error a default does not widen the declared values
+  useStyles(defaultedSheet, { variants: { tone: 'quiet', size: 'xl' } })
+  useStyles(defaultedSheet, {
+    variants: { tone: 'quiet' },
+    // @ts-expect-error unknown instance override part
+    overrides: { Missing: {} },
+  })
+
+  // Platform vocabulary widens, but the declared element kind still applies.
+  const portableSystem = defineSystem({
+    id: 'host-kind-types',
+    tokens: { bgColor },
+  })
+  portableSystem.stylesheet({
+    Root: {
+      $kind: 'view',
+      '@platform.web': {
+        // @ts-expect-error view parts cannot acquire text-only fields through a web gate
+        $style: { fontSize: 12 },
+      },
+    },
+  })
+  portableSystem.stylesheet({
+    Root: { $kind: 'text', '@platform.web': { $style: { fontSize: '1rem' } } },
+  })
+
+  useStyles(defaultedSheet, {
+    variants: { tone: 'quiet' },
+    overrides: { Root: { bgColor: null } },
+  })
+  system.stylesheet({ Root: {} }).variants<{ size: 's' | 'm' }>()(
+    ($) => ({ [$.size('s')]: { Root: {} } }),
+    // @ts-expect-error undefined is not a declared default value
+    { defaults: { size: undefined } },
+  )
+
+  const alphaSystem = defineSystem({
+    id: 'alpha-types',
+    tokens: {
+      bg: defineToken({
+        values: ['primary'] as const,
+        alphaChannel: ['backgroundColor'],
+        resolve: () => ({ backgroundColor: '#fff' }),
+      }),
+      plain: defineToken({
+        values: ['primary'] as const,
+        resolve: () => ({ color: '#fff' }),
+      }),
+    },
+  })
+  alphaSystem.stylesheet({ Root: { bg: alpha('primary', 0.2) } })
+  // @ts-expect-error the helper preserves the exact named token value
+  alphaSystem.stylesheet({ Root: { bg: alpha('missing', 0.2) } })
+  // @ts-expect-error alpha syntax requires an alpha-enabled token
+  alphaSystem.stylesheet({ Root: { plain: alpha('primary', 0.2) } })
+
+  // Legacy untyped parts retain their web escape vocabulary.
+  system.stylesheet({
+    Legacy: { '@platform web': { $style: { fontSize: '1rem' } } },
+  })
+  portableSystem.stylesheet({
+    Root: {
+      '@platform web': {
+        // @ts-expect-error descriptor systems default the part kind to view
+        $style: { fontSize: '1rem' },
+      },
+    },
+  })
+
+  // Authoritative composition is available to pure server/build code too.
+  const pureOverride = overrideSheet(
+    defaultedSheet,
+    { Root: { bgColor: null } },
+    ($) => ({
+      [$.tone('quiet')]: { Root: { bgColor: 'base' } },
+    }),
+  )
+  useStyles(pureOverride, { tone: 'quiet' })
+  // @ts-expect-error unknown override part
+  overrideSheet(defaultedSheet, { Missing: {} })
+  overrideSheet(defaultedSheet, {}, ($) => ({
+    // @ts-expect-error unknown variant value in pure override
+    [$.tone('missing')]: { Root: {} },
+  }))
+  // @ts-expect-error unknown token in pure override variant
+  overrideSheet(defaultedSheet, {}, ($) => ({
+    [$.tone('quiet')]: { Root: { bogus: true } },
+  }))
+
+  return null
+}

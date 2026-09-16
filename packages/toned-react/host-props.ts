@@ -1,3 +1,8 @@
+import { version } from 'react'
+
+/** React 18 detaches through ref(null); React 19 also accepts returned cleanup. */
+export const supportsRefCleanup = Number.parseInt(version, 10) >= 19
+
 type AnyValue = any
 
 function flattenHostStyle(value: AnyValue): Record<string, AnyValue> {
@@ -83,7 +88,7 @@ export function addWith(
         else if (typeof userRef === 'function') userRef(null)
         else if (userRef) userRef.current = null
       }
-      return detach
+      return supportsRefCleanup ? detach : undefined
     }
     return addWith(merged)
   }

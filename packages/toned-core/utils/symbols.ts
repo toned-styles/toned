@@ -46,3 +46,6 @@ export const SYMBOL_STYLE: typeof _symStyle = Symbol.for(
 export const SYMBOL_ACCESS: typeof _symAccess = Symbol.for(
   '@toned/core/SYMBOL_ACCESS',
 ) as any
+
+/** Immutable declared variant defaults, shared by mounted and pure resolution. */
+export const SYMBOL_DEFAULTS = Symbol.for('@toned/core/SYMBOL_DEFAULTS')

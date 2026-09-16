@@ -43,12 +43,14 @@ for (const bound of [false, true]) {
     })
     // A foreign component can stop forwarding a bound bag without replacing
     // its host. The renderer must retain this exact node and diff its props.
-    function Forwarder({
-      styled,
-      ...props
-    }: React.ComponentProps<'div'> & { styled: boolean }) {
-      return <div {...(styled ? props : plain)} data-testid="target" />
-    }
+    const Forwarder = React.forwardRef<
+      HTMLDivElement,
+      React.ComponentProps<'div'> & { styled: boolean }
+    >(function Forwarder({ styled, ...props }, ref) {
+      return (
+        <div {...(styled ? { ...props, ref } : plain)} data-testid="target" />
+      )
+    })
     function View({ styled }: { styled: boolean }) {
       const styles = useStyles(sheet)
       const parts = useBind(sheet)

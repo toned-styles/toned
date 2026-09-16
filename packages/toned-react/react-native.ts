@@ -1,7 +1,8 @@
 import { defineConfig } from '@toned/core'
-import type { Base } from '@toned/core/stylesheet'
+import { nativeBackend } from '@toned/core/backends'
+import { type Base, registerNativeHost } from '@toned/core/stylesheet'
 import reactConfig from './config.native.ts'
-import { addWith } from './host-props.ts'
+import { addWith, supportsRefCleanup } from './host-props.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
 type AnyValue = any
@@ -16,13 +17,24 @@ function getProps(this: Base, elementKey: string) {
     detach = undefined
     host = current
     if (!current) return
-    if (typeof current.setNativeProps !== 'function') {
+    const adapter = this.config.nativeHost
+    if (!adapter)
       throw new Error(
-        '[toned/native] Mounted targets must expose setNativeProps with merge patches and null resets; forward the native host ref or install a supported host adapter.',
+        '[toned/native] Configure nativeHost with a declared renderer adapter; setNativeProps alone does not establish support.',
       )
+    const unregister = registerNativeHost(current, adapter)
+    try {
+      const release = this.attach(elementKey, current, result, caller)
+      detach = () => {
+        release()
+        // Base completes ownership release in its queued detach reconciliation.
+        queueMicrotask(unregister)
+      }
+    } catch (error) {
+      unregister()
+      throw error
     }
-    detach = this.attach(elementKey, current, result, caller)
-    return detach
+    return supportsRefCleanup ? detach : undefined
   }
 
   let result: Record<string, AnyValue>
@@ -104,20 +116,16 @@ function getProps(this: Base, elementKey: string) {
   return result
 }
 
-// Unlike web, there is no universal native default: toned-react has no
-// react-native dependency (and must not), so it cannot name View/Text/Image
-// itself. The NATIVE HOST supplies the resolver — `@lib/haelo-primitives`
-// installs a `resolveElement` returning its own View/Text/Image via setConfig,
-// exactly as it would override any config field. `buildBoundMap` calls this
-// LAZILY on first render (not at bind time), so this throws when a bound
-// component actually renders with no host installed — not while a module is
-// merely imported — and any `setConfig` before that first render is in time.
+// The native integration owns concrete View/Text/Image components. The core
+// package has no React Native dependency and cannot choose a renderer for an app.
+// Resolution remains lazy; install this resolver and nativeHost together in the
+// explicit configuration passed to ConfigProvider.
 function resolveElement(type?: string): never {
   throw new Error(
     `useBind/bind on native need a host resolveElement (got $$type ${JSON.stringify(
       type,
-    )}). Install one via setConfig before the first bound component renders — ` +
-      'e.g. @lib/haelo-primitives mapping view→View, text→Text, image→Image, pressable→Pressable. ' +
+    )}). Install resolveElement and nativeHost through ConfigProvider before the first bound component renders — ` +
+      'map view→View, text→Text, image→Image and pressable→Pressable from the selected renderer. ' +
       'toned-react ships no native default because it has no react-native dependency.',
   )
 }
@@ -125,6 +133,7 @@ function resolveElement(type?: string): never {
 export default defineConfig({
   ...reactConfig,
   platform: 'native',
+  backend: nativeBackend,
   // Conventional bridge names (see BridgeConfig): a host renaming its bridges
   // overrides this map via setConfig.
   bridgeProps: {

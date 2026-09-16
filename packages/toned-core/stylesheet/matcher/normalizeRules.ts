@@ -2,8 +2,9 @@ import type { QueryPredicate } from '../../system/queries.ts'
 import { mergeStyle } from '../../utils/mergeStyle.ts'
 import { warnOnce } from '../../utils/warn.ts'
 import { resolveCrossHoverCss } from '../crossHover.ts'
+import { relationFactKey } from '../relations.ts'
+import { declarationLayers } from '../removals.ts'
 import {
-  RULE_LAYERS,
   type RuleObject,
   TOKEN_OPERATIONS,
   type TokenOperation,
@@ -176,10 +177,7 @@ export function normalizeRules(
   let deferred: Array<() => void> = []
   let predicateIdentity = ''
   const conditionIdentities = new WeakMap<object, string>()
-  const layers: RuleObject[] = [
-    rules,
-    ...(rules[RULE_LAYERS as unknown as string] ?? []),
-  ]
+  const layers: RuleObject[] = declarationLayers(rules)
   let layer = 0
   let layerBase: RuleObject = {}
 
@@ -213,6 +211,10 @@ export function normalizeRules(
     key: string,
     value: unknown,
   ) => {
+    if (key.endsWith('$webRules') && (key !== '$webRules' || predicate))
+      throw new Error(
+        'Toned: $webRules is a separate selector extension; express selector conditions in its &-anchored rules',
+      )
     let conditionIdentity = conditionIdentities.get(conditions)
     if (conditionIdentity === undefined) {
       conditionIdentity = identity(conditions)
@@ -261,10 +263,14 @@ export function normalizeRules(
     }
     const next = constrain(base, extra)
     if (next) {
+      const declarationLayer = layer
       const visit = () => {
+        const previousLayer = layer
+        layer = declarationLayer
         conditionDepth++
         apply(next)
         conditionDepth--
+        layer = previousLayer
       }
       // Legacy declarations specialize their complete parent rule, including
       // later sibling parts. Only nested traversal is deferred: overlapping
@@ -300,6 +306,35 @@ export function normalizeRules(
     prefix: string,
   ) => {
     elementSet.add(element)
+    // Direct legacy exec supplies an occurrence stream after its one-time
+    // spelling adapter. Consume it through this same declaration traversal.
+    const occurrences: readonly TokenOperation[] | undefined =
+      node[TOKEN_OPERATIONS as unknown as string]
+    if (occurrences) {
+      const savedLayer = layer
+      for (const occurrence of occurrences) {
+        layer = occurrence.layer
+        conditionDepth++
+        if (occurrence.conditional) {
+          const savedPredicate = predicate
+          const savedIdentity = predicateIdentity
+          predicate = occurrence.conditional.predicate
+          predicateIdentity = `?${JSON.stringify(predicate)}`
+          walkElement(conditions, element, occurrence.conditional.style, prefix)
+          predicate = savedPredicate
+          predicateIdentity = savedIdentity
+        } else
+          walkElement(
+            conditions,
+            element,
+            { [occurrence.key]: occurrence.value },
+            prefix,
+          )
+        conditionDepth--
+      }
+      layer = savedLayer
+      return
+    }
     for (const key in node) {
       if (key[0] === ':' && key.includes('_')) {
         emit(conditions, element, prefix + key, node[key])
@@ -362,13 +397,14 @@ export function normalizeRules(
             'cross-element-pseudo-css-mode',
             `'${key}' is a cross-element pseudo selector and runs through runtime event handlers; self pseudos and base-level hover sources remain CSS.`,
           )
-        const [element, ...states] = key.split(':')
+        const [source, ...states] = key.split(':')
+        const element = source?.replace(/~$/, '')
         if (!element || !elementSet.has(element)) continue
         interactions[element] ??= {}
         const extra = new Map<string, string[]>()
         for (const state of states) {
           interactions[element][`:${state}`] = true
-          extra.set(`${element}:${state}`, ['true'])
+          extra.set(`${source}:${state}`, ['true'])
         }
         withConditions(conditions, extra, (next) =>
           walk(next, node[key], prefix),
@@ -382,6 +418,18 @@ export function normalizeRules(
   }
 
   const registerPredicate = (query: QueryPredicate): void => {
+    if (query.op === 'relation') {
+      const relation = query.relation
+      for (const part of [relation.sourcePart, relation.part])
+        if (!elementSet.has(part))
+          throw new Error(`Unknown relation part: ${part}`)
+      if (!['child', 'descendant'].includes(relation.scope))
+        throw new Error(`Unknown relation scope: ${relation.scope}`)
+      scheme[relationFactKey(relation)] = new Set(['true'])
+      interactions[relation.part] ??= {}
+      interactions[relation.part]![`:${relation.state}`] = true
+      return
+    }
     if (query.op === 'not') {
       registerPredicate(query.operand)
       return

@@ -411,3 +411,16 @@ describe('StyleOverrides + overlapping CSS properties', () => {
     expect(el.style.paddingLeft).toBe('')
   })
 })
+
+test('override entries snapshot caller rules before identity-based derivation caching', () => {
+  const ui = defineSystem({
+    gap: defineToken({ values: [0, 4], resolve: (value) => ({ gap: value }) }),
+  })
+  const sheet = ui.stylesheet({ Root: { gap: 0 } })
+  const rules = { Root: { gap: 4 as 0 | 4 } }
+  const entry = overrideStyles(sheet, rules)
+  rules.Root.gap = 0
+  expect(entry.rules['Root'].gap).toBe(4)
+  expect(Object.isFrozen(entry)).toBe(true)
+  expect(Object.isFrozen(entry.rules['Root'])).toBe(true)
+})

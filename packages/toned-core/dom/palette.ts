@@ -8,8 +8,8 @@
  *   under `@media (prefers-color-scheme: <scheme>)`, guarded so a manual choice
  *   (a `[data-theme]` attr, or the default theme's own class) always wins.
  *
- * A token missing a theme's key falls back to the default theme's value, so a
- * pair only names what actually differs.
+ * A missing value uses the palette's explicitly declared fallbackTheme.
+ * definePalette validates complete coverage before CSS is generated.
  *
  * @module dom/palette
  */
@@ -35,7 +35,11 @@ export function generatePalette(
   const valueFor = (name: string, theme: string): string => {
     const v = tokens[name]!
     if (typeof v === 'string') return v
-    return v[theme] ?? v[defaultTheme]!
+    const value =
+      v[theme] ?? (palette.fallbackTheme ? v[palette.fallbackTheme] : undefined)
+    if (value === undefined)
+      throw new Error(`generatePalette: missing '${name}' in '${theme}'`)
+    return value
   }
 
   const block = (theme: string): string =>

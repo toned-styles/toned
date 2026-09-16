@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildStyles } from '../build/index.ts'
+import { buildStyles, buildTailwind } from '../build/index.ts'
 import {
   createNativeRenderer,
   createRenderer,
@@ -36,15 +36,38 @@ describe('explicit output backends', () => {
       },
     ],
   })
-  it('uses the same sheet through pure web, native and utility resolution', () => {
+  it('uses the same sheet through pure web, native and utility resolution', async () => {
     const artifact = buildStyles(ui, { sheets: [sheet] })
     const web = createWebRenderer(ui, {
       manifest: artifact.manifest,
       tokens: {},
     }).resolve(sheet)
     const native = createNativeRenderer(ui, { tokens: {} }).resolve(sheet)
+    const declarations: Record<string, string> = {
+      flex: 'display:flex',
+      'flex-row': 'flex-direction:row',
+      'gap-[12px]': 'gap:12px',
+      'gap-[var(--test-gap)]': 'gap:var(--test-gap)',
+    }
+    const built = await buildTailwind(ui, tailwind, {
+      sheets: [sheet],
+      tokens: {},
+      source: '',
+      compile: async (source) => ({
+        build: (candidates) => {
+          const utility = source.match(/@apply ([^;]+);/)?.[1]
+          if (utility) return `.toned_mapping_probe {${declarations[utility]}}`
+          return candidates
+            .map(
+              (candidate) =>
+                `.${candidate.replace(/[^a-zA-Z0-9_-]/g, (value) => `\\${value}`)} {${declarations[candidate]}}`,
+            )
+            .join('\n')
+        },
+      }),
+    })
     const utility = createRenderer(ui, {
-      backend: tailwind,
+      backend: built.backend,
       tokens: {},
     }).resolve(sheet)
     expect(web['Root']?.className).toBeTruthy()
@@ -53,10 +76,17 @@ describe('explicit output backends', () => {
       flexDirection: 'row',
       gap: 12,
     })
-    expect(utility['Root']).toEqual({
-      className: 'flex flex-row gap-[12px]',
-      style: {},
-    })
+    expect(utility['Root']?.className?.split(' ')).toEqual(
+      expect.arrayContaining(['flex', 'flex-row', 'gap-[12px]']),
+    )
+    expect(utility['Root']?.style).toEqual({})
+    expect(() =>
+      createRenderer(ui, {
+        backend: tailwind,
+        tokens: {},
+        manifest: artifact.manifest,
+      }),
+    ).toThrow('requires a validated build artifact')
     expect(artifact.css).toMatch(/flex-direction:\s*row/)
   })
   it('builds complete dynamic candidates and rejects unmapped semantics', () => {
@@ -148,4 +178,69 @@ it('native capabilities fail visibly for CSS-only fields and values', () => {
   expect(() =>
     createNativeRenderer(system, { tokens: {} }).resolve(sheet),
   ).toThrow('unsupported display')
+})
+
+it('native validation rejects CSS units, invalid transforms and nested CSS expressions', async () => {
+  const { nativeBackend } = await import('./native.ts')
+  expect(() =>
+    nativeBackend.resolve({ style: { paddingLeft: '2rem' } }),
+  ).toThrow('logical numbers')
+  expect(() =>
+    nativeBackend.resolve({ style: { opacity: Number.NaN } }),
+  ).toThrow('finite')
+  expect(() =>
+    nativeBackend.resolve({
+      style: { transform: [{ translateX: 'var(--x)' }] },
+    }),
+  ).toThrow('transform')
+  expect(() =>
+    nativeBackend.resolve({
+      style: { shadowOffset: { width: 'calc(1px)', height: 0 } },
+    }),
+  ).toThrow('CSS-only')
+  expect(
+    nativeBackend.resolve({
+      style: {
+        width: '50%',
+        marginLeft: 'auto',
+        transform: [{ translateX: 2 }, { rotate: '45deg' }],
+      },
+    }).style,
+  ).toEqual({
+    width: '50%',
+    marginLeft: 'auto',
+    transform: [{ translateX: 2 }, { rotate: '45deg' }],
+  })
+})
+
+it('native color capability rejects browser color functions while retaining native color forms', async () => {
+  const { nativeBackend } = await import('./native.ts')
+  for (const color of [
+    'color-mix(in srgb, red, blue)',
+    'oklch(50% 0.2 30)',
+    'OKLAB(0.5 0.2 0.1)',
+    'lab(50% 20 10)',
+    'lch(50% 20 30)',
+    'color(display-p3 1 0 0)',
+    'light-dark(white, black)',
+    'rgba(from red r g b / 0.5)',
+    'hwb(from red h w b)',
+  ]) {
+    expect(() => nativeBackend.resolve({ style: { color } })).toThrow(
+      'CSS-only',
+    )
+  }
+  for (const color of [
+    'red',
+    '#ff0000',
+    0xff0000ff,
+    'rgb(255 0 0)',
+    'rgba(255, 0, 0, 0.5)',
+    'hsl(0 100% 50%)',
+    'hwb(0 0% 0%)',
+  ]) {
+    expect(nativeBackend.resolve({ style: { color } }).style['color']).toBe(
+      color,
+    )
+  }
 })
