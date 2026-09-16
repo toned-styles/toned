@@ -68,7 +68,8 @@ function makeBaseMock() {
   }
 }
 
-const getProps = (base: AnyValue): AnyValue => reactWebConfig.getProps.call(base, 'box')
+const getProps = (base: AnyValue): AnyValue =>
+  reactWebConfig.getProps.call(base, 'box')
 
 let doc: ReturnType<typeof fakeEventTarget>
 let win: ReturnType<typeof fakeEventTarget>

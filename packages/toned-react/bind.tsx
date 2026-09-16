@@ -1,18 +1,18 @@
-import { useRuntimeConfig } from './runtime-config.ts'
+import { type Config, type ElementType, getConfig, SYMBOL_INIT } from '@toned/core'
 import {
-  createElement,
-  createContext,
   type Context,
+  createContext,
+  createElement,
+  type ReactElement,
   type ReactNode,
   useContext,
+  useLayoutEffect,
   useMemo,
   useState,
-  useLayoutEffect,
   useSyncExternalStore,
-  type ReactElement,
 } from 'react'
-import { getConfig, SYMBOL_INIT, type Config, type ElementType } from '@toned/core'
 import { ContainerSizesContext } from './containers.tsx'
+import { useRuntimeConfig } from './runtime-config.ts'
 
 /**
  * What a web intrinsic IMPLIES about the element's nature, for the native
@@ -55,6 +55,7 @@ const TYPE_BY_TAG: Record<string, ElementType> = {
   sup: 'text',
   img: 'image',
 }
+
 // Cycle-safe: index.ts imports this module for its typed re-exports, and this
 // line imports back. `useStyles` is a hoisted function declaration, so its
 // binding is live before index.ts finishes evaluating; `useBind` only calls it
@@ -209,7 +210,11 @@ function buildBoundElement(
             { value: sizes },
             props?.['children'] as never,
           )
-          return createElement<AnyProps>(RenderCore, { ...props, ...measureProps, children })
+          return createElement<AnyProps>(RenderCore, {
+            ...props,
+            ...measureProps,
+            children,
+          })
         }
   ) as BoundElement
   return Comp
@@ -301,7 +306,13 @@ export function useBind(
   // Stable components expose committed bags for backwards compatibility.
   // Render-current spread props are immutable and travel with this render.
   const props: Record<string, Bag> = {}
-  for (const { key } of instance.elementDescriptors()) props[key] = instance[key]!
+  for (const { key } of instance.elementDescriptors())
+    Object.defineProperty(props, key, {
+      enumerable: true,
+      // Each access binds a different host to this same render snapshot.
+      get: () => instance[key]!,
+    })
+  Object.freeze(props)
   return {
     ...store.map,
     $props: props as any,

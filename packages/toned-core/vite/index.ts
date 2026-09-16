@@ -1,7 +1,7 @@
-import type { TokenStyleDeclaration } from '../types/index.ts'
-import { generate } from '../dom/generate.ts'
-import type { Plugin } from 'vite'
 import { resolve } from 'node:path'
+import type { Plugin } from 'vite'
+import { generate } from '../dom/generate.ts'
+import type { TokenStyleDeclaration } from '../types/index.ts'
 
 const VIRTUAL_ID = 'virtual:toned.css'
 const RESOLVED_ID = '\0virtual:toned.css'
@@ -24,21 +24,34 @@ export interface TonedPluginOptions {
   /** Explicit declaration modules/assets watched by the build. */
   inputs?: readonly string[]
   /** Recollect after a watched declaration changes; include lazy sheets. */
-  conditions?: readonly string[] | (() => readonly string[] | Promise<readonly string[]>)
+  conditions?:
+    | readonly string[]
+    | (() => readonly string[] | Promise<readonly string[]>)
 }
 
 export default function toned(options: TonedPluginOptions): Plugin {
   let inputs = new Set<string>()
   const render = async () => {
-    const conditions = typeof options.conditions === 'function' ? await options.conditions() : options.conditions
-    const generated = generate(options.system, { id: options.id, scope: options.scope, conditions })
-    return options.layer ? `@layer ${options.layer} {\n${generated}\n}` : generated
+    const conditions =
+      typeof options.conditions === 'function'
+        ? await options.conditions()
+        : options.conditions
+    const generated = generate(options.system, {
+      id: options.id,
+      scope: options.scope,
+      conditions,
+    })
+    return options.layer
+      ? `@layer ${options.layer} {\n${generated}\n}`
+      : generated
   }
 
   return {
     name: 'toned',
     configResolved(config) {
-      inputs = new Set((options.inputs ?? []).map(file => resolve(config.root, file)))
+      inputs = new Set(
+        (options.inputs ?? []).map((file) => resolve(config.root, file)),
+      )
     },
     buildStart() {
       for (const file of inputs) this.addWatchFile(file)

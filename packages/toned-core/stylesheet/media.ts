@@ -3,12 +3,17 @@
 
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
-export const initMedia = <S extends TokenStyleDeclaration>({ config }: TokenSystem<S>) => {
+export const initMedia = <S extends TokenStyleDeclaration>({
+  config,
+}: TokenSystem<S>) => {
   const w = typeof window === 'undefined' ? null : window
 
   const medias = Object.fromEntries(
     Object.entries(
-      (config?.breakpoints?.__breakpoints ?? {}) as Record<string, number | string>,
+      (config?.breakpoints?.__breakpoints ?? {}) as Record<
+        string,
+        number | string
+      >,
     ).map(
       // A number is px; a string length passes through as-is (appending px to
       // '30rem' produced the invalid '30rempx' — every rem breakpoint was
@@ -72,7 +77,7 @@ class Emitter<T extends Record<string, any>> {
   emit(data: Partial<T>) {
     Object.assign(this.data, data)
 
-    this.listeners.forEach(cb => {
+    this.listeners.forEach((cb) => {
       cb(data)
     })
   }

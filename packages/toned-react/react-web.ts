@@ -1,7 +1,7 @@
-import { addWith } from './host-props.ts'
 import { defineConfig } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
 import reactConfig from './config.ts'
+import { addWith } from './host-props.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
 type AnyValue = any
@@ -28,14 +28,19 @@ function getProps(this: Base, elementKey: string) {
       owner.setElementActive(elementKey, pseudo, el, on)
       owner.applyState(
         {
-          [`${elementKey}${pseudo}`]: owner.anyElementActive(elementKey, pseudo),
+          [`${elementKey}${pseudo}`]: owner.anyElementActive(
+            elementKey,
+            pseudo,
+          ),
         },
         { triggerKey: elementKey, pseudo },
       )
     }
 
-    const onMouseEnter = (e: AnyValue) => setPseudo(':hover', e.currentTarget, true)
-    const onMouseLeave = (e: AnyValue) => setPseudo(':hover', e.currentTarget, false)
+    const onMouseEnter = (e: AnyValue) =>
+      setPseudo(':hover', e.currentTarget, true)
+    const onMouseLeave = (e: AnyValue) =>
+      setPseudo(':hover', e.currentTarget, false)
     const onFocus = (e: AnyValue) => setPseudo(':focus', e.currentTarget, true)
     const onBlur = (e: AnyValue) => setPseudo(':focus', e.currentTarget, false)
 
@@ -101,5 +106,6 @@ export default defineConfig({
   ...reactConfig,
   platform: 'web',
   getProps,
-  resolveElement: (type?: string) => WEB_ELEMENT_BY_TYPE[type ?? 'view'] ?? 'div',
+  resolveElement: (type?: string) =>
+    WEB_ELEMENT_BY_TYPE[type ?? 'view'] ?? 'div',
 })

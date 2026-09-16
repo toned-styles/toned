@@ -1,3 +1,4 @@
+import { readdir, rm } from 'node:fs/promises'
 import * as path from 'node:path'
 import { $ } from 'bun'
 
@@ -6,15 +7,6 @@ const dist = path.resolve(cwd, '.dist')
 const monorepoRoot = path.resolve(__dirname, '../..')
 
 const licenseLocation = path.join(monorepoRoot, 'LICENSE')
-// @ts-expect-error
-const _rollupBin = path.join(
-  __dirname,
-  'node_modules',
-  'rollup',
-  'dist',
-  'bin',
-  'rollup',
-)
 
 /**
  * Source `exports` point at the TypeScript entry points, so the packages can be
@@ -51,9 +43,25 @@ const transformPkg = async () => {
   )
 }
 
+/** Type fixtures participate in checking, but test runners are not package dependencies. */
+async function removeTestArtifacts(directory: string): Promise<void> {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name)
+    if (
+      entry.name === '__tests__' ||
+      /\.test(?:-d)?(?:\.|$)/.test(entry.name)
+    ) {
+      await rm(file, { recursive: true, force: true })
+    } else if (entry.isDirectory()) {
+      await removeTestArtifacts(file)
+    }
+  }
+}
+
 await $`rm -rf ${dist}`
 
 await $`tsc -b --emitDeclarationOnly false`
+await removeTestArtifacts(dist)
 
 await $`cp README.md ${dist}`
 await transformPkg()

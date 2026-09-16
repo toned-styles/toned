@@ -1,5 +1,5 @@
-import { createGridScope } from './index.ts'
 import type { GridArea, GridDefinition } from './index.ts'
+import { createGridScope } from './index.ts'
 
 export interface GridHostElement {
   parentElement: GridHostElement | null

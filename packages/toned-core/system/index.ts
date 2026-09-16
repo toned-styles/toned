@@ -4,14 +4,9 @@
  * @module system
  */
 
+export type { Condition, ContainerConditionBuilder } from './conditions.ts'
+export { and, bp, cq, not, or } from './conditions.ts'
 export { defineConfig, getConfig, setConfig } from './config.ts'
-export { definePalette } from './palette.ts'
-export type {
-  Palette,
-  PaletteConfig,
-  ThemeMeta,
-  ThemeValue,
-} from './palette.ts'
 export type { TokenSystem } from './definers.ts'
 export {
   defineAnimations,
@@ -19,8 +14,12 @@ export {
   defineToken,
   defineUnit,
 } from './definers.ts'
-export { and, bp, cq, not, or } from './conditions.ts'
-export type { Condition, ContainerConditionBuilder } from './conditions.ts'
-
-export { createQueries } from './queries.ts'
+export type {
+  Palette,
+  PaletteConfig,
+  ThemeMeta,
+  ThemeValue,
+} from './palette.ts'
+export { definePalette } from './palette.ts'
 export type { QueryBuilder, QueryPredicate } from './queries.ts'
+export { createQueries } from './queries.ts'

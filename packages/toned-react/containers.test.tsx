@@ -9,9 +9,15 @@
  * toned-core (dom/generate.test.ts, system/definers.test.ts).
  */
 import { act, cleanup, render } from '@testing-library/react'
+import {
+  cq,
+  defineSystem,
+  defineToken,
+  getConfig,
+  setConfig,
+} from '@toned/core'
 // The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
 import * as React from 'react'
-import { cq, defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { afterEach, describe, expect, test } from 'vitest'
 import { bind, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'

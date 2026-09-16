@@ -1,11 +1,11 @@
-import { hydrateRoot } from 'react-dom/client'
-import { renderToString } from 'react-dom/server'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
+import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { createTailwindBackend } from '@toned/core/backends'
 // @vitest-environment happy-dom
 import * as React from 'react'
-import { act, cleanup, fireEvent, render } from '@testing-library/react'
+import { hydrateRoot } from 'react-dom/client'
+import { renderToString } from 'react-dom/server'
 import { afterEach, expect, test } from 'vitest'
-import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { ConfigProvider, useBind, useStyles } from './index.ts'
 import web from './react-web.ts'
 
@@ -15,11 +15,16 @@ afterEach(() => {
   setConfig(original)
 })
 const system = defineSystem({
-  opacity: defineToken({ values: [0, 0.5, 1] as const, resolve: (v: number) => ({ opacity: v }) }),
+  opacity: defineToken({
+    values: [0, 0.5, 1] as const,
+    resolve: (v: number) => ({ opacity: v }),
+  }),
 })
 const sheet = system
   .stylesheet({ Root: { opacity: 0, ':hover': { opacity: 0.5 } } })
-  .variants<{ on: boolean }>($ => ({ [$.on(true)]: { Root: { opacity: 1 } } }))
+  .variants<{ on: boolean }>($ => ({
+    [$.on(true)]: { Root: { opacity: 1 } },
+  }))
 const blocker = new Promise<never>(() => {})
 const install = () =>
   setConfig({
@@ -110,7 +115,11 @@ test('Strict Mode ref replacement cleans up each generation and preserves caller
     const s = useStyles(sheet, { on })
     return (
       <div
-        {...s.Root.withProps({ ref: caller, style: { width: 17 }, onMouseEnter: () => calls++ })}
+        {...s.Root.withProps({
+          ref: caller,
+          style: { width: 17 },
+          onMouseEnter: () => calls++,
+        })}
         data-testid="target"
       />
     )
@@ -299,4 +308,30 @@ test('composed bound components keep independent ownership on the same host', ()
   fireEvent.mouseLeave(target)
   expect(target.classList.contains('opacity_0')).toBe(true)
   expect(target.classList.contains('caller')).toBe(true)
+})
+
+test('repeated props snapshot reads bind independent hosts and interaction state', () => {
+  install()
+  function View({ on }: { on: boolean }) {
+    const s = useBind(sheet, { on })
+    return (
+      <>
+        <div {...s.$props.Root} data-testid="first" />
+        <div {...s.$props.Root} data-testid="second" />
+      </>
+    )
+  }
+  const view = render(<View on={false} />)
+  const first = view.getByTestId('first')
+  const second = view.getByTestId('second')
+  fireEvent.mouseEnter(first)
+  expect(first.style.opacity).toBe('0.5')
+  expect(second.style.opacity).toBe('0')
+  view.rerender(<View on={false} />)
+  expect(first.style.opacity).toBe('0.5')
+  expect(second.style.opacity).toBe('0')
+  fireEvent.mouseLeave(first)
+  fireEvent.mouseEnter(second)
+  expect(first.style.opacity).toBe('0')
+  expect(second.style.opacity).toBe('0.5')
 })

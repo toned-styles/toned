@@ -13,7 +13,7 @@ export function applyOperationOrder(
   strict: boolean,
   resolve: Resolve,
 ): void {
-  const layers = new Set(operations.map(operation => operation.layer ?? 0))
+  const layers = new Set(operations.map((operation) => operation.layer ?? 0))
   const layered = layers.size > 1
   const writes = new Map<string, Set<string>>()
   const resolved: Array<TokenOperation & { style: Style }> = []
@@ -38,11 +38,16 @@ export function applyOperationOrder(
   let ordered: Style = {}
   if (layered && !strict) {
     for (const layer of layers) {
-      const group = operations.filter(operation => (operation.layer ?? 0) === layer)
+      const group = operations.filter(
+        (operation) => (operation.layer ?? 0) === layer,
+      )
       const declaration: Record<string | symbol, unknown> = { style: ordered }
       for (const { key, value } of group) {
         if (key === 'style')
-          declaration[key] = { ...(declaration[key] as object), ...(value as object) }
+          declaration[key] = {
+            ...(declaration[key] as object),
+            ...(value as object),
+          }
         else {
           delete declaration[key]
           declaration[key] = value
@@ -79,7 +84,10 @@ export function applyOperationOrder(
 export function applyConditionalOrder(
   operations: readonly TokenOperation[],
   resolve: Resolve,
-  applyConditional: (style: Style, record: NonNullable<TokenOperation['conditional']>) => void,
+  applyConditional: (
+    style: Style,
+    record: NonNullable<TokenOperation['conditional']>,
+  ) => void,
 ): Style {
   let output: Style = {}
   let pending: TokenOperation[] = []
@@ -88,7 +96,10 @@ export function applyConditionalOrder(
     const declaration: Record<string | symbol, unknown> = { style: output }
     for (const { key, value } of pending) {
       if (key === 'style')
-        declaration[key] = { ...(declaration[key] as object), ...(value as object) }
+        declaration[key] = {
+          ...(declaration[key] as object),
+          ...(value as object),
+        }
       else {
         delete declaration[key]
         declaration[key] = value
@@ -96,8 +107,14 @@ export function applyConditionalOrder(
     }
     // Include the prior resolved fields in ordering: a later token must beat a
     // prior guard even if it writes through another token or raw-style alias.
-    const prior: TokenOperation = { key: 'style', value: output, layer: pending[0]!.layer - 1 }
-    Object.defineProperty(declaration, OPERATIONS, { value: [prior, ...pending] })
+    const prior: TokenOperation = {
+      key: 'style',
+      value: output,
+      layer: pending[0]!.layer - 1,
+    }
+    Object.defineProperty(declaration, OPERATIONS, {
+      value: [prior, ...pending],
+    })
     output = resolve(declaration as Record<string, unknown>)
     pending = []
   }

@@ -4,12 +4,19 @@ import { createNativeRenderer } from './index.ts'
 
 test('pure native rendering evaluates platform predicates against native', () => {
   const system = defineSystem({
-    opacity: defineToken({ values: [0, 1], resolve: value => ({ opacity: value }) }),
+    opacity: defineToken({
+      values: [0, 1],
+      resolve: (value) => ({ opacity: value }),
+    }),
   })
   const sheet = system
     .stylesheet({ Root: { opacity: 1 } })
     .when(system.q.all(system.q.platform('native')), { Root: { opacity: 0 } })
-  expect(createNativeRenderer(system, { tokens: {} }).resolve(sheet).Root.style['opacity']).toBe(0)
+  expect(
+    createNativeRenderer(system, { tokens: {} }).resolve(sheet).Root.style[
+      'opacity'
+    ],
+  ).toBe(0)
 })
 test('renderer theme snapshots and returned nested styles cannot mutate other resolutions', () => {
   const system = defineSystem({

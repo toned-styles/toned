@@ -1,5 +1,5 @@
-import type { QueryPredicate } from './queries.ts'
 import { atomSlug, parseConditionKey } from '../utils/conditions.ts'
+import type { QueryPredicate } from './queries.ts'
 
 export const CONDITIONAL_RULES = Symbol.for('@toned/conditionalRules')
 export type ConditionalRule = {
@@ -24,16 +24,21 @@ export function compilePredicateGuard(
     if (node.op === 'atom') {
       const key = node.key
       if (key.startsWith('@platform'))
-        throw new Error('Toned: platform predicates must be resolved before CSS compilation')
+        throw new Error(
+          'Toned: platform predicates must be resolved before CSS compilation',
+        )
       if (key.startsWith('@')) {
         const expr = parseConditionKey(key.slice(1))
         if (!expr || expr.length !== 1 || expr[0]?.length !== 1)
-          throw new Error(`Toned: expected a finite condition atom, received ${key}`)
+          throw new Error(
+            `Toned: expected a finite condition atom, received ${key}`,
+          )
         const atom = expr[0]![0]!
         return `var(--${atomSlug(atom)}${negate !== atom.negated ? '-not' : ''})`
       }
       const separator = key.indexOf(':')
-      if (separator < 0) throw new Error(`Toned: unsupported CSS predicate ${key}`)
+      if (separator < 0)
+        throw new Error(`Toned: unsupported CSS predicate ${key}`)
       const part = key.slice(0, separator)
       if (part && part !== target)
         throw new Error(
@@ -42,7 +47,7 @@ export function compilePredicateGuard(
       return `var(--toned_${key.slice(separator + 1)}${negate ? '-not' : ''})`
     }
     const op = negate ? (node.op === 'all' ? 'any' : 'all') : node.op
-    const operands = node.operands.map(operand => visit(operand, negate))
+    const operands = node.operands.map((operand) => visit(operand, negate))
     const name = `--toned-predicate-${prefix}-${counter++}`
     if (op === 'all') parameters[name] = operands.join(' ') || ' '
     else {

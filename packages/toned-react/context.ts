@@ -1,3 +1,5 @@
+'use client'
+
 import type { Tokens } from '@toned/core'
 import { createContext } from 'react'
 

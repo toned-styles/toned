@@ -1,20 +1,27 @@
 /** Pure resolution: no React imports, global config installation or host writes. */
-import { cssVariablesBackend, nativeBackend } from '../backends/index.ts'
+
 import type { OutputBackend, ResolvedProps } from '../backends/index.ts'
+import { cssVariablesBackend, nativeBackend } from '../backends/index.ts'
 import type { BuildManifest } from '../build/index.ts'
+import {
+  collectManifestConditions,
+  systemDefinition,
+} from '../build/manifest.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
-import type { TokenStyleDeclaration, TokenSystem, Tokens } from '../types/index.ts'
-import { collectManifestConditions, systemDefinition } from '../build/manifest.ts'
-import { resolvePlatformKeys } from '../utils/platform.ts'
+import type {
+  TokenStyleDeclaration,
+  TokenSystem,
+  Tokens,
+} from '../types/index.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 
 type SheetMeta<T> = T extends { readonly __toned__?: infer M } ? M : never
 type SheetVariants<T> = SheetMeta<T> extends { mods: infer M } ? M : never
-type SheetOutput<T> =
-  SheetMeta<T> extends { elements: infer E }
-    ? Readonly<{ [K in keyof E]: ResolvedProps }>
-    : Readonly<Record<string, ResolvedProps>>
+type SheetOutput<T> = SheetMeta<T> extends { elements: infer E }
+  ? Readonly<{ [K in keyof E]: ResolvedProps }>
+  : Readonly<Record<string, ResolvedProps>>
 
 export function createRenderer<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,
@@ -22,8 +29,13 @@ export function createRenderer<S extends TokenStyleDeclaration>(
 ) {
   const backend = Object.freeze({ ...options.backend })
   if (options.manifest && options.manifest.systemId !== (system.id ?? 'legacy'))
-    throw new Error('Toned renderer: build manifest belongs to a different system namespace')
-  if (options.manifest && options.manifest.definition !== systemDefinition(system.system))
+    throw new Error(
+      'Toned renderer: build manifest belongs to a different system namespace',
+    )
+  if (
+    options.manifest &&
+    options.manifest.definition !== systemDefinition(system.system)
+  )
     throw new Error(
       'Toned renderer: build manifest has a different system definition; regenerate CSS',
     )
@@ -35,7 +47,12 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     resolve<T extends object>(
       sheet: T,
       ...args: SheetVariants<T> extends never
-        ? [input?: { facts?: Readonly<Record<string, string | number | boolean>>; tokens?: Tokens }]
+        ? [
+            input?: {
+              facts?: Readonly<Record<string, string | number | boolean>>
+              tokens?: Tokens
+            },
+          ]
         : [
             input: {
               variants: SheetVariants<T>
@@ -51,13 +68,17 @@ export function createRenderer<S extends TokenStyleDeclaration>(
       }
       const plan = getStylesheetPlan(sheet)
       if (plan.ref !== (system as unknown))
-        throw new Error('Toned renderer: stylesheet belongs to a different system')
+        throw new Error(
+          'Toned renderer: stylesheet belongs to a different system',
+        )
       let matcher = matchers.get(sheet)
       if (!matcher) {
         const rules = resolvePlatformKeys(plan.rules, backend.platform)
         if (backend.browserConditions) {
           if (!options.manifest)
-            throw new Error('Toned web renderer: a pre-generated CSS manifest is required')
+            throw new Error(
+              'Toned web renderer: a pre-generated CSS manifest is required',
+            )
           const needed = new Set<string>()
           collectManifestConditions(rules, needed)
           for (const atom of needed)
@@ -70,7 +91,9 @@ export function createRenderer<S extends TokenStyleDeclaration>(
           platform: backend.platform,
           cssMediaMode: backend.browserConditions,
           cssPseudoMode: backend.browserConditions,
-          stateAliases: Object.keys((system.system as Record<string, unknown>)['states'] ?? {}),
+          stateAliases: Object.keys(
+            (system.system as Record<string, unknown>)['states'] ?? {},
+          ),
         })
         matchers.set(sheet, matcher)
       }
@@ -95,7 +118,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
             ? output.className
             : output.className
                 ?.split(/\s+/)
-                .filter(name => name !== '_' && name !== '_s')
+                .filter((name) => name !== '_' && name !== '_s')
                 .join(' ')
         result[part] = immutableSnapshot(
           backend.resolve({

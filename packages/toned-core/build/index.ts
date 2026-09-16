@@ -5,8 +5,8 @@ import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { collectManifestConditions, systemDefinition } from './manifest.ts'
 
 export { generate } from '../dom/generate.ts'
-export { generatePalette } from '../dom/palette.ts'
 export type { GeneratePaletteOptions } from '../dom/palette.ts'
+export { generatePalette } from '../dom/palette.ts'
 
 export type BuildManifest = Readonly<{
   version: 1
@@ -23,7 +23,8 @@ export type BuildArtifact = Readonly<{ css: string; manifest: BuildManifest }>
 /** Stable content identifier, not a security hash or an equality shortcut. */
 function fingerprint(text: string): string {
   let hash = 2166136261
-  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
+  for (let i = 0; i < text.length; i++)
+    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619)
   return (hash >>> 0).toString(36)
 }
 
@@ -48,15 +49,22 @@ export function buildStyles<S extends TokenStyleDeclaration>(
   const conditions = Object.freeze([...atoms].sort())
   const systemId = system.id ?? 'legacy'
   if (options.systemId !== undefined && options.systemId !== systemId)
-    throw new Error('Toned build: systemId must match the runtime system namespace')
-  if (options.layer && !/^[a-zA-Z_][\w-]*(?:\.[a-zA-Z_][\w-]*)*$/.test(options.layer))
+    throw new Error(
+      'Toned build: systemId must match the runtime system namespace',
+    )
+  if (
+    options.layer &&
+    !/^[a-zA-Z_][\w-]*(?:\.[a-zA-Z_][\w-]*)*$/.test(options.layer)
+  )
     throw new Error('Toned build: layer must be a CSS layer name')
   const output = generate(system.system, {
     scope: options.scope,
     conditions,
     ...(systemId === 'legacy' ? {} : { id: systemId }),
   })
-  const css = options.layer ? `@layer ${options.layer} {\n${output}\n}\n` : output
+  const css = options.layer
+    ? `@layer ${options.layer} {\n${output}\n}\n`
+    : output
   const manifest = Object.freeze({
     version: 1 as const,
     systemId,
@@ -67,7 +75,10 @@ export function buildStyles<S extends TokenStyleDeclaration>(
   return Object.freeze({ css, manifest })
 }
 
-export function assertManifestConditions(manifest: BuildManifest, rules: unknown): void {
+export function assertManifestConditions(
+  manifest: BuildManifest,
+  rules: unknown,
+): void {
   const needed = new Set<string>()
   collectManifestConditions(rules, needed)
   const emitted = new Set(manifest.conditions)

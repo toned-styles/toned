@@ -13,7 +13,9 @@ type FakeEl = { style: FakeStyle }
 
 function makeEl(): FakeEl {
   const kebabToCamel = (prop: string) =>
-    prop.startsWith('--') ? prop : prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+    prop.startsWith('--')
+      ? prop
+      : prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
 
   const style = {
     getPropertyValue(prop: string): string {
@@ -123,7 +125,7 @@ describe('setStyles (web) className ownership', () => {
       remove(cls: string) {
         el.className = el.className
           .split(' ')
-          .filter(c => c && c !== cls)
+          .filter((c) => c && c !== cls)
           .join(' ')
       },
     }
@@ -154,11 +156,18 @@ describe('native owned patches', () => {
   test('restores caller baseline, resets dropped keys, and skips identical patches', () => {
     const patches: unknown[] = []
     const host = { setNativeProps: (patch: unknown) => patches.push(patch) }
-    recordHostCommit(host, { style: { opacity: 1, width: 10 } }, { style: { color: 'blue' } })
+    recordHostCommit(
+      host,
+      { style: { opacity: 1, width: 10 } },
+      { style: { color: 'blue' } },
+    )
     setStyles(host, { style: { opacity: 0, width: 10 } })
     setStyles(host, { style: { opacity: 0, width: 10 } })
     setStyles(host, {})
-    expect(patches).toEqual([{ style: { opacity: 0 } }, { style: { opacity: null, width: null } }])
+    expect(patches).toEqual([
+      { style: { opacity: 0 } },
+      { style: { opacity: null, width: null } },
+    ])
   })
 })
 
@@ -170,9 +179,16 @@ test('native bridge props are diffed and restore a caller baseline on removal', 
     { style: {}, selectionColor: 'red', placeholderTextColor: 'red' },
     { selectionColor: 'blue' },
   )
-  setStyles(host, { style: {}, selectionColor: 'green', placeholderTextColor: 'green' })
+  setStyles(host, {
+    style: {},
+    selectionColor: 'green',
+    placeholderTextColor: 'green',
+  })
   setStyles(host, {})
-  expect(patches).toEqual([{ placeholderTextColor: 'green' }, { placeholderTextColor: null }])
+  expect(patches).toEqual([
+    { placeholderTextColor: 'green' },
+    { placeholderTextColor: null },
+  ])
 })
 
 test('a commit keeps ownership of event-only fields React did not rewrite', () => {
@@ -191,11 +207,19 @@ test('a commit keeps ownership of event-only fields React did not rewrite', () =
     },
   }
   base.style.setProperty('opacity', '1')
-  recordHostCommit(host, { style: { opacity: 1 }, className: 'base' }, { className: 'caller' })
+  recordHostCommit(
+    host,
+    { style: { opacity: 1 }, className: 'base' },
+    { className: 'caller' },
+  )
   setStyles(host, { style: { opacity: 0, color: 'red' }, className: 'hover' })
   // The declarative style/class props are unchanged from React's point of
   // view, so React does not write them again during this unrelated commit.
-  recordHostCommit(host, { style: { opacity: 1 }, className: 'base' }, { className: 'caller' })
+  recordHostCommit(
+    host,
+    { style: { opacity: 1 }, className: 'base' },
+    { className: 'caller' },
+  )
   setStyles(host, { style: { opacity: 1 }, className: 'base' })
   expect(cssValue(base, 'opacity')).toBe('1')
   expect(cssValue(base, 'color')).toBe('')

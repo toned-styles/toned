@@ -1,4 +1,9 @@
-import type { AnimationInput, Breakpoints, BridgeConfig, Tokens } from '../types/index.ts'
+import type {
+  AnimationInput,
+  Breakpoints,
+  BridgeConfig,
+  Tokens,
+} from '../types/index.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 
 export type SystemOptions = {
@@ -21,17 +26,23 @@ export type SystemOptions = {
 type FixedConditions<C> = {
   [K in keyof C]: K extends 'breakpoints'
     ? C[K] extends { __breakpoints: infer B }
-      ? { __breakpoints: { [N in keyof B]: B[N] extends number ? B[N] : never } }
+      ? {
+          __breakpoints: { [N in keyof B]: B[N] extends number ? B[N] : never }
+        }
       : never
     : K extends 'containers'
       ? {
           [N in keyof C[K]]: {
-            [Step in keyof C[K][N]]: C[K][N][Step] extends number ? C[K][N][Step] : never
+            [Step in keyof C[K][N]]: C[K][N][Step] extends number
+              ? C[K][N][Step]
+              : never
           }
         }
       : C[K]
 }
-export function fixedConditions<C extends SystemOptions>(conditions: C | undefined): C | undefined {
+export function fixedConditions<C extends SystemOptions>(
+  conditions: C | undefined,
+): C | undefined {
   if (!conditions) return conditions
   const fixed = (value: unknown, path: string): number => {
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0)
@@ -45,7 +56,10 @@ export function fixedConditions<C extends SystemOptions>(conditions: C | undefin
   const widths = conditions.media ?? conditions.breakpoints?.__breakpoints
   const breakpoints = widths && {
     __breakpoints: Object.fromEntries(
-      Object.entries(widths).map(([name, value]) => [name, fixed(value, `media.${name}`)]),
+      Object.entries(widths).map(([name, value]) => [
+        name,
+        fixed(value, `media.${name}`),
+      ]),
     ),
   }
   // Canonical px literals survive the legacy evaluator's spacing multiplier.

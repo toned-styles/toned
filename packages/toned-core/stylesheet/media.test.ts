@@ -8,13 +8,18 @@ const g = globalThis as any
 const createMockSystem = (breakpoints?: Record<string, number>) =>
   ({
     system: {},
-    config: breakpoints ? { breakpoints: { __breakpoints: breakpoints } } : undefined,
+    config: breakpoints
+      ? { breakpoints: { __breakpoints: breakpoints } }
+      : undefined,
     t: () => ({}),
     stylesheet: () => ({}),
     exec: () => ({ style: {}, className: '' }),
   }) as unknown as TokenSystem<TokenStyleDeclaration>
 
-function createMockMediaQueryList(query: string, matches: boolean): MediaQueryList {
+function createMockMediaQueryList(
+  query: string,
+  matches: boolean,
+): MediaQueryList {
   return {
     matches,
     media: query,
@@ -32,7 +37,9 @@ function createMockMediaQueryList(query: string, matches: boolean): MediaQueryLi
  * The source code reads `typeof window` to decide SSR vs browser,
  * so we must stub the whole `window` object, not just `matchMedia`.
  */
-function stubWindowWithMatchMedia(matchMediaImpl: (query: string) => MediaQueryList) {
+function stubWindowWithMatchMedia(
+  matchMediaImpl: (query: string) => MediaQueryList,
+) {
   vi.stubGlobal('window', { matchMedia: matchMediaImpl })
 }
 
@@ -188,10 +195,14 @@ describe('initMedia', () => {
 
   describe('@ prefix addition', () => {
     test('keys without @ get @ prepended in emitter data', () => {
-      stubWindowWithMatchMedia(query => createMockMediaQueryList(query, false))
+      stubWindowWithMatchMedia((query) =>
+        createMockMediaQueryList(query, false),
+      )
 
       try {
-        const emitter = initMedia(createMockSystem({ sm: 640, md: 768, lg: 1024 }))
+        const emitter = initMedia(
+          createMockSystem({ sm: 640, md: 768, lg: 1024 }),
+        )
 
         expect(emitter.data).toHaveProperty('@sm')
         expect(emitter.data).toHaveProperty('@md')
@@ -205,7 +216,9 @@ describe('initMedia', () => {
     })
 
     test('keys already starting with @ are not double-prefixed', () => {
-      stubWindowWithMatchMedia(query => createMockMediaQueryList(query, false))
+      stubWindowWithMatchMedia((query) =>
+        createMockMediaQueryList(query, false),
+      )
 
       try {
         const system = {
@@ -232,7 +245,9 @@ describe('initMedia', () => {
 
   describe('matchMedia integration', () => {
     test('calls matchMedia with correct min-width queries', () => {
-      const mockMatchMedia = vi.fn((query: string) => createMockMediaQueryList(query, false))
+      const mockMatchMedia = vi.fn((query: string) =>
+        createMockMediaQueryList(query, false),
+      )
       stubWindowWithMatchMedia(mockMatchMedia)
 
       try {
@@ -254,7 +269,9 @@ describe('initMedia', () => {
       stubWindowWithMatchMedia(mockMatchMedia)
 
       try {
-        const emitter = initMedia(createMockSystem({ sm: 640, md: 768, lg: 1024 }))
+        const emitter = initMedia(
+          createMockSystem({ sm: 640, md: 768, lg: 1024 }),
+        )
 
         expect(emitter.data['@sm']).toBe(true)
         expect(emitter.data['@md']).toBe(false)
@@ -310,8 +327,12 @@ describe('initMedia', () => {
         const listener = vi.fn()
         emitter.sub(listener)
 
-        const smCallback = callbacks['(min-width: 640px)'] as MediaChangeCallback
-        const mdCallback = callbacks['(min-width: 768px)'] as MediaChangeCallback
+        const smCallback = callbacks[
+          '(min-width: 640px)'
+        ] as MediaChangeCallback
+        const mdCallback = callbacks[
+          '(min-width: 768px)'
+        ] as MediaChangeCallback
 
         // Simulate sm breakpoint becoming active
         smCallback({ matches: true })
@@ -369,13 +390,21 @@ describe('query construction per breakpoint value shape', () => {
         system: {},
         config: {
           breakpoints: {
-            __breakpoints: { sm: 480, md: '30rem', coarse: '(pointer: coarse)' },
+            __breakpoints: {
+              sm: 480,
+              md: '30rem',
+              coarse: '(pointer: coarse)',
+            },
           },
         },
       } as unknown as TokenSystem<TokenStyleDeclaration>)
       // Appending px to a string produced '(min-width: 30rempx)' — every rem
       // breakpoint was silently dead in runtime mode.
-      expect(queries).toEqual(['(min-width: 480px)', '(min-width: 30rem)', '(pointer: coarse)'])
+      expect(queries).toEqual([
+        '(min-width: 480px)',
+        '(min-width: 30rem)',
+        '(pointer: coarse)',
+      ])
     } finally {
       g.window = originalWindow
     }

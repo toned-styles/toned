@@ -1,13 +1,19 @@
 import { immutableSnapshot } from '../utils/immutable.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype
+  value !== null &&
+  typeof value === 'object' &&
+  Object.getPrototypeOf(value) === Object.prototype
 
 /** Canonicalize author-facing aliases once, before matcher compilation. */
 export function normalizeDeclarations<T>(input: T): T {
   if (!isRecord(input)) return input
   const out: Record<string, unknown> = {}
-  if ('$kind' in input && '$$type' in input && input['$kind'] !== input['$$type'])
+  if (
+    '$kind' in input &&
+    '$$type' in input &&
+    input['$kind'] !== input['$$type']
+  )
     throw new Error('Toned: $kind and $$type must agree')
   for (const [key, value] of Object.entries(input)) {
     const canonical =
@@ -27,7 +33,9 @@ export function normalizeDeclarations<T>(input: T): T {
       isRecord(value) &&
       ('$kind' in value || '$$type' in value)
     )
-      throw new Error('Toned: part kind is static and cannot change inside a condition')
+      throw new Error(
+        'Toned: part kind is static and cannot change inside a condition',
+      )
     const normalized =
       canonical === 'style'
         ? immutableSnapshot(value)
@@ -40,7 +48,11 @@ export function normalizeDeclarations<T>(input: T): T {
         : normalized
   }
   for (const symbol of Object.getOwnPropertySymbols(input)) {
-    Object.defineProperty(out, symbol, Object.getOwnPropertyDescriptor(input, symbol)!)
+    Object.defineProperty(
+      out,
+      symbol,
+      Object.getOwnPropertyDescriptor(input, symbol)!,
+    )
   }
   return out as T
 }
@@ -68,7 +80,8 @@ export function validateDeclarations(
       return
     }
     if (!isRecord(node)) return
-    if (node['op'] === 'atom' && typeof node['key'] === 'string') walk({ [node['key']]: {} })
+    if (node['op'] === 'atom' && typeof node['key'] === 'string')
+      walk({ [node['key']]: {} })
     for (const [key, value] of Object.entries(node)) {
       if (key.startsWith('@platform.')) {
         if (!['web', 'native'].includes(key.slice(10)))
@@ -78,7 +91,7 @@ export function validateDeclarations(
         const atoms = key
           .slice(1)
           .split(/[&|]/)
-          .map(atom => atom.replace(/^!/, ''))
+          .map((atom) => atom.replace(/^!/, ''))
         for (const atom of atoms) {
           const [container, step] = atom.split('/')
           if (step === undefined) {

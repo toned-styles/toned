@@ -55,7 +55,11 @@ export type TokenConfig<Values extends readonly any[], Result> = {
   /** Explicit dynamic input channel; boxed sentinel values remain legacy aliases. */
   dynamic?: 'number' | 'string'
   values: Values
-  resolve: (value: Values[number], tokens: Tokens, ctx?: ResolveContext) => Result
+  resolve: (
+    value: Values[number],
+    tokens: Tokens,
+    ctx?: ResolveContext,
+  ) => Result
   /**
    * CSS properties in `resolve`'s result that carry this token's colour.
    * Declaring it enables the alpha modifier — `bgColor: 'primary/90'` — see
@@ -130,7 +134,9 @@ export type TokenTypeConfig = {
  * }
  * ```
  */
-export type Breakpoints<O extends Record<string, number | string>> = { __breakpoints: O }
+export type Breakpoints<O extends Record<string, number | string>> = {
+  __breakpoints: O
+}
 
 /**
  * Named size containers — the element-scoped analogue of breakpoints. Each
@@ -201,8 +207,12 @@ export type BridgeConfig = {
 }
 
 /** Narrow an input to its two halves. */
-export const isAnimationDefinition = (a: AnimationInput): a is AnimationDefinition =>
-  'keyframes' in a && typeof a.keyframes === 'object' && !Array.isArray(a.keyframes)
+export const isAnimationDefinition = (
+  a: AnimationInput,
+): a is AnimationDefinition =>
+  'keyframes' in a &&
+  typeof a.keyframes === 'object' &&
+  !Array.isArray(a.keyframes)
 
 export type TokenStyleDeclaration = {
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
@@ -263,9 +273,9 @@ export type TokenKeys<S> = Exclude<
   'media' | 'breakpoints' | 'responsiveTokens' | 'containers' | 'base'
 >
 
-import type { PlatformStyle } from './style.ts'
-import type { Platform } from './config.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
+import type { Platform } from './config.ts'
+import type { PlatformStyle } from './style.ts'
 
 /**
  * Inline style object — what the `style` escape hatch accepts. Tuned by the
@@ -296,7 +306,10 @@ export type InlineStyle = TonedTypeRegistry extends { inlineStyle: infer T }
  * Does a token apply to an element of type ET? Untyped elements (ET =
  * undefined) accept everything; tokens without `$types` apply everywhere.
  */
-type TokenAllowedOn<C, ET extends ElementType | undefined> = ET extends ElementType
+type TokenAllowedOn<
+  C,
+  ET extends ElementType | undefined,
+> = ET extends ElementType
   ? Extract<C, { $types: readonly ElementType[] }> extends never
     ? true
     : Extract<C, { $types: readonly ElementType[] }> extends {
@@ -357,7 +370,9 @@ type TokenStyleAllowed<
   //
   // The `as` clause drops tokens whose `$types` excludes this element's
   // declared `$$type` — they are not offered, and using one is an error.
-  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true ? key : never]: Extract<
+  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true
+    ? key
+    : never]: Extract<
     S[key],
     // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
     TokenConfig<any, unknown>
@@ -367,7 +382,10 @@ type TokenStyleAllowed<
       // (where the field is merely optional) stays exactly as strict as before.
       Extract<S[key], { alphaChannel: readonly string[] }> extends never
       ? V[number] | DynamicTokenValue<S[key]>
-      : V[number] | DynamicTokenValue<S[key]> | `${V[number] & string}/${number}`
+      :
+          | V[number]
+          | DynamicTokenValue<S[key]>
+          | `${V[number] & string}/${number}`
     : never
 }>
 
@@ -383,6 +401,8 @@ type TokenStyleForbidden<
   ET extends ElementType | undefined,
 > = ET extends ElementType
   ? {
-      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false ? key : never]?: never
+      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false
+        ? key
+        : never]?: never
     }
   : {}

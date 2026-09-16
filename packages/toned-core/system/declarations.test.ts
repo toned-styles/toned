@@ -1,25 +1,40 @@
 import { describe, expect, test } from 'vitest'
-import { defineSystem, defineToken } from './definers.ts'
-import { normalizeDeclarations } from './normalize.ts'
-import { namespaceCss, namespaceOutput } from './namespace.ts'
 import { generate } from '../dom/generate.ts'
-import { resolvePlatformKeys } from '../utils/platform.ts'
 import { defineGrid, fr } from '../grid/index.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
+import { defineSystem, defineToken } from './definers.ts'
+import { namespaceCss, namespaceOutput } from './namespace.ts'
+import { normalizeDeclarations } from './normalize.ts'
 
 const dynamic = defineToken({
   values: ['base', 'zero', 'wide'] as const,
-  resolve: value =>
-    value === 'base' ? { opacity: 1 } : value === 'zero' ? { opacity: 0 } : { width: 20 },
+  resolve: (value) =>
+    value === 'base'
+      ? { opacity: 1 }
+      : value === 'zero'
+        ? { opacity: 0 }
+        : { width: 20 },
 })
 describe('conditional property resolution', () => {
-  const system = defineSystem({ dynamic }, { breakpoints: { __breakpoints: { md: 768 } } })
+  const system = defineSystem(
+    { dynamic },
+    { breakpoints: { __breakpoints: { md: 768 } } },
+  )
   test('zero survives media and pseudo chains', () => {
-    const media = system.exec({ tokens: {} }, { dynamic: 'base', '@md_dynamic': 'zero' })
-      .style as Record<string, string>
-    const pseudo = system.exec({ tokens: {} }, { dynamic: 'base', ':hover_dynamic': 'zero' })
-      .style as Record<string, string>
-    expect(Object.values(media).some(value => value.endsWith(' 0'))).toBe(true)
-    expect(Object.values(pseudo).some(value => value.endsWith(' 0'))).toBe(true)
+    const media = system.exec(
+      { tokens: {} },
+      { dynamic: 'base', '@md_dynamic': 'zero' },
+    ).style as Record<string, string>
+    const pseudo = system.exec(
+      { tokens: {} },
+      { dynamic: 'base', ':hover_dynamic': 'zero' },
+    ).style as Record<string, string>
+    expect(Object.values(media).some((value) => value.endsWith(' 0'))).toBe(
+      true,
+    )
+    expect(Object.values(pseudo).some((value) => value.endsWith(' 0'))).toBe(
+      true,
+    )
     expect(media['opacity']).toContain('var(')
     expect(pseudo['opacity']).toContain('var(')
   })
@@ -42,15 +57,24 @@ describe('declaration normalization', () => {
   test('builders and human aliases have canonical identities', () => {
     const { q } = defineSystem(
       { dynamic },
-      { breakpoints: { __breakpoints: { md: 768 } }, containers: { field: { wide: 400 } } },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { field: { wide: 400 } },
+      },
     )
     expect(
       normalizeDeclarations({
-        '@media md': { '@container field wide': { '@platform web': { $style: { opacity: 0 } } } },
+        '@media md': {
+          '@container field wide': {
+            '@platform web': { $style: { opacity: 0 } },
+          },
+        },
       }),
     ).toEqual({
       [q.media('md')]: {
-        [q.container('field', 'wide')]: { [q.platform('web')]: { style: { opacity: 0 } } },
+        [q.container('field', 'wide')]: {
+          [q.platform('web')]: { style: { opacity: 0 } },
+        },
       },
     })
     expect(q.state('focus-visible')).toBe(':focus-visible')
@@ -58,10 +82,12 @@ describe('declaration normalization', () => {
     expect(typeof q.all(q.media('md'))).toBe('object')
   })
   test('rejects conflicting or conditional kinds', () => {
-    expect(() => normalizeDeclarations({ Root: { $kind: 'view', $$type: 'text' } })).toThrow(
-      'must agree',
-    )
-    expect(() => normalizeDeclarations({ Root: { ':hover': { $kind: 'text' } } })).toThrow('static')
+    expect(() =>
+      normalizeDeclarations({ Root: { $kind: 'view', $$type: 'text' } }),
+    ).toThrow('must agree')
+    expect(() =>
+      normalizeDeclarations({ Root: { ':hover': { $kind: 'text' } } }),
+    ).toThrow('static')
   })
   test('grid remains web-only and foreign blocks never execute', () => {
     const grid = defineGrid('card', { areas: [['body']], columns: [fr(1)] })
@@ -69,7 +95,10 @@ describe('declaration normalization', () => {
       Root: { '@platform web': { $grid: grid, $area: grid.area('body') } },
     })
     expect(resolvePlatformKeys(normalized, 'native')).toEqual({ Root: {} })
-    expect(resolvePlatformKeys(normalized, 'web')).toHaveProperty('Root.style.display', 'grid')
+    expect(resolvePlatformKeys(normalized, 'web')).toHaveProperty(
+      'Root.style.display',
+      'grid',
+    )
   })
 })
 describe('system namespace', () => {
@@ -83,13 +112,19 @@ describe('system namespace', () => {
     expect(
       namespaceOutput(
         {
-          style: { '--toned_hover': 'var(--base)', animationName: 'toned_spin' },
+          style: {
+            '--toned_hover': 'var(--base)',
+            animationName: 'toned_spin',
+          },
           className: '_ paint_base',
         },
         'one',
       ),
     ).toEqual({
-      style: { '--one-toned_hover': 'var(--one-base)', animationName: 'one-toned_spin' },
+      style: {
+        '--one-toned_hover': 'var(--one-base)',
+        animationName: 'one-toned_spin',
+      },
       className: '_ one--paint_base',
     })
   })
@@ -103,10 +138,15 @@ describe('system namespace', () => {
     expect(system.tokens).not.toHaveProperty('breakpoints')
     expect(Object.isFrozen(system.tokens)).toBe(true)
     expect(
-      system.exec({ tokens: {}, useClassName: true }, { dynamic: 'base' }).className,
+      system.exec({ tokens: {}, useClassName: true }, { dynamic: 'base' })
+        .className,
     ).toContain('example--dynamic_base')
-    expect(generate(system.system, { id: system.id })).toContain('.example--dynamic_base')
-    expect(() => defineSystem({ id: 'Bad ID', tokens: {} })).toThrow('kebab-case')
+    expect(generate(system.system, { id: system.id })).toContain(
+      '.example--dynamic_base',
+    )
+    expect(() => defineSystem({ id: 'Bad ID', tokens: {} })).toThrow(
+      'kebab-case',
+    )
   })
 })
 
@@ -161,12 +201,12 @@ test('raw styles are snapshots, not live caller objects', () => {
 })
 test('strict descriptors reject unknown facts, while pure declarations read no theme', () => {
   const system = defineSystem({ id: 'checked', tokens: { dynamic } })
-  expect(() => system.stylesheet({ Root: { '@mdd': { dynamic: 'zero' } } } as any)).toThrow(
-    'undeclared media',
-  )
-  expect(() => system.stylesheet({ Root: { ':hovver': { dynamic: 'zero' } } } as any)).toThrow(
-    'undeclared state',
-  )
+  expect(() =>
+    system.stylesheet({ Root: { '@mdd': { dynamic: 'zero' } } } as any),
+  ).toThrow('undeclared media')
+  expect(() =>
+    system.stylesheet({ Root: { ':hovver': { dynamic: 'zero' } } } as any),
+  ).toThrow('undeclared state')
   expect(system.style({ dynamic: 'base' })).toEqual({ dynamic: 'base' })
   expect(Object.isFrozen(system.style({ dynamic: 'base' }))).toBe(true)
 })
@@ -179,8 +219,14 @@ test('declared footprints survive immutable construction without resolver probes
       throw new Error('actual theme required')
     },
   })
-  const system = defineSystem({ id: 'footprint', tokens: { typography: token } })
-  expect(system.tokens.typography.properties).toEqual(['fontSize', 'lineHeight'])
+  const system = defineSystem({
+    id: 'footprint',
+    tokens: { typography: token },
+  })
+  expect(system.tokens.typography.properties).toEqual([
+    'fontSize',
+    'lineHeight',
+  ])
 })
 
 test('pure style snapshots preserve grid and area reference identity', () => {
@@ -189,8 +235,14 @@ test('pure style snapshots preserve grid and area reference identity', () => {
   const area = grid.area('content')
   const parent = system.style({ '@platform web': { $grid: grid } })
   const child = system.style({ '@platform web': { $area: area } })
-  const parentStyle = resolvePlatformKeys(parent, 'web') as Record<string, unknown>
-  const childStyle = resolvePlatformKeys(child, 'web') as Record<string, unknown>
+  const parentStyle = resolvePlatformKeys(parent, 'web') as Record<
+    string,
+    unknown
+  >
+  const childStyle = resolvePlatformKeys(child, 'web') as Record<
+    string,
+    unknown
+  >
   expect(parentStyle['$grid']).toBe(grid)
   expect(childStyle['$area']).toBe(area)
   expect(parentStyle['style']).toMatchObject({ display: 'grid' })
