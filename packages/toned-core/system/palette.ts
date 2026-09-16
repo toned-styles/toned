@@ -16,6 +16,8 @@
  * @module system/palette
  */
 
+import { immutableSnapshot } from '../utils/immutable.ts'
+
 /** A token's value: a bare string is theme-INVARIANT; a map is per-theme. */
 export type ThemeValue = string | Record<string, string>
 
@@ -28,6 +30,8 @@ export interface ThemeMeta {
 }
 
 export interface PaletteConfig {
+  /** Explicit source for omitted theme values; otherwise every map must be complete. */
+  fallbackTheme?: string
   /** The themes this palette spans, keyed by name (the value-map keys). */
   themes: Record<string, ThemeMeta>
 }
@@ -38,6 +42,7 @@ export interface Palette {
   themes: Record<string, ThemeMeta>
   /** The name of the single theme flagged `default: true`. */
   defaultTheme: string
+  fallbackTheme?: string
 }
 
 /**
@@ -62,7 +67,22 @@ export function definePalette(
       `definePalette: exactly one theme must be { default: true } (got ${defaults.length}: ${defaults.join(', ') || 'none'})`,
     )
 
+  if (
+    config.fallbackTheme !== undefined &&
+    !themeNames.includes(config.fallbackTheme)
+  )
+    throw new Error(
+      `definePalette: fallback theme '${config.fallbackTheme}' is not declared`,
+    )
+
   for (const [name, value] of Object.entries(tokens)) {
+    if (
+      typeof value !== 'string' &&
+      (!value || typeof value !== 'object' || Array.isArray(value))
+    )
+      throw new Error(
+        `definePalette: token '${name}' must be a string or theme map`,
+      )
     if (value && typeof value === 'object') {
       for (const theme of Object.keys(value)) {
         if (!(theme in config.themes))
@@ -70,8 +90,22 @@ export function definePalette(
             `definePalette: token '${name}' names theme '${theme}', which is not declared in \`themes\``,
           )
       }
+      for (const theme of themeNames) {
+        const resolved =
+          value[theme] ??
+          (config.fallbackTheme ? value[config.fallbackTheme] : undefined)
+        if (typeof resolved !== 'string')
+          throw new Error(
+            `definePalette: token '${name}' has no value for theme '${theme}'; provide it or declare a fallbackTheme with a value`,
+          )
+      }
     }
   }
 
-  return { tokens, themes: config.themes, defaultTheme: defaults[0]! }
+  return immutableSnapshot({
+    tokens,
+    themes: config.themes,
+    defaultTheme: defaults[0]!,
+    ...(config.fallbackTheme ? { fallbackTheme: config.fallbackTheme } : {}),
+  })
 }

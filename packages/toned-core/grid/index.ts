@@ -10,9 +10,8 @@ function track(unit: 'dp' | 'fr' | '%', value: number): GridTrack {
 }
 
 /** Fixed logical pixels, independent of the font or theme spacing scale. */
-export const dp = (value: number): GridTrack => track('dp', value)
+export { dp, percent } from '../core/values.ts'
 export const fr = (value: number): GridTrack => track('fr', value)
-export const percent = (value: number): GridTrack => track('%', value)
 
 export type GridPlacement = Readonly<{
   rowStart: number
@@ -23,13 +22,32 @@ export type GridPlacement = Readonly<{
 
 const gridBrand = Symbol('toned.grid')
 const areaBrand = Symbol('toned.grid.area')
+const families = new WeakMap<object, object>()
+
+export type GridInput<Matrix extends readonly (readonly string[])[]> = {
+  columns: readonly GridTrack[]
+  rows?: readonly GridTrack[]
+  areas: Matrix
+  gap?: number
+}
+
+/** Layout variants share ownership, while independently defined grids never do. */
+export function sameGridFamily(a: GridDefinition, b: GridDefinition): boolean {
+  return a === b || (!!families.get(a) && families.get(a) === families.get(b))
+}
+
+// CSS area names are local to one grid formatting context. Encode arbitrary
+// public names injectively rather than exposing CSS identifier/string syntax.
+const cssArea = (name: string) =>
+  `a${Array.from(name, (char) => char.codePointAt(0)!.toString(16)).join('_')}`
 
 export type GridArea<
   Id extends string = string,
   Name extends string = string,
+  AllNames extends string = string,
 > = Readonly<{
   readonly [areaBrand]: true
-  grid: GridDefinition<Id, Name>
+  grid: GridDefinition<Id, AllNames>
   name: Name
   placement: GridPlacement
 }>
@@ -45,7 +63,14 @@ export type GridDefinition<
   areas: readonly (readonly string[])[]
   /** Fixed logical pixels. Semantic spacing tokens can supply a separate gap. */
   gap?: number
-  area: <N extends Name>(name: N) => GridArea<Id, N>
+  area: <N extends Name>(name: N) => GridArea<Id, N, Name>
+  /** A complete alternative layout, preserving every named area and host owner. */
+  variant: <const Matrix extends readonly (readonly (Name | '.')[])[]>(
+    input: GridInput<Matrix> &
+      (Exclude<Name, Matrix[number][number]> extends never
+        ? unknown
+        : { readonly $missingAreas: Exclude<Name, Matrix[number][number]> }),
+  ) => GridDefinition<Id, Name>
 }>
 
 export function defineGrid<
@@ -53,12 +78,19 @@ export function defineGrid<
   const Matrix extends readonly (readonly string[])[],
 >(
   id: Id,
-  input: {
-    columns: readonly GridTrack[]
-    rows?: readonly GridTrack[]
-    areas: Matrix
-    gap?: number
-  },
+  input: GridInput<Matrix>,
+): GridDefinition<Id, Exclude<Matrix[number][number], '.'>> {
+  return createGrid(id, input, {})
+}
+
+function createGrid<
+  const Id extends string,
+  const Matrix extends readonly (readonly string[])[],
+>(
+  id: Id,
+  input: GridInput<Matrix>,
+  family: object,
+  required?: readonly string[],
 ): GridDefinition<Id, Exclude<Matrix[number][number], '.'>> {
   type Name = Exclude<Matrix[number][number], '.'>
   if (!id) throw new Error('Toned grid: a stable nonempty id is required')
@@ -94,6 +126,14 @@ export function defineGrid<
         positions.set(name, { top: y, left: x, bottom: y, right: x, count: 1 })
     })
   })
+  if (
+    required &&
+    (required.some((name) => !positions.has(name)) ||
+      [...positions.keys()].some((name) => !required.includes(name)))
+  )
+    throw new Error(
+      `Toned grid ${id}: every layout variant must preserve exactly the same named areas`,
+    )
   const placements = new Map<string, GridPlacement>()
   for (const [name, box] of positions) {
     if (box.count !== (box.bottom - box.top + 1) * (box.right - box.left + 1)) {
@@ -126,17 +166,23 @@ export function defineGrid<
     ),
     areas: Object.freeze(input.areas.map((row) => Object.freeze([...row]))),
     ...(input.gap === undefined ? {} : { gap: input.gap }),
-    area<N extends Name>(name: N): GridArea<Id, N> {
+    variant(next) {
+      return createGrid(id, next, family, [
+        ...positions.keys(),
+      ]) as GridDefinition<Id, Name>
+    },
+    area<N extends Name>(name: N): GridArea<Id, N, Name> {
       const placement = placements.get(name)
       if (!placement) throw new Error(`Toned grid ${id}: unknown area ${name}`)
       return Object.freeze({
         [areaBrand]: true as const,
-        grid: definition as GridDefinition<Id, N>,
+        grid: definition,
         name,
         placement,
       })
     },
   })
+  families.set(definition, family)
   return definition
 }
 
@@ -154,7 +200,7 @@ function cssTrack(value: GridTrack): string {
     : `${value.value}${value.unit === 'dp' ? 'px' : value.unit}`
 }
 
-/** Pure SSR-safe output; numeric lines avoid global CSS area-name collisions. */
+/** Pure SSR-safe output. Named areas follow browser-selected layout variants. */
 export function resolveGrid(
   value: GridDefinition | GridArea,
   platform: 'web' | 'native',
@@ -168,17 +214,17 @@ export function resolveGrid(
       display: 'grid',
       gridTemplateColumns: value.columns.map(cssTrack).join(' '),
       gridTemplateRows: value.rows.map(cssTrack).join(' '),
-      ...(value.gap === undefined ? {} : { gap: value.gap }),
+      gridTemplateAreas: value.areas
+        .map(
+          (row) =>
+            `"${row.map((name) => (name === '.' ? '.' : cssArea(name))).join(' ')}"`,
+        )
+        .join(' '),
+      gap: value.gap ?? 0,
     })
   if (!isGridArea(value))
     throw new Error('Toned grid: expected a definition or area reference')
-  const p = value.placement
-  return Object.freeze({
-    gridRowStart: p.rowStart,
-    gridRowEnd: p.rowEnd,
-    gridColumnStart: p.columnStart,
-    gridColumnEnd: p.columnEnd,
-  })
+  return Object.freeze({ gridArea: cssArea(value.name) })
 }
 
 /** One registry per mounted grid. Host adapters must pass direct layout children. */
@@ -187,7 +233,7 @@ export function createGridScope(grid: GridDefinition) {
   return Object.freeze({
     grid,
     attach(target: object, area: GridArea, directChild = true) {
-      if (area.grid !== grid)
+      if (!sameGridFamily(area.grid, grid))
         throw new Error(
           `Toned grid ${grid.id}: area ${area.name} belongs to another grid definition`,
         )

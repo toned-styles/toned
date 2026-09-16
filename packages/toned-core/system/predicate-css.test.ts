@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
 import {
   RULE_LAYERS,
@@ -34,6 +35,25 @@ test('boolean guards compile linearly and preserve nested negation', () => {
   expect(JSON.stringify(parameters)).toContain('--toned_hover-not')
   expect(JSON.stringify(parameters)).toContain('--cq-card-wide-not')
   expect(Object.keys(parameters).length).toBeLessThan(10)
+  for (const media of [false, true])
+    for (const hover of [false, true])
+      for (const container of [false, true]) {
+        const actual = cssTestValue(
+          { ...parameters, value: `${result} active` },
+          'value',
+          {
+            '--media-md': media,
+            '--media-md-not': !media,
+            '--toned_hover': hover,
+            '--toned_hover-not': !hover,
+            '--cq-card-wide': container,
+            '--cq-card-wide-not': !container,
+          },
+        )
+        expect(actual).toBe(
+          !((media && hover) || container) ? 'active' : undefined,
+        )
+      }
 })
 test('conditional zero values ride guarded property writes and fall back to resting values', () => {
   const style = {
@@ -51,8 +71,14 @@ test('conditional zero values ride guarded property writes and fall back to rest
     string,
     string
   >
-  expect(result['--toned-rule-3-0-opacity']).toMatch(/ 0$/)
-  expect(result['opacity']).toBe('var(--toned-rule-3-0-opacity, 1)')
+  for (const media of [false, true])
+    for (const hover of [false, true])
+      expect(
+        cssTestValue(result, 'opacity', {
+          '--media-md': media,
+          '--toned_hover': hover,
+        }),
+      ).toBe(media && hover ? '0' : '1')
 })
 test('complement state toggles exist without any viewport configuration', () => {
   expect(generate({})).toContain('._ {--toned_hover-not: ;}')
@@ -96,11 +122,26 @@ for (const strict of [false, true])
         [RULE_LAYERS]: [{ Root: { paint: 0.5 } }],
       }
       const matcher = new StyleMatcher(rules, { cssPseudoMode: true })
-      const css = ref.exec({ tokens: {}, useClassName }, matcher.match({}).Root)
-        .style as Record<string, unknown>
-      expect(css['opacity']).toBe(0.5)
-      expect(css['width']).toContain('toned-rule-')
-      expect(css['width']).toContain(', 1px)')
+      const output = ref.exec(
+        { tokens: {}, useClassName },
+        matcher.match({}).Root,
+      )
+      const css = output.style as Record<string, unknown>
+      const prefix = strict ? '--ordered-' : '--'
+      if (useClassName) {
+        expect(
+          output.className
+            ?.split(' ')
+            .filter((name) => name.includes('paint_')),
+        ).toEqual([strict ? 'ordered--paint_0.5' : 'paint_0.5'])
+        expect(
+          generate(ref.system, strict ? { id: ref.id } : undefined),
+        ).toContain('paint_0\\.5{opacity:0.5;}')
+      } else expect(css['opacity']).toBe(0.5)
+      for (const hover of [false, true])
+        expect(
+          cssTestValue(css, 'width', { [`${prefix}toned_hover`]: hover }),
+        ).toBe(hover ? '2px' : '1px')
       const runtime = new StyleMatcher(rules)
       const active = ref.exec(
         { tokens: {}, useClassName: false },
@@ -125,7 +166,17 @@ for (const strict of [false, true])
         { tokens: {}, useClassName },
         final.match({}).Root,
       ).style as Record<string, unknown>
-      expect(finalCss['opacity']).toContain('toned-rule-')
-      expect(finalCss['opacity']).toContain(', 0.5)')
-      expect(String(finalCss['opacity']).match(/toned-rule-/g)).toHaveLength(1)
+      for (const hover of [false, true])
+        for (const focus of [false, true]) {
+          const toggles = {
+            [`${prefix}toned_hover`]: hover,
+            [`${prefix}toned_focus`]: focus,
+          }
+          expect(cssTestValue(finalCss, 'opacity', toggles)).toBe(
+            focus ? '1' : '0.5',
+          )
+          expect(cssTestValue(finalCss, 'width', toggles)).toBe(
+            hover ? '2px' : '1px',
+          )
+        }
     })

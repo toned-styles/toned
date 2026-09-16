@@ -1,4 +1,9 @@
 import type { Properties } from 'csstype'
+import type {
+  LogicalLength,
+  PortableColor,
+  ThemeReference,
+} from '../core/values.ts'
 import type { Platform } from './config.ts'
 import type { ElementType } from './tokens.ts'
 
@@ -51,6 +56,31 @@ export interface PortableInlineStyle {
   minHeight?: Dimension
   minWidth?: Dimension
   overflow?: 'visible' | 'hidden'
+  // Logical layout is resolved against the system's immutable layout contract.
+  paddingInline?: Dimension
+  paddingInlineStart?: Dimension
+  paddingInlineEnd?: Dimension
+  paddingBlock?: Dimension
+  paddingBlockStart?: Dimension
+  paddingBlockEnd?: Dimension
+  marginInline?: Dimension | 'auto'
+  marginInlineStart?: Dimension | 'auto'
+  marginInlineEnd?: Dimension | 'auto'
+  marginBlock?: Dimension | 'auto'
+  marginBlockStart?: Dimension | 'auto'
+  marginBlockEnd?: Dimension | 'auto'
+  insetInline?: Dimension
+  insetInlineStart?: Dimension
+  insetInlineEnd?: Dimension
+  insetBlock?: Dimension
+  insetBlockStart?: Dimension
+  insetBlockEnd?: Dimension
+  inlineSize?: Dimension | 'auto'
+  blockSize?: Dimension | 'auto'
+  minInlineSize?: Dimension
+  minBlockSize?: Dimension
+  maxInlineSize?: Dimension
+  maxBlockSize?: Dimension
   padding?: Dimension
   paddingBottom?: Dimension
   paddingLeft?: Dimension
@@ -111,6 +141,52 @@ export interface PortableInlineStyle {
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
 }
 
+/** Portable resolver outputs: fields and value domains are explicit, including
+ * serializable authoring values before backend-specific lowering. */
+type LengthField =
+  | 'width'
+  | 'height'
+  | 'minWidth'
+  | 'minHeight'
+  | 'maxWidth'
+  | 'maxHeight'
+  | 'inlineSize'
+  | 'blockSize'
+  | 'minInlineSize'
+  | 'minBlockSize'
+  | 'maxInlineSize'
+  | 'maxBlockSize'
+  | 'top'
+  | 'right'
+  | 'bottom'
+  | 'left'
+  | 'flexBasis'
+  | 'gap'
+  | 'rowGap'
+  | 'columnGap'
+  | 'fontSize'
+  | 'letterSpacing'
+  | `padding${string}`
+  | `margin${string}`
+  | `inset${string}`
+  | `border${string}Width`
+  | 'borderWidth'
+  | `border${string}Radius`
+  | 'borderRadius'
+type TokenFieldValue<K extends keyof PortableInlineStyle> =
+  | PortableInlineStyle[K]
+  | (K extends LengthField
+      ? `${number}%` extends NonNullable<PortableInlineStyle[K]>
+        ? LogicalLength
+        : LogicalLength & { unit: 'dp' }
+      : never)
+  | (K extends 'color' | `${string}Color` ? PortableColor : never)
+export type PortableTokenStyle = {
+  [K in keyof PortableInlineStyle]?:
+    | TokenFieldValue<K>
+    | ThemeReference<NonNullable<TokenFieldValue<K>>>
+}
+
 type TextKeys =
   | 'color'
   | 'fontFamily'
@@ -128,6 +204,20 @@ type ForKind<T, Kind> = Kind extends 'text'
 export type WebInlineStyle = Properties<number | string> & {
   [K in `--${string}`]?: string | number
 }
+type NativeTransformOperation =
+  | { perspective: number }
+  | { scale: number }
+  | { scaleX: number }
+  | { scaleY: number }
+  | { translateX: number }
+  | { translateY: number }
+  | { rotate: `${number}deg` | `${number}rad` }
+  | { rotateX: `${number}deg` | `${number}rad` }
+  | { rotateY: `${number}deg` | `${number}rad` }
+  | { rotateZ: `${number}deg` | `${number}rad` }
+  | { skewX: `${number}deg` | `${number}rad` }
+  | { skewY: `${number}deg` | `${number}rad` }
+  | { matrix: readonly number[] }
 export type NativeInlineStyle<Kind> = ForKind<
   Omit<PortableInlineStyle, 'textAlign'>,
   Kind
@@ -142,7 +232,7 @@ export type NativeInlineStyle<Kind> = ForKind<
   shadowOffset?: { width: number; height: number }
   shadowOpacity?: number
   shadowRadius?: number
-  transform?: readonly Record<string, number | string>[]
+  transform?: readonly NativeTransformOperation[]
 } & (Kind extends 'text'
     ? {
         textAlign?: 'auto' | 'left' | 'right' | 'center' | 'justify'
@@ -163,7 +253,9 @@ export type PlatformStyle<
   Kind extends ElementType | undefined,
   Host extends Platform | undefined,
 > = Host extends 'web'
-  ? WebInlineStyle
+  ? Kind extends undefined
+    ? WebInlineStyle
+    : ForKind<WebInlineStyle, Kind>
   : Host extends 'native'
     ? NativeInlineStyle<Kind>
     : ForKind<PortableInlineStyle, Kind>

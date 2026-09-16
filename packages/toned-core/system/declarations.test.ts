@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
 import { defineGrid, fr } from '../grid/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -43,10 +44,14 @@ describe('conditional property resolution', () => {
       { tokens: {} },
       { dynamic: 'base', ':hover_dynamic': 'zero', ':active_dynamic': 'wide' },
     ).style as Record<string, string>
-    expect(style['width']).toContain('active')
-    expect(style['width']).not.toContain('hover')
-    expect(style['opacity']).toContain('hover')
-    expect(style['opacity']).not.toContain('active')
+    for (const hover of [false, true])
+      for (const active of [false, true]) {
+        const toggles = { '--toned_hover': hover, '--toned_active': active }
+        expect(cssTestValue(style, 'width', toggles)).toBe(
+          active ? '20px' : undefined,
+        )
+        expect(cssTestValue(style, 'opacity', toggles)).toBe(hover ? '0' : '1')
+      }
   })
   test('pseudo toggle generation does not depend on breakpoints', () => {
     expect(generate({ dynamic })).toContain('._:hover')
@@ -246,5 +251,7 @@ test('pure style snapshots preserve grid and area reference identity', () => {
   expect(parentStyle['$grid']).toBe(grid)
   expect(childStyle['$area']).toBe(area)
   expect(parentStyle['style']).toMatchObject({ display: 'grid' })
-  expect(childStyle['style']).toMatchObject({ gridColumnStart: 1 })
+  expect(childStyle['style']).toMatchObject({
+    gridArea: 'a63_6f_6e_74_65_6e_74',
+  })
 })

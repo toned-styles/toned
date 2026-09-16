@@ -119,9 +119,7 @@ cqSystem.stylesheet({
 
 cqSystem.stylesheet({
   root: {
-    // @ts-expect-error — expressions never sit INSIDE an element rule: a
-    // pattern-typed member there would suppress excess-property checking for
-    // the whole element literal (bogusToken would pass silently)
+    // Expressions collocate here; recursive validation still catches typos.
     '@card/>=100': { bgColor: 'accent' },
   },
 })

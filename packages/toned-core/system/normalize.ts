@@ -1,3 +1,4 @@
+import { fixedQueryWidth } from '../utils/conditions.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -62,7 +63,7 @@ export function validateDeclarations(
   input: unknown,
   system: {
     breakpoints?: { __breakpoints: Record<string, number | string> }
-    containers?: Record<string, Record<string, number | string>>
+    containers?: Record<string, Record<string, unknown>>
     states?: Record<string, string>
   },
 ): void {
@@ -95,14 +96,18 @@ export function validateDeclarations(
         for (const atom of atoms) {
           const [container, step] = atom.split('/')
           if (step === undefined) {
-            if (!(container! in (system.breakpoints?.__breakpoints ?? {})))
+            if (
+              fixedQueryWidth(container!) === undefined &&
+              !(container! in (system.breakpoints?.__breakpoints ?? {}))
+            )
               throw new Error(`Toned: undeclared media condition ${key}`)
           } else if (
             !system.containers?.[container!] ||
-            !(step in system.containers[container!]!)
+            (fixedQueryWidth(step) === undefined &&
+              !(step in system.containers[container!]!))
           ) {
             throw new Error(
-              `Toned: undeclared container condition ${key}; portable conditions must be named fixed thresholds`,
+              `Toned: undeclared container condition ${key}; portable conditions must be named fixed thresholds or explicit dp lengths`,
             )
           }
         }
@@ -112,7 +117,13 @@ export function validateDeclarations(
             throw new Error(`Toned: undeclared state ${state}`)
         }
       }
-      if (key !== 'style' && key !== '$grid' && key !== '$area') walk(value)
+      if (
+        key !== 'style' &&
+        key !== '$grid' &&
+        key !== '$area' &&
+        key !== '$webRules'
+      )
+        walk(value)
     }
     for (const symbol of Object.getOwnPropertySymbols(node))
       walk((node as Record<symbol, unknown>)[symbol])

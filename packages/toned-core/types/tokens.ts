@@ -46,7 +46,10 @@ export type Tokens = Record<string, any>
  * convention a token follows is **branch on `'native'`**; `'web'` is the
  * baseline both the inline and the generated paths agree on.
  */
-export type ResolveContext = { platform: import('./config.ts').Platform }
+export type ResolveContext = {
+  platform: import('./config.ts').Platform /** Internal descriptor lowering policy; legacy keeps authored shorthands. */
+  canonicalFields?: boolean
+} & import('../core/values.ts').LayoutContext
 
 // biome-ignore lint/suspicious/noExplicitAny: const generic requires any[] for tuple inference
 export type TokenConfig<Values extends readonly any[], Result> = {
@@ -148,7 +151,10 @@ export type Breakpoints<O extends Record<string, number | string>> = {
  * on the web, resolved at runtime against the nearest measured ancestor on
  * native.
  */
-export type Containers = Record<string, Record<string, number | string>>
+export type Containers = Record<
+  string,
+  Record<string, number | string | import('../core/values.ts').LogicalLength>
+>
 
 /**
  * Token style declaration - the complete system definition.
@@ -215,6 +221,7 @@ export const isAnimationDefinition = (
   !Array.isArray(a.keyframes)
 
 export type TokenStyleDeclaration = {
+  layoutContext?: import('../core/values.ts').LayoutContext
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
   [key: string]:
     | TokenConfig<any, any>
@@ -222,14 +229,14 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
-    | Record<string, number>
+    | Record<string, number | import('../core/values.ts').LogicalLength>
     | Containers
     | readonly string[]
     | number
     | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
-  media?: Record<string, number>
+  media?: Record<string, number | import('../core/values.ts').LogicalLength>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
   /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
@@ -270,7 +277,12 @@ export type TokenStyleDeclaration = {
 /** Filter out 'breakpoints' key from token style keys */
 export type TokenKeys<S> = Exclude<
   keyof S,
-  'media' | 'breakpoints' | 'responsiveTokens' | 'containers' | 'base'
+  | 'layoutContext'
+  | 'media'
+  | 'breakpoints'
+  | 'responsiveTokens'
+  | 'containers'
+  | 'base'
 >
 
 import type { TonedTypeRegistry } from '../registry.ts'

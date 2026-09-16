@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { cssTestValue } from '../../backends/css/test-values.test.helpers.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
 import { RULE_LAYERS, TOKEN_OPERATIONS, WHEN_RULES } from './normalizeRules.ts'
@@ -216,10 +217,16 @@ describe('normalized rule occurrences', () => {
         },
         { cssPseudoMode: true },
       )
-      expect(
-        system.exec({ tokens: {}, useClassName: false }, matcher.match({}).Root)
-          .style,
-      ).toMatchObject({ color: 'override' })
+      const output = system.exec(
+        { tokens: {}, useClassName: false },
+        matcher.match({}).Root,
+      )
+      for (const hover of [false, true])
+        expect(
+          cssTestValue(output.style, 'color', {
+            [system.id ? `--${system.id}-toned_hover` : '--toned_hover']: hover,
+          }),
+        ).toBe('override')
     }
   })
   test('compound selectors have no implicit priority over later subsets', () => {

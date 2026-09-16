@@ -3,12 +3,19 @@
 import type { QueryBuilder } from '@toned/core/system'
 import type { ValidateDeclaration } from '@toned/core/types/stylesheet'
 
-export { ConfigProvider } from './runtime-config.ts'
+export {
+  ConfigProvider,
+  type ReactHost,
+  type ReactRenderer,
+  TonedProvider,
+} from './runtime-config.ts'
 
 import {
   type AuthoredElementStyle,
   type ElementType,
   type ModType,
+  type NullableOverride as OverrideDeclaration,
+  overrideSheet,
   SYMBOL_INIT,
   type TokenStyle,
   type TokenStyleDeclaration,
@@ -19,30 +26,34 @@ import {
   type ElementType as HostElement,
   type ReactElement,
   type ReactNode,
+  useCallback,
   useContext,
   useLayoutEffect,
+  useMemo,
   useRef,
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
-import { ContainerSizesContext } from './containers.tsx'
+import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
 import {
   overrideStyles as _overrideStyles,
+  isStyleOverrideEntry,
   type StyleOverrideEntry,
   useOverriddenSheet,
 } from './overrides.tsx'
-import { useRuntimeConfig } from './runtime-config.ts'
+import { useRuntimeConfig, VALIDATE_SHEET } from './runtime-config.ts'
+import { styleView } from './style-view.ts'
+import { useTokenConfig } from './token-config.ts'
 
 /**
  * Props returned for each element in a stylesheet.
  * Includes known properties (style, className) plus dynamic attributes.
  */
 type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic style object
-  style?: Record<string, any>
+  /** Resolved host fields; use withProps<Host>() for the host's precise style type. */
+  style?: Readonly<Record<string, unknown>>
   className?: string
   /** Present so React re-attaches interaction state on commit — safe to spread. */
-  // biome-ignore lint/suspicious/noExplicitAny: platform node type varies
-  ref?: (node: any) => void
+  ref?: (node: unknown) => void
   /**
    * Merge host props onto this element. Token overrides belong in overrideStyles().
    *
@@ -67,7 +78,7 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
       | false
       | null
       | undefined,
-  ) => ElementProps<S> & ComponentPropsWithRef<As>
+  ) => Omit<ElementProps<S>, 'style' | 'ref'> & ComponentPropsWithRef<As>
 } & InteractionHandlerProps
 
 /**
@@ -146,6 +157,23 @@ type InferElements<S> = InferMeta<S> extends {
     }
 
 type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
+type InferDefaults<S> = InferMeta<S> extends { defaults: infer D } ? D : {}
+type InputMods<S> = Omit<InferMods<S>, keyof InferDefaults<S>> &
+  Partial<
+    Pick<InferMods<S>, Extract<keyof InferDefaults<S>, keyof InferMods<S>>>
+  >
+type VariantArgs<S> = [InferMods<S>] extends [never]
+  ? []
+  : {} extends InputMods<S>
+    ? [state?: InputMods<S>]
+    : [state: InputMods<S>]
+export type UseStylesOptions<T extends StylesheetLike> = {
+  overrides?: StyleOverrideRules<T> | OverrideEntry<T>
+} & ([InferMods<T>] extends [never]
+  ? { variants?: never }
+  : {} extends InputMods<T>
+    ? { variants?: InputMods<T> }
+    : { variants: InputMods<T> })
 
 /**
  * Hook to use a stylesheet in a React component.
@@ -162,7 +190,12 @@ type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
  */
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
-  ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
+  ...args: VariantArgs<T>
+): InferElements<T>
+
+export function useStyles<T extends StylesheetLike>(
+  stylesheet: T,
+  options: UseStylesOptions<T>,
 ): InferElements<T>
 
 export function useStyles<T extends StylesheetLike>(
@@ -170,13 +203,54 @@ export function useStyles<T extends StylesheetLike>(
   state?: object,
 ) {
   const sourceSheet = stylesheet
-  stylesheet = useOverriddenSheet(stylesheet)
-  const containerSizes = useContext(ContainerSizesContext)
+  // A real axis named "variants" remains legal: its value is scalar, while
+  // the options wrapper carries a variants object (or only an overrides map).
+  const options =
+    state &&
+    ((typeof (state as any).variants === 'object' &&
+      (state as any).variants !== null) ||
+      (typeof (state as any).overrides === 'object' &&
+        (state as any).overrides !== null))
+      ? (state as { variants?: object; overrides?: any })
+      : undefined
+  const mods = options ? options.variants : state
+  const inherited = useOverriddenSheet(stylesheet)
+  const overrides = options?.overrides
+  stylesheet = useMemo(() => {
+    if (!overrides) return inherited
+    const isEntry = isStyleOverrideEntry(overrides)
+    if (isEntry && overrides.sheet !== sourceSheet)
+      throw new Error('Toned instance override targets a different stylesheet')
+    return (
+      overrideSheet as (sheet: T, rules: unknown, variants?: unknown) => T
+    )(
+      inherited,
+      isEntry ? overrides.rules : overrides,
+      isEntry ? overrides.variantRules : undefined,
+    )
+  }, [inherited, sourceSheet, overrides])
+  const legacySizes = useContext(ContainerSizesContext)
+  const containerScope = useContext(ContainerStoreContext)
+  const readSizes = useCallback(
+    () =>
+      containerScope
+        ? {
+            ...containerScope.store.snapshot(),
+            ...(containerScope.legacy === legacySizes ? {} : legacySizes),
+          }
+        : legacySizes,
+    [containerScope, legacySizes],
+  )
+  const containerSizes = readSizes()
   const committed = useRef<any>(null)
-  const config = useRuntimeConfig()
+  const config = useTokenConfig(useRuntimeConfig())
+  useMemo(
+    () => (config as any)[VALIDATE_SHEET]?.(stylesheet),
+    [config, stylesheet],
+  )
   // A candidate is private to this render. In particular a suspended render
   // cannot publish mods, refs, subscriptions, or token values to the live tree.
-  const candidate = stylesheet[SYMBOL_INIT](config, state)
+  const candidate = stylesheet[SYMBOL_INIT](config, mods)
   candidate.prepare?.(
     committed.current?.stylesheet === sourceSheet
       ? committed.current.candidate
@@ -189,9 +263,21 @@ export function useStyles<T extends StylesheetLike>(
   }
   useLayoutEffect(() => {
     committed.current = { stylesheet: sourceSheet, candidate }
-    return candidate.mount?.()
-  }, [candidate, sourceSheet])
-  return candidate
+    const unmount = candidate.mount?.()
+    const syncMeasurements = () => {
+      const conditions = candidate.conditionState?.(readSizes())
+      if (conditions) candidate.applyState(conditions)
+    }
+    const unsubscribe = containerScope?.store.subscribe(syncMeasurements)
+    // A measurement can change after render or during child attachment. Read
+    // it again in the commit phase before the browser/native host paints.
+    if (containerScope) syncMeasurements()
+    return () => {
+      unsubscribe?.()
+      unmount?.()
+    }
+  }, [candidate, sourceSheet, containerScope, readSizes])
+  return styleView(candidate)
 }
 
 /**
@@ -251,9 +337,11 @@ export type StyleOverrideRules<T extends StylesheetLike> =
     elements: infer E
   }
     ? {
-        [K in keyof E as K extends string ? K : never]?: AuthoredElementStyle<
-          Sys,
-          E[K] extends ElementType | undefined ? E[K] : undefined
+        [K in keyof E as K extends string ? K : never]?: OverrideDeclaration<
+          AuthoredElementStyle<
+            Sys,
+            E[K] extends ElementType | undefined ? E[K] : undefined
+          >
         >
       } & {
         /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
@@ -262,7 +350,9 @@ export type StyleOverrideRules<T extends StylesheetLike> =
         [K in
           | `${keyof E & string}:${string}`
           | `${keyof E & string}~:${string}`]?: {
-          [T2 in keyof E as T2 extends string ? T2 : never]?: TokenStyle<Sys>
+          [T2 in keyof E as T2 extends string
+            ? T2
+            : never]?: OverrideDeclaration<TokenStyle<Sys>>
         }
       }
     : Record<string, TokenStyle<TokenStyleDeclaration>>
@@ -286,9 +376,11 @@ export type StyleOverrideVariantRules<T extends StylesheetLike> =
     elements: infer E
   }
     ? { $compose?: string | string[] } & {
-        [K in keyof E as K extends string ? K : never]?: AuthoredElementStyle<
-          Sys,
-          E[K] extends ElementType | undefined ? E[K] : undefined
+        [K in keyof E as K extends string ? K : never]?: OverrideDeclaration<
+          AuthoredElementStyle<
+            Sys,
+            E[K] extends ElementType | undefined ? E[K] : undefined
+          >
         >
       }
     : Record<string, AuthoredElementStyle<TokenStyleDeclaration>>
@@ -356,7 +448,7 @@ export type OverridableStylesheet = StylesheetLike
 
 export const useBind = _useBind as <T extends StylesheetLike>(
   stylesheet: T,
-  ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
+  ...args: VariantArgs<T>
 ) => BoundElementsOf<T> & {
   readonly $props: InferElements<T>
   $scope: (children: ReactNode) => ReactElement

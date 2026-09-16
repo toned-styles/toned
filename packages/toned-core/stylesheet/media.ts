@@ -3,18 +3,17 @@
 
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
-export const initMedia = <S extends TokenStyleDeclaration>({
-  config,
-}: TokenSystem<S>) => {
+export const initMedia = <S extends TokenStyleDeclaration>(
+  { config }: TokenSystem<S>,
+  additional: Readonly<Record<string, number>> = {},
+) => {
   const w = typeof window === 'undefined' ? null : window
 
   const medias = Object.fromEntries(
-    Object.entries(
-      (config?.breakpoints?.__breakpoints ?? {}) as Record<
-        string,
-        number | string
-      >,
-    ).map(
+    Object.entries({
+      ...config?.breakpoints?.__breakpoints,
+      ...additional,
+    } as Record<string, number | string>).map(
       // A number is px; a string length passes through as-is (appending px to
       // '30rem' produced the invalid '30rempx' — every rem breakpoint was
       // silently dead in runtime mode); a parenthesised string is a raw

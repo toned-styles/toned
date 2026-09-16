@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { defineSystem, defineToken } from '../system/index.ts'
 import type { Config, TokenSystem } from '../types/index.ts'
 import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
+import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
 import { setStyles } from './applyStyles.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
@@ -11,14 +12,8 @@ import {
   isNamedStyleKey,
 } from './variantSelector.ts'
 
-/*
- * Mock TokenSystem for testing.
- *
- * The token DECLARATIONS are real even though `exec` is stubbed. Typing this as
- * TokenSystem<TokenStyleDeclaration> instead collapses TokenStyle<S> to
- * Partial<{ [x: string]: never }>, so every style object below becomes a type
- * error — the degenerate case, not a realistic one.
- */
+/* Identity field resolvers keep controller assertions focused on ownership and
+ * matched declarations while exercising the real shared evaluation pipeline. */
 const testTokens = {
   bgColor: defineToken({
     values: [
@@ -54,11 +49,18 @@ const testTokens = {
 }
 
 const mockTokenSystem = {
-  // `system` stays EMPTY at runtime — these tests assert on the stubbed `exec`
-  // passing the token style straight through, and a populated system makes the
-  // resolver rewrite it. Only the TYPE needs to be concrete; the cast below is
-  // what carries it.
-  system: {},
+  system: Object.fromEntries(
+    [
+      ...Object.keys(testTokens),
+      'pad',
+      'borderColor',
+      'outlineColor',
+      'container',
+    ].map((key) => [
+      key,
+      { values: [], resolve: (value: unknown) => ({ [key]: value }) },
+    ]),
+  ),
   config: undefined,
   t: () => ({}),
   stylesheet: () => ({}),
@@ -629,7 +631,7 @@ describe('multi-instance interaction state', () => {
         el.recorded = { ...el.visible }
       },
     }
-    return el
+    return registerFixtureHost(el)
   }
 
   function setup() {
@@ -767,7 +769,7 @@ function fakeInteractiveEl() {
       el.recorded = { ...el.visible }
     },
   }
-  return el
+  return registerFixtureHost(el)
 }
 
 function setupPair() {
@@ -1123,11 +1125,13 @@ describe('elementDescriptors', () => {
 })
 
 describe('runtime container queries (Base)', () => {
-  // conditionState reads the declared containers off the system ref; exec
-  // stays the pass-through stub — `containers` is config, not a token.
+  // conditionState reads container metadata alongside the identity resolvers.
   const cqTokenSystem = {
     ...(mockTokenSystem as unknown as Record<string, unknown>),
-    system: { containers: { card: { sm: 80, md: '28rem' } } },
+    system: {
+      ...mockTokenSystem.system,
+      containers: { card: { sm: 80, md: '28rem' } },
+    },
   } as unknown as TokenSystem<typeof testTokens>
 
   const rules = {
@@ -1181,7 +1185,7 @@ describe('runtime condition algebra (Base)', () => {
     ...(mockTokenSystem as unknown as Record<string, unknown>),
     // sm: 80 units × the default base (4px) = 320px — container numbers
     // ride the universal spacing scale.
-    system: { containers: { card: { sm: 80 } } },
+    system: { ...mockTokenSystem.system, containers: { card: { sm: 80 } } },
     usedConditions: new Set<string>(),
   } as unknown as TokenSystem<typeof testTokens>
 
@@ -1199,15 +1203,18 @@ describe('runtime condition algebra (Base)', () => {
       modsState: { '@md': true },
     })
     expect(base.conditionState({ card: 200 })).toEqual({
+      '@card/>=100': false,
       '@!card/>=100': true,
       '@md&card/>=100': false,
     })
     expect(base.conditionState({ card: 500 })).toEqual({
+      '@card/>=100': true,
       '@!card/>=100': false,
       '@md&card/>=100': true,
     })
     // an unmeasured container is width 0 — the below-condition holds
     expect(base.conditionState({})).toEqual({
+      '@card/>=100': false,
       '@!card/>=100': true,
       '@md&card/>=100': false,
     })
@@ -1248,7 +1255,7 @@ describe('runtime condition algebra (Base)', () => {
 describe("the ':rtl' runtime half (getDirection seam)", () => {
   const rtlSystem = {
     ...(mockTokenSystem as unknown as Record<string, unknown>),
-    system: { states: { rtl: ':dir(rtl)' } },
+    system: { ...mockTokenSystem.system, states: { rtl: ':dir(rtl)' } },
   } as unknown as TokenSystem<typeof testTokens>
 
   const make = (getDirection?: () => 'ltr' | 'rtl') =>
@@ -1295,4 +1302,28 @@ test('Base chooses legacy parent precedence or descriptor source order and keeps
   expect(legacy.matcher.match(state).label.textColor).toBe('white')
   expect(descriptor.matcher.match(state).label.textColor).toBe('black')
   expect(descriptor.matcher).not.toBe(legacy.matcher)
+})
+
+test('controllers use the shared semantic plan on web and native without the legacy exec boundary', () => {
+  const ui = defineSystem({
+    id: 'controller-plan',
+    tokens: {
+      gap: defineToken({ values: [0, 4], resolve: (gap) => ({ gap }) }),
+    },
+  })
+  const spy = vi.spyOn(ui, 'exec').mockImplementation(() => {
+    throw new Error('legacy executor called')
+  })
+  for (const platform of ['web', 'native'] as const) {
+    const base = new Base({
+      ref: ui,
+      rules: { Root: { gap: 0, ':hover': { gap: 4 } } },
+      config: { ...mockConfig, platform },
+      modsState: {},
+    })
+    expect(base.getCurrentStyle('Root').style).toEqual({ gap: 0 })
+    base.applyState({ 'Root:hover': true })
+    expect(base.getCurrentStyle('Root').style).toEqual({ gap: 4 })
+  }
+  expect(spy).not.toHaveBeenCalled()
 })

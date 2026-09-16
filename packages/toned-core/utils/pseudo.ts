@@ -14,10 +14,10 @@ export const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
 
 /**
  * States that resolve through the CSS variable chains but have NO runtime
- * event pairing — web-only graceful enhancement. `:focus-visible` is the
- * canonical member: the browser decides it, no JS event reports it, and a
- * native renderer simply never activates it. Runtime pseudo mode ignores
- * these; css mode treats them exactly like the tracked set.
+ * event pairing. The browser decides `:focus-visible`; native integrations
+ * supply it through their explicit semantic-state capability with an input
+ * modality contract. Native declarations fail visibly without that capability.
+ * CSS mode handles these in the same way as the event-tracked set.
  */
 export const CSS_ONLY_PSEUDO_STATES = [
   ':src-hover',

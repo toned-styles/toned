@@ -18,7 +18,7 @@
  * @module utils/platform
  */
 
-import { resolveGrid } from '../grid/index.ts'
+import { isGrid, isGridArea, resolveGrid } from '../grid/index.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: rules are dynamically shaped
 type AnyValue = any
@@ -46,6 +46,8 @@ function hasPlatformKeys(node: AnyValue): boolean {
 }
 
 function deepMerge(base: AnyValue, over: AnyValue): AnyValue {
+  // Grid references carry immutable ownership identity; never merge their internals.
+  if (isGrid(over) || isGridArea(over)) return over
   if (!isPlainObject(base) || !isPlainObject(over)) return over
   const out: Record<string, AnyValue> = { ...base }
   for (const key in over) {

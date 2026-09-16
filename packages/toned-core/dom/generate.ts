@@ -1,3 +1,7 @@
+import {
+  resolveAlphaChannels,
+  resolveConfiguredToken,
+} from '../core/resolve.ts'
 /**
  * CSS generation utilities.
  *
@@ -13,18 +17,26 @@ import {
   DEFAULT_ALPHA_STEPS,
   withAlphaExpr,
 } from '../utils/alpha.ts'
-import { atomSlug, parseConditionKey } from '../utils/conditions.ts'
+import {
+  assertConditionSlugs,
+  atomSlug,
+  parseConditionKey,
+} from '../utils/conditions.ts'
 import { bridgeVarName, camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
 
-const tokens = new Proxy(
-  {},
-  {
-    get(_target, prop: string) {
-      return `var(--${prop})`
-    },
+const tokens = new Proxy(Object.create(null), {
+  get(_target, prop: string) {
+    return `var(--${prop})`
   },
-)
+  // Build symbols deliberately represent every theme key; runtime themes
+  // still require a real own property before a themeRef can resolve.
+  getOwnPropertyDescriptor(_target, prop) {
+    return typeof prop === 'string'
+      ? { configurable: true, enumerable: true, value: `var(--${prop})` }
+      : undefined
+  },
+})
 
 /**
  * Generate CSS from a token style declaration.
@@ -47,6 +59,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     responsiveTokens,
     containers,
     base,
+    layoutContext: layout,
     ...system
   }: S,
   opts?: {
@@ -61,6 +74,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     conditions?: readonly string[]
   },
 ) {
+  assertConditionSlugs({ breakpoints, containers }, opts?.conditions)
   const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
 
@@ -257,6 +271,13 @@ export function generate<const S extends TokenStyleDeclaration>(
       rules += `@media ${condition} { html { ${varName}: ; ${varName}-not: initial; } }`
     }
 
+    for (const atomKey of [...(opts?.conditions ?? [])].sort()) {
+      const atom = parseConditionKey(atomKey)?.[0]?.[0]
+      if (!atom || atom.container !== null || atom.step !== null) continue
+      const variable = `--${atomSlug(atom)}`
+      rootRule += `${variable}: initial;${variable}-not: ;`
+      rules += `@media (min-width: ${atom.min}) { html { ${variable}: ; ${variable}-not: initial; } }`
+    }
     styles += `html {${rootRule}}`
     styles += rules
   }
@@ -349,8 +370,14 @@ export function generate<const S extends TokenStyleDeclaration>(
     // Skip non-token entries (like breakpoints)
     if (!token || !('values' in token) || !('resolve' in token)) continue
 
-    const alphaChannel = (token as { alphaChannel?: readonly string[] })
+    const authoredAlphaChannel = (token as { alphaChannel?: readonly string[] })
       .alphaChannel
+    const alphaChannel =
+      authoredAlphaChannel &&
+      resolveAlphaChannels(authoredAlphaChannel, {
+        ...layout,
+        canonicalFields: !!opts?.id,
+      })
     if (alphaChannel) {
       const steps =
         (token as { alphaSteps?: readonly number[] }).alphaSteps ??
@@ -376,7 +403,11 @@ export function generate<const S extends TokenStyleDeclaration>(
       // Static CSS generation is the web target, so a per-platform token
       // resolves its web branch here (its native branch resolves inline under
       // the RN binding, which does not use generated CSS).
-      const result = token.resolve(value, tokens, { platform: 'web' })
+      const result = resolveConfiguredToken(token, value, tokens, {
+        ...layout,
+        platform: 'web',
+        canonicalFields: !!opts?.id,
+      })
 
       if (!result) return
 
@@ -478,7 +509,11 @@ export function generate<const S extends TokenStyleDeclaration>(
         // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
         token.values.forEach((value: any) => {
           if (value instanceof Number || value instanceof String) return
-          const result = token.resolve(value, tokens, { platform: 'web' })
+          const result = resolveConfiguredToken(token, value, tokens, {
+            ...layout,
+            platform: 'web',
+            canonicalFields: !!opts?.id,
+          })
           if (!result) return
           let cssRule = ''
           for (const cssProp in result) {

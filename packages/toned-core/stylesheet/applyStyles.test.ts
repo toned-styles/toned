@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
 import { recordHostCommit, setStyles } from './applyStyles.ts'
 
 // Minimal stand-in for an element's inline style. Mirrors a browser closely
@@ -156,6 +157,7 @@ describe('native owned patches', () => {
   test('restores caller baseline, resets dropped keys, and skips identical patches', () => {
     const patches: unknown[] = []
     const host = { setNativeProps: (patch: unknown) => patches.push(patch) }
+    registerFixtureHost(host)
     recordHostCommit(
       host,
       { style: { opacity: 1, width: 10 } },
@@ -174,6 +176,7 @@ describe('native owned patches', () => {
 test('native bridge props are diffed and restore a caller baseline on removal', () => {
   const patches: unknown[] = []
   const host = { setNativeProps: (patch: unknown) => patches.push(patch) }
+  registerFixtureHost(host)
   recordHostCommit(
     host,
     { style: {}, selectionColor: 'red', placeholderTextColor: 'red' },

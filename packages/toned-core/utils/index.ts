@@ -5,6 +5,7 @@
  */
 
 export { camelToKebab } from './css.ts'
+export { immutableSnapshot } from './immutable.ts'
 export {
   SYMBOL_ACCESS,
   SYMBOL_INIT,

@@ -10,18 +10,18 @@ describe('typed grid declarations', () => {
         ['.', 'body'],
       ],
     })
-  it('compiles area geometry to stable lines without measuring children', () => {
+  it('compiles local named areas without measuring children', () => {
     const message = grid()
     expect(resolveGrid(message, 'web')).toEqual({
       display: 'grid',
       gridTemplateColumns: '48px 1fr',
       gridTemplateRows: 'auto auto',
+      gap: 0,
+      gridTemplateAreas:
+        '"a61_76_61_74_61_72 a74_69_74_6c_65" ". a62_6f_64_79"',
     })
     expect(resolveGrid(message.area('body'), 'web')).toEqual({
-      gridRowStart: 2,
-      gridRowEnd: 3,
-      gridColumnStart: 2,
-      gridColumnEnd: 3,
+      gridArea: 'a62_6f_64_79',
     })
     expect(Object.isFrozen(message.areas[0])).toBe(true)
   })

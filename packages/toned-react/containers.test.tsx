@@ -19,7 +19,7 @@ import {
 // The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
 import * as React from 'react'
 import { afterEach, describe, expect, test } from 'vitest'
-import { bind, useBind } from './index.ts'
+import { bind, ContainerSizesContext, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
 const { stylesheet } = defineSystem(
@@ -52,6 +52,12 @@ describe('runtime container queries (binding)', () => {
   test('a measured container drives a descendant sheet across the step', () => {
     const prev = { ...getConfig() }
     const sizeReporters: Array<(w: number) => void> = []
+    let childRenders = 0
+    function MeasuredChild() {
+      childRenders++
+      const s = useBind(childStyles)
+      return <s.Label data-slot="l" />
+    }
     setConfig({
       ...reactWebConfig,
       useClassName: false,
@@ -66,7 +72,7 @@ describe('runtime container queries (binding)', () => {
       const { Root } = bind(cardStyles)
       const { container } = render(
         <Root data-slot="r">
-          <Child />
+          <MeasuredChild />
         </Root>,
       )
 
@@ -83,6 +89,7 @@ describe('runtime container queries (binding)', () => {
 
       act(() => sizeReporters[0]!(200))
       expect(label(container).style.width).toBe('100px')
+      expect(childRenders).toBe(1)
     } finally {
       setConfig(prev)
     }
@@ -163,4 +170,156 @@ describe('runtime container queries (binding)', () => {
       setConfig(prev)
     }
   })
+})
+
+test('measurements update committed styles during Suspense and survive its later commit', async () => {
+  const previous = { ...getConfig() }
+  let report: ((width: number) => void) | undefined
+  let select: React.Dispatch<React.SetStateAction<boolean>> | undefined
+  let release!: () => void
+  let ready = false
+  const pending = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const measured = childStyles.variants<{ on: boolean }>()(($) => ({
+    [$.on(true)]: { Label: { $style: { opacity: 1 } } },
+    [$.on(false)]: { Label: { $style: { opacity: 0 } } },
+  }))
+  setConfig({
+    ...reactWebConfig,
+    useClassName: false,
+    mediaMode: 'runtime',
+    getTokens: () => ({}),
+    measureContainerProps(onSize) {
+      report = onSize
+      return {}
+    },
+  })
+  try {
+    function Child() {
+      const [on, setOn] = React.useState(false)
+      select = setOn
+      const s = useBind(measured, { on })
+      if (on && !ready) throw pending
+      return <s.Label data-slot="l" />
+    }
+    const { Root } = bind(cardStyles)
+    const view = render(
+      <Root>
+        <React.Suspense fallback={<span>pending</span>}>
+          <Child />
+        </React.Suspense>
+      </Root>,
+    )
+    const target = label(view.container)
+    act(() => React.startTransition(() => select!(true)))
+    act(() => report!(400))
+    expect(target.style.width).toBe('400px')
+    expect(target.style.opacity).toBe('0')
+    await act(async () => {
+      ready = true
+      release()
+      await pending
+    })
+    expect(target.style.width).toBe('400px')
+    expect(target.style.opacity).toBe('1')
+  } finally {
+    setConfig(previous)
+  }
+})
+
+test('measurement handlers compose with caller handlers', () => {
+  const previous = { ...getConfig() }
+  let called = 0
+  setConfig({
+    ...reactWebConfig,
+    useClassName: false,
+    mediaMode: 'runtime',
+    getTokens: () => ({}),
+    measureContainerProps: (onSize) => ({ onClick: () => onSize(400) }),
+  })
+  try {
+    const { Root } = bind(cardStyles)
+    const view = render(
+      <Root
+        onClick={() => {
+          called++
+        }}
+        data-testid="measure"
+      >
+        <Child />
+      </Root>,
+    )
+    act(() => view.getByTestId('measure').click())
+    expect(called).toBe(1)
+    expect(label(view.container).style.width).toBe('400px')
+  } finally {
+    setConfig(previous)
+  }
+})
+
+test('measurement refs and caller refs both attach and detach through a bound container', () => {
+  const previous = { ...getConfig() }
+  const caller = React.createRef<HTMLElement>()
+  let measured: HTMLElement | null = null
+  setConfig({
+    ...reactWebConfig,
+    useClassName: false,
+    mediaMode: 'runtime',
+    getTokens: () => ({}),
+    measureContainerProps: (onSize) => ({
+      ref: (node: HTMLElement | null) => {
+        measured = node
+        if (node) onSize(400)
+      },
+    }),
+  })
+  try {
+    const { Root } = bind(cardStyles)
+    const view = render(
+      <Root ref={caller} data-testid="measure-ref">
+        <Child />
+      </Root>,
+    )
+    expect(measured).toBe(view.getByTestId('measure-ref'))
+    expect(caller.current).toBe(measured)
+    expect(label(view.container).style.width).toBe('400px')
+    view.unmount()
+    expect(caller.current).toBe(null)
+    expect(measured).toBe(null)
+  } finally {
+    setConfig(previous)
+  }
+})
+
+test('a measured width survives changes to inherited legacy context', () => {
+  const previous = { ...getConfig() }
+  let report: ((width: number) => void) | undefined
+  setConfig({
+    ...reactWebConfig,
+    useClassName: false,
+    mediaMode: 'runtime',
+    getTokens: () => ({}),
+    measureContainerProps: (onSize) => {
+      report = onSize
+      return {}
+    },
+  })
+  try {
+    const { Root } = bind(cardStyles)
+    const tree = (outer: number) => (
+      <ContainerSizesContext.Provider value={{ outer }}>
+        <Root>
+          <Child />
+        </Root>
+      </ContainerSizesContext.Provider>
+    )
+    const view = render(tree(100))
+    act(() => report!(400))
+    expect(label(view.container).style.width).toBe('400px')
+    view.rerender(tree(200))
+    expect(label(view.container).style.width).toBe('400px')
+  } finally {
+    setConfig(previous)
+  }
 })

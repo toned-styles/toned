@@ -1,4 +1,4 @@
 import getConfig from './config.auto.ts'
-import { TokensContext } from './context.ts'
+import { defineContext, TokensContext } from './context.ts'
 
-export default getConfig(TokensContext)
+export default getConfig(TokensContext, defineContext({}))

@@ -38,7 +38,7 @@ export const alphaVarName = (cssProp: string): string =>
 
 export interface AlphaValue {
   base: string
-  /** Percentage, 0–100 exclusive of the ends (100 is just the base value). */
+  /** Percentage, inclusive 0–100. */
   alpha: number
 }
 
@@ -51,8 +51,10 @@ export function splitAlphaValue(value: unknown): AlphaValue | null {
   if (typeof value !== 'string') return null
   const idx = value.lastIndexOf('/')
   if (idx <= 0 || idx === value.length - 1) return null
-  const alpha = Number(value.slice(idx + 1))
-  if (!Number.isFinite(alpha) || alpha <= 0 || alpha >= 100) return null
+  const suffix = value.slice(idx + 1)
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(suffix)) return null
+  const alpha = Number(suffix)
+  if (!Number.isFinite(alpha) || alpha < 0 || alpha > 100) return null
   return { base: value.slice(0, idx), alpha }
 }
 
@@ -133,4 +135,20 @@ export function applyAlpha(colorValue: string, alpha01: number): string {
   if (colorValue.includes('var('))
     return withAlphaExpr(colorValue, String(alpha01))
   return alphaLiteral(colorValue, alpha01)
+}
+
+/** Canonical alpha authoring uses the same [0, 1] fraction as opacity.
+ * The literal base survives in the return type, so only alpha-enabled tokens
+ * containing that named value accept it. Slash strings remain migration sugar. */
+export function alpha<const Base extends string>(
+  base: Base,
+  fraction: number,
+): `${Base}/${number}` {
+  if (!base || base.includes('/'))
+    throw new Error('Toned alpha: base must be one unmodified token value')
+  if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1)
+    throw new Error(
+      'Toned alpha: fraction must be finite and between 0 and 1 inclusive',
+    )
+  return `${base}/${Number((fraction * 100).toPrecision(15))}` as `${Base}/${number}`
 }

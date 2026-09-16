@@ -1,4 +1,5 @@
 import type { QueryPredicate } from '../../system/queries.ts'
+import { relationFactKey } from '../relations.ts'
 import type { BitSet, CompiledPredicate } from './bitset.ts'
 import { matchesBits } from './bitset.ts'
 import { type Conditions, parseVariantSelector } from './normalizeRules.ts'
@@ -21,6 +22,11 @@ export function compilePredicate(
   },
   compileMask: (conditions: Conditions) => CompiledPredicate,
 ): PredicatePlan {
+  if (query.op === 'relation')
+    return {
+      op: 'fact',
+      mask: compileMask(new Map([[relationFactKey(query.relation), ['true']]])),
+    }
   if (query.op === 'not')
     return {
       op: 'not',

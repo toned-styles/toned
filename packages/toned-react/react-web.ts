@@ -1,7 +1,7 @@
 import { defineConfig } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
 import reactConfig from './config.ts'
-import { addWith } from './host-props.ts'
+import { addWith, supportsRefCleanup } from './host-props.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
 type AnyValue = any
@@ -15,7 +15,7 @@ function getProps(this: Base, elementKey: string) {
     detach = undefined
     if (!current) return
     detach = this.attach(elementKey, current, result, caller)
-    return detach
+    return supportsRefCleanup ? detach : undefined
   }
 
   let result: Record<string, AnyValue>

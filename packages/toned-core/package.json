@@ -18,7 +18,8 @@
     "./build": "./build/index.ts",
     "./dev/inject": "./dom/inject.ts",
     "./server": "./server/index.ts",
-    "./backends": "./backends/index.ts"
+    "./backends": "./backends/index.ts",
+    "./core": "./core/index.ts"
   },
   "publishConfig": {
     "access": "public",

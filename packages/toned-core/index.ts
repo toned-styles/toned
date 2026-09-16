@@ -5,13 +5,26 @@
  */
 
 export type {
+  LayoutContext,
+  LogicalLength,
+  PortableColor,
+  ThemeReference,
+} from './core/values.ts'
+export { dp, percent, rgba, themeRef } from './core/values.ts'
+export type {
   GridArea,
   GridDefinition,
+  GridInput,
   GridPlacement,
   GridTrack,
 } from './grid/index.ts'
-export { defineGrid, dp, fr, percent } from './grid/index.ts'
+export { defineGrid, fr } from './grid/index.ts'
 export type { TonedTypeRegistry } from './registry.ts'
+export {
+  type NullableOverride,
+  type OverrideSheetRules,
+  overrideSheet,
+} from './stylesheet/overrideSheet.ts'
 export type { SystemDefinition, SystemOptions } from './system/definers.ts'
 export type {
   Condition,
@@ -43,6 +56,12 @@ export type {
   QueryBuilder,
   QueryPredicate,
 } from './system/queries.ts'
+export type {
+  SystemTheme,
+  ThemeContract,
+  ThemeTokenFactory,
+} from './system/theme-types.ts'
+export { defineTokenFor } from './system/theme-types.ts'
 // Re-export types for convenience
 // Type-only brands, exported so downstream declaration emission can name a
 // stylesheet's inferred type across package boundaries (TS4023 otherwise).
@@ -57,16 +76,21 @@ export type {
   Breakpoints,
   BridgeConfig,
   Config,
+  DefaultSystemKind,
   ElementStyleNew,
   ElementType,
   ModType,
   Platform,
+  PreVariantsStylesheet,
   Pseudo,
   ResolveContext,
+  ResolvedTokenStyle,
   Stylesheet,
   StylesheetInput,
   StylesheetInstance,
+  StylesheetMetadata,
   StylesheetType,
+  StylesheetWithVariants,
   TokenConfig,
   TokenStyle,
   TokenStyleDeclaration,
@@ -80,6 +104,15 @@ export type {
   NativeInlineStyle,
   PlatformStyle,
   PortableInlineStyle,
+  PortableTokenStyle,
   WebInlineStyle,
 } from './types/style.ts'
+export { alpha } from './utils/alpha.ts'
 export { bridgeVarName } from './utils/css.ts'
+export {
+  compileWebRules,
+  isWebRules,
+  type WebRuleStyle,
+  type WebRules,
+  webRules,
+} from './web/rules.ts'

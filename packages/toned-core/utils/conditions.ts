@@ -47,6 +47,14 @@ export type ConditionClause = ConditionAtom[]
 /** OR of clauses — the whole expression, in DNF. */
 export type ConditionExpr = ConditionClause[]
 
+/** Canonical portable thresholds are literal px, never font/theme-relative values. */
+export function fixedQueryWidth(key: string): number | undefined {
+  if (!/^>=(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?px$/i.test(key))
+    return undefined
+  const value = Number(key.slice(2, -2))
+  return Number.isFinite(value) && value >= 0 ? value : undefined
+}
+
 /**
  * Parse a condition key (without its leading `@`). Returns null for a key
  * that is not a condition expression (e.g. `platform.web`, which is resolved
@@ -62,6 +70,16 @@ export function parseConditionKey(key: string): ConditionExpr | null {
       const body = negated ? atomSrc.slice(1) : atomSrc
       if (body.length === 0) return null
       const slash = body.indexOf('/')
+      if (slash === -1 && body.startsWith('>=')) {
+        if (fixedQueryWidth(body) === undefined) return null
+        clause.push({
+          container: null,
+          step: null,
+          min: body.slice(2),
+          negated,
+        })
+        continue
+      }
       if (slash === -1) {
         clause.push({ container: null, step: body, min: null, negated })
         continue
@@ -90,14 +108,12 @@ export function isSimpleExpr(expr: ConditionExpr): boolean {
 
 /** Serialize an expression back to its canonical key body (no `@`). */
 export function serializeExpr(expr: ConditionExpr): string {
-  return expr
-    .map((clause) => clause.map(serializeAtom).join('&'))
-    .join('|')
+  return expr.map((clause) => clause.map(serializeAtom).join('&')).join('|')
 }
 
-function serializeAtom(atom: ConditionAtom): string {
+export function serializeAtom(atom: ConditionAtom): string {
   const neg = atom.negated ? '!' : ''
-  if (atom.container === null) return `${neg}${atom.step}`
+  if (atom.container === null) return `${neg}${atom.step ?? `>=${atom.min}`}`
   if (atom.step !== null) return `${neg}${atom.container}/${atom.step}`
   return `${neg}${atom.container}/>=${atom.min}`
 }
@@ -114,7 +130,10 @@ function lengthSlug(value: number | string): string {
  * `media-md`, `cq-field-group-md`, `cq-card-gte400`.
  */
 export function atomSlug(atom: ConditionAtom): string {
-  if (atom.container === null) return `media-${camelToKebab(atom.step!)}`
+  if (atom.container === null)
+    return atom.step === null
+      ? `fixed-media-gte${lengthSlug(atom.min!)}`
+      : `media-${camelToKebab(atom.step)}`
   const name = camelToKebab(atom.container)
   return atom.step !== null
     ? `cq-${name}-${camelToKebab(atom.step)}`
@@ -183,7 +202,7 @@ export function evalExpr(expr: ConditionExpr, env: ConditionEnv): boolean {
     clause.every((atom) => {
       let truth: boolean
       if (atom.container === null) {
-        truth = env.media(atom.step!) === true
+        truth = env.media(atom.step ?? `>=${atom.min}`) === true
       } else {
         const width =
           atom.step !== null
@@ -191,7 +210,8 @@ export function evalExpr(expr: ConditionExpr, env: ConditionEnv): boolean {
             : atom.min!
         truth =
           width !== undefined &&
-          (env.containerPx(atom.container) ?? 0) >= lengthToPx(width, env.basePx)
+          (env.containerPx(atom.container) ?? 0) >=
+            lengthToPx(width, env.basePx)
       }
       return atom.negated ? !truth : truth
     }),
@@ -222,7 +242,7 @@ export function collectAdHocConditions(
       const expr = parseConditionKey(key.slice(1))
       if (expr) {
         for (const atom of adHocAtoms(expr)) {
-          out.add(`${atom.container}/>=${atom.min}`)
+          out.add(serializeAtom(atom))
         }
       }
     }
@@ -234,10 +254,47 @@ export function adHocAtoms(expr: ConditionExpr): ConditionAtom[] {
   const out: ConditionAtom[] = []
   for (const clause of expr) {
     for (const atom of clause) {
-      if (atom.container !== null && atom.step === null) {
+      if (atom.step === null) {
         out.push({ ...atom, negated: false })
       }
     }
   }
   return out
+}
+
+/** Refuse ambiguous generated toggles before either web backend publishes CSS.
+ * Keep existing asset names, but never let a named step impersonate an ad-hoc
+ * threshold (or another condition's negation) after CSS-safe normalization. */
+export function assertConditionSlugs(
+  system: {
+    breakpoints?: { __breakpoints: Readonly<Record<string, unknown>> }
+    containers?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  },
+  conditions: Iterable<string> = [],
+): void {
+  const names = new Map<string, string>()
+  const register = (atom: ConditionAtom) => {
+    const positive = { ...atom, negated: false }
+    const identity = serializeAtom(positive)
+    const slug = atomSlug(positive)
+    for (const [name, origin] of [
+      [slug, identity],
+      [`${slug}-not`, `!${identity}`],
+    ]) {
+      const previous = names.get(name!)
+      if (previous !== undefined && previous !== origin)
+        throw new Error(
+          `Toned: condition toggle collision between ${previous} and ${origin} (${name}); rename the named condition`,
+        )
+      names.set(name!, origin!)
+    }
+  }
+  for (const name of Object.keys(system.breakpoints?.__breakpoints ?? {}))
+    register({ container: null, step: name, min: null, negated: false })
+  for (const [container, steps] of Object.entries(system.containers ?? {}))
+    for (const step of Object.keys(steps))
+      register({ container, step, min: null, negated: false })
+  for (const key of conditions)
+    for (const clause of parseConditionKey(key) ?? [])
+      for (const atom of clause) register(atom)
 }

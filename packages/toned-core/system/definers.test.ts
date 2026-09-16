@@ -1,5 +1,24 @@
 import { describe, expect, test } from 'vitest'
+import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { defineSystem, defineToken, defineUnit } from './definers.ts'
+
+function expectConditions(
+  style: object,
+  field: string,
+  guards: readonly string[],
+  values: readonly (string | number | undefined)[],
+) {
+  expect(values).toHaveLength(2 ** guards.length)
+  for (let mask = 0; mask < values.length; mask++) {
+    const toggles = Object.fromEntries(
+      guards.map((guard, bit) => [guard, !!(mask & (1 << bit))]),
+    )
+    expect(
+      String(cssTestValue(style, field, toggles)),
+      JSON.stringify(toggles),
+    ).toBe(String(values[mask]))
+  }
+}
 
 // biome-ignore lint/suspicious/noExplicitAny: test helper for dynamic style access
 type AnyStyle = Record<string, any>
@@ -124,10 +143,10 @@ describe('defineSystem', () => {
           responsiveTokens: ['maxW'],
         },
       )
-      const result = exec(
-        { tokens: {}, useClassName: true },
-        { maxW: 'gutter', '@sm': { maxW: '32' } } as any,
-      )
+      const result = exec({ tokens: {}, useClassName: true }, {
+        maxW: 'gutter',
+        '@sm': { maxW: '32' },
+      } as any)
       expect(result.className).toContain('maxW_gutter')
       expect(result.className).toContain('@sm:maxW_32')
       // no chain rides the inline style
@@ -145,12 +164,17 @@ describe('defineSystem', () => {
         { maxW },
         { breakpoints: { __breakpoints: { sm: 640 } } },
       )
-      const result = exec(
-        { tokens: {}, useClassName: true },
-        { maxW: 'gutter', '@sm': { maxW: '32' } } as any,
-      )
+      const result = exec({ tokens: {}, useClassName: true }, {
+        maxW: 'gutter',
+        '@sm': { maxW: '32' },
+      } as any)
       const style = result.style as Record<string, unknown>
-      expect(String(style['maxWidth'] ?? '')).toContain('var(--media-sm__max-width')
+      expectConditions(
+        style,
+        'maxWidth',
+        ['--media-sm'],
+        ['calc(100% - 2rem)', '32rem'],
+      )
     })
 
     test('generates className strings for known token values', () => {
@@ -241,10 +265,12 @@ describe('defineSystem', () => {
         bgColor: 'primary',
       } as any)
 
-      expect(result.style).toEqual({
-        '--toned_hover__background-color': 'var(--toned_hover) #6c757d',
-        backgroundColor: 'var(--toned_hover__background-color, #007bff)',
-      })
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--toned_hover'],
+        ['#007bff', '#6c757d'],
+      )
     })
 
     test('keys starting with $ are ignored', () => {
@@ -267,10 +293,12 @@ describe('defineSystem', () => {
         bgColor: 'primary',
       } as any)
 
-      expect(result.style).toEqual({
-        '--toned_focus__background-color': 'var(--toned_focus) #6c757d',
-        backgroundColor: 'var(--toned_focus__background-color, #007bff)',
-      })
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--toned_focus'],
+        ['#007bff', '#6c757d'],
+      )
     })
   })
 
@@ -308,15 +336,11 @@ describe('defineSystem', () => {
         '@sm_bgColor': 'secondary',
       } as any)
 
-      // Should have the CSS custom property for the sm breakpoint
-      expect(result.style).toHaveProperty('--media-sm__background-color')
-      expect((result.style as AnyStyle)['--media-sm__background-color']).toBe(
-        'var(--media-sm) #6c757d',
-      )
-
-      // The main property should be wrapped in a var() fallback chain
-      expect((result.style as AnyStyle)['backgroundColor']).toBe(
-        'var(--media-sm__background-color, #007bff)',
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--media-sm'],
+        ['#007bff', '#6c757d'],
       )
     })
 
@@ -346,20 +370,11 @@ describe('defineSystem', () => {
         '@md_bgColor': 'danger',
       } as any)
 
-      // Both custom properties should exist
-      expect(result.style).toHaveProperty('--media-sm__background-color')
-      expect(result.style).toHaveProperty('--media-md__background-color')
-
-      expect((result.style as AnyStyle)['--media-sm__background-color']).toBe(
-        'var(--media-sm) #6c757d',
-      )
-      expect((result.style as AnyStyle)['--media-md__background-color']).toBe(
-        'var(--media-md) #dc3545',
-      )
-
-      // Chain should be nested: md wraps sm wraps base (sorted ascending)
-      expect((result.style as AnyStyle)['backgroundColor']).toBe(
-        'var(--media-md__background-color, var(--media-sm__background-color, #007bff))',
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--media-sm', '--media-md'],
+        ['#007bff', '#6c757d', '#dc3545', '#dc3545'],
       )
     })
 
@@ -481,11 +496,11 @@ describe('defineSystem', () => {
         ':hover_style': { cursor: 'grab' },
       } as any)
 
-      expect((result.style as AnyStyle)['--toned_hover__cursor__style']).toBe(
-        'var(--toned_hover) grab',
-      )
-      expect((result.style as AnyStyle)['cursor']).toBe(
-        'var(--toned_hover__cursor__style, pointer)',
+      expectConditions(
+        result.style,
+        'cursor',
+        ['--toned_hover'],
+        ['pointer', 'grab'],
       )
     })
 
@@ -510,20 +525,11 @@ describe('defineSystem', () => {
 
       for (const styleFirst of [false, true]) {
         const style = run(styleFirst)
-        // Token var is still emitted (kept as an inner fallback)…
-        expect(style['--toned_hover__color']).toBe('var(--toned_hover) #000')
-        // …the raw-style var lives in its own namespace…
-        expect(style['--toned_hover__color__style']).toBe(
-          'var(--toned_hover) red',
-        )
-        // …and style is outermost, so it wins on :hover, then token, then base.
-        expect(style['color']).toBe(
-          'var(--toned_hover__color__style, var(--toned_hover__color, #fff))',
-        )
+        expectConditions(style, 'color', ['--toned_hover'], ['#fff', 'red'])
       }
     })
 
-    test('token-only pseudo overrides are unaffected (no __style namespace)', () => {
+    test('token-only pseudo overrides preserve resting and active values', () => {
       const { exec } = defineSystem({ bgColor })
 
       const result = exec({ tokens: {}, useClassName: false }, {
@@ -531,13 +537,12 @@ describe('defineSystem', () => {
         ':hover_bgColor': 'secondary',
       } as any).style as AnyStyle
 
-      expect(result['--toned_hover__background-color']).toBe(
-        'var(--toned_hover) #6c757d',
+      expectConditions(
+        result,
+        'backgroundColor',
+        ['--toned_hover'],
+        ['#007bff', '#6c757d'],
       )
-      expect(result['backgroundColor']).toBe(
-        'var(--toned_hover__background-color, #007bff)',
-      )
-      expect(result['--toned_hover__background-color__style']).toBeUndefined()
     })
   })
 
@@ -604,8 +609,12 @@ describe('exec() chain fidelity (css pseudo mode, className on)', () => {
       { tokens: {}, useClassName: true },
       { shadowStep: 'rest', ':focus-visible_ring': 'focus' },
     ).style as AnyStyle
-    expect(String(style['boxShadow'])).toContain('--toned_focus-visible__box-shadow')
-    expect(String(style['boxShadow'])).toContain('0 1px 2px 0 #000')
+    expectConditions(
+      style,
+      'boxShadow',
+      ['--toned_focus-visible'],
+      ['0 1px 2px 0 #000', '0 0 0 3px #f00'],
+    )
   })
 
   test('alpha-channel chain values carry the class-fidelity RCS wrapper', () => {
@@ -620,8 +629,12 @@ describe('exec() chain fidelity (css pseudo mode, className on)', () => {
     ).style as AnyStyle
     const wrapped =
       'rgb(from var(--input) r g b / calc(alpha * var(--toned-alpha-border-color, 1)))'
-    expect(String(style['--toned_focus-visible__border-color'])).toContain(wrapped)
-    expect(String(style['borderColor'])).toContain(wrapped)
+    expectConditions(
+      style,
+      'borderColor',
+      ['--toned_focus-visible'],
+      [wrapped, wrapped],
+    )
   })
 })
 
@@ -644,13 +657,18 @@ describe('exec() media chains without a resting value', () => {
     } as any)
 
     const style = result.style as Record<string, unknown>
-    expect(style['--media-md__max-width']).toBe('var(--media-md) 40rem')
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--media-md'],
+      ['revert-layer', '40rem'],
+    )
     // css-hooks' trick: with every condition off the declaration rolls back
     // past the style attribute, so a resting ATOMIC CLASS for the property
     // still applies. (The open-ended chain this replaces computed to unset,
     // stomping it; resolving the missing base through a unit before that
     // produced calc(NaN), which computes to 0 and collapsed layouts.)
-    expect(style['maxWidth']).toBe('var(--media-md__max-width, revert-layer)')
+    expect(String(style['maxWidth'])).toContain('revert-layer')
     expect(JSON.stringify(style)).not.toContain('NaN')
   })
 
@@ -662,8 +680,7 @@ describe('exec() media chains without a resting value', () => {
     } as any)
 
     const style = result.style as Record<string, unknown>
-    expect(style['--media-md__max-width']).toBe('var(--media-md) 40rem')
-    expect(style['maxWidth']).toBe('var(--media-md__max-width, 20rem)')
+    expectConditions(style, 'maxWidth', ['--media-md'], ['20rem', '40rem'])
   })
 
   test('a nested pseudo BLOCK (the t() path) reaches the pseudo chain', () => {
@@ -674,7 +691,7 @@ describe('exec() media chains without a resting value', () => {
     } as any)
 
     const style = result.style as Record<string, unknown>
-    expect(String(style['maxWidth'])).toContain('--toned_hover__max-width')
+    expectConditions(style, 'maxWidth', ['--toned_hover'], ['20rem', '40rem'])
   })
 })
 
@@ -696,11 +713,11 @@ describe('compound state+pseudo keys (css chain mode)', () => {
       bgColor: 'a',
       ':open:hover': { bgColor: 'b' },
     } as any)
-    expect((result.style as AnyStyle)['--toned_open--hover__background-color']).toBe(
-      'var(--toned_open) var(--toned_hover) #b',
-    )
-    expect((result.style as AnyStyle)['backgroundColor']).toBe(
-      'var(--toned_open--hover__background-color, #a)',
+    expectConditions(
+      result.style,
+      'backgroundColor',
+      ['--toned_open', '--toned_hover'],
+      ['#a', '#a', '#a', '#b'],
     )
   })
 
@@ -712,22 +729,25 @@ describe('compound state+pseudo keys (css chain mode)', () => {
       ':open': { bgColor: 'c' },
       ':open:hover': { bgColor: 'd' },
     } as any)
-    // outermost first: compound over state over pseudo over base
-    expect((result.style as AnyStyle)['backgroundColor']).toBe(
-      'var(--toned_open--hover__background-color, ' +
-        'var(--toned_open__background-color, ' +
-        'var(--toned_hover__background-color, #a)))',
+    expectConditions(
+      result.style,
+      'backgroundColor',
+      ['--toned_hover', '--toned_open'],
+      ['#a', '#b', '#c', '#d'],
     )
   })
 
-  test("compound in the raw `style` escape rides the same guards", () => {
+  test('compound in the raw `style` escape rides the same guards', () => {
     const { exec } = makeSystem()
     const result = exec({ tokens: {}, useClassName: false }, {
       ':open:hover': { style: { outlineOffset: '2px' } },
     } as any)
-    expect(
-      (result.style as AnyStyle)['--toned_open--hover__outline-offset__style'],
-    ).toBe('var(--toned_open) var(--toned_hover) 2px')
+    expectConditions(
+      result.style,
+      'outlineOffset',
+      ['--toned_open', '--toned_hover'],
+      [undefined, undefined, undefined, '2px'],
+    )
   })
 })
 
@@ -736,8 +756,10 @@ describe('container-condition chains', () => {
     defineSystem(
       {
         maxWidth: defineToken({
-          values: ['s', 'l'] as const,
-          resolve: (v) => ({ maxWidth: v === 's' ? '20rem' : '40rem' }),
+          values: ['s', 'm', 'l'] as const,
+          resolve: (v) => ({
+            maxWidth: v === 's' ? '20rem' : v === 'm' ? '30rem' : '40rem',
+          }),
         }),
       },
       {
@@ -754,11 +776,11 @@ describe('container-condition chains', () => {
     } as any)
 
     const style = result.style as Record<string, unknown>
-    expect(style['--cq-field-group-md__max-width']).toBe(
-      'var(--cq-field-group-md) 40rem',
-    )
-    expect(style['maxWidth']).toBe(
-      'var(--cq-field-group-md__max-width, 20rem)',
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--cq-field-group-md'],
+      ['20rem', '40rem'],
     )
   })
 
@@ -767,14 +789,15 @@ describe('container-condition chains', () => {
     const result = exec({ tokens: {}, useClassName: false }, {
       maxWidth: 's',
       '@md_maxWidth': 'l',
-      '@field-group/md_maxWidth': 'l',
+      '@field-group/md_maxWidth': 'm',
     } as any)
 
     const style = result.style as Record<string, unknown>
-    // The container measures the element's own ancestor — more local than any
-    // viewport condition, so its var wraps the media var, not the reverse.
-    expect(style['maxWidth']).toBe(
-      'var(--cq-field-group-md__max-width, var(--media-md__max-width, 20rem))',
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--media-md', '--cq-field-group-md'],
+      ['20rem', '40rem', '30rem', '30rem'],
     )
   })
 
@@ -785,8 +808,11 @@ describe('container-condition chains', () => {
     } as any)
 
     const style = result.style as Record<string, unknown>
-    expect(style['maxWidth']).toBe(
-      'var(--cq-field-group-md__max-width, revert-layer)',
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--cq-field-group-md'],
+      ['revert-layer', '40rem'],
     )
   })
 
@@ -813,7 +839,12 @@ describe('container-condition chains', () => {
     // must ride the chain even for an opted, enumerated token.
     expect(result.className ?? '').not.toContain('field-group')
     const style = result.style as Record<string, unknown>
-    expect(style['maxWidth']).toContain('--cq-field-group-md__max-width')
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--cq-field-group-md'],
+      ['20rem', '40rem'],
+    )
   })
 })
 
@@ -822,7 +853,7 @@ describe('condition algebra chains (css mode)', () => {
     defineSystem(
       {
         display: defineToken({
-          values: ['none', 'flex'] as const,
+          values: ['none', 'flex', 'grid', 'block'] as const,
           resolve: (v) => ({ display: v }),
         }),
       },
@@ -838,11 +869,11 @@ describe('condition algebra chains (css mode)', () => {
       '@!card/>=400_display': 'none',
     } as any)
     const style = result.style as Record<string, unknown>
-    expect(style['--not-cq-card-gte400__display']).toBe(
-      'var(--cq-card-gte400-not) none',
-    )
-    expect(style['display']).toBe(
-      'var(--not-cq-card-gte400__display, revert-layer)',
+    expectConditions(
+      style,
+      'display',
+      ['--cq-card-gte400-not'],
+      ['revert-layer', 'none'],
     )
   })
 
@@ -853,25 +884,26 @@ describe('condition algebra chains (css mode)', () => {
       '@md&card/>=400_display': 'flex',
     } as any)
     const style = result.style as Record<string, unknown>
-    expect(style['--media-md-and-cq-card-gte400__display']).toBe(
-      'var(--media-md) var(--cq-card-gte400) flex',
-    )
-    expect(style['display']).toBe(
-      'var(--media-md-and-cq-card-gte400__display, none)',
+    expectConditions(
+      style,
+      'display',
+      ['--media-md', '--cq-card-gte400'],
+      ['none', 'none', 'none', 'flex'],
     )
   })
 
-  test('an OR condition contributes adjacent chain links sharing the value', () => {
+  test('an OR condition selects the value when either branch matches', () => {
     const { exec } = makeSystem()
     const result = exec({ tokens: {}, useClassName: false }, {
       display: 'none',
       '@md|card/>=400_display': 'flex',
     } as any)
     const style = result.style as Record<string, unknown>
-    expect(style['--media-md__display']).toBe('var(--media-md) flex')
-    expect(style['--cq-card-gte400__display']).toBe('var(--cq-card-gte400) flex')
-    expect(style['display']).toBe(
-      'var(--cq-card-gte400__display, var(--media-md__display, none))',
+    expectConditions(
+      style,
+      'display',
+      ['--media-md', '--cq-card-gte400'],
+      ['none', 'flex', 'flex', 'flex'],
     )
   })
 
@@ -880,13 +912,15 @@ describe('condition algebra chains (css mode)', () => {
     const result = exec({ tokens: {}, useClassName: false }, {
       display: 'none',
       '@!card/>=400_display': 'flex',
-      '@md_display': 'flex',
-      '@card/sm_display': 'flex',
+      '@md_display': 'grid',
+      '@card/sm_display': 'block',
     } as any)
     const style = result.style as Record<string, unknown>
-    // media asc, then containers, then algebra outermost
-    expect(style['display']).toBe(
-      'var(--not-cq-card-gte400__display, var(--cq-card-sm__display, var(--media-md__display, none)))',
+    expectConditions(
+      style,
+      'display',
+      ['--media-md', '--cq-card-sm', '--cq-card-gte400-not'],
+      ['none', 'grid', 'block', 'block', 'flex', 'flex', 'flex', 'flex'],
     )
   })
 
@@ -898,8 +932,6 @@ describe('condition algebra chains (css mode)', () => {
     } as any)
     const style = result.style as Record<string, unknown>
     expect(style['display']).toBe('none')
-    expect(
-      Object.keys(style).some((k) => k.includes('nope')),
-    ).toBe(false)
+    expect(Object.keys(style).some((k) => k.includes('nope'))).toBe(false)
   })
 })

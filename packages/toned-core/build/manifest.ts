@@ -1,14 +1,22 @@
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { adHocAtoms, parseConditionKey } from '../utils/conditions.ts'
+import {
+  adHocAtoms,
+  parseConditionKey,
+  serializeAtom,
+} from '../utils/conditions.ts'
+import { collectWebRules } from '../web/collect.ts'
 
 export type BuildManifest = Readonly<{
   version: 1
   systemId: string
+  /** null is anonymous legacy output; the explicit id 'legacy' is distinct. */
+  namespace: string | null
   /** Exact static schema, including named thresholds and token vocabulary. */
   definition: string
   /** Ad-hoc condition atoms. Named conditions belong to definition. */
   conditions: readonly string[]
   fingerprint: string
+  extensions?: readonly string[]
 }>
 
 export type BuildArtifact = Readonly<{ css: string; manifest: BuildManifest }>
@@ -25,6 +33,12 @@ export function assertManifestConditions(
   manifest: BuildManifest,
   rules: unknown,
 ): void {
+  for (const name of collectWebRules(rules, manifest.systemId).keys()) {
+    if (!manifest.extensions?.includes(name))
+      throw new Error(
+        `Toned manifest ${manifest.systemId}: webRules absent from build inventory; add the stylesheet to buildStyles({ sheets })`,
+      )
+  }
   const needed = new Set<string>()
   collectManifestConditions(rules, needed)
   const emitted = new Set(manifest.conditions)
@@ -75,6 +89,7 @@ export function systemDefinition(system: TokenStyleDeclaration): string {
     ]
   })
   return JSON.stringify({
+    layout: system.layoutContext,
     breakpoints: system.breakpoints,
     containers: system.containers,
     states: system.states,
@@ -97,8 +112,7 @@ export function collectManifestConditions(
     if (!name.startsWith('@') || name.startsWith('@platform.')) return
     const expression = parseConditionKey(name.slice(1))
     if (expression)
-      for (const atom of adHocAtoms(expression))
-        out.add(`${atom.container}/>=${atom.min}`)
+      for (const atom of adHocAtoms(expression)) out.add(serializeAtom(atom))
   }
   const walk = (value: unknown): void => {
     if (!value || typeof value !== 'object' || visited.has(value)) return

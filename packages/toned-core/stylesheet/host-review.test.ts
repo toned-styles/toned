@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { expect, test } from 'vitest'
+import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
 import {
   prepareHostRelease,
   recordHostCommit,
@@ -33,6 +34,7 @@ test('native commit restores unchanged interaction output after a changed restin
     setNativeProps: (patch: { style?: Record<string, unknown> }) =>
       Object.assign(live, patch.style),
   }
+  registerFixtureHost(host)
   recordHostCommit(host, { style: { opacity: 0 } })
   setStyles(host, { style: { opacity: 1 } })
   // React commits a new resting prop while this host remains hovered.
@@ -81,6 +83,7 @@ test('native commit invalidates removed resting fields and changed bridge props'
     setNativeProps: ({ style, ...props }: Record<string, unknown>) =>
       Object.assign(live, style, props),
   }
+  registerFixtureHost(host)
   recordHostCommit(host, { style: { opacity: 0 }, placeholderTextColor: 'red' })
   setStyles(host, { style: { opacity: 1 }, placeholderTextColor: 'blue' })
   live['opacity'] = null
