@@ -1,7 +1,10 @@
-import type { ValidateDeclaration } from '@toned/core/types/stylesheet'
+'use client'
+
 import type { QueryBuilder } from '@toned/core/system'
+import type { ValidateDeclaration } from '@toned/core/types/stylesheet'
+
 export { ConfigProvider } from './runtime-config.ts'
-import { useRuntimeConfig } from './runtime-config.ts'
+
 import {
   type AuthoredElementStyle,
   type ElementType,
@@ -17,8 +20,8 @@ import {
   type ReactElement,
   type ReactNode,
   useContext,
-  useRef,
   useLayoutEffect,
+  useRef,
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
 import { ContainerSizesContext } from './containers.tsx'
@@ -27,6 +30,7 @@ import {
   type StyleOverrideEntry,
   useOverriddenSheet,
 } from './overrides.tsx'
+import { useRuntimeConfig } from './runtime-config.ts'
 
 /**
  * Props returned for each element in a stylesheet.
@@ -53,7 +57,9 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   with: <P extends Record<string, unknown> | false | null | undefined>(
     props: P,
   ) => ElementProps<S> &
-    (P extends Record<string, unknown> ? Omit<P, 'className' | 'style' | 'ref' | 'with'> : {})
+    (P extends Record<string, unknown>
+      ? Omit<P, 'className' | 'style' | 'ref' | 'with'>
+      : {})
   /** Explicit host-prop composition; `with` is its compatibility alias. */
   withProps: <As extends HostElement = 'div'>(
     props:
@@ -123,22 +129,21 @@ type StylesheetLike = {
  */
 type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
 
-type InferElements<S> =
-  InferMeta<S> extends {
-    system: infer Sys extends TokenStyleDeclaration
-    elements: infer T
-  }
-    ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
-    : {
-        // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
-        // key, so the composition methods have to be excluded by name — otherwise
-        // `s.extend` types as an element and a typo'd element name resolves to it.
-        [K in keyof S as K extends StylesheetMethod
-          ? never
-          : K extends string
-            ? K
-            : never]: ElementProps
-      }
+type InferElements<S> = InferMeta<S> extends {
+  system: infer Sys extends TokenStyleDeclaration
+  elements: infer T
+}
+  ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
+  : {
+      // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
+      // key, so the composition methods have to be excluded by name — otherwise
+      // `s.extend` types as an element and a typo'd element name resolves to it.
+      [K in keyof S as K extends StylesheetMethod
+        ? never
+        : K extends string
+          ? K
+          : never]: ElementProps
+    }
 
 type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
 
@@ -160,7 +165,10 @@ export function useStyles<T extends StylesheetLike>(
   ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
 ): InferElements<T>
 
-export function useStyles<T extends StylesheetLike>(stylesheet: T, state?: object) {
+export function useStyles<T extends StylesheetLike>(
+  stylesheet: T,
+  state?: object,
+) {
   const sourceSheet = stylesheet
   stylesheet = useOverriddenSheet(stylesheet)
   const containerSizes = useContext(ContainerSizesContext)
@@ -170,7 +178,9 @@ export function useStyles<T extends StylesheetLike>(stylesheet: T, state?: objec
   // cannot publish mods, refs, subscriptions, or token values to the live tree.
   const candidate = stylesheet[SYMBOL_INIT](config, state)
   candidate.prepare?.(
-    committed.current?.stylesheet === sourceSheet ? committed.current.candidate : undefined,
+    committed.current?.stylesheet === sourceSheet
+      ? committed.current.candidate
+      : undefined,
   )
   const conditions = candidate.conditionState?.(containerSizes)
   if (conditions) {
@@ -199,7 +209,9 @@ export function useStyles<T extends StylesheetLike>(stylesheet: T, state?: objec
  * and silently pass.
  */
 type BoundCallable = {
-  <As extends HostElement>(props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>): ReactElement
+  <As extends HostElement>(
+    props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>,
+  ): ReactElement
   (props?: { as?: never } & Record<string, unknown>): ReactElement
 }
 
@@ -218,7 +230,9 @@ type BoundElementsOf<T> = {
  * Mod-less module-level binding for a stylesheet with no variants:
  * `const { Root, Label } = bind(styles)`. The general form is `useBind`.
  */
-export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundElementsOf<T>
+export const bind = _bind as <T extends StylesheetLike>(
+  stylesheet: T,
+) => BoundElementsOf<T>
 
 /**
  * The bound counterpart of `useStyles`: same arguments (mods in the hook call),
@@ -245,7 +259,9 @@ export type StyleOverrideRules<T extends StylesheetLike> =
         /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
          * the override's base rules; the matcher resolves them on the derived
          * sheet exactly as on an authored one. */
-        [K in `${keyof E & string}:${string}` | `${keyof E & string}~:${string}`]?: {
+        [K in
+          | `${keyof E & string}:${string}`
+          | `${keyof E & string}~:${string}`]?: {
           [T2 in keyof E as T2 extends string ? T2 : never]?: TokenStyle<Sys>
         }
       }
@@ -285,16 +301,28 @@ export type StyleOverrideVariantRules<T extends StylesheetLike> =
  * invent, and one that could be invented would be dead code that type-checks.
  * A matcher the sheet declared is replaced; one it did not is added.
  */
-type OverrideSystem<T> =
-  InferMeta<T> extends { system: infer S extends TokenStyleDeclaration } ? S : TokenStyleDeclaration
-type OverrideParts<T> = InferMeta<T> extends { elements: infer E } ? keyof E & string : string
-export interface OverrideEntry<T extends StylesheetLike> extends StyleOverrideEntry {
+type OverrideSystem<T> = InferMeta<T> extends {
+  system: infer S extends TokenStyleDeclaration
+}
+  ? S
+  : TokenStyleDeclaration
+type OverrideParts<T> = InferMeta<T> extends { elements: infer E }
+  ? keyof E & string
+  : string
+export interface OverrideEntry<T extends StylesheetLike>
+  extends StyleOverrideEntry {
   variants<const Rules extends Record<string, unknown>>(
     callback: (
-      selector: VariantSelector<InferMods<T> extends ModType ? InferMods<T> : never>,
+      selector: VariantSelector<
+        InferMods<T> extends ModType ? InferMods<T> : never
+      >,
       q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
     ) => Rules &
-      ValidateDeclaration<Rules, Record<string, StyleOverrideVariantRules<T>>, OverrideSystem<T>>,
+      ValidateDeclaration<
+        Rules,
+        Record<string, StyleOverrideVariantRules<T>>,
+        OverrideSystem<T>
+      >,
   ): OverrideEntry<T>
 }
 
@@ -304,10 +332,12 @@ export const overrideStyles = _overrideStyles as <
 >(
   sheet: T,
   rules:
-    | (Rules & ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>)
+    | (Rules &
+        ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>)
     | ((
         q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-      ) => Rules & ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>),
+      ) => Rules &
+        ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>),
   opts?: { scope?: string },
 ) => OverrideEntry<T>
 

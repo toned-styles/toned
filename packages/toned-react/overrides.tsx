@@ -1,6 +1,12 @@
-import { useRuntimeConfig } from './runtime-config.ts'
 import type { Config } from '@toned/core'
-import { createContext, createElement, type ReactNode, useContext, useMemo } from 'react'
+import {
+  createContext,
+  createElement,
+  type ReactNode,
+  useContext,
+  useMemo,
+} from 'react'
+import { useRuntimeConfig } from './runtime-config.ts'
 
 /**
  * Stylesheet overrides — the styling analogue of a slot/implementation
@@ -60,7 +66,9 @@ export function overrideStyles(
   opts?: { scope?: string },
 ): StyleOverrideEntry {
   const base: StyleOverrideEntry =
-    opts?.scope !== undefined ? { sheet, rules, scope: opts.scope } : { sheet, rules }
+    opts?.scope !== undefined
+      ? { sheet, rules, scope: opts.scope }
+      : { sheet, rules }
   return withVariants(base)
 }
 
@@ -68,14 +76,18 @@ export function overrideStyles(
 function withVariants(entry: StyleOverrideEntry): StyleOverrideEntry {
   return Object.defineProperty(entry, 'variants', {
     // biome-ignore lint/suspicious/noExplicitAny: the selector is the sheet's own; index.ts types it
-    value: (fn: ($: any) => AnyRules) => withVariants({ ...entry, variantRules: fn }),
+    value: (fn: ($: any) => AnyRules) =>
+      withVariants({ ...entry, variantRules: fn }),
     enumerable: false,
   }) as StyleOverrideEntry
 }
 
 /** Default scope match: the entry's scope appears in the ambient path as a
  * contiguous run of whole segments. */
-export function matchesScopeDefault(scope: string, ambient: string | null | undefined): boolean {
+export function matchesScopeDefault(
+  scope: string,
+  ambient: string | null | undefined,
+): boolean {
   if (!ambient) return false
   if (scope === ambient) return true
   const a = ambient.split('/')
@@ -100,7 +112,11 @@ export function StyleOverrides({
 }) {
   const outer = useContext(StyleOverridesContext)
   const merged = useMemo(() => [...outer, ...value], [outer, value])
-  return createElement(StyleOverridesContext.Provider, { value: merged }, children)
+  return createElement(
+    StyleOverridesContext.Provider,
+    { value: merged },
+    children,
+  )
 }
 
 interface DerivedCache {
@@ -121,7 +137,10 @@ interface DerivedCache {
  */
 const derivedCache = new WeakMap<object, DerivedCache>()
 
-function sameEntries(a: readonly StyleOverrideEntry[], b: readonly StyleOverrideEntry[]): boolean {
+function sameEntries(
+  a: readonly StyleOverrideEntry[],
+  b: readonly StyleOverrideEntry[],
+): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
   return true
@@ -154,7 +173,9 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
 
   const matchScope = config.matchStyleOverrideScope ?? matchesScopeDefault
   const applicable = entries.filter(
-    e => e.sheet === sheet && (e.scope === undefined || matchScope(e.scope, ambient)),
+    (e) =>
+      e.sheet === sheet &&
+      (e.scope === undefined || matchScope(e.scope, ambient)),
   )
   // Scoped entries apply after unscoped, most specific (deepest scope) last —
   // so specificity wins over provider order among scoped entries, matching the
@@ -175,7 +196,11 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
     })
     return sheet
   }
-  if (cached && cached.config === config && sameEntries(cached.matched, matched)) {
+  if (
+    cached &&
+    cached.config === config &&
+    sameEntries(cached.matched, matched)
+  ) {
     derivedCache.set(sheet, {
       config,
       context: entries,
@@ -188,7 +213,9 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
 
   let derived: object = sheet
   for (const entry of matched) {
-    const applyOverride = (derived as Record<symbol, unknown>)[Symbol.for('@toned/override')]
+    const applyOverride = (derived as Record<symbol, unknown>)[
+      Symbol.for('@toned/override')
+    ]
     if (typeof applyOverride !== 'function') {
       throw new Error(
         'StyleOverrides requires a Toned stylesheet with explicit override-layer support.',
@@ -196,6 +223,12 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
     }
     derived = applyOverride.call(derived, entry.rules, entry.variantRules)
   }
-  derivedCache.set(sheet, { config, context: entries, ambient, matched, derived })
+  derivedCache.set(sheet, {
+    config,
+    context: entries,
+    ambient,
+    matched,
+    derived,
+  })
   return derived as T
 }

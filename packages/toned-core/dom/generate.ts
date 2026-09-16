@@ -5,16 +5,17 @@
  */
 
 import { namespaceCss } from '../system/namespace.ts'
-import { isAnimationDefinition } from '../types/index.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
+import { isAnimationDefinition } from '../types/index.ts'
 import {
-  DEFAULT_ALPHA_STEPS,
   alphaVarName,
   alphaWrappable,
+  DEFAULT_ALPHA_STEPS,
   withAlphaExpr,
 } from '../utils/alpha.ts'
 import { atomSlug, parseConditionKey } from '../utils/conditions.ts'
 import { bridgeVarName, camelToKebab } from '../utils/css.ts'
+import { serializeCssValue } from '../utils/css-value.ts'
 
 const tokens = new Proxy(
   {},
@@ -175,7 +176,7 @@ export function generate<const S extends TokenStyleDeclaration>(
       for (const [step, decl] of Object.entries(frames)) {
         let rule = ''
         for (const prop in decl) {
-          rule += `${camelToKebab(prop)}:${decl[prop]};`
+          rule += `${camelToKebab(prop)}:${serializeCssValue(prop, decl[prop])};`
         }
         body += `${step} {${rule}}`
       }
@@ -189,7 +190,13 @@ export function generate<const S extends TokenStyleDeclaration>(
 
     // The runtime-tracked states plus the css-only enhancements (:focus-visible
     // has no JS event and no native analogue — the browser decides it).
-    const PSEUDO_STATES = ['hover', 'focus', 'focus-visible', 'focus-within', 'active']
+    const PSEUDO_STATES = [
+      'hover',
+      'focus',
+      'focus-visible',
+      'focus-within',
+      'active',
+    ]
 
     let rootRule = ''
     let rules = ''
@@ -257,8 +264,12 @@ export function generate<const S extends TokenStyleDeclaration>(
   // Complement channels make q.not(state) equivalent on CSS and native.
   // Reset at every bound element so a parent's state never answers for a child.
   const complementStates: Record<string, string> = {
-    hover: ':hover', focus: ':focus', 'focus-visible': ':focus-visible',
-    'focus-within': ':focus-within', active: ':active', ...states,
+    hover: ':hover',
+    focus: ':focus',
+    'focus-visible': ':focus-visible',
+    'focus-within': ':focus-within',
+    active: ':active',
+    ...states,
   }
   for (const [name, selector] of Object.entries(complementStates)) {
     const variable = `--toned_${name}-not`
@@ -380,7 +391,7 @@ export function generate<const S extends TokenStyleDeclaration>(
         if (descendant) {
           descendantRules.set(
             descendant.selector,
-            `${descendantRules.get(descendant.selector) ?? ''}${descendant.cssProp}:${cssValue};`,
+            `${descendantRules.get(descendant.selector) ?? ''}${descendant.cssProp}:${serializeCssValue(descendant.cssProp, cssValue)};`,
           )
           continue
         }
@@ -391,7 +402,7 @@ export function generate<const S extends TokenStyleDeclaration>(
           alphaProps.add(cssProp)
           cssValue = withAlphaExpr(cssValue, `var(${alphaVarName(cssProp)}, 1)`)
         }
-        cssRule += `${camelToKebab(cssProp)}:${cssValue};`
+        cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, cssValue)};`
       }
 
       const ruleKey = `${key}_${value}`
@@ -427,7 +438,7 @@ export function generate<const S extends TokenStyleDeclaration>(
             let body = ''
             const props = perPseudo[pseudoSel]!
             for (const cssProp in props) {
-              body += `${camelToKebab(cssProp)}:${props[cssProp]};`
+              body += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, props[cssProp])};`
             }
             if (body) styles += `${scope}.${selector}${pseudoSel}{${body}}`
           }
@@ -449,7 +460,8 @@ export function generate<const S extends TokenStyleDeclaration>(
         ? v
         : v.startsWith('(')
           ? Number.POSITIVE_INFINITY
-          : Number.parseFloat(v) * (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
+          : Number.parseFloat(v) *
+            (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
     const sorted = Object.entries(
       breakpoints.__breakpoints as Record<string, number | string>,
     ).sort(([, a], [, b]) => px(a) - px(b))
@@ -470,7 +482,7 @@ export function generate<const S extends TokenStyleDeclaration>(
           if (!result) return
           let cssRule = ''
           for (const cssProp in result) {
-            cssRule += `${camelToKebab(cssProp)}:${result[cssProp]};`
+            cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, result[cssProp])};`
           }
           if (!cssRule) return
           const ruleKey = `@${bpKey}:${key}_${value}`
@@ -489,5 +501,7 @@ export function generate<const S extends TokenStyleDeclaration>(
   }
   styles += alphaClasses
 
-  return opts?.id ? namespaceCss(styles, opts.id, { scope: opts.scope }) : styles
+  return opts?.id
+    ? namespaceCss(styles, opts.id, { scope: opts.scope })
+    : styles
 }

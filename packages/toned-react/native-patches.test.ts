@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest'
 import { defineSystem } from '@toned/core'
 import { Base } from '@toned/core/stylesheet'
+import { describe, expect, test } from 'vitest'
 import native from './react-native.ts'
 
 function setup() {
@@ -9,10 +9,17 @@ function setup() {
     rules: {
       Root: {
         style: { opacity: 1 },
-        ':hover': { style: { color: 'red', '--toned-b-placeholder-color': 'green' } },
+        ':hover': {
+          style: { color: 'red', '--toned-b-placeholder-color': 'green' },
+        },
       },
     },
-    config: { ...native, getTokens: () => ({}), useClassName: false, mediaMode: false },
+    config: {
+      ...native,
+      getTokens: () => ({}),
+      useClassName: false,
+      mediaMode: false,
+    },
   })
   return { base, props: native.getProps.call(base, 'Root') as any }
 }

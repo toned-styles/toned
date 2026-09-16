@@ -1,6 +1,12 @@
 import { defineSystem, defineToken } from '../system/definers.ts'
+
 const ui = defineSystem(
-  { paint: defineToken({ values: ['base', 'accent'], resolve: v => ({ backgroundColor: v }) }) },
+  {
+    paint: defineToken({
+      values: ['base', 'accent'],
+      resolve: (v) => ({ backgroundColor: v }),
+    }),
+  },
   {
     breakpoints: { __breakpoints: { md: 768 } },
     containers: { field: { wide: 400 }, card: { narrow: 200 } },
@@ -21,8 +27,12 @@ ui.stylesheet({
     '@platform native': { $style: { paddingHorizontal: 12 } },
   },
 })
-ui.stylesheet(q => ({
-  Root: { $kind: 'text', [q.media('md')]: { paint: 'accent' }, $style: { fontSize: 12 } },
+ui.stylesheet((q) => ({
+  Root: {
+    $kind: 'text',
+    [q.media('md')]: { paint: 'accent' },
+    $style: { fontSize: 12 },
+  },
 }))
 // @ts-expect-error unknown media
 q.media('mdd')
@@ -96,7 +106,7 @@ ui.stylesheet({
 const textOnly = defineToken({
   values: ['body'],
   $types: ['text'],
-  resolve: value => ({ color: value }),
+  resolve: (value) => ({ color: value }),
 })
 const canonical = defineSystem({ id: 'canonical', tokens: { textOnly } })
 canonical.stylesheet({
@@ -105,10 +115,14 @@ canonical.stylesheet({
     textOnly: 'body',
   },
 })
-const textSheet = canonical.stylesheet({ Label: { $kind: 'text', textOnly: 'body' } })
+const textSheet = canonical.stylesheet({
+  Label: { $kind: 'text', textOnly: 'body' },
+})
 // @ts-expect-error variants inherit the declared static kind
 textSheet.variants<{ open: boolean }>(($, q) => ({
-  [$.open(true)]: { Label: { [q.state('hover')]: { textOnly: 'body' }, $kind: 'view' } },
+  [$.open(true)]: {
+    Label: { [q.state('hover')]: { textOnly: 'body' }, $kind: 'view' },
+  },
 }))
 const invalidPortable = {
   id: 'portable',
@@ -121,7 +135,9 @@ defineSystem(invalidPortable)
 q.all('@unknown')
 
 const simple = ui.stylesheet({ Root: { paint: 'base' } })
-simple.when(q.all(q.media('md'), q.part('Root').state('hover')), { Root: { paint: 'accent' } })
+simple.when(q.all(q.media('md'), q.part('Root').state('hover')), {
+  Root: { paint: 'accent' },
+})
 simple.when(q.all(q.media('md')), {
   Root: {
     // @ts-expect-error advanced rule maps retain token typo checks
@@ -137,7 +153,7 @@ const flexible = defineToken({
   values: ['auto'],
   dynamic: 'number',
   properties: ['width'],
-  resolve: value => ({ width: value }),
+  resolve: (value) => ({ width: value }),
 })
 const flexibleSystem = defineSystem({ flexible })
 flexibleSystem.stylesheet({ Root: { flexible: 17 } })
@@ -149,11 +165,17 @@ flexibleSystem.stylesheet({
 })
 simple.variants<{ open: boolean }>(($, q) =>
   // @ts-expect-error checked variant return rejects excess token keys
-  q.rules({ [$.open(true)]: { Root: { [q.state('hover')]: { paint: 'base' }, piant: 'accent' } } }),
+  q.rules({
+    [$.open(true)]: {
+      Root: { [q.state('hover')]: { paint: 'base' }, piant: 'accent' },
+    },
+  }),
 )
 
 simple.variants<{ open: boolean }>(($, q) =>
-  q.rules({ [$.open(true)]: { Root: { [q.state('hover')]: { paint: 'accent' } } } }),
+  q.rules({
+    [$.open(true)]: { Root: { [q.state('hover')]: { paint: 'accent' } } },
+  }),
 )
 
 simple.variants<{ open: boolean }>()(($, q) => ({
@@ -161,14 +183,18 @@ simple.variants<{ open: boolean }>()(($, q) => ({
 }))
 // @ts-expect-error the canonical inferred callback rejects an excess token beside a computed atom
 simple.variants<{ open: boolean }>()(($, q) => ({
-  [$.open(true)]: { Root: { [q.state('hover')]: { paint: 'base' }, piant: 'accent' } },
+  [$.open(true)]: {
+    Root: { [q.state('hover')]: { paint: 'base' }, piant: 'accent' },
+  },
 }))
 // @ts-expect-error unknown nested properties are checked recursively
 simple.variants<{ open: boolean }>()(($, q) => ({
   [$.open(true)]: { Root: { [q.state('hover')]: { piant: 'base' } } },
 }))
 // @ts-expect-error wrong token values are checked through the canonical factory
-simple.variants<{ open: boolean }>()($ => ({ [$.open(true)]: { Root: { paint: 'typo' } } }))
+simple.variants<{ open: boolean }>()(($) => ({
+  [$.open(true)]: { Root: { paint: 'typo' } },
+}))
 
 ui.stylesheet({
   Text: {
@@ -208,4 +234,6 @@ const mediaNamed = defineSystem({
   tokens: {},
   conditions: { media: { md: 400 }, containers: { card: { wide: 400 } } },
 })
-mediaNamed.stylesheet(q => ({ Root: { [q.media('md')]: { $style: { opacity: 0 } } } }))
+mediaNamed.stylesheet((q) => ({
+  Root: { [q.media('md')]: { $style: { opacity: 0 } } },
+}))

@@ -4,7 +4,15 @@
  * @module @toned/core
  */
 
+export type {
+  GridArea,
+  GridDefinition,
+  GridPlacement,
+  GridTrack,
+} from './grid/index.ts'
+export { defineGrid, dp, fr, percent } from './grid/index.ts'
 export type { TonedTypeRegistry } from './registry.ts'
+export type { SystemDefinition, SystemOptions } from './system/definers.ts'
 export type {
   Condition,
   ContainerConditionBuilder,
@@ -30,6 +38,11 @@ export {
   or,
   setConfig,
 } from './system/index.ts'
+export type {
+  QueryAtom,
+  QueryBuilder,
+  QueryPredicate,
+} from './system/queries.ts'
 // Re-export types for convenience
 // Type-only brands, exported so downstream declaration emission can name a
 // stylesheet's inferred type across package boundaries (TS4023 otherwise).
@@ -63,9 +76,10 @@ export type {
 } from './types/index.ts'
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'
+export type {
+  NativeInlineStyle,
+  PlatformStyle,
+  PortableInlineStyle,
+  WebInlineStyle,
+} from './types/style.ts'
 export { bridgeVarName } from './utils/css.ts'
-export { defineGrid, dp, fr, percent } from './grid/index.ts'
-export type { GridArea, GridDefinition, GridPlacement, GridTrack } from './grid/index.ts'
-export type { QueryBuilder, QueryPredicate, QueryAtom } from './system/queries.ts'
-export type { PortableInlineStyle, PlatformStyle, NativeInlineStyle, WebInlineStyle } from './types/style.ts'
-export type { SystemOptions, SystemDefinition } from './system/definers.ts'

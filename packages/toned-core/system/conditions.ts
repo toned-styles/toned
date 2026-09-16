@@ -18,12 +18,11 @@
  */
 
 import {
-  parseConditionKey,
-  serializeExpr,
   type ConditionAtom,
   type ConditionExpr,
+  parseConditionKey,
+  serializeExpr,
 } from '../utils/conditions.ts'
-
 
 /**
  * A condition node. TYPED as its serialized key intersected with the carried

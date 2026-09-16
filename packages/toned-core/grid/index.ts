@@ -1,5 +1,7 @@
 /** Typed layout declarations. Geometry belongs to the selected layout engine. */
-export type GridTrack = 'auto' | Readonly<{ unit: 'dp' | 'fr' | '%'; value: number }>
+export type GridTrack =
+  | 'auto'
+  | Readonly<{ unit: 'dp' | 'fr' | '%'; value: number }>
 
 function track(unit: 'dp' | 'fr' | '%', value: number): GridTrack {
   if (!Number.isFinite(value) || value < 0)
@@ -22,14 +24,20 @@ export type GridPlacement = Readonly<{
 const gridBrand = Symbol('toned.grid')
 const areaBrand = Symbol('toned.grid.area')
 
-export type GridArea<Id extends string = string, Name extends string = string> = Readonly<{
+export type GridArea<
+  Id extends string = string,
+  Name extends string = string,
+> = Readonly<{
   readonly [areaBrand]: true
   grid: GridDefinition<Id, Name>
   name: Name
   placement: GridPlacement
 }>
 
-export type GridDefinition<Id extends string = string, Name extends string = string> = Readonly<{
+export type GridDefinition<
+  Id extends string = string,
+  Name extends string = string,
+> = Readonly<{
   readonly [gridBrand]: true
   id: Id
   columns: readonly GridTrack[]
@@ -68,10 +76,13 @@ export function defineGrid<
   >()
   input.areas.forEach((row, y) => {
     if (row.length !== width)
-      throw new Error(`Toned grid ${id}: row ${y + 1} must contain ${width} cells`)
+      throw new Error(
+        `Toned grid ${id}: row ${y + 1} must contain ${width} cells`,
+      )
     row.forEach((name, x) => {
       if (name === '.') return
-      if (!name) throw new Error(`Toned grid ${id}: area names must be nonempty`)
+      if (!name)
+        throw new Error(`Toned grid ${id}: area names must be nonempty`)
       const box = positions.get(name)
       if (box) {
         box.top = Math.min(box.top, y)
@@ -79,7 +90,8 @@ export function defineGrid<
         box.bottom = Math.max(box.bottom, y)
         box.right = Math.max(box.right, x)
         box.count++
-      } else positions.set(name, { top: y, left: x, bottom: y, right: x, count: 1 })
+      } else
+        positions.set(name, { top: y, left: x, bottom: y, right: x, count: 1 })
     })
   })
   const placements = new Map<string, GridPlacement>()
@@ -108,9 +120,11 @@ export function defineGrid<
     id,
     columns: Object.freeze(input.columns.map(copyTrack)),
     rows: Object.freeze(
-      (input.rows ?? Array.from({ length: height }, () => 'auto' as const)).map(copyTrack),
+      (input.rows ?? Array.from({ length: height }, () => 'auto' as const)).map(
+        copyTrack,
+      ),
     ),
-    areas: Object.freeze(input.areas.map(row => Object.freeze([...row]))),
+    areas: Object.freeze(input.areas.map((row) => Object.freeze([...row]))),
     ...(input.gap === undefined ? {} : { gap: input.gap }),
     area<N extends Name>(name: N): GridArea<Id, N> {
       const placement = placements.get(name)
@@ -135,7 +149,9 @@ export function isGridArea(value: unknown): value is GridArea {
 }
 
 function cssTrack(value: GridTrack): string {
-  return value === 'auto' ? value : `${value.value}${value.unit === 'dp' ? 'px' : value.unit}`
+  return value === 'auto'
+    ? value
+    : `${value.value}${value.unit === 'dp' ? 'px' : value.unit}`
 }
 
 /** Pure SSR-safe output; numeric lines avoid global CSS area-name collisions. */
@@ -154,7 +170,8 @@ export function resolveGrid(
       gridTemplateRows: value.rows.map(cssTrack).join(' '),
       ...(value.gap === undefined ? {} : { gap: value.gap }),
     })
-  if (!isGridArea(value)) throw new Error('Toned grid: expected a definition or area reference')
+  if (!isGridArea(value))
+    throw new Error('Toned grid: expected a definition or area reference')
   const p = value.placement
   return Object.freeze({
     gridRowStart: p.rowStart,
@@ -178,7 +195,8 @@ export function createGridScope(grid: GridDefinition) {
         throw new Error(
           `Toned grid ${grid.id}: an area must be a direct layout child; wrappers and portals need an explicit placement contract`,
         )
-      if (targets.has(target)) throw new Error(`Toned grid ${grid.id}: target already registered`)
+      if (targets.has(target))
+        throw new Error(`Toned grid ${grid.id}: target already registered`)
       // Multiple occupants are explicit CSS overlap, preserving host/source order.
       targets.set(target, area)
       let attached = true

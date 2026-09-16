@@ -35,9 +35,15 @@ describe('typed grid declarations', () => {
         ],
       }),
     ).toThrow('rectangle')
-    expect(() => defineGrid('bad', { columns: [fr(1)], areas: [['x', 'y']] })).toThrow('cells')
     expect(() =>
-      defineGrid('bad', { columns: [fr(1)], rows: ['auto', 'auto'], areas: [['x']] }),
+      defineGrid('bad', { columns: [fr(1)], areas: [['x', 'y']] }),
+    ).toThrow('cells')
+    expect(() =>
+      defineGrid('bad', {
+        columns: [fr(1)],
+        rows: ['auto', 'auto'],
+        areas: [['x']],
+      }),
     ).toThrow('track count')
     expect(() => dp(-1)).toThrow('invalid')
     expect(() => resolveGrid(grid(), 'native')).toThrow('@platform web')
@@ -50,8 +56,12 @@ describe('typed grid declarations', () => {
     const detach = first.attach(target, definition.area('title'))
     expect(first.size).toBe(1)
     expect(second.size).toBe(0)
-    expect(() => second.attach({}, grid().area('title'))).toThrow('another grid')
-    expect(() => second.attach({}, definition.area('title'), false)).toThrow('direct layout child')
+    expect(() => second.attach({}, grid().area('title'))).toThrow(
+      'another grid',
+    )
+    expect(() => second.attach({}, definition.area('title'), false)).toThrow(
+      'direct layout child',
+    )
     detach()
     detach()
     expect(first.size).toBe(0)

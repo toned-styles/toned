@@ -96,7 +96,10 @@ export type Config = Readonly<{
    * entry's scope appears in the ambient path as a contiguous run of whole
    * segments — 'checkout/summary' applies under '__root__/checkout/summary/x'.
    */
-  matchStyleOverrideScope?: (scope: string, ambient: string | null | undefined) => boolean
+  matchStyleOverrideScope?: (
+    scope: string,
+    ambient: string | null | undefined,
+  ) => boolean
 
   /**
    * Props that make an element report its own inline width, for the runtime
@@ -107,7 +110,9 @@ export type Config = Readonly<{
    * ResizeObserver-attaching ref. Unset: container elements render unmeasured
    * and every container condition stays false.
    */
-  measureContainerProps?: (onSize: (width: number) => void) => Record<string, unknown>
+  measureContainerProps?: (
+    onSize: (width: number) => void,
+  ) => Record<string, unknown>
 
   /**
    * The runtime half of the ':rtl' declared state (whose web half is a

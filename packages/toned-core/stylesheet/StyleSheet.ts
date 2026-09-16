@@ -1,7 +1,9 @@
 import { attachGridElement, validateGridElement } from '../grid/host.ts'
-import { normalizeDeclarations, validateDeclarations } from '../system/normalize.ts'
-import { registerStylesheetPlan } from './plans.ts'
 import { getConfig } from '../system/config.ts'
+import {
+  normalizeDeclarations,
+  validateDeclarations,
+} from '../system/normalize.ts'
 import type {
   Config,
   ElementType,
@@ -24,10 +26,15 @@ import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { warnOnce } from '../utils/warn.ts'
-import { recordHostCommit, setStyles } from './applyStyles.ts'
+import { recordHostCommit, releaseHost, setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
+import { registerStylesheetPlan } from './plans.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
-import { deepMerge, mergeRules, processVariantRules } from './variantProcessing.ts'
+import {
+  deepMerge,
+  mergeRules,
+  processVariantRules,
+} from './variantProcessing.ts'
 import { createVariantSelector } from './variantSelector.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
@@ -36,12 +43,16 @@ type AnyValue = any
 type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
-const ATTACHMENTS = new WeakMap<object, WeakMap<object, { owner: Base; generation: object }>>()
+const ATTACHMENTS = new WeakMap<
+  object,
+  WeakMap<object, { owner: Base; generation: object }>
+>()
 const HOST_CLEANUPS = new WeakMap<object, WeakMap<object, Set<() => void>>>()
 
 // Bundlers replace `process.env.NODE_ENV`; fall back to non-production when the
 // global is unavailable so dev-only warnings still surface in browser bundles.
-const IS_PRODUCTION = (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
+const IS_PRODUCTION =
+  (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
 
 type ElementStyle = AnyValue
 
@@ -119,7 +130,12 @@ function elementNamesOf(rules: AnyValue): Set<string> {
   const variantSymbolStr = SYMBOL_VARIANTS.toString()
   const names = new Set<string>()
   for (const key in rules as object) {
-    if (key[0] !== '[' && !key.includes(':') && key !== 'prototype' && key !== variantSymbolStr) {
+    if (
+      key[0] !== '[' &&
+      !key.includes(':') &&
+      key !== 'prototype' &&
+      key !== variantSymbolStr
+    ) {
       names.add(key)
     }
   }
@@ -159,7 +175,12 @@ function mergeOverrideVariants(
     const before = merged[key]
     delete merged[key]
     const after = incoming[key]
-    if (!before || typeof before !== 'object' || !after || typeof after !== 'object') {
+    if (
+      !before ||
+      typeof before !== 'object' ||
+      !after ||
+      typeof after !== 'object'
+    ) {
       merged[key] = after
       continue
     }
@@ -168,7 +189,10 @@ function mergeOverrideVariants(
       const incomingEl = after[el]
       const existingEl = entry[el]
       entry[el] =
-        existingEl && typeof existingEl === 'object' && incomingEl && typeof incomingEl === 'object'
+        existingEl &&
+        typeof existingEl === 'object' &&
+        incomingEl &&
+        typeof incomingEl === 'object'
           ? { ...existingEl, ...incomingEl }
           : incomingEl
     }
@@ -177,7 +201,11 @@ function mergeOverrideVariants(
   return merged
 }
 
-export function createStylesheet<S extends TokenStyleDeclaration, _Mods extends ModType, T>(
+export function createStylesheet<
+  S extends TokenStyleDeclaration,
+  _Mods extends ModType,
+  T,
+>(
   ref: TokenSystem<S>,
   rules: T,
   variantRules?: AnyValue,
@@ -252,7 +280,10 @@ export function createStylesheet<S extends TokenStyleDeclaration, _Mods extends 
       const build = (input: AnyValue) => {
         const raw =
           typeof input === 'function'
-            ? input(createVariantSelector<M>([], { rejectDuplicates: true }), ref.q)
+            ? input(
+                createVariantSelector<M>([], { rejectDuplicates: true }),
+                ref.q,
+              )
             : input
         const variants = mergeOverrideVariants(
           variantRules,
@@ -260,7 +291,13 @@ export function createStylesheet<S extends TokenStyleDeclaration, _Mods extends 
           elementNamesOf(rules),
           ref.q,
         )
-        return createStylesheet<S, M, T>(ref, rules, variants, whenRules, overrideLayers)
+        return createStylesheet<S, M, T>(
+          ref,
+          rules,
+          variants,
+          whenRules,
+          overrideLayers,
+        )
       }
       return variantsArg === undefined ? build : build(variantsArg)
     },
@@ -269,18 +306,31 @@ export function createStylesheet<S extends TokenStyleDeclaration, _Mods extends 
         ref,
         rules,
         variantRules,
-        [...whenRules, { predicate, rules: normalizeDeclarations(elementRules) }],
+        [
+          ...whenRules,
+          { predicate, rules: normalizeDeclarations(elementRules) },
+        ],
         overrideLayers,
       ),
     // Ordinary derivation changes defaults; existing matching variants retain
     // their normal precedence over those defaults.
-    extend: (extensionRules: AnyValue, variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue) => {
+    extend: (
+      extensionRules: AnyValue,
+      variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
+    ) => {
       const extension = normalizeDeclarations(
-        typeof extensionRules === 'function' ? extensionRules(ref.q) : extensionRules,
+        typeof extensionRules === 'function'
+          ? extensionRules(ref.q)
+          : extensionRules,
       )
       const extendedRules = deepMerge(rules as AnyValue, extension)
       const variants = variantsArg
-        ? mergeOverrideVariants(variantRules, variantsArg, elementNamesOf(extendedRules), ref.q)
+        ? mergeOverrideVariants(
+            variantRules,
+            variantsArg,
+            elementNamesOf(extendedRules),
+            ref.q,
+          )
         : variantRules
       return createStylesheet<S, _Mods, AnyValue>(
         ref,
@@ -297,23 +347,34 @@ export function createStylesheet<S extends TokenStyleDeclaration, _Mods extends 
       variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
     ) => {
       const extension = normalizeDeclarations(
-        typeof extensionRules === 'function' ? extensionRules(ref.q) : extensionRules,
+        typeof extensionRules === 'function'
+          ? extensionRules(ref.q)
+          : extensionRules,
       )
       const variants = variantsArg
         ? processVariantRules(
-            variantsArg(createVariantSelector([], { rejectDuplicates: true }), ref.q),
+            variantsArg(
+              createVariantSelector([], { rejectDuplicates: true }),
+              ref.q,
+            ),
             elementNamesOf(rules),
           )
         : undefined
       const layer = mergeRules(extension, normalizeDeclarations(variants))
-      return createStylesheet<S, _Mods, T>(ref, rules, variantRules, whenRules, [
-        ...overrideLayers,
-        layer,
-      ])
+      return createStylesheet<S, _Mods, T>(
+        ref,
+        rules,
+        variantRules,
+        whenRules,
+        [...overrideLayers, layer],
+      )
     },
   })
 
-  registerStylesheetPlan(stylesheet, { ref: ref as AnyValue, rules: mergedRules })
+  registerStylesheetPlan(stylesheet, {
+    ref: ref as AnyValue,
+    rules: mergedRules,
+  })
   return stylesheet
 }
 
@@ -396,13 +457,15 @@ export class Base {
     this.tokens = this.config.getTokens()
     this.refs = {}
 
-    const mediaMode = this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    const mediaMode =
+      this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
     // Declared-state aliases live on the system ref (`defineSystem` spreads the
     // config, incl. `states`, into `.system`). They drive the CSS src-state
     // cross-element channel; absent, only `:hover` cross keys compile to CSS.
     const stateAliases = Object.keys(
-      (this.ref as { system?: { states?: Record<string, string> } })?.system?.states ?? {},
+      (this.ref as { system?: { states?: Record<string, string> } })?.system
+        ?.states ?? {},
     )
     this.matcher = sharedMatcher(
       rules,
@@ -439,7 +502,8 @@ export class Base {
       for (const key in previous._activeEls)
         this._activeEls[key] = new Set(previous._activeEls[key])
       for (const key in previous.modsState) {
-        if (key.startsWith('@') || key.includes(':')) this.modsState[key] = previous.modsState[key]
+        if (key.startsWith('@') || key.includes(':'))
+          this.modsState[key] = previous.modsState[key]
       }
       this.matchStyles()
     }
@@ -459,7 +523,8 @@ export class Base {
         if (node.isConnected === false) this._activeEls[key]!.delete(node)
       this.modsState[key] = this._activeEls[key]!.size > 0
     }
-    const mediaMode = this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    const mediaMode =
+      this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     if (mediaMode === 'runtime' && !this.stopMedia) {
       const emitter = sharedMedia(this.ref)
       this.stopMedia = emitter.sub(() => this.applyState(emitter.data || {}))
@@ -490,7 +555,12 @@ export class Base {
     this.stopMedia = undefined
   }
 
-  attach(elementKey: string, node: AnyValue, toned: AnyValue, caller?: AnyValue) {
+  attach(
+    elementKey: string,
+    node: AnyValue,
+    toned: AnyValue,
+    caller?: AnyValue,
+  ) {
     if (!node) return () => {}
 
     let refs = this.refs[elementKey]
@@ -506,8 +576,12 @@ export class Base {
     recordHostCommit(node, toned, caller, this.family)
     const declaration = this.rules[elementKey]
     const detachGrid =
-      this.config.platform === 'web' && (declaration?.$grid || declaration?.$area)
-        ? attachGridElement(node, { grid: declaration.$grid, area: declaration.$area })
+      this.config.platform === 'web' &&
+      (declaration?.$grid || declaration?.$area)
+        ? attachGridElement(node, {
+            grid: declaration.$grid,
+            area: declaration.$area,
+          })
         : undefined
     // Callback refs are commit work too. A child layout effect can dispatch
     // an event before its parent's layout effect, so its candidate must already
@@ -526,8 +600,10 @@ export class Base {
       // React detaches and reattaches callback refs in one commit. Retain
       // transient facts through that handoff, then discard true unmounts.
       queueMicrotask(() => {
-        if (ATTACHMENTS.get(node)?.get(this.family)?.generation !== generation) return
+        if (ATTACHMENTS.get(node)?.get(this.family)?.generation !== generation)
+          return
         ATTACHMENTS.get(node)?.delete(this.family)
+        releaseHost(node, this.family)
         this.pruneEl(elementKey, node)
         const current = this.family.current
         current.pruneEl(elementKey, node)
@@ -538,7 +614,8 @@ export class Base {
           if (current.modsState[key] !== active) changed[key] = active
         }
         if (Object.keys(changed).length) current.applyState(changed)
-        for (const cleanup of HOST_CLEANUPS.get(node)?.get(this.family) ?? []) cleanup()
+        for (const cleanup of HOST_CLEANUPS.get(node)?.get(this.family) ?? [])
+          cleanup()
         HOST_CLEANUPS.get(node)?.delete(this.family)
       })
     }
@@ -548,7 +625,8 @@ export class Base {
     if (this.config.platform !== 'web') return
     for (const key in this.refs) {
       const refs = this.refs[key]
-      if (refs instanceof Set) for (const node of refs) validateGridElement(node)
+      if (refs instanceof Set)
+        for (const node of refs) validateGridElement(node)
     }
   }
 
@@ -598,8 +676,9 @@ export class Base {
    * measurement and provide sizes to descendants in runtime mode.
    */
   containerName(elementKey: ElementKey): string | undefined {
-    const decl = (this.rules as Record<string, { container?: unknown } | undefined>)[elementKey]
-      ?.container
+    const decl = (
+      this.rules as Record<string, { container?: unknown } | undefined>
+    )[elementKey]?.container
     return typeof decl === 'string' ? decl : undefined
   }
 
@@ -616,7 +695,9 @@ export class Base {
    * expression) evaluates through utils/conditions.ts: an unmeasured
    * container acts as width 0 — the mobile-first base styles.
    */
-  conditionState(sizes: Record<string, number>): Record<string, boolean> | null {
+  conditionState(
+    sizes: Record<string, number>,
+  ): Record<string, boolean> | null {
     const containers = (
       this.ref as {
         system?: {
@@ -634,8 +715,8 @@ export class Base {
       if (isSimpleExpr(expr) && expr[0]![0]!.container === null) continue
       out ??= {}
       out[mod] = evalExpr(expr, {
-        media: name => this.modsState[`@${name}`] as boolean | undefined,
-        containerPx: name => sizes[name],
+        media: (name) => this.modsState[`@${name}`] as boolean | undefined,
+        containerPx: (name) => sizes[name],
         stepWidth: (c, s) => containers?.[c]?.[s],
         basePx: (this.ref as { system?: { base?: number } }).system?.base ?? 4,
       })
@@ -643,7 +724,9 @@ export class Base {
     // The ':rtl' declared state's runtime half: every `<element>:rtl` mod
     // answers the host's getDirection seam (unset means never matched — the
     // web half is the generated `:dir(rtl)` toggle and needs no runtime).
-    const dir = (this.config as { getDirection?: () => 'ltr' | 'rtl' }).getDirection?.()
+    const dir = (
+      this.config as { getDirection?: () => 'ltr' | 'rtl' }
+    ).getDirection?.()
     if (dir !== undefined) {
       for (const mod in this.matcher.scheme) {
         if (!mod.endsWith(':rtl')) continue
@@ -723,7 +806,12 @@ export class Base {
   }
 
   // Mark or clear an element's membership in a pseudo-state.
-  setElementActive(elementKey: ElementKey, pseudo: string, el: AnyValue, on: boolean) {
+  setElementActive(
+    elementKey: ElementKey,
+    pseudo: string,
+    el: AnyValue,
+    on: boolean,
+  ) {
     const key = this.stateKey(elementKey, pseudo)
     let set = this._activeEls[key]
     if (!set) {
@@ -745,7 +833,8 @@ export class Base {
   private activePseudos(elementKey: ElementKey, el: AnyValue): string[] {
     const active: string[] = []
     for (const pseudo of PSEUDO_STATES) {
-      if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el)) active.push(pseudo)
+      if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el))
+        active.push(pseudo)
     }
     return active
   }
@@ -763,7 +852,10 @@ export class Base {
   // StyleMatcher caches by mod bitmask, so the returned reference is stable
   // across identical (pseudo + variant + media) state — which drives the
   // redundant-write skip in applyElementStyles.
-  private matchedRule(elementKey: ElementKey, activePseudos: string[]): AnyValue {
+  private matchedRule(
+    elementKey: ElementKey,
+    activePseudos: string[],
+  ): AnyValue {
     const active = new Set(activePseudos)
     const elMods = { ...this.modsState }
     for (const pseudo of PSEUDO_STATES) {
@@ -773,7 +865,10 @@ export class Base {
   }
 
   // Resolve an element's style for exactly `activePseudos`.
-  private styleForPseudos(elementKey: ElementKey, activePseudos: string[]): AnyValue {
+  private styleForPseudos(
+    elementKey: ElementKey,
+    activePseudos: string[],
+  ): AnyValue {
     return this.applyTokens(this.matchedRule(elementKey, activePseudos))
   }
 
@@ -823,7 +918,10 @@ export class Base {
   // another element's interaction (its live style differs from resting) while
   // rendered multi-instance — i.e. the cross-element effect is being suppressed
   // to avoid leaking across instances.
-  private warnCrossElementMultiInstance(elementKey: ElementKey, restingStyle: AnyValue) {
+  private warnCrossElementMultiInstance(
+    elementKey: ElementKey,
+    restingStyle: AnyValue,
+  ) {
     if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
     const liveStyle = this.getCurrentStyle(elementKey)
     if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
@@ -848,7 +946,9 @@ export class Base {
 
       // For multi-instance self-targets, bypass isEqual (element-level state differs)
       if (!(isMultiInstance && isSelfTarget)) {
-        if (this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)) {
+        if (
+          this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)
+        ) {
           continue
         }
       }
@@ -871,7 +971,10 @@ export class Base {
             const active = this.activePseudos(elementKey, el)
             const signature = this.pseudoSignature(active)
             if (!styleBySignature.has(signature)) {
-              styleBySignature.set(signature, this.styleForPseudos(elementKey, active))
+              styleBySignature.set(
+                signature,
+                this.styleForPseudos(elementKey, active),
+              )
             }
             setStyles(el, styleBySignature.get(signature), this.family)
           }

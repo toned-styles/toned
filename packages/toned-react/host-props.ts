@@ -2,7 +2,8 @@ type AnyValue = any
 
 function flattenHostStyle(value: AnyValue): Record<string, AnyValue> {
   if (value == null || value === false) return {}
-  if (Array.isArray(value)) return Object.assign({}, ...value.map(flattenHostStyle))
+  if (Array.isArray(value))
+    return Object.assign({}, ...value.map(flattenHostStyle))
   if (typeof value !== 'object') {
     throw new Error(
       '[toned] withProps.style requires a resolved style object or array of objects. Resolve registered native style IDs with StyleSheet.flatten, and express interaction styles in the stylesheet.',
@@ -11,8 +12,12 @@ function flattenHostStyle(value: AnyValue): Record<string, AnyValue> {
   return value
 }
 
-export function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue> {
-  const withProps = (props: Record<string, AnyValue> | false | null | undefined) => {
+export function addWith(
+  obj: Record<string, AnyValue>,
+): Record<string, AnyValue> {
+  const withProps = (
+    props: Record<string, AnyValue> | false | null | undefined,
+  ) => {
     if (!props) return obj
 
     const merged: Record<string, AnyValue> = {}
@@ -28,7 +33,10 @@ export function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue>
         merged[key] = merged[key] ? `${merged[key]} ${props[key]}` : props[key]
       } else if (key === 'style') {
         merged[key] = merged[key]
-          ? { ...flattenHostStyle(merged[key]), ...flattenHostStyle(props[key]) }
+          ? {
+              ...flattenHostStyle(merged[key]),
+              ...flattenHostStyle(props[key]),
+            }
           : flattenHostStyle(props[key])
       } else if (key === 'ref') {
         // Composed once below, including React 19 callback cleanup.
@@ -54,10 +62,16 @@ export function addWith(obj: Record<string, AnyValue>): Record<string, AnyValue>
       const tonedCleanup = tonedRef?.(node, {
         ...props,
         ...caller,
-        className: [props['className'], caller.className].filter(Boolean).join(' '),
-        style: { ...flattenHostStyle(props['style']), ...flattenHostStyle(caller.style) },
+        className: [props['className'], caller.className]
+          .filter(Boolean)
+          .join(' '),
+        style: {
+          ...flattenHostStyle(props['style']),
+          ...flattenHostStyle(caller.style),
+        },
       })
-      const userCleanup = typeof userRef === 'function' ? userRef(node) : undefined
+      const userCleanup =
+        typeof userRef === 'function' ? userRef(node) : undefined
       if (userRef && typeof userRef !== 'function') userRef.current = node
       let attached = true
       detach = () => {

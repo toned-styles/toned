@@ -1,14 +1,26 @@
 import type { Properties } from 'csstype'
-import type { ElementType } from './tokens.ts'
 import type { Platform } from './config.ts'
+import type { ElementType } from './tokens.ts'
 
 type Dimension = number | `${number}%`
 
 export interface PortableInlineStyle {
   // Layout (Yoga ∩ CSS flexbox)
-  alignContent?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'space-between' | 'space-around'
+  alignContent?:
+    | 'flex-start'
+    | 'flex-end'
+    | 'center'
+    | 'stretch'
+    | 'space-between'
+    | 'space-around'
   alignItems?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'
-  alignSelf?: 'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'
+  alignSelf?:
+    | 'auto'
+    | 'flex-start'
+    | 'flex-end'
+    | 'center'
+    | 'stretch'
+    | 'baseline'
   aspectRatio?: number
   bottom?: Dimension
   columnGap?: number
@@ -91,7 +103,11 @@ export interface PortableInlineStyle {
   letterSpacing?: number
   // lineHeight is intentionally platform-specific (CSS ratio vs native dp).
   textAlign?: 'left' | 'right' | 'center' | 'justify'
-  textDecorationLine?: 'none' | 'underline' | 'line-through' | 'underline line-through'
+  textDecorationLine?:
+    | 'none'
+    | 'underline'
+    | 'line-through'
+    | 'underline line-through'
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
 }
 
@@ -106,11 +122,16 @@ type TextKeys =
   | 'textAlign'
   | 'textDecorationLine'
   | 'textTransform'
-type ForKind<T, Kind> = Kind extends 'text' ? T : Omit<T, TextKeys> & { [K in TextKeys]?: never }
+type ForKind<T, Kind> = Kind extends 'text'
+  ? T
+  : Omit<T, TextKeys> & { [K in TextKeys]?: never }
 export type WebInlineStyle = Properties<number | string> & {
   [K in `--${string}`]?: string | number
 }
-export type NativeInlineStyle<Kind> = ForKind<Omit<PortableInlineStyle, 'textAlign'>, Kind> & {
+export type NativeInlineStyle<Kind> = ForKind<
+  Omit<PortableInlineStyle, 'textAlign'>,
+  Kind
+> & {
   flex?: number
   paddingHorizontal?: number
   paddingVertical?: number
@@ -131,7 +152,10 @@ export type NativeInlineStyle<Kind> = ForKind<Omit<PortableInlineStyle, 'textAli
       }
     : {}) &
   (Kind extends 'image'
-    ? { resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center'; tintColor?: string }
+    ? {
+        resizeMode?: 'cover' | 'contain' | 'stretch' | 'repeat' | 'center'
+        tintColor?: string
+      }
     : {})
 /** The portable escape is always checked, independently of the active host.
  * Host gates widen property/value vocabulary without losing the part kind. */

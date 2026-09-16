@@ -11,7 +11,9 @@ describe('generate', () => {
       })
       expect(result).toContain('._s:hover ~ ._ {--toned_sib-hover: ;}')
       expect(result).toContain('._s:focus-within {--toned_src-focus-within: ;}')
-      expect(result).toContain("._s[data-active] ~ ._ {--toned_sib-data-active: ;}")
+      expect(result).toContain(
+        '._s[data-active] ~ ._ {--toned_sib-data-active: ;}',
+      )
       // focus-within joins the self pseudo toggles too
       expect(result).toContain('._:focus-within {--toned_focus-within: ;}')
     })
@@ -34,7 +36,9 @@ describe('generate', () => {
       expect(result).toContain(
         '@media (min-width: 480px) {.\\@sm\\:maxW_gutter{max-width:calc(100% - 2rem);}.\\@sm\\:maxW_32{max-width:32rem;}}',
       )
-      expect(result).toContain('@media (min-width: 768px) {.\\@md\\:maxW_gutter')
+      expect(result).toContain(
+        '@media (min-width: 768px) {.\\@md\\:maxW_gutter',
+      )
       // ascending order: the md classes come after the sm classes, and both
       // after the resting atomics, so an active breakpoint wins by order
       expect(result.indexOf('.maxW_gutter{')).toBeLessThan(
@@ -90,7 +94,9 @@ describe('generate', () => {
       expect(result).toContain(
         '@container card (min-width: 400px) { ._ { --cq-card-gte100: ; --cq-card-gte100-not: initial; } }',
       )
-      expect(result).toContain('--cq-card-gte100: initial;--cq-card-gte100-not: ;')
+      expect(result).toContain(
+        '--cq-card-gte100: initial;--cq-card-gte100-not: ;',
+      )
     })
 
     test('a scoped system scopes both halves', () => {
@@ -98,7 +104,9 @@ describe('generate', () => {
         { containers: { card: { sm: 80 } } },
         { scope: '.ds2' },
       )
-      expect(result).toContain('.ds2 ._ {--cq-card-sm: initial;--cq-card-sm-not: ;}')
+      expect(result).toContain(
+        '.ds2 ._ {--cq-card-sm: initial;--cq-card-sm-not: ;}',
+      )
       expect(result).toContain(
         '@container card (min-width: 320px) { .ds2 ._ { --cq-card-sm: ; --cq-card-sm-not: initial; } }',
       )
@@ -489,8 +497,8 @@ describe('generate', () => {
         { scope: '.my-ds' },
       )
 
-      expect(result).toContain(".my-ds .bgColor_primary{")
-      expect(result).toContain(".my-ds .bgColor\\$50{")
+      expect(result).toContain('.my-ds .bgColor_primary{')
+      expect(result).toContain('.my-ds .bgColor\\$50{')
       expect(result).toContain(".my-ds ._[data-state='open'] {--toned_open: ;}")
       // Custom-property inits and @property registrations stay global —
       // idempotent between systems, and a scoped @property is not a thing.
@@ -519,9 +527,15 @@ describe('token pseudoRules — the vendor pseudo-element channel', () => {
 describe('condition breakpoints — parenthesised values are raw media conditions', () => {
   test('emits the toggle under the condition, not min-width', () => {
     const css = generate({
-      breakpoints: { __breakpoints: { sm: 480, pointerCoarse: '(pointer: coarse)' } },
+      breakpoints: {
+        __breakpoints: { sm: 480, pointerCoarse: '(pointer: coarse)' },
+      },
     } as never)
-    expect(css).toContain('@media (pointer: coarse) { html { --media-pointer-coarse: ; --media-pointer-coarse-not: initial; } }')
-    expect(css).toContain('@media (min-width: 480px) { html { --media-sm: ; --media-sm-not: initial; } }')
+    expect(css).toContain(
+      '@media (pointer: coarse) { html { --media-pointer-coarse: ; --media-pointer-coarse-not: initial; } }',
+    )
+    expect(css).toContain(
+      '@media (min-width: 480px) { html { --media-sm: ; --media-sm-not: initial; } }',
+    )
   })
 })

@@ -36,10 +36,11 @@ function hasPlatformKeys(node: AnyValue): boolean {
   if (Array.isArray(node)) return node.some(hasPlatformKeys)
   if (!isPlainObject(node)) return false
   for (const key in node) {
-    if (key.startsWith(PREFIX) || key === '$grid' || key === '$area') return true
+    if (key.startsWith(PREFIX) || key === '$grid' || key === '$area')
+      return true
     if (hasPlatformKeys(node[key])) return true
   }
-  return Object.getOwnPropertySymbols(node).some(symbol =>
+  return Object.getOwnPropertySymbols(node).some((symbol) =>
     hasPlatformKeys(node[symbol as unknown as string]),
   )
 }
@@ -54,10 +55,11 @@ function deepMerge(base: AnyValue, over: AnyValue): AnyValue {
 }
 
 function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
-  if (Array.isArray(node)) return node.map(value => resolveNode(value, platform))
+  if (Array.isArray(node))
+    return node.map((value) => resolveNode(value, platform))
   if (!isPlainObject(node)) return node
   let out: Record<string, AnyValue> = {}
-  let matched: AnyValue[] = []
+  const matched: AnyValue[] = []
   for (const key in node) {
     if (key.startsWith(PREFIX)) {
       if (key.slice(PREFIX.length) === platform) matched.push(node[key])
@@ -96,12 +98,17 @@ function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
  */
 const CACHE = new WeakMap<object, Map<string, AnyValue>>()
 
-export function resolvePlatformKeys<T>(rules: T, platform: string | undefined): T {
+export function resolvePlatformKeys<T>(
+  rules: T,
+  platform: string | undefined,
+): T {
   if (!isPlainObject(rules)) return rules
   const cacheKey = platform ?? ''
   let byPlatform = CACHE.get(rules)
   if (byPlatform?.has(cacheKey)) return byPlatform.get(cacheKey) as T
-  const resolved = hasPlatformKeys(rules) ? (resolveNode(rules, platform) as T) : rules
+  const resolved = hasPlatformKeys(rules)
+    ? (resolveNode(rules, platform) as T)
+    : rules
   if (!byPlatform) {
     byPlatform = new Map()
     CACHE.set(rules, byPlatform)

@@ -29,16 +29,25 @@ export const nativeBackend: OutputBackend = Object.freeze({
   platform: 'native',
   browserConditions: false,
   resolve(input: ResolvedProps) {
-    if (input.className) throw new Error('Toned native backend: CSS classes require a web host')
+    if (input.className)
+      throw new Error('Toned native backend: CSS classes require a web host')
     for (const [field, value] of Object.entries(input.style)) {
       if (!nativeFields.has(field))
-        throw new Error(`Toned native backend: unsupported style field ${field}`)
+        throw new Error(
+          `Toned native backend: unsupported style field ${field}`,
+        )
       if (
-        (field === 'position' && !['relative', 'absolute', 'static'].includes(String(value))) ||
+        (field === 'position' &&
+          !['relative', 'absolute', 'static'].includes(String(value))) ||
         (field === 'display' && !['flex', 'none'].includes(String(value)))
       )
-        throw new Error(`Toned native backend: unsupported ${field} value ${String(value)}`)
-      if (field.startsWith('--') || (typeof value === 'string' && /\bvar\(/.test(value)))
+        throw new Error(
+          `Toned native backend: unsupported ${field} value ${String(value)}`,
+        )
+      if (
+        field.startsWith('--') ||
+        (typeof value === 'string' && /\bvar\(/.test(value))
+      )
         throw new Error(
           `Toned native backend: ${field} contains a CSS-only value; supply a native token resolver`,
         )
@@ -76,12 +85,16 @@ export function createTailwindBackend(options: {
   const parameters = new Map<string, ParameterMapping>()
   const candidates = new Set<string>()
   if (!options.id || ['css-vars', 'native'].includes(options.id))
-    throw new Error('Toned Tailwind: profile id must be distinct from the built-in backend ids')
+    throw new Error(
+      'Toned Tailwind: profile id must be distinct from the built-in backend ids',
+    )
   const claimed = new Map<string, string>()
   const claimedVariables = new Set<string>()
   const candidate = (utility: string, identity: string) => {
     if (!utility || /\s|["\\{}]/.test(utility))
-      throw new Error('Toned Tailwind: utility must be one complete source-safe candidate')
+      throw new Error(
+        'Toned Tailwind: utility must be one complete source-safe candidate',
+      )
     const previous = claimed.get(utility)
     if (previous && previous !== identity)
       throw new Error(
@@ -98,7 +111,9 @@ export function createTailwindBackend(options: {
       finite.set(mapping.field, values)
     }
     if (values.has(mapping.value))
-      throw new Error(`Toned Tailwind: duplicate mapping for ${mapping.field}=${mapping.value}`)
+      throw new Error(
+        `Toned Tailwind: duplicate mapping for ${mapping.field}=${mapping.value}`,
+      )
     values.set(mapping.value, mapping.utility)
   }
   for (const parameter of options.parameters ?? []) {
@@ -115,7 +130,9 @@ export function createTailwindBackend(options: {
       )
     claimedVariables.add(parameter.variable)
     if (parameters.has(parameter.field))
-      throw new Error(`Toned Tailwind: duplicate parameter for ${parameter.field}`)
+      throw new Error(
+        `Toned Tailwind: duplicate parameter for ${parameter.field}`,
+      )
     parameters.set(parameter.field, Object.freeze({ ...parameter }))
   }
   const inventory = Object.freeze([...candidates].sort())
@@ -127,14 +144,17 @@ export function createTailwindBackend(options: {
     browserConditions: false,
     resolve(input: ResolvedProps): ResolvedProps {
       if (input.className)
-        throw new Error('Toned Tailwind: resolve normalized fields before utility emission')
+        throw new Error(
+          'Toned Tailwind: resolve normalized fields before utility emission',
+        )
       const classes: string[] = []
       const style: Record<string, string> = {}
       for (const [field, value] of Object.entries(input.style)) {
         if (value == null) continue
         if (
           field.startsWith('--') ||
-          (typeof value === 'string' && /var\(--(?:[\w-]+-)?(?:toned[_-]|media-|cq-)/.test(value))
+          (typeof value === 'string' &&
+            /var\(--(?:[\w-]+-)?(?:toned[_-]|media-|cq-)/.test(value))
         )
           throw new Error(
             `Toned Tailwind capability: browser condition chains are outside profile ${options.id}`,
@@ -162,6 +182,7 @@ export function createTailwindBackend(options: {
     ...backend,
     candidates: inventory,
     /** Feed this file to Tailwind v4; the application owns @import/layer order. */
-    source: inventory.map(value => `@source inline("${value}");`).join('\n') + '\n',
+    source:
+      inventory.map((value) => `@source inline("${value}");`).join('\n') + '\n',
   })
 }

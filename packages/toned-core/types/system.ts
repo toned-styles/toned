@@ -5,7 +5,10 @@ import type { SystemOptions } from '../system/definition.ts'
  * @module types/system
  */
 
-import type { Condition, ContainerConditionBuilder } from '../system/conditions.ts'
+import type {
+  Condition,
+  ContainerConditionBuilder,
+} from '../system/conditions.ts'
 import type { QueryBuilder } from '../system/queries.ts'
 import type {
   AuthoredElementStyle,
@@ -15,14 +18,16 @@ import type {
 } from './stylesheet.ts'
 import type {
   Breakpoints,
-  TokenStyle,
   TokenConfig,
+  TokenStyle,
   TokenStyleDeclaration,
   Tokens,
 } from './tokens.ts'
 
 /** The container names a system config declares — never matches when absent. */
-type ContainerNamesOf<C> = C extends { containers: infer Ct } ? keyof Ct & string : never
+type ContainerNamesOf<C> = C extends { containers: infer Ct }
+  ? keyof Ct & string
+  : never
 
 /** The breakpoint names a system config declares. */
 type BreakpointNamesOf<C> = C extends { media: infer M }
@@ -52,7 +57,12 @@ export type TokenSystem<
 > = {
   readonly id?: string
   readonly tokens: Readonly<
-    Pick<S, { [K in keyof S]: S[K] extends TokenConfig<any, any> ? K : never }[keyof S]>
+    Pick<
+      S,
+      {
+        [K in keyof S]: S[K] extends TokenConfig<any, any> ? K : never
+      }[keyof S]
+    >
   >
   readonly themes?: Readonly<Record<string, Tokens>>
 
@@ -75,7 +85,9 @@ export type TokenSystem<
    * remain for generic tooling; combinators (`and`/`or`/`not`) are
    * name-agnostic and stay standalone.
    */
-  cq: <N extends ContainerNamesOf<SystemConfig>>(name: N) => ContainerConditionBuilder<N>
+  cq: <N extends ContainerNamesOf<SystemConfig>>(
+    name: N,
+  ) => ContainerConditionBuilder<N>
   bp: <N extends BreakpointNamesOf<SystemConfig>>(name: N) => Condition<`@${N}`>
 
   q: QueryBuilder<SystemConfig>

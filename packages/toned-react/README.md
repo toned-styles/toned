@@ -2,6 +2,8 @@
 
 React 18/19 bindings for Toned's web and native hosts. Declarations are immutable;
 matching plans are shared; each mounted hook owns its committed runtime state.
+The React entry and context subpaths declare a client boundary; server-only
+resolution imports `@toned/core/server`.
 
 ## Declare and render
 
@@ -20,9 +22,11 @@ export const system = defineSystem({
   },
 })
 
-export const buttonStyles = system.stylesheet(q => ({
-  Root: { $kind: 'pressable', tone: 'neutral', [q.state('hover')]: { tone: 'accent' } },
-})).variants<{ size: 's' | 'm' }>()($ => ({
+export const buttonStyles = system
+  .stylesheet(q => ({
+    Root: { $kind: 'pressable', tone: 'neutral', [q.state('hover')]: { tone: 'accent' } },
+  }))
+  .variants<{ size: 's' | 'm' }>()($ => ({
   [$.size('s')]: { Root: { $style: { padding: 4 } } },
   [$.size('m')]: { Root: { $style: { padding: 8 } } },
 }))
@@ -31,11 +35,19 @@ const config = defineConfig({ ...web, mediaMode: 'css', pseudoMode: 'css' })
 
 function Button() {
   const s = useBind(buttonStyles, { size: 's' })
-  return <s.Root as="button" type="button">Save</s.Root>
+  return (
+    <s.Root as="button" type="button">
+      Save
+    </s.Root>
+  )
 }
 
 export function Application() {
-  return <ConfigProvider config={config}><Button /></ConfigProvider>
+  return (
+    <ConfigProvider config={config}>
+      <Button />
+    </ConfigProvider>
+  )
 }
 ```
 
@@ -91,7 +103,11 @@ use the optional render scope:
 
 ```tsx
 const s = useBind(buttonStyles, { size: 'm' })
-return s.$scope(<s.Root><MeasuredChild /></s.Root>)
+return s.$scope(
+  <s.Root>
+    <MeasuredChild />
+  </s.Root>,
+)
 ```
 
 The scope's stable context carries this render's candidate and works during SSR.
@@ -99,6 +115,11 @@ Spreading `$props` also installs render-current styles. Without the scope, an
 earlier descendant layout effect can observe the previous bound snapshot before
 the owning hook publishes. Compatibility properties on `s.Root` itself expose
 committed values; read `$props.Root` during render.
+
+Each `$props.Root` access creates a separate host ref binding, so repeated parts
+can each spread it safely. Read the property for each host; do not save one prop
+bag and spread that same callback ref onto multiple hosts. Bound components
+already create a separate binding per mounted instance.
 
 `ConfigProvider` scopes an immutable host/backend configuration; hooks retain the
 installed `setConfig` value as a migration fallback. Module-level `bind(sheet)`

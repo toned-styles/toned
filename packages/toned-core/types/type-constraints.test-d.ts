@@ -169,8 +169,3 @@ stateSys.stylesheet({
     ':hover': { bgColor: 'accent' },
   },
 })
-// (An undeclared state key like ':closed' gets no toggle at runtime — proven
-// in stylesheet/variant-pseudo.test.ts; excess-property checking through this
-// deep intersection is unreliable, so it is asserted at runtime, not here.)
-
-export {}

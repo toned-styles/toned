@@ -1,7 +1,7 @@
-import { addWith } from './host-props.ts'
 import { defineConfig } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
 import reactConfig from './config.native.ts'
+import { addWith } from './host-props.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: ignore
 type AnyValue = any
@@ -60,9 +60,19 @@ function getProps(this: Base, elementKey: string) {
           () => {
             if (!host) return
             const owner = this.eventOwner(host)
-            owner.setElementActive(elementKey, pseudo as string, host, on as boolean)
+            owner.setElementActive(
+              elementKey,
+              pseudo as string,
+              host,
+              on as boolean,
+            )
             owner.applyState(
-              { [`${elementKey}${pseudo}`]: owner.anyElementActive(elementKey, pseudo as string) },
+              {
+                [`${elementKey}${pseudo}`]: owner.anyElementActive(
+                  elementKey,
+                  pseudo as string,
+                ),
+              },
               { triggerKey: elementKey, pseudo: pseudo as string },
             )
           },
