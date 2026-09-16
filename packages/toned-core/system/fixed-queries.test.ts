@@ -173,3 +173,42 @@ it('build rejects named container steps colliding with local threshold toggle na
   }))
   expect(() => buildStyles(distinct, { sheets: [other] })).not.toThrow()
 })
+
+it.each(['768.0px', '768PX', '1e3px', '.5px'])(
+  'fixed viewport %s shares one build/runtime CSS identity',
+  (spelling) => {
+    const ui = defineSystem({ id: 'fixed-spelling', tokens: {} })
+    const sheet = ui.stylesheet({
+      Root: {
+        $style: { opacity: 1 },
+        [`@>=${spelling}`]: { $style: { opacity: 0.5 } },
+      },
+    } as never)
+    const artifact = buildStyles(ui, { sheets: [sheet] })
+    const props = createWebRenderer(ui, {
+      tokens: {},
+      manifest: artifact.manifest,
+    }).resolve(sheet) as Record<string, { style: object }>
+    const variables = JSON.stringify(props['Root']!.style).match(
+      /--fixed-spelling-fixed-media-gte[a-zA-Z0-9]+/g,
+    )!
+    expect(variables.length).toBeGreaterThan(0)
+    for (const variable of variables)
+      expect(artifact.css).toContain(`${variable}:`)
+    const native = createNativeRenderer(ui, { tokens: {} }).resolve(sheet, {
+      facts: { [`@>=${spelling}`]: true },
+    }) as Record<string, { style: Record<string, unknown> }>
+    expect(native['Root']!.style['opacity']).toBe(0.5)
+  },
+)
+
+it('equivalent fixed viewport spellings can share a generated toggle', () => {
+  const ui = defineSystem({ id: 'fixed-equivalent', tokens: {} })
+  const sheet = ui.stylesheet({
+    Root: {
+      '@>=768px': { $style: { opacity: 0.5 } },
+      '@>=768.0PX': { $style: { opacity: 1 } },
+    },
+  } as never)
+  expect(() => buildStyles(ui, { sheets: [sheet] })).not.toThrow()
+})

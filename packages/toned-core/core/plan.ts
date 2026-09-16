@@ -460,6 +460,7 @@ export function foldOperations(operations: readonly ResolvedOperation[]) {
   const style: Record<string, unknown> = {}
   let className: string | undefined
   for (const operation of operations) {
+    if (operation.value === undefined) continue
     if (
       operation.predicate !== TRUE &&
       !(

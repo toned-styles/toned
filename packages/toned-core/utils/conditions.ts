@@ -130,10 +130,14 @@ function lengthSlug(value: number | string): string {
  * `media-md`, `cq-field-group-md`, `cq-card-gte400`.
  */
 export function atomSlug(atom: ConditionAtom): string {
-  if (atom.container === null)
-    return atom.step === null
-      ? `fixed-media-gte${lengthSlug(atom.min!)}`
-      : `media-${camelToKebab(atom.step)}`
+  if (atom.container === null) {
+    if (atom.step !== null) return `media-${camelToKebab(atom.step)}`
+    // Runtime predicates carry numeric widths, while inventories retain authored
+    // spelling. Use one CSS identity without changing public runtime fact keys.
+    const width = fixedQueryWidth(`>=${atom.min}`)
+    const canonical = width === undefined ? atom.min! : `${width}px`
+    return `fixed-media-gte${lengthSlug(canonical)}`
+  }
   const name = camelToKebab(atom.container)
   return atom.step !== null
     ? `cq-${name}-${camelToKebab(atom.step)}`
@@ -275,6 +279,10 @@ export function assertConditionSlugs(
   const names = new Map<string, string>()
   const register = (atom: ConditionAtom) => {
     const positive = { ...atom, negated: false }
+    if (positive.container === null && positive.step === null) {
+      const width = fixedQueryWidth(`>=${positive.min}`)
+      if (width !== undefined) positive.min = `${width}px`
+    }
     const identity = serializeAtom(positive)
     const slug = atomSlug(positive)
     for (const [name, origin] of [

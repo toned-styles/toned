@@ -32,7 +32,6 @@ const finite = (value: number) => {
 export const dp = <const N extends number>(
   value: N,
 ): LogicalLength & { unit: 'dp'; value: N } => {
-  if (value < 0) throw new Error('Toned: invalid negative dp length')
   return Object.freeze({
     $tonedValue: 'length',
     unit: 'dp',
@@ -73,6 +72,7 @@ function materialize(
   value: unknown,
   tokens: Readonly<Record<string, unknown>>,
   visiting: Set<string>,
+  platform: 'web' | 'native',
 ): unknown {
   if (!value || typeof value !== 'object') return value
   const tagged = value as LogicalLength | PortableColor | ThemeReference
@@ -80,7 +80,11 @@ function materialize(
     finite(tagged.value)
     if (tagged.unit !== 'dp' && tagged.unit !== '%')
       throw new Error('Toned: unsupported portable length unit')
-    return tagged.unit === 'dp' ? tagged.value : `${tagged.value}%`
+    return tagged.unit === 'dp'
+      ? platform === 'web'
+        ? `${tagged.value}px`
+        : tagged.value
+      : `${tagged.value}%`
   }
   if (tagged.$tonedValue === 'color') {
     rgba(tagged.red, tagged.green, tagged.blue, tagged.alpha)
@@ -92,17 +96,19 @@ function materialize(
     if (visiting.has(tagged.key))
       throw new Error(`Toned: cyclic theme reference ${tagged.key}`)
     visiting.add(tagged.key)
-    const resolved = materialize(tokens[tagged.key], tokens, visiting)
+    const resolved = materialize(tokens[tagged.key], tokens, visiting, platform)
     visiting.delete(tagged.key)
     return resolved
   }
   if (Array.isArray(value))
-    return value.map((member) => materialize(member, tokens, visiting))
+    return value.map((member) =>
+      materialize(member, tokens, visiting, platform),
+    )
   if (Object.getPrototypeOf(value) === Object.prototype)
     return Object.fromEntries(
       Object.entries(value).map(([key, member]) => [
         key,
-        materialize(member, tokens, visiting),
+        materialize(member, tokens, visiting, platform),
       ]),
     )
   return value
@@ -219,6 +225,7 @@ export function resolvePortableFields(
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {}
   for (const [field, value] of Object.entries(fields)) {
+    if (value === undefined) continue
     const targets = logicalFields(field, context)
     if (
       context.platform === 'native' &&
@@ -234,7 +241,7 @@ export function resolvePortableFields(
           'Toned native: vertical logical layout requires a host with writing-mode support',
         )
     }
-    const resolved = materialize(value, tokens, new Set())
+    const resolved = materialize(value, tokens, new Set(), context.platform)
     const values =
       context.canonicalFields && targets.length > 1
         ? shorthandValues(resolved, targets.length)

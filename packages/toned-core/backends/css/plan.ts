@@ -174,10 +174,12 @@ function atoms(
 
 /** The unnamespaced checkpoint deliberately retains its fixed media/state
  * ladder inside each layer. New descriptors use source order on every backend.
+ * Base raw styles outrank token classes, as they did as inline declarations.
  * Advanced .when boundaries always retain occurrence order, including legacy. */
 function legacyOrder(
   operations: readonly ResolvedOperation[],
   system: TokenSystem<any>,
+  rawStyleLast = false,
 ): ResolvedOperation[] {
   const config = system.system
   const states = Object.keys(config.states ?? {})
@@ -188,7 +190,8 @@ function legacyOrder(
     ...states.map((name) => `:${name}`),
   ]
   const rank = (operation: ResolvedOperation): number[] => {
-    if (unconditional(operation.predicate)) return [0]
+    if (unconditional(operation.predicate))
+      return [0, rawStyleLast && operation.origin.token === 'style' ? 1 : 0]
     const facts = atoms(operation.predicate)
     if (facts?.length && facts.every((fact) => fact.kind === 'state')) {
       const names = facts.map((fact) =>
@@ -291,14 +294,16 @@ function pruneParameters(
 
 /** Lower the shared, already-resolved field stream to legacy atomic classes and
  * bounded custom-property chains. Token resolvers are never invoked by lowering. */
-export function lowerCssOperations(
+function lowerCssOperations(
   input: readonly ResolvedOperation[],
   system: TokenSystem<any>,
   part: string,
   useClassName = true,
   namespace = true,
 ): ResolvedProps {
-  const operations = system.id ? input : legacyOrder(input, system)
+  const operations = system.id
+    ? input
+    : legacyOrder(input, system, useClassName)
   const config = system.system
   const parameters: Record<string, unknown> = {}
   const classes = new Set<string>(['_'])

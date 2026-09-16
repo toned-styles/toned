@@ -178,8 +178,9 @@ const useNoOverrideScope = () => undefined
 
 export function useOverriddenSheet<T extends object>(sheet: T): T {
   const entries = useContext(StyleOverridesContext)
-  // The host integration's ambient scope. The hook identity is fixed at config
-  // install time, so the call pattern is render-stable; absent hook = no scope.
+  // Read at the leaf so nested host contexts keep their scope. ConfigProvider
+  // enforces this hook identity for its mounted lifetime; changing it requires
+  // an explicit provider remount, preserving React's hook-order contract.
   const config = useRuntimeConfig()
   const useOverrideScope = config.useStyleOverrideScope ?? useNoOverrideScope
   const ambient = useOverrideScope()

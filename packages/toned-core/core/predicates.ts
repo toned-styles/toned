@@ -45,8 +45,12 @@ export function conditionPredicate(
   key: string,
   values: readonly string[] = ['true'],
 ): Predicate {
-  if (key.startsWith('@platform.'))
-    return atom({ kind: 'platform', name: key.slice(10) as 'web' | 'native' })
+  if (key.startsWith('@platform.')) {
+    const name = key.slice(10)
+    if (name !== 'web' && name !== 'native')
+      throw new Error(`Toned: unknown platform ${name}`)
+    return atom({ kind: 'platform', name })
+  }
   if (key.startsWith('@')) {
     const expression = parseConditionKey(key.slice(1))
     if (!expression) throw new Error(`Toned: invalid condition ${key}`)

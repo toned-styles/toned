@@ -19,6 +19,8 @@
  */
 
 import { isGrid, isGridArea, resolveGrid } from '../grid/index.ts'
+import { declarationLayers } from '../stylesheet/removals.ts'
+import { RULE_LAYERS } from '../stylesheet/rule-protocol.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: rules are dynamically shaped
 type AnyValue = any
@@ -56,31 +58,43 @@ function deepMerge(base: AnyValue, over: AnyValue): AnyValue {
   return out
 }
 
-function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
+function resolveNode(
+  node: AnyValue,
+  platform: string | undefined,
+  materialize = true,
+): AnyValue {
   if (Array.isArray(node))
-    return node.map((value) => resolveNode(value, platform))
+    return node.map((value) => resolveNode(value, platform, materialize))
   if (!isPlainObject(node)) return node
   let out: Record<string, AnyValue> = {}
   const matched: AnyValue[] = []
   for (const key in node) {
     if (key.startsWith(PREFIX)) {
-      if (key.slice(PREFIX.length) === platform) matched.push(node[key])
+      const name = key.slice(PREFIX.length)
+      if (name !== 'web' && name !== 'native')
+        throw new Error(`Toned: unknown platform ${name}`)
+      if (name === platform) matched.push(node[key])
       continue
     }
     if (key === '$grid' || key === '$area') {
       out[key] = node[key]
-      out['style'] = {
-        ...out['style'],
-        ...resolveGrid(node[key], platform === 'native' ? 'native' : 'web'),
-      }
+      if (materialize)
+        out['style'] = {
+          ...out['style'],
+          ...resolveGrid(node[key], platform === 'native' ? 'native' : 'web'),
+        }
     } else {
-      const value = resolveNode(node[key], platform)
+      const value = resolveNode(node[key], platform, materialize)
       out[key] = key === 'style' ? { ...out['style'], ...value } : value
     }
   }
   for (const symbol of Object.getOwnPropertySymbols(node)) {
     Object.defineProperty(out, symbol, {
-      value: resolveNode(node[symbol as unknown as string], platform),
+      value: resolveNode(
+        node[symbol as unknown as string],
+        platform,
+        materialize,
+      ),
       enumerable: true,
       configurable: true,
     })
@@ -88,7 +102,7 @@ function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
   // Platform content merges LAST, so it overrides sibling base keys — the same
   // relationship a more specific declaration always has here.
   for (const block of matched) {
-    out = deepMerge(out, resolveNode(block, platform))
+    out = deepMerge(out, resolveNode(block, platform, materialize))
   }
   return out
 }
@@ -108,9 +122,25 @@ export function resolvePlatformKeys<T>(
   const cacheKey = platform ?? ''
   let byPlatform = CACHE.get(rules)
   if (byPlatform?.has(cacheKey)) return byPlatform.get(cacheKey) as T
-  const resolved = hasPlatformKeys(rules)
-    ? (resolveNode(rules, platform) as T)
-    : rules
+  let resolved: T = rules
+  if (hasPlatformKeys(rules)) {
+    // Select platform paths before exact-path removals, but materialize opaque
+    // grid values only afterwards. Otherwise null becomes invalid layout input
+    // and earlier grid-generated style fields survive their token's removal.
+    const selected = resolveNode(rules, platform, false)
+    const layers = declarationLayers(selected).map((layer) => {
+      const clean = { ...layer }
+      delete (clean as Record<symbol, unknown>)[RULE_LAYERS]
+      return resolveNode(clean, platform)
+    })
+    const base = layers[0]!
+    if (layers.length > 1)
+      Object.defineProperty(base, RULE_LAYERS, {
+        value: layers.slice(1),
+        enumerable: true,
+      })
+    resolved = base as T
+  }
   if (!byPlatform) {
     byPlatform = new Map()
     CACHE.set(rules, byPlatform)

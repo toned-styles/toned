@@ -323,3 +323,81 @@ test('public parts never collide with controller fields or methods', () => {
   expect(view.getByTestId('method-part').style.opacity).toBe('0.5')
   expect(view.getByTestId('bound-method').style.opacity).toBe('0')
 })
+
+test('equivalent inline host objects preserve the bound subtree and scope hook', () => {
+  const Scope = React.createContext('root')
+  const useScope = () => React.useContext(Scope)
+  const renderer = createRenderer(system, {
+    backend: {
+      ...cssVariablesBackend,
+      id: 'stable-host',
+      browserConditions: false,
+    },
+    tokens: {},
+  })
+  let mounts = 0
+  function Child() {
+    React.useEffect(() => {
+      mounts++
+    }, [])
+    return <span>child</span>
+  }
+  function View() {
+    const s = useBind(sheet)
+    return (
+      <s.Root data-testid="inline-host">
+        <Child />
+      </s.Root>
+    )
+  }
+  const wrap = () => (
+    <TonedProvider
+      renderer={renderer}
+      host={{ ...web, useStyleOverrideScope: useScope }}
+    >
+      <View />
+    </TonedProvider>
+  )
+  const view = render(wrap())
+  const host = view.getByTestId('inline-host')
+  view.rerender(wrap())
+  view.rerender(wrap())
+  expect(view.getByTestId('inline-host')).toBe(host)
+  expect(mounts).toBe(1)
+})
+
+test('scope hooks read nested contexts and provider replacement requires an explicit key', () => {
+  const Scope = React.createContext('outside')
+  const useScope = () => {
+    const [prefix] = React.useState('root')
+    return prefix + '/' + React.useContext(Scope)
+  }
+  const scoped = { ...config, useStyleOverrideScope: useScope }
+  const entry = overrideStyles(
+    sheet,
+    { Root: { opacity: 0 } },
+    { scope: 'inside' },
+  )
+  function View() {
+    const s = useStyles(sheet)
+    return <div {...s.Root} data-testid="scope-host" />
+  }
+  const wrap = (installed: typeof config, key = 'first') => (
+    <ConfigProvider config={installed} key={key}>
+      <Scope.Provider value="inside">
+        <StyleOverrides value={[entry]}>
+          <View />
+        </StyleOverrides>
+      </Scope.Provider>
+    </ConfigProvider>
+  )
+  const view = render(wrap(scoped))
+  expect(view.getByTestId('scope-host').style.opacity).toBe('0')
+  view.rerender(wrap(config, 'without-scope'))
+  expect(view.getByTestId('scope-host').style.opacity).toBe('0.5')
+  view.rerender(wrap(scoped, 'with-scope'))
+  expect(view.getByTestId('scope-host').style.opacity).toBe('0')
+  expect(() => view.rerender(wrap(config, 'with-scope'))).toThrow(
+    'give the provider a new key',
+  )
+})

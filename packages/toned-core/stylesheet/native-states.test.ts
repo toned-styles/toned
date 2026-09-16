@@ -183,3 +183,46 @@ test('committed candidate handoff replaces subscriptions and restores latest sem
   await Promise.resolve()
   expect(f.listeners.size).toBe(0)
 })
+
+test('native rtl is owned by direction configuration, not semantic host state readers', async () => {
+  let direction: 'ltr' | 'rtl' = 'rtl'
+  const f = fixture(),
+    original = f.create()
+  let reads = 0
+  for (const hasReader of [false, true]) {
+    const adapter = {
+      ...f.adapter,
+      readState: hasReader
+        ? () => {
+            reads++
+            return false
+          }
+        : undefined,
+      subscribeState: hasReader ? f.adapter.subscribeState : undefined,
+    }
+    const base = new Base({
+      ref: original.ref,
+      config: {
+        ...original.config,
+        nativeHost: adapter,
+        getDirection: () => direction,
+      },
+      rules: {
+        Root: { style: { opacity: 1 }, ':rtl': { style: { opacity: 0.5 } } },
+      },
+    })
+    direction = 'rtl'
+    base.applyState(base.conditionState({}) ?? {})
+    const root = f.attach(base, 'Root')
+    const stop = base.mount()
+    expect(root.style()['opacity']).toBe(0.5)
+    direction = 'ltr'
+    base.applyState(base.conditionState({}) ?? {})
+    expect(root.style()['opacity']).toBe(1)
+    root.detach()
+    stop()
+    await Promise.resolve()
+  }
+  expect(reads).toBe(0)
+  expect(f.listeners.size).toBe(0)
+})

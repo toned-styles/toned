@@ -2,6 +2,8 @@ import { expect, test } from 'vitest'
 import { buildStyles } from '../build/index.ts'
 import { defineSystem } from '../index.ts'
 import { createWebRenderer } from '../server/index.ts'
+import { overrideSheet } from '../stylesheet/overrideSheet.ts'
+import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import {
   createGridScope,
@@ -11,6 +13,7 @@ import {
   resolveGrid,
   sameGridFamily,
 } from './index.ts'
+import { gridRegistrations } from './validation.ts'
 
 const compact = () =>
   defineGrid('message', {
@@ -150,4 +153,69 @@ test('complete layouts reset an omitted gap instead of inheriting the previous p
   const wide = base.variant({ columns: [fr(1)], areas: [['body']] })
   expect(resolveGrid(base, 'web')['gap']).toBe(12)
   expect(resolveGrid(wide, 'web')['gap']).toBe(0)
+})
+
+test('grid and area null overrides remove generated geometry before materialization', () => {
+  const grid = compact()
+  const ui = defineSystem({ id: 'removed-grid', tokens: {} })
+  const base = ui.stylesheet({
+    Root: { '@platform web': { $grid: grid } },
+    Body: { '@platform web': { $area: grid.area('body') } },
+  })
+  const removed = overrideSheet(base, {
+    Root: { '@platform web': { $grid: null } },
+    Body: { '@platform web': { $area: null } },
+  })
+  const built = buildStyles(ui, { sheets: [removed] })
+  const output = createWebRenderer(ui, {
+    tokens: {},
+    manifest: built.manifest,
+  }).resolve(removed)
+  expect(output.Root.style).toEqual({})
+  expect(output.Body.style).toEqual({})
+  expect(buildStyles(ui, { sheets: [base] }).css).toBeTruthy()
+})
+
+test('authoritative layers may add unconditional grid registrations and replace them together', () => {
+  const first = compact(),
+    second = compact()
+  const ui = defineSystem({ id: 'layered-grid', tokens: {} })
+  const base = ui.stylesheet({
+    Root: { '@platform web': { $grid: first } },
+    Body: {},
+  })
+  const added = overrideSheet(base, {
+    Body: { '@platform web': { $area: first.area('body') } },
+  })
+  expect(() => buildStyles(ui, { sheets: [added] })).not.toThrow()
+  const replaced = overrideSheet(added, {
+    Root: { '@platform web': { $grid: second } },
+    Body: { '@platform web': { $area: second.area('body') } },
+  })
+  expect(() => buildStyles(ui, { sheets: [replaced] })).not.toThrow()
+  const rules = resolvePlatformKeys(getStylesheetPlan(added).rules, 'web')
+  const effective = gridRegistrations(rules)
+  expect((effective['Body']!['$area'] as { grid: unknown }).grid).toBe(first)
+})
+
+test('removing a grid registration cannot leave its conditional layout behind', () => {
+  const first = compact()
+  const wide = first.variant({
+    columns: [dp(48), fr(1)],
+    areas: [
+      ['avatar', 'title'],
+      ['.', 'body'],
+    ],
+  })
+  const ui = defineSystem({
+    id: 'missing-grid-owner',
+    tokens: {},
+    conditions: { media: { wide: 600 } },
+  })
+  const base = ui.stylesheet({
+    Root: { '@platform web': { $grid: first, '@media wide': { $grid: wide } } },
+  })
+  expect(() =>
+    overrideSheet(base, { Root: { '@platform web': { $grid: null } } }),
+  ).toThrow('unconditional registration')
 })

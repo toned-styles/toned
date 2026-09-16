@@ -32,7 +32,11 @@ export function buildStyles<S extends TokenStyleDeclaration>(
       throw new Error('Toned build: stylesheet belongs to a different system')
     const rules = resolvePlatformKeys(plan.rules, 'web')
     collectManifestConditions(rules, atoms)
-    for (const [name, css] of collectWebRules(rules, system.id ?? 'legacy')) {
+    for (const [name, css] of collectWebRules(
+      rules,
+      system.id ?? 'legacy',
+      options.scope,
+    )) {
       if (extensions.has(name) && extensions.get(name) !== css)
         throw new Error('Toned: webRules content identity collision')
       extensions.set(name, css)
@@ -54,11 +58,6 @@ export function buildStyles<S extends TokenStyleDeclaration>(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, css]) => css)
     .join('\n')
-  if (options.scope)
-    extra = extra
-      .split('\n')
-      .map((rule) => `${options.scope} ${rule}`)
-      .join('\n')
   if (options.layer) extra = `@layer ${options.layer} {\n${extra}\n}`
   const css = `${artifact.css}\n${extra}\n`
   return Object.freeze({

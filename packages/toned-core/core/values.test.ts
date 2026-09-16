@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
+import { cssVariablesBackend } from '../backends/index.ts'
 import { buildStyles } from '../build/index.ts'
-import { createNativeRenderer } from '../server/index.ts'
+import { createNativeRenderer, createRenderer } from '../server/index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
 import {
   dp,
@@ -134,4 +135,37 @@ test('dp thresholds normalize once to the same fixed literals in every condition
     // @ts-expect-error percentage thresholds are not fixed logical lengths
     defineSystem(invalid)
   }).toThrow('fixed nonnegative')
+})
+
+test('dp preserves length units on web unitless fields and accepts negative layout lengths', () => {
+  const reference = themeRef<{ leading: ReturnType<typeof dp> }>()
+  const ui = defineSystem({
+    id: 'explicit-dp',
+    tokens: {
+      leading: defineToken({
+        values: [true],
+        resolve: () => ({ lineHeight: dp(20), marginTop: dp(-4) }),
+      }),
+    },
+  })
+  const sheet = ui.stylesheet({ Root: { leading: true } })
+  const web = createRenderer(ui, {
+    backend: cssVariablesBackend,
+    manifest: buildStyles(ui, { sheets: [sheet] }).manifest,
+    tokens: {},
+  })
+  expect(web.resolve(sheet).Root.className).toBeTruthy()
+  expect(web.explain(sheet).parts['Root']!['lineHeight']!.value).toBe('20px')
+  expect(
+    createNativeRenderer(ui, { tokens: {} }).resolve(sheet).Root.style,
+  ).toMatchObject({ lineHeight: 20, marginTop: -4 })
+  expect(buildStyles(ui, { sheets: [sheet] }).css).toContain('line-height:20px')
+  expect(
+    resolvePortableFields(
+      { lineHeight: reference('leading') },
+      { leading: dp(20) },
+      { platform: 'web' },
+    ),
+  ).toEqual({ lineHeight: '20px' })
+  expect(() => dp(Number.POSITIVE_INFINITY)).toThrow('finite')
 })

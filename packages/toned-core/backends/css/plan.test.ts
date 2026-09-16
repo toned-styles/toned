@@ -280,3 +280,50 @@ describe('CSS shared-plan adapter', () => {
     ).toContain('--toned_sib-hover')
   })
 })
+
+it('legacy direct exec raw style wins over finite token classes in either key order', () => {
+  const system = defineSystem(tokens)
+  for (const input of [
+    { style: { color: 'blue' }, paint: 'red' },
+    { paint: 'red', style: { color: 'blue' } },
+  ]) {
+    const result = system.exec(
+      { tokens: {}, useClassName: true },
+      input as never,
+    )
+    expect(result.style).toMatchObject({ color: 'blue' })
+  }
+  // Literal resolution and new descriptor source order retain their own contracts.
+  expect(
+    system.exec(
+      { tokens: {}, useClassName: false },
+      {
+        style: { color: 'blue' },
+        paint: 'red',
+      },
+    ).style,
+  ).toMatchObject({ color: 'red' })
+  const descriptor = defineSystem({ id: 'ordered', tokens })
+  expect(
+    descriptor.exec({ tokens: {}, useClassName: true }, {
+      $style: { color: 'blue' },
+      paint: 'red',
+    } as never).style,
+  ).toMatchObject({ color: 'red' })
+})
+
+it('direct exec observes mutations to token and nested raw-style inputs', () => {
+  const system = defineSystem(tokens)
+  const input = { paint: 'red' as 'red' | 'blue', style: { opacity: 0.5 } }
+  const before = system.exec({ tokens: {}, useClassName: false }, input)
+  input.paint = 'blue'
+  input.style.opacity = 1
+  expect(system.exec({ tokens: {}, useClassName: false }, input).style).toEqual(
+    { color: 'blue', opacity: 1 },
+  )
+  expect(before.style).toEqual({ color: 'red', opacity: 0.5 })
+  const caller = { style: { opacity: 0.25 } }
+  expect(system.t(caller).style).toMatchObject({ opacity: 0.25 })
+  caller.style.opacity = 0.75
+  expect(system.t(caller).style).toMatchObject({ opacity: 0.75 })
+})

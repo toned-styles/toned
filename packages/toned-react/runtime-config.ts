@@ -5,13 +5,13 @@ import {
   type ReactNode,
   useContext,
   useMemo,
+  useRef,
 } from 'react'
 
 import { createReactConfig } from './token-config.ts'
 
 const RendererTokensContext = createContext<Tokens>({})
 const RuntimeConfigContext = createContext<Config | null>(null)
-
 /** An immutable renderer configuration scoped to this React tree. */
 export function ConfigProvider({
   config,
@@ -20,6 +20,11 @@ export function ConfigProvider({
   config: Config
   children?: ReactNode
 }) {
+  const installedScopeHook = useRef(config.useStyleOverrideScope)
+  if (installedScopeHook.current !== config.useStyleOverrideScope)
+    throw new Error(
+      'Toned ConfigProvider: useStyleOverrideScope must remain the same hook while mounted; give the provider a new key to install a different host scope hook',
+    )
   return createElement(
     RuntimeConfigContext.Provider,
     { value: config },
@@ -68,7 +73,33 @@ export function TonedProvider({
   theme?: import('@toned/core').Tokens
   children?: ReactNode
 }) {
+  const {
+    platform,
+    getProps,
+    resolveElement,
+    initRef,
+    initInteraction,
+    nativeHost,
+    bridgeProps,
+    measureContainerProps,
+    getDirection,
+    useStyleOverrideScope,
+    matchStyleOverrideScope,
+  } = host
   const config = useMemo(() => {
+    const host = {
+      platform,
+      getProps,
+      resolveElement,
+      initRef,
+      initInteraction,
+      nativeHost,
+      bridgeProps,
+      measureContainerProps,
+      getDirection,
+      useStyleOverrideScope,
+      matchStyleOverrideScope,
+    }
     if (host.platform !== renderer.backend.platform)
       throw new Error(
         `TonedProvider: ${renderer.backend.id} output requires a ${renderer.backend.platform} host`,
@@ -91,7 +122,20 @@ export function TonedProvider({
       debug: false,
       [VALIDATE_SHEET]: renderer.validate,
     })
-  }, [renderer, host])
+  }, [
+    renderer,
+    platform,
+    getProps,
+    resolveElement,
+    initRef,
+    initInteraction,
+    nativeHost,
+    bridgeProps,
+    measureContainerProps,
+    getDirection,
+    useStyleOverrideScope,
+    matchStyleOverrideScope,
+  ])
   return createElement(
     RendererTokensContext.Provider,
     { value: theme ?? renderer.tokens },

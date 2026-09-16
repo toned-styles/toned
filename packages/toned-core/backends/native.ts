@@ -39,6 +39,11 @@ const dimensions = new Set(
     ' ',
   ),
 )
+const numericFields = new Set(
+  'aspectRatio flex flexGrow flexShrink zIndex borderBottomLeftRadius borderBottomRightRadius borderBottomWidth borderLeftWidth borderRadius borderRightWidth borderTopLeftRadius borderTopRightRadius borderTopWidth borderWidth opacity fontSize letterSpacing lineHeight elevation shadowOpacity shadowRadius borderStartWidth borderEndWidth shadowOffset.width shadowOffset.height'.split(
+    ' ',
+  ),
+)
 const percentages = /^-?(?:\d+\.?\d*|\.\d+)%$/
 const angles = /^-?(?:\d+\.?\d*|\.\d+)(deg|rad)$/
 const cssExpression =
@@ -65,6 +70,16 @@ function validateValue(field: string, value: unknown): void {
     throw new Error(`Toned native backend: ${field} must be finite`)
   if (typeof value === 'string' && cssExpression.test(value))
     throw new Error(`Toned native backend: ${field} contains a CSS-only value`)
+  if (numericFields.has(field) && typeof value !== 'number')
+    throw new Error(`Toned native backend: ${field} requires a finite number`)
+  if (
+    field === 'fontWeight' &&
+    typeof value === 'string' &&
+    !/^(?:normal|bold|[1-9]00)$/.test(value)
+  )
+    throw new Error(
+      'Toned native backend: fontWeight requires a number or supported weight name',
+    )
   if (
     dimensions.has(field) &&
     typeof value !== 'number' &&

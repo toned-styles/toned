@@ -13,6 +13,12 @@ const media = new WeakMap<object, Map<string, ReturnType<typeof initMedia>>>()
 export function createDomIntegration(
   system: TokenSystem<any>,
 ): HostIntegration {
+  const stateAttributes = Object.values(system.system.states ?? {}).flatMap(
+    (selector) =>
+      [...String(selector).matchAll(/\[\s*([\w:-]+)/g)].map(
+        (match) => match[1]!,
+      ),
+  )
   return {
     connected: (target) => (target as Node).isConnected !== false,
     validateRelations: () => {},
@@ -28,7 +34,7 @@ export function createDomIntegration(
       const stops: (() => void)[] = []
       try {
         for (const document of documents)
-          stops.push(subscribeWebRelations(document, notify))
+          stops.push(subscribeWebRelations(document, notify, stateAttributes))
       } catch (error) {
         for (const stop of stops) stop()
         throw error

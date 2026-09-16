@@ -196,6 +196,18 @@ React 18 and 19 use the same mechanism. No private dispatcher access or hooks in
 getters remain. An explicitly supplied pure `getTokens` overrides that legacy
 context binding.
 
+`TonedProvider` compares the host's fields rather than its wrapper object:
+`host={{ ...web, useStyleOverrideScope }}` preserves bound component identities
+when those fields are unchanged. Keep host callback implementations stable.
+`useStyleOverrideScope` reads at the consuming component so nested host contexts
+retain their meaning. React cannot replace an arbitrary custom hook with a
+potentially different hook sequence inside that mounted consumer. Accordingly,
+`ConfigProvider` validates that this hook's identity stays fixed; changing or
+removing it requires a new provider `key`, which explicitly remounts that host
+integration. Other configuration updates and context value changes do not require
+that remount. A named Toned error diagnoses a changed hook before React encounters
+an inconsistent hook count.
+
 Module-level `bind(sheet)` and legacy `t` getters are pure, static snapshots of the
 installed configuration. They cannot consume provider context outside React.
 Web's fallback supplies CSS variable references; literal/native theme consumers
@@ -232,7 +244,13 @@ certification. A `setNativeProps` member alone never enables native support.
 
 The HQ consumer runs `bun scripts/build/test-toned-react-versions.ts` in CI. It
 installs React 18.3.1 and 19.2.7 into disposable directories outside the checkout,
-then runs the same guarded commit, context, container, binding and ref fixtures.
+using `npm ci --ignore-scripts` and a committed complete lockfile per version at
+`scripts/build/fixtures/toned-react-versions`. It then runs the same guarded commit,
+context, container, binding and ref fixtures. Both legs resolve React, React DOM
+and the testing library from their isolated consumer; version sentinels assert
+the actual React and React DOM versions. The isolated React 19 leg is deliberate:
+it verifies the pinned standalone consumer graph independently of HQ's workspace
+React version and dependency resolution.
 Dependency installation happens before tests; test processes and workers retain
 filesystem, credential, service and network isolation.
 

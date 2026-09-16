@@ -63,6 +63,12 @@ point-in-time design document and has not been rewritten to match the code.
   New renderer/provider APIs avoid those switches. HQ keeps its existing
   Daylight namespace and cascade while migrating authoring; changing the
   namespace/default primitive or cascade is a separate visible product change.
+- **Changing a host's override hook while mounted:** equivalent host objects keep
+  provider and bound-part identities stable. Replacing `useStyleOverrideScope`
+  itself requires an explicit provider key/remount. The hook must run at each
+  consumer so it sees nested override contexts; moving it to the provider changes
+  scope semantics, while swapping arbitrary hook implementations in that consumer
+  violates React's fixed hook order. Providers diagnose the change explicitly.
 
 ## Evidence
 
