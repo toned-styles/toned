@@ -1,9 +1,14 @@
+import { useRuntimeConfig } from './runtime-config.ts'
 import {
   createElement,
+  createContext,
+  type Context,
+  type ReactNode,
   useContext,
   useMemo,
-  useRef,
   useState,
+  useLayoutEffect,
+  useSyncExternalStore,
   type ReactElement,
 } from 'react'
 import { getConfig, SYMBOL_INIT, type Config, type ElementType } from '@toned/core'
@@ -70,6 +75,8 @@ type Bag = AnyProps & { with: (p: AnyProps | false | null | undefined) => Bag }
 /** A bound element: a component that ALSO carries the raw prop-bag. */
 export type BoundElement = ((props?: AnyProps) => ReactElement) & Bag
 
+const EmptyRenderContext = createContext<Instance | null>(null)
+
 type Instance = Record<string, Bag> & {
   elementDescriptors: () => Array<{ key: string; type?: ElementType }>
 }
@@ -79,13 +86,14 @@ type StylesheetLike = { [SYMBOL_INIT]: (...args: any[]) => any }
 
 /**
  * Build one stable component per element, over a getter for the CURRENT
- * resolution. Shared by `bind` (fixed instance) and `useBind` (a ref updated
- * each render), so mods flow anew without remounting: identities are created
- * here once, never per render.
+ * committed resolution. Each family has a stable identity; render snapshots
+ * travel through its optional context rather than mutating these functions.
  */
 export function buildBoundMap(
   getInstance: () => Instance,
   config: Config,
+  subscribe?: (listener: () => void) => () => void,
+  renderContext: Context<Instance | null> = EmptyRenderContext,
 ): Record<string, BoundElement> {
   const resolveElement = config.resolveElement
   if (typeof resolveElement !== 'function') {
@@ -96,113 +104,137 @@ export function buildBoundMap(
   }
 
   const map: Record<string, BoundElement> = {}
-  for (const { key, type } of getInstance().elementDescriptors()) {
-    // Resolve the host element LAZILY, on first render, not here. `resolveElement`
-    // can throw (the native seam does until a host installs one), and building
-    // the map runs at module import for `bind()`; a throw there would fault an
-    // import from a component nobody rendered. Deferring it to render keeps the
-    // component identity stable (identity is `Comp`, cached once — not `El`).
-    let El: unknown
-    const renderCore = (props?: AnyProps): ReactElement => {
-      // `key` is a declared element, so the getter never yields undefined.
-      const bag = getInstance()[key]!
-      // `as` overrides the `$$type`-selected primitive for this render: the
-      // element renders exactly that component/intrinsic, with every other
-      // prop merged through the same with() path. It never reaches the DOM.
-      //
-      // A STRING `as` is a WEB refinement only: an intrinsic tag has no
-      // meaning on native, so there the element falls back to a primitive —
-      // the declared `$$type` first, else what the tag itself implies
-      // (`as="h2"` is a text element → Text; see TYPE_BY_TAG), else View.
-      // Behavior is never inferred: press/input semantics need an explicit
-      // interactive `$$type`. A COMPONENT `as` renders on every platform —
-      // the component is expected to be universal or platform-split itself.
-      if (props?.['as'] !== undefined) {
-        const { as, ...rest } = props
-        if (typeof as === 'string' && config.platform === 'native') {
-          const native = resolveElement(type ?? TYPE_BY_TAG[as] ?? 'view')
-          return createElement(native as never, bag.with(rest))
-        }
-        return createElement(as as never, bag.with(rest))
-      }
-      // No `as`, no `$$type`: the default element is a View — the universal
-      // box. `'view'` is resolved here, not left to each host's resolver, so
-      // the default is part of the core contract.
-      if (El === undefined) El = resolveElement(type ?? 'view')
-      const merged = props ? bag.with(props) : bag
-      return createElement(El as never, merged)
-    }
-
-    // Runtime container roots (mediaMode 'runtime', an element declaring
-    // `container: '<name>'`): the component measures its own inline size
-    // through the platform's `measureContainerProps` seam and provides the
-    // sizes map to its subtree, shadowing an outer same-name container —
-    // the runtime mirror of the `@container` nearest-ancestor lookup. In css
-    // mode the generated toggles carry all of this, so the plain component
-    // renders with zero extra hooks. Container-ness is static in the rules,
-    // so each element key takes ONE of these branches for its whole life.
-    const containerOf =
-      config.mediaMode === 'runtime'
-        ? (
-            getInstance() as Instance & {
-              containerName?: (k: string) => string | undefined
-            }
-          ).containerName?.(key)
-        : undefined
-
-    const Comp = (
-      containerOf === undefined
-        ? renderCore
-        : (props?: AnyProps): ReactElement => {
-            const parentSizes = useContext(ContainerSizesContext)
-            const [width, setWidth] = useState(0)
-            const sizes = useMemo(
-              () => ({ ...parentSizes, [containerOf]: width }),
-              [parentSizes, width],
-            )
-            // setWidth is stable and the config seam is read once: the
-            // measure props keep one identity for the element's life.
-            // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
-            const measureProps = useMemo(
-              () =>
-                config.measureContainerProps?.((w) =>
-                  setWidth((prev) => (prev === w ? prev : w)),
-                ),
-              [],
-            )
-            const children = createElement(
-              ContainerSizesContext.Provider,
-              { value: sizes },
-              props?.['children'] as never,
-            )
-            return renderCore({ ...props, ...measureProps, children })
-          }
-    ) as BoundElement
-    map[key] = Comp
+  for (const descriptor of getInstance().elementDescriptors()) {
+    map[descriptor.key] = buildBoundElement(
+      getInstance,
+      config,
+      descriptor,
+      subscribe,
+      renderContext,
+    )
   }
   return map
 }
 
-/**
- * Reflect the current render's raw prop-bag onto each bound component, so the
- * escape-hatch accessors (`s.Root.with`, `.style`, `.className`, handlers) read
- * this render's values. `with` is non-enumerable on the bag, so Object.assign
- * (enumerable-only) misses it — it is re-bound explicitly.
- */
+function buildBoundElement(
+  getInstance: () => Instance,
+  config: Config,
+  { key, type }: { key: string; type?: ElementType },
+  subscribe: ((listener: () => void) => () => void) | undefined,
+  renderContext: Context<Instance | null>,
+): BoundElement {
+  const subscribeToInstance = subscribe ?? (() => () => {})
+  const resolveElement = config.resolveElement!
+  // Resolve the host element LAZILY, on first render, not here. `resolveElement`
+  // can throw (the native seam does until a host installs one), and building
+  // the map runs at module import for `bind()`; a throw there would fault an
+  // import from a component nobody rendered. Deferring it to render keeps the
+  // component identity stable (identity is `Comp`, cached once — not `El`).
+  let El: unknown
+  function RenderCore(props: AnyProps = {}): ReactElement {
+    // `key` is a declared element, so the getter never yields undefined.
+    const snapshot = useContext(renderContext)
+    const committed = useSyncExternalStore(subscribeToInstance, getInstance, getInstance)
+    const instance = snapshot ?? committed
+    useLayoutEffect(() => {
+      // Module-level bind has no owning hook; the mounted host supplies its
+      // lifecycle. useBind's parent owns commit publication instead.
+      if (!subscribe) return (instance as AnyProps)['mount']?.()
+      ;(instance as AnyProps)['validateHosts']?.()
+    }, [instance, subscribe])
+    const bag = instance[key]!
+    // `as` overrides the `$$type`-selected primitive for this render: the
+    // element renders exactly that component/intrinsic, with every other
+    // prop merged through the same with() path. It never reaches the DOM.
+    //
+    // A STRING `as` is a WEB refinement only: an intrinsic tag has no
+    // meaning on native, so there the element falls back to a primitive —
+    // the declared `$$type` first, else what the tag itself implies
+    // (`as="h2"` is a text element → Text; see TYPE_BY_TAG), else View.
+    // Behavior is never inferred: press/input semantics need an explicit
+    // interactive `$$type`. A COMPONENT `as` renders on every platform —
+    // the component is expected to be universal or platform-split itself.
+    if (props?.['as'] !== undefined) {
+      const { as, ...rest } = props
+      if (typeof as === 'string' && config.platform === 'native') {
+        const native = resolveElement(type ?? TYPE_BY_TAG[as] ?? 'view')
+        return createElement(native as never, bag.with(rest))
+      }
+      return createElement(as as never, bag.with(rest))
+    }
+    // No `as`, no `$$type`: the default element is a View — the universal
+    // box. `'view'` is resolved here, not left to each host's resolver, so
+    // the default is part of the core contract.
+    if (El === undefined) El = resolveElement(type ?? 'view')
+    const merged = props ? bag.with(props) : bag
+    return createElement(El as never, merged)
+  }
+
+  // Runtime container roots (mediaMode 'runtime', an element declaring
+  // `container: '<name>'`): the component measures its own inline size
+  // through the platform's `measureContainerProps` seam and provides the
+  // sizes map to its subtree, shadowing an outer same-name container —
+  // the runtime mirror of the `@container` nearest-ancestor lookup. In css
+  // mode the generated toggles carry all of this, so the plain component
+  // renders with zero extra hooks. Container-ness is static in the rules,
+  // so each element key takes ONE of these branches for its whole life.
+  const containerOf =
+    config.mediaMode === 'runtime'
+      ? (
+          getInstance() as Instance & {
+            containerName?: (k: string) => string | undefined
+          }
+        ).containerName?.(key)
+      : undefined
+
+  const Comp = (
+    containerOf === undefined
+      ? RenderCore
+      : (props?: AnyProps): ReactElement => {
+          const parentSizes = useContext(ContainerSizesContext)
+          const [width, setWidth] = useState(0)
+          const sizes = useMemo(
+            () => ({ ...parentSizes, [containerOf]: width }),
+            [parentSizes, width],
+          )
+          // setWidth is stable and the config seam is read once: the
+          // measure props keep one identity for the element's life.
+          // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
+          const measureProps = useMemo(
+            () => config.measureContainerProps?.(w => setWidth(prev => (prev === w ? prev : w))),
+            [config],
+          )
+          const children = createElement(
+            ContainerSizesContext.Provider,
+            { value: sizes },
+            props?.['children'] as never,
+          )
+          return createElement<AnyProps>(RenderCore, { ...props, ...measureProps, children })
+        }
+  ) as BoundElement
+  return Comp
+}
+
+/** Publish compatibility accessors only from a commit (or module-level bind). */
 export function reflectBags(map: Record<string, BoundElement>, instance: Instance): void {
   for (const key in map) {
     const comp = map[key]!
     const bag = instance[key]!
+    if (!bag)
+      throw new Error(
+        `[toned] Bound part ${key} has no prop accessor; available parts: ${Object.getOwnPropertyNames(Object.getPrototypeOf(instance)).join(', ')}`,
+      )
     Object.assign(comp, bag)
     // Non-enumerable, matching the bag's own `with`: a plain assignment made
     // it enumerable on the COMPONENT, so `{...s.El}` leaked a `with` function
     // into DOM props (React warns and drops it).
-    Object.defineProperty(comp, 'with', {
-      value: bag.with,
-      enumerable: false,
-      configurable: true,
-      writable: true,
-    })
+    for (const name of ['with', 'withProps'])
+      Object.defineProperty(comp, name, {
+        value: bag.with,
+        enumerable: false,
+        configurable: true,
+        writable: true,
+      })
   }
 }
 
@@ -213,7 +245,7 @@ export function reflectBags(map: Record<string, BoundElement>, instance: Instanc
 export function bind(styles: StylesheetLike): Record<string, BoundElement> {
   const config = getConfig()
   const instance = styles[SYMBOL_INIT](config, undefined) as Instance
-  const map = buildBoundMap(() => instance, config)
+  const map = buildBoundMap(() => instance, (instance as AnyProps)['config'] ?? config)
   reflectBags(map, instance)
   return map
 }
@@ -228,20 +260,52 @@ export function useBind(
   styles: StylesheetLike,
   ...mods: [] | [AnyProps]
 ): Record<string, BoundElement> {
-  // useStyles owns the resolution + its applyState guard; its result IS the
-  // Base instance (element getters + elementDescriptors) at runtime.
-  const instance = (useStyles as (s: StylesheetLike, m?: AnyProps) => Instance)(styles, mods[0])
+  // useStyles supplies a private render candidate; publication happens below.
+  const instance = (useStyles as unknown as (s: StylesheetLike, m?: AnyProps) => Instance)(
+    styles,
+    mods[0],
+  )
 
-  const liveInstance = useRef(instance)
-  liveInstance.current = instance
-
-  const mapRef = useRef<{ styles: StylesheetLike; map: Record<string, BoundElement> } | null>(null)
-  if (mapRef.current?.styles !== styles) {
-    mapRef.current = {
-      styles,
-      map: buildBoundMap(() => liveInstance.current, getConfig()),
+  const config = useRuntimeConfig()
+  // The candidate is the initial snapshot only; later candidates publish below.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stylesheet/config own the component family; instance only seeds it, subsequent candidates publish at commit.
+  const store = useMemo(() => {
+    const store = {
+      current: instance,
+      context: createContext<Instance | null>(null),
+      listeners: new Set<() => void>(),
+      map: {} as Record<string, BoundElement>,
     }
+    store.map = buildBoundMap(
+      () => store.current,
+      (instance as AnyProps)['config'] ?? config,
+      listener => {
+        store.listeners.add(listener)
+        return () => {
+          store.listeners.delete(listener)
+        }
+      },
+      store.context,
+    )
+    return store
+    // A stylesheet owns the stable component family; candidates publish only
+    // in the layout effect below. React discards this memo with an abandoned
+    // stylesheet switch instead of mutating the committed family's ref.
+  }, [styles, config])
+  useLayoutEffect(() => {
+    store.current = instance
+    reflectBags(store.map, instance)
+    for (const listener of store.listeners) listener()
+  }, [store, instance])
+  // Stable components expose committed bags for backwards compatibility.
+  // Render-current spread props are immutable and travel with this render.
+  const props: Record<string, Bag> = {}
+  for (const { key } of instance.elementDescriptors()) props[key] = instance[key]!
+  return {
+    ...store.map,
+    $props: props as any,
+    $scope: ((children: ReactNode) =>
+      createElement(store.context.Provider, { value: instance }, children)) as any,
   }
-  reflectBags(mapRef.current.map, instance)
-  return mapRef.current.map
 }

@@ -483,6 +483,10 @@ importers:
         version: link:../../config/typescript
 
   packages/toned-core:
+    dependencies:
+      csstype:
+        specifier: ^3.2.3
+        version: 3.2.3
     devDependencies:
       '@toned-config/build':
         specifier: workspace:*
@@ -493,6 +497,7 @@ importers:
       vite:
         specifier: ^6.3.5
         version: 6.3.5(@types/node@22.18.12)(lightningcss@1.27.0)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.1)
+    linkDirectory: false
     publishDirectory: .dist
 
   packages/toned-react:
@@ -515,6 +520,9 @@ importers:
       '@types/react':
         specifier: ^19.2.2
         version: 19.2.2
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.2)
       '@types/react18':
         specifier: npm:@types/react@^18.3.26
         version: '@types/react@18.3.26'
@@ -530,6 +538,7 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.0(react@19.2.0)
+    linkDirectory: false
     publishDirectory: .dist
 
   packages/toned-systems:
@@ -546,6 +555,7 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.2
+    linkDirectory: false
     publishDirectory: .dist
 
   packages/toned-themes:
@@ -562,6 +572,7 @@ importers:
       rollup-plugin-copy:
         specifier: ^3.5.0
         version: 3.5.0
+    linkDirectory: false
     publishDirectory: .dist
 
 packages:
@@ -4499,6 +4510,9 @@ packages:
 
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
+
+  csstype@3.2.3:
+    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
   cuint@0.2.2:
     resolution: {integrity: sha512-d4ZVpCW31eWwCMe1YT3ur7mUDnTXbgwyzaL320DrcRT45rfjYxkt5QWLrmOJ+/UEAI2+fQgKe/fCjR8l4TpRgw==}
@@ -13112,6 +13126,8 @@ snapshots:
       css-tree: 2.2.1
 
   csstype@3.1.3: {}
+
+  csstype@3.2.3: {}
 
   cuint@0.2.2: {}
 

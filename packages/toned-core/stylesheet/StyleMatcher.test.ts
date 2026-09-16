@@ -62,10 +62,7 @@ describe('style matcher', () => {
           "paddingX": 30,
           "paddingY": 30,
         },
-        Symbol(@toned/core/StyleMatcher/elementHash): {
-          "container": 1,
-        },
-        Symbol(@toned/core/StyleMatcher/propsBits): 1,
+        "label": {},
       }
     `)
 
@@ -76,10 +73,7 @@ describe('style matcher', () => {
           "paddingX": 30,
           "paddingY": 30,
         },
-        Symbol(@toned/core/StyleMatcher/elementHash): {
-          "container": 2,
-        },
-        Symbol(@toned/core/StyleMatcher/propsBits): 2,
+        "label": {},
       }
     `)
 
@@ -102,11 +96,6 @@ describe('style matcher', () => {
         "label": {
           "color": "white",
         },
-        Symbol(@toned/core/StyleMatcher/elementHash): {
-          "container": 4,
-          "label": 25,
-        },
-        Symbol(@toned/core/StyleMatcher/propsBits): 29,
       }
     `)
 
@@ -127,11 +116,6 @@ describe('style matcher', () => {
         "label": {
           "color": "white",
         },
-        Symbol(@toned/core/StyleMatcher/elementHash): {
-          "container": 1,
-          "label": 25,
-        },
-        Symbol(@toned/core/StyleMatcher/propsBits): 25,
       }
     `)
   })
@@ -237,13 +221,8 @@ describe('style matcher with pseudo', () => {
           },
         },
         "label": {
-          "textColor": "on_action_secondary",
+          "textColor": "on_action",
         },
-        Symbol(@toned/core/StyleMatcher/elementHash): {
-          "container": 8,
-          "label": 1,
-        },
-        Symbol(@toned/core/StyleMatcher/propsBits): 27,
       }
     `)
   })
@@ -340,11 +319,6 @@ describe('style matcher with media', () => {
         "label": {
           "textColor": "on_action",
         },
-        Symbol(@toned/core/StyleMatcher/elementHash): {
-          "container": 40,
-          "label": 16,
-        },
-        Symbol(@toned/core/StyleMatcher/propsBits): 58,
       }
     `)
   })

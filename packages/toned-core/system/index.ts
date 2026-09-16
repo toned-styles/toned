@@ -21,3 +21,6 @@ export {
 } from './definers.ts'
 export { and, bp, cq, not, or } from './conditions.ts'
 export type { Condition, ContainerConditionBuilder } from './conditions.ts'
+
+export { createQueries } from './queries.ts'
+export type { QueryBuilder, QueryPredicate } from './queries.ts'

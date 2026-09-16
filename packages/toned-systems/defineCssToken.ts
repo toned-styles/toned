@@ -21,6 +21,7 @@ export const defineCssToken = <const Values extends Readonly<any[]>>(
 ) => {
   return defineTokenCore({
     values,
+    properties: Object.freeze(Array.isArray(propName) ? [...propName] : [propName]),
     resolve: (value, tokens) => {
       const v = getValue ? getValue(value, tokens) : value
 

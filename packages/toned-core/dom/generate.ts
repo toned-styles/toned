@@ -4,6 +4,7 @@
  * @module dom/generate
  */
 
+import { namespaceCss } from '../system/namespace.ts'
 import { isAnimationDefinition } from '../types/index.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import {
@@ -49,6 +50,8 @@ export function generate<const S extends TokenStyleDeclaration>(
   }: S,
   opts?: {
     scope?: string
+    /** Stable system identity; namespaces classes, parameters and animations. */
+    id?: string
     /**
      * Ad-hoc condition ATOMS to emit toggles for (canonical `name/>=len`
      * spellings) — the union a generator script collects from the system
@@ -180,8 +183,9 @@ export function generate<const S extends TokenStyleDeclaration>(
     }
   }
 
-  if (breakpoints) {
-    const bpValues = breakpoints.__breakpoints
+  {
+    // Interaction state toggles exist independently of viewport breakpoints.
+    const bpValues = breakpoints?.__breakpoints ?? {}
 
     // The runtime-tracked states plus the css-only enhancements (:focus-visible
     // has no JS event and no native analogue — the browser decides it).
@@ -248,6 +252,19 @@ export function generate<const S extends TokenStyleDeclaration>(
 
     styles += `html {${rootRule}}`
     styles += rules
+  }
+
+  // Complement channels make q.not(state) equivalent on CSS and native.
+  // Reset at every bound element so a parent's state never answers for a child.
+  const complementStates: Record<string, string> = {
+    hover: ':hover', focus: ':focus', 'focus-visible': ':focus-visible',
+    'focus-within': ':focus-within', active: ':active', ...states,
+  }
+  for (const [name, selector] of Object.entries(complementStates)) {
+    const variable = `--toned_${name}-not`
+    styles += `${scope}._ {${variable}: ;}`
+    const rule = `${scope}._${selector} {${variable}: initial;}`
+    styles += name === 'hover' ? `@media (hover: hover) {${rule}}` : rule
   }
 
   // Container-condition toggles — the `@container` analogue of the media
@@ -472,5 +489,5 @@ export function generate<const S extends TokenStyleDeclaration>(
   }
   styles += alphaClasses
 
-  return styles
+  return opts?.id ? namespaceCss(styles, opts.id, { scope: opts.scope }) : styles
 }

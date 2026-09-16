@@ -1,3 +1,6 @@
+import { attachGridElement, validateGridElement } from '../grid/host.ts'
+import { normalizeDeclarations, validateDeclarations } from '../system/normalize.ts'
+import { registerStylesheetPlan } from './plans.ts'
 import { getConfig } from '../system/config.ts'
 import type {
   Config,
@@ -21,16 +24,10 @@ import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { warnOnce } from '../utils/warn.ts'
-import { setStyles } from './applyStyles.ts'
+import { recordHostCommit, setStyles } from './applyStyles.ts'
 import { initMedia } from './media.ts'
-import { inlineConflicts } from './propertyIndex.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
-import {
-  deepMerge,
-  extractOrderedKeys,
-  mergeRules,
-  processVariantRules,
-} from './variantProcessing.ts'
+import { deepMerge, mergeRules, processVariantRules } from './variantProcessing.ts'
 import { createVariantSelector } from './variantSelector.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
@@ -39,11 +36,12 @@ type AnyValue = any
 type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
+const ATTACHMENTS = new WeakMap<object, WeakMap<object, { owner: Base; generation: object }>>()
+const HOST_CLEANUPS = new WeakMap<object, WeakMap<object, Set<() => void>>>()
 
 // Bundlers replace `process.env.NODE_ENV`; fall back to non-production when the
 // global is unavailable so dev-only warnings still surface in browser bundles.
-const IS_PRODUCTION =
-  (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
+const IS_PRODUCTION = (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
 
 type ElementStyle = AnyValue
 
@@ -65,13 +63,17 @@ function sharedMatcher(
   cssMediaMode: boolean,
   cssPseudoMode: boolean,
   stateAliases: readonly string[],
+  platform?: 'web' | 'native',
 ): StyleMatcher {
   let byMode = MATCHER_CACHE.get(rules)
   if (!byMode) {
     byMode = new Map()
     MATCHER_CACHE.set(rules, byMode)
   }
-  const key = (cssMediaMode ? 1 : 0) | (cssPseudoMode ? 2 : 0)
+  const key =
+    (cssMediaMode ? 1 : 0) |
+    (cssPseudoMode ? 2 : 0) |
+    (platform === 'native' ? 4 : platform === 'web' ? 8 : 0)
   let matcher = byMode.get(key)
   if (!matcher) {
     // stateAliases are constant for a given rules object (one system per
@@ -80,6 +82,7 @@ function sharedMatcher(
       cssMediaMode,
       cssPseudoMode,
       stateAliases,
+      platform,
     })
     byMode.set(key, matcher)
   }
@@ -116,12 +119,7 @@ function elementNamesOf(rules: AnyValue): Set<string> {
   const variantSymbolStr = SYMBOL_VARIANTS.toString()
   const names = new Set<string>()
   for (const key in rules as object) {
-    if (
-      key[0] !== '[' &&
-      !key.includes(':') &&
-      key !== 'prototype' &&
-      key !== variantSymbolStr
-    ) {
+    if (key[0] !== '[' && !key.includes(':') && key !== 'prototype' && key !== variantSymbolStr) {
       names.add(key)
     }
   }
@@ -146,32 +144,22 @@ function elementNamesOf(rules: AnyValue): Set<string> {
  */
 function mergeOverrideVariants(
   sheetVariants: AnyValue,
-  variantsArg: ($: AnyValue) => AnyValue,
+  variantsArg: ($: AnyValue, q?: AnyValue) => AnyValue,
   baseElements: Set<string>,
+  q?: AnyValue,
 ): AnyValue {
   const existing = sheetVariants ?? {}
-  const preliminary = variantsArg(createVariantSelector([]))
-  const orderedKeys = [
-    ...new Set([
-      ...extractOrderedKeys(existing),
-      ...extractOrderedKeys(preliminary),
-    ]),
-  ]
   const incoming = processVariantRules(
-    variantsArg(createVariantSelector(orderedKeys)),
+    variantsArg(createVariantSelector([], { rejectDuplicates: true }), q),
     baseElements,
   )
 
   const merged: AnyValue = { ...existing }
   for (const key in incoming) {
     const before = merged[key]
+    delete merged[key]
     const after = incoming[key]
-    if (
-      !before ||
-      typeof before !== 'object' ||
-      !after ||
-      typeof after !== 'object'
-    ) {
+    if (!before || typeof before !== 'object' || !after || typeof after !== 'object') {
       merged[key] = after
       continue
     }
@@ -180,10 +168,7 @@ function mergeOverrideVariants(
       const incomingEl = after[el]
       const existingEl = entry[el]
       entry[el] =
-        existingEl &&
-        typeof existingEl === 'object' &&
-        incomingEl &&
-        typeof incomingEl === 'object'
+        existingEl && typeof existingEl === 'object' && incomingEl && typeof incomingEl === 'object'
           ? { ...existingEl, ...incomingEl }
           : incomingEl
     }
@@ -192,14 +177,12 @@ function mergeOverrideVariants(
   return merged
 }
 
-export function createStylesheet<
-  S extends TokenStyleDeclaration,
-  _Mods extends ModType,
-  T,
->(
+export function createStylesheet<S extends TokenStyleDeclaration, _Mods extends ModType, T>(
   ref: TokenSystem<S>,
   rules: T,
   variantRules?: AnyValue,
+  whenRules: Array<{ predicate: AnyValue; rules: AnyValue }> = [],
+  overrideLayers: AnyValue[] = [],
 ): PreVariantsStylesheet<
   S,
   // Element name → its declared `$$type` — see the note on StylesheetType.
@@ -209,8 +192,21 @@ export function createStylesheet<
   { [K in PickString<ExtractElements<T>>]: InferElementType<T, K> },
   PickString<ExtractElements<T>>
 > {
+  rules = normalizeDeclarations(rules)
+  variantRules = normalizeDeclarations(variantRules)
   // Merge base rules with variants - StyleMatcher handles the format directly
-  const mergedRules = mergeRules(rules, variantRules)
+  const mergedRules = { ...mergeRules(rules, variantRules) }
+  if (whenRules.length)
+    Object.defineProperty(mergedRules, Symbol.for('@toned/when'), {
+      value: whenRules,
+      enumerable: true,
+    })
+  if (overrideLayers.length)
+    Object.defineProperty(mergedRules, Symbol.for('@toned/layers'), {
+      value: overrideLayers,
+      enumerable: true,
+    })
+  if (ref.id) validateDeclarations(mergedRules, ref.config ?? {})
 
   // Register the ad-hoc condition atoms this sheet uses on the system ref, so
   // a css generator that imports the stylesheet modules can emit exactly the
@@ -252,118 +248,72 @@ export function createStylesheet<
       })
     },
     // Add variants method for chaining
-    variants: <M extends ModType>(
-      variantsArg: AnyValue | (($: AnyValue) => AnyValue),
-    ) => {
-      let newVariantRules: AnyValue
-
-      if (typeof variantsArg === 'function') {
-        // Callback-based API
-        // First, we need to call the callback to get the rules
-        // We'll use a preliminary call to extract keys, then create the real selector
-        const preliminaryRules = variantsArg(
-          createVariantSelector<M>([] as (keyof M)[]),
+    variants: <M extends ModType>(variantsArg?: AnyValue): AnyValue => {
+      const build = (input: AnyValue) => {
+        const raw =
+          typeof input === 'function'
+            ? input(createVariantSelector<M>([], { rejectDuplicates: true }), ref.q)
+            : input
+        const variants = mergeOverrideVariants(
+          variantRules,
+          () => raw,
+          elementNamesOf(rules),
+          ref.q,
         )
-        const orderedKeys = extractOrderedKeys(preliminaryRules)
-
-        // Now create the real selector with ordered keys and call again
-        const $ = createVariantSelector<M>(orderedKeys as (keyof M)[])
-        const rawRules = variantsArg($)
-
-        newVariantRules = processVariantRules(rawRules, elementNamesOf(rules))
-      } else {
-        // Legacy object-based API
-        newVariantRules = variantsArg
+        return createStylesheet<S, M, T>(ref, rules, variants, whenRules, overrideLayers)
       }
-
-      return createStylesheet<S, M, T>(ref, rules, newVariantRules)
+      return variantsArg === undefined ? build : build(variantsArg)
     },
-    // Add extend method for composition
-    extend: (
-      extensionRules: AnyValue,
-      variantsArg?: ($: AnyValue) => AnyValue,
-    ) => {
-      /*
-       * Where the extension writes a CSS property some base token also writes
-       * under a DIFFERENT name, its declaration is resolved and moved to the
-       * inline style: both would be atomic classes of equal specificity, and
-       * the winner would be generated-stylesheet order. See propertyIndex.ts.
-       */
-      // Only reachable where a config is installed — module-scope composition
-      // has none, and there the merge behaves exactly as it did before.
-      const conflictTokens = (() => {
-        try {
-          return getConfig().getTokens?.()
-        } catch {
-          return undefined
-        }
-      })()
-      const reconciledExtension: AnyValue = {}
-      for (const key of Object.keys(extensionRules ?? {})) {
-        const extEl = extensionRules[key]
-        const baseEl = (rules as AnyValue)[key]
-        reconciledExtension[key] =
-          baseEl &&
-          extEl &&
-          typeof baseEl === 'object' &&
-          typeof extEl === 'object'
-            ? inlineConflicts(
-                baseEl,
-                extEl,
-                ref.system,
-                conflictTokens,
-                undefined,
-              )
-            : extEl
-      }
-      extensionRules = reconciledExtension
-      // Deep merge base rules with extension rules
-      const extendedRules = deepMerge(rules as AnyValue, extensionRules)
-      // An extension REPLACES the properties it names wherever the sheet
-      // declares them: patch each variant entry's matching element rules too,
-      // so a variant's own value cannot resurrect over an override (a
-      // caller overriding `width` means the WIDTH, not "the width unless a
-      // size variant says otherwise"). Nested pseudo/breakpoint objects
-      // replace wholesale — an override declares its intersections whole.
-      let extendedVariants = variantRules
-      if (
-        variantRules &&
-        extensionRules &&
-        typeof extensionRules === 'object'
-      ) {
-        extendedVariants = {}
-        for (const vKey in variantRules) {
-          const vEntry = variantRules[vKey]
-          if (!vEntry || typeof vEntry !== 'object') {
-            extendedVariants[vKey] = vEntry
-            continue
-          }
-          const patched: AnyValue = { ...vEntry }
-          for (const el in extensionRules) {
-            const extEl = extensionRules[el]
-            if (!patched[el] || !extEl || typeof extEl !== 'object') continue
-            const elRule: AnyValue = { ...patched[el] }
-            for (const prop in extEl) elRule[prop] = extEl[prop]
-            patched[el] = elRule
-          }
-          extendedVariants[vKey] = patched
-        }
-      }
-      if (variantsArg) {
-        extendedVariants = mergeOverrideVariants(
-          extendedVariants,
-          variantsArg,
-          elementNamesOf(extendedRules),
-        )
-      }
+    when: (predicate: AnyValue, elementRules: AnyValue) =>
+      createStylesheet<S, _Mods, T>(
+        ref,
+        rules,
+        variantRules,
+        [...whenRules, { predicate, rules: normalizeDeclarations(elementRules) }],
+        overrideLayers,
+      ),
+    // Ordinary derivation changes defaults; existing matching variants retain
+    // their normal precedence over those defaults.
+    extend: (extensionRules: AnyValue, variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue) => {
+      const extension = normalizeDeclarations(
+        typeof extensionRules === 'function' ? extensionRules(ref.q) : extensionRules,
+      )
+      const extendedRules = deepMerge(rules as AnyValue, extension)
+      const variants = variantsArg
+        ? mergeOverrideVariants(variantRules, variantsArg, elementNamesOf(extendedRules), ref.q)
+        : variantRules
       return createStylesheet<S, _Mods, AnyValue>(
         ref,
         extendedRules,
-        extendedVariants,
+        variants,
+        whenRules,
+        overrideLayers,
       )
+    },
+    // Subtree/instance override application is a separate, complete precedence
+    // layer. No resolver probes or ambient theme reads occur during authoring.
+    [Symbol.for('@toned/override')]: (
+      extensionRules: AnyValue,
+      variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
+    ) => {
+      const extension = normalizeDeclarations(
+        typeof extensionRules === 'function' ? extensionRules(ref.q) : extensionRules,
+      )
+      const variants = variantsArg
+        ? processVariantRules(
+            variantsArg(createVariantSelector([], { rejectDuplicates: true }), ref.q),
+            elementNamesOf(rules),
+          )
+        : undefined
+      const layer = mergeRules(extension, normalizeDeclarations(variants))
+      return createStylesheet<S, _Mods, T>(ref, rules, variantRules, whenRules, [
+        ...overrideLayers,
+        layer,
+      ])
     },
   })
 
+  registerStylesheetPlan(stylesheet, { ref: ref as AnyValue, rules: mergedRules })
   return stylesheet
 }
 
@@ -413,7 +363,28 @@ export class Base {
     config?: Config
     modsState?: ModState
   }) {
-    this.config = config ?? getConfig()
+    this.config = { ...(config ?? getConfig()) }
+    const backend = this.config.backend
+    if (backend) {
+      if (this.config.platform && this.config.platform !== backend.platform) {
+        throw new Error(
+          `[toned] Backend ${backend.id} targets ${backend.platform}, but the installed host targets ${this.config.platform}`,
+        )
+      }
+      this.config = {
+        ...this.config,
+        platform: backend.platform,
+        mediaMode:
+          !backend.browserConditions && this.config.mediaMode === 'css'
+            ? 'runtime'
+            : this.config.mediaMode,
+        pseudoMode:
+          !backend.browserConditions && this.config.pseudoMode === 'css'
+            ? 'runtime'
+            : this.config.pseudoMode,
+        useClassName: backend.id === 'css-vars' && this.config.useClassName,
+      }
+    }
 
     this.ref = ref
     // '@platform.<name>' keys resolve statically before compilation — matching
@@ -425,21 +396,20 @@ export class Base {
     this.tokens = this.config.getTokens()
     this.refs = {}
 
-    const mediaMode =
-      this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    const mediaMode = this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
     // Declared-state aliases live on the system ref (`defineSystem` spreads the
     // config, incl. `states`, into `.system`). They drive the CSS src-state
     // cross-element channel; absent, only `:hover` cross keys compile to CSS.
     const stateAliases = Object.keys(
-      (this.ref as { system?: { states?: Record<string, string> } })?.system
-        ?.states ?? {},
+      (this.ref as { system?: { states?: Record<string, string> } })?.system?.states ?? {},
     )
     this.matcher = sharedMatcher(
       rules,
       mediaMode === 'css',
       pseudoMode === 'css',
       stateAliases,
+      this.config.platform,
     )
 
     if (mediaMode === false && this.matcher.hasMediaRules) {
@@ -451,34 +421,155 @@ export class Base {
       )
     }
 
-    if (mediaMode === 'runtime') {
-      const mediaEmitter = sharedMedia(this.ref)
+    // Construction is a pure render candidate. Browser listeners start only
+    // when a host commits/mounts this controller.
+    this.modsState = { ...modsState }
+    this.matchStyles()
+  }
 
-      // Merge initial mods state with current media query state
-      // Note: Object spread is O(n) but n is small (few variants + breakpoints)
-      this.modsState = {
-        ...modsState,
-        ...mediaEmitter.data,
+  private stopMedia?: () => void
+  private predecessor?: Base
+  private family: { current: Base } = { current: this }
+
+  /** Snapshot only; this never changes the previous committed controller. */
+  prepare(previous?: Base) {
+    this.predecessor = previous
+    if (previous) {
+      this.family = previous.family
+      for (const key in previous._activeEls)
+        this._activeEls[key] = new Set(previous._activeEls[key])
+      for (const key in previous.modsState) {
+        if (key.startsWith('@') || key.includes(':')) this.modsState[key] = previous.modsState[key]
       }
-
       this.matchStyles()
+    }
+  }
 
-      // Subscribe through a WeakRef: the emitter outlives any one instance, so
-      // a strong `this` here would pin every Base ever mounted. A collected
-      // instance unsubscribes itself on the next media change.
-      const weakSelf = new WeakRef(this)
-      const unsub = mediaEmitter.sub(() => {
-        const self = weakSelf.deref()
-        if (!self) {
-          unsub()
-          return
+  /** Runs in React's layout phase, after declarative host mutations. */
+  commit() {
+    this.family.current = this
+    if (this.predecessor) {
+      for (const key in this.predecessor._activeEls) {
+        this._activeEls[key] = new Set(this.predecessor._activeEls[key])
+      }
+      this.predecessor = undefined
+    }
+    for (const key in this._activeEls) {
+      for (const node of this._activeEls[key]!)
+        if (node.isConnected === false) this._activeEls[key]!.delete(node)
+      this.modsState[key] = this._activeEls[key]!.size > 0
+    }
+    const mediaMode = this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    if (mediaMode === 'runtime' && !this.stopMedia) {
+      const emitter = sharedMedia(this.ref)
+      this.stopMedia = emitter.sub(() => this.applyState(emitter.data || {}))
+      Object.assign(this.modsState, emitter.data)
+    }
+    this.validateHosts()
+    this.matchStyles()
+    // Theme changes can change output with an identical matching rule set.
+    // Host writers perform the final value diff.
+    this.modsStylePrev = undefined as AnyValue
+    this.applyElementStyles()
+  }
+
+  private mounts = 0
+  mount() {
+    this.mounts++
+    this.commit()
+    let mounted = true
+    return () => {
+      if (!mounted) return
+      mounted = false
+      if (--this.mounts === 0) this.dispose()
+    }
+  }
+
+  dispose() {
+    this.stopMedia?.()
+    this.stopMedia = undefined
+  }
+
+  attach(elementKey: string, node: AnyValue, toned: AnyValue, caller?: AnyValue) {
+    if (!node) return () => {}
+
+    let refs = this.refs[elementKey]
+    if (!(refs instanceof Set)) refs = this.refs[elementKey] = new Set()
+    refs.add(node)
+    const generation = {}
+    let owners = ATTACHMENTS.get(node)
+    if (!owners) {
+      owners = new WeakMap()
+      ATTACHMENTS.set(node, owners)
+    }
+    owners.set(this.family, { owner: this, generation })
+    recordHostCommit(node, toned, caller, this.family)
+    const declaration = this.rules[elementKey]
+    const detachGrid =
+      this.config.platform === 'web' && (declaration?.$grid || declaration?.$area)
+        ? attachGridElement(node, { grid: declaration.$grid, area: declaration.$area })
+        : undefined
+    // Callback refs are commit work too. A child layout effect can dispatch
+    // an event before its parent's layout effect, so its candidate must already
+    // know the previously committed interaction state.
+    if (this.predecessor) {
+      for (const key in this.predecessor._activeEls)
+        this._activeEls[key] = new Set(this.predecessor._activeEls[key])
+    }
+    this.reapplyInteraction(elementKey, node)
+    let attached = true
+    return () => {
+      if (!attached) return
+      attached = false
+      detachGrid?.()
+      refs.delete(node)
+      // React detaches and reattaches callback refs in one commit. Retain
+      // transient facts through that handoff, then discard true unmounts.
+      queueMicrotask(() => {
+        if (ATTACHMENTS.get(node)?.get(this.family)?.generation !== generation) return
+        ATTACHMENTS.get(node)?.delete(this.family)
+        this.pruneEl(elementKey, node)
+        const current = this.family.current
+        current.pruneEl(elementKey, node)
+        const changed: Record<string, boolean> = {}
+        for (const pseudo of PSEUDO_STATES) {
+          const key = `${elementKey}${pseudo}`
+          const active = current.anyElementActive(elementKey, pseudo)
+          if (current.modsState[key] !== active) changed[key] = active
         }
-        self.applyState(mediaEmitter.data || {})
+        if (Object.keys(changed).length) current.applyState(changed)
+        for (const cleanup of HOST_CLEANUPS.get(node)?.get(this.family) ?? []) cleanup()
+        HOST_CLEANUPS.get(node)?.delete(this.family)
       })
-    } else {
-      // CSS mode or disabled: no runtime media listeners needed
-      this.modsState = { ...modsState }
-      this.matchStyles()
+    }
+  }
+
+  validateHosts() {
+    if (this.config.platform !== 'web') return
+    for (const key in this.refs) {
+      const refs = this.refs[key]
+      if (refs instanceof Set) for (const node of refs) validateGridElement(node)
+    }
+  }
+
+  eventOwner(node: AnyValue): Base {
+    return ATTACHMENTS.get(node)?.get(this.family)?.owner ?? this.family.current
+  }
+
+  onHostDetach(node: AnyValue, cleanup: () => void) {
+    let owners = HOST_CLEANUPS.get(node)
+    if (!owners) {
+      owners = new WeakMap()
+      HOST_CLEANUPS.set(node, owners)
+    }
+    let callbacks = owners.get(this.family)
+    if (!callbacks) {
+      callbacks = new Set()
+      owners.set(this.family, callbacks)
+    }
+    callbacks.add(cleanup)
+    return () => {
+      callbacks.delete(cleanup)
     }
   }
 
@@ -495,7 +586,7 @@ export class Base {
     for (const key of this.matcher.elementSet) {
       if (key.includes(':') || key[0] === '[') continue
       const rule = (this.rules as Record<string, { $$type?: ElementType }>)[key]
-      out.push({ key, type: rule?.$$type })
+      out.push({ key, type: (rule as AnyValue)?.$kind ?? rule?.$$type })
     }
     return out
   }
@@ -507,9 +598,8 @@ export class Base {
    * measurement and provide sizes to descendants in runtime mode.
    */
   containerName(elementKey: ElementKey): string | undefined {
-    const decl = (
-      this.rules as Record<string, { container?: unknown } | undefined>
-    )[elementKey]?.container
+    const decl = (this.rules as Record<string, { container?: unknown } | undefined>)[elementKey]
+      ?.container
     return typeof decl === 'string' ? decl : undefined
   }
 
@@ -526,9 +616,7 @@ export class Base {
    * expression) evaluates through utils/conditions.ts: an unmeasured
    * container acts as width 0 — the mobile-first base styles.
    */
-  conditionState(
-    sizes: Record<string, number>,
-  ): Record<string, boolean> | null {
+  conditionState(sizes: Record<string, number>): Record<string, boolean> | null {
     const containers = (
       this.ref as {
         system?: {
@@ -546,8 +634,8 @@ export class Base {
       if (isSimpleExpr(expr) && expr[0]![0]!.container === null) continue
       out ??= {}
       out[mod] = evalExpr(expr, {
-        media: (name) => this.modsState[`@${name}`] as boolean | undefined,
-        containerPx: (name) => sizes[name],
+        media: name => this.modsState[`@${name}`] as boolean | undefined,
+        containerPx: name => sizes[name],
         stepWidth: (c, s) => containers?.[c]?.[s],
         basePx: (this.ref as { system?: { base?: number } }).system?.base ?? 4,
       })
@@ -555,9 +643,7 @@ export class Base {
     // The ':rtl' declared state's runtime half: every `<element>:rtl` mod
     // answers the host's getDirection seam (unset means never matched — the
     // web half is the generated `:dir(rtl)` toggle and needs no runtime).
-    const dir = (
-      this.config as { getDirection?: () => 'ltr' | 'rtl' }
-    ).getDirection?.()
+    const dir = (this.config as { getDirection?: () => 'ltr' | 'rtl' }).getDirection?.()
     if (dir !== undefined) {
       for (const mod in this.matcher.scheme) {
         if (!mod.endsWith(':rtl')) continue
@@ -589,14 +675,40 @@ export class Base {
 
   // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
   applyTokens(value: ElementStyle): any {
-    return this.ref.exec(
+    const output: AnyValue = this.ref.exec(
       {
         tokens: this.tokens,
         useClassName: this.config.useClassName,
         platform: this.config.platform,
       },
-      value,
+      value ?? {},
     )
+    if (this.config.platform === 'native' && output.style) {
+      output.style = { ...output.style }
+      for (const variable in this.config.bridgeProps) {
+        if (!(variable in output.style)) continue
+        output[this.config.bridgeProps![variable]!] = output.style[variable]
+        delete output.style[variable]
+      }
+      delete output.style.containerType
+      delete output.style.containerName
+    }
+    const backend = this.config.backend
+    if (backend) {
+      const input =
+        backend.id === 'css-vars'
+          ? output
+          : {
+              style: output.style,
+              className:
+                output.className
+                  ?.split(/\s+/)
+                  .filter((name: string) => name !== '_' && name !== '_s')
+                  .join(' ') || undefined,
+            }
+      return { ...output, className: undefined, ...backend.resolve(input) }
+    }
+    return output
   }
 
   // --- per-element interaction state -------------------------------------
@@ -611,12 +723,7 @@ export class Base {
   }
 
   // Mark or clear an element's membership in a pseudo-state.
-  setElementActive(
-    elementKey: ElementKey,
-    pseudo: string,
-    el: AnyValue,
-    on: boolean,
-  ) {
+  setElementActive(elementKey: ElementKey, pseudo: string, el: AnyValue, on: boolean) {
     const key = this.stateKey(elementKey, pseudo)
     let set = this._activeEls[key]
     if (!set) {
@@ -638,8 +745,7 @@ export class Base {
   private activePseudos(elementKey: ElementKey, el: AnyValue): string[] {
     const active: string[] = []
     for (const pseudo of PSEUDO_STATES) {
-      if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el))
-        active.push(pseudo)
+      if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el)) active.push(pseudo)
     }
     return active
   }
@@ -657,10 +763,7 @@ export class Base {
   // StyleMatcher caches by mod bitmask, so the returned reference is stable
   // across identical (pseudo + variant + media) state — which drives the
   // redundant-write skip in applyElementStyles.
-  private matchedRule(
-    elementKey: ElementKey,
-    activePseudos: string[],
-  ): AnyValue {
+  private matchedRule(elementKey: ElementKey, activePseudos: string[]): AnyValue {
     const active = new Set(activePseudos)
     const elMods = { ...this.modsState }
     for (const pseudo of PSEUDO_STATES) {
@@ -670,10 +773,7 @@ export class Base {
   }
 
   // Resolve an element's style for exactly `activePseudos`.
-  private styleForPseudos(
-    elementKey: ElementKey,
-    activePseudos: string[],
-  ): AnyValue {
+  private styleForPseudos(elementKey: ElementKey, activePseudos: string[]): AnyValue {
     return this.applyTokens(this.matchedRule(elementKey, activePseudos))
   }
 
@@ -692,7 +792,7 @@ export class Base {
   reapplyInteraction(elementKey: ElementKey, el: AnyValue) {
     const active = this.activePseudos(elementKey, el)
     if (active.length === 0) return
-    setStyles(el, this.styleForPseudos(elementKey, active))
+    setStyles(el, this.styleForPseudos(elementKey, active), this.family)
   }
 
   // Remove a single unmounted element from refs and from every interaction set.
@@ -723,10 +823,7 @@ export class Base {
   // another element's interaction (its live style differs from resting) while
   // rendered multi-instance — i.e. the cross-element effect is being suppressed
   // to avoid leaking across instances.
-  private warnCrossElementMultiInstance(
-    elementKey: ElementKey,
-    restingStyle: AnyValue,
-  ) {
+  private warnCrossElementMultiInstance(elementKey: ElementKey, restingStyle: AnyValue) {
     if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
     const liveStyle = this.getCurrentStyle(elementKey)
     if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
@@ -751,9 +848,7 @@ export class Base {
 
       // For multi-instance self-targets, bypass isEqual (element-level state differs)
       if (!(isMultiInstance && isSelfTarget)) {
-        if (
-          this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)
-        ) {
+        if (this.matcher.isEqual(elementKey, this.modsStylePrev, this.modsStyle)) {
           continue
         }
       }
@@ -769,19 +864,16 @@ export class Base {
           // delete during for..of is safe).
           const styleBySignature = new Map<string, AnyValue>()
           for (const el of ref) {
-            if (!el.isConnected) {
+            if (el.isConnected === false) {
               this.pruneEl(elementKey, el)
               continue
             }
             const active = this.activePseudos(elementKey, el)
             const signature = this.pseudoSignature(active)
             if (!styleBySignature.has(signature)) {
-              styleBySignature.set(
-                signature,
-                this.styleForPseudos(elementKey, active),
-              )
+              styleBySignature.set(signature, this.styleForPseudos(elementKey, active))
             }
-            setStyles(el, styleBySignature.get(signature))
+            setStyles(el, styleBySignature.get(signature), this.family)
           }
         } else if (isMultiInstance) {
           // A non-interactive element shared across instances may still be a
@@ -796,26 +888,26 @@ export class Base {
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
           for (const el of ref) {
-            if (!el.isConnected) {
+            if (el.isConnected === false) {
               this.pruneEl(elementKey, el)
               continue
             }
-            setStyles(el, restingStyle)
+            setStyles(el, restingStyle, this.family)
           }
         } else {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
           for (const el of ref) {
-            if (!el.isConnected) {
+            if (el.isConnected === false) {
               this.pruneEl(elementKey, el)
               continue
             }
-            setStyles(el, style)
+            setStyles(el, style, this.family)
           }
         }
       } else if (ref) {
         // Single ref (native) — unchanged.
-        setStyles(ref, this.getCurrentStyle(elementKey))
+        setStyles(ref, this.getCurrentStyle(elementKey), this.family)
       }
     }
   }

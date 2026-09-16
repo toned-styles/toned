@@ -18,18 +18,25 @@ import type { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
  */
 export type { SYMBOL_INIT, SYMBOL_REF }
 
+import type { QueryBuilder, QueryPredicate } from '../system/queries.ts'
+import type { GridDefinition, GridArea } from '../grid/index.ts'
+export declare const DEFAULT_KIND: unique symbol
+
 import type { Config, Platform } from './config.ts'
 import type {
   Breakpoints,
   ElementType,
   TokenStyle,
   TokenStyleDeclaration,
+  TokenConfig,
 } from './tokens.ts'
 
 /** Extract breakpoint keys from a system configuration */
-type InferBreakpoints<R> = R extends { breakpoints?: Breakpoints<infer X> }
-  ? X
-  : never
+type InferBreakpoints<R> = R extends { media: infer M }
+  ? M
+  : R extends { breakpoints?: Breakpoints<infer X> }
+    ? X
+    : never
 
 /**
  * Declared containers (`containers` config) → their `'<name>/<step>'`
@@ -76,6 +83,13 @@ type InferStatePseudos<R> = R extends { states?: infer States }
     ? `:${keyof States & string}`
     : never
   : never
+
+type InferStateChannels<S> =
+  InferStatePseudos<S> extends infer P extends string
+    ? P extends `:${infer Name}`
+      ? `:src-${Name}` | `:sib-${Name}`
+      : never
+    : never
 
 /** String, number, or symbol (for object keys) */
 type StringOrNumber = string | number | symbol
@@ -148,43 +162,93 @@ export type ElementStyleNew<
     | keyof InferBreakpoints<S>
     | InferContainerConditions<S>,
   ET extends ElementType | undefined = undefined,
-> = TokenStyle<S, ET> & {
-  /**
-   * The element's primitive type. Declaring one constrains which tokens the
-   * element accepts to those whose `$types` include it — how a stylesheet
-   * stays compliant with React Native, where e.g. text styling exists only on
-   * Text. Undeclared elements accept every token.
-   */
-  $$type?: ElementType
+  Host extends Platform | undefined = undefined,
+  Parts extends string = never,
+  Static extends boolean = true,
+> = TokenStyle<S, ET, Host> & {
+  /** Declares a measured container using this system's finite name set. */
+  container?: 'container' extends keyof S
+    ? S['container'] extends TokenConfig<infer Values, unknown>
+      ? Values[number]
+      : never
+    : S extends { containers: infer C }
+      ? keyof C & string
+      : never
+  $kind?: Static extends true ? ET : never
+  /** @deprecated Use $kind. */
+  $$type?: Static extends true ? ET : never
 } & {
-  [P in AvailablePseudo]?: TokenStyle<S, ET>
+  [P in AvailablePseudo | InferStateChannels<S> | `:${string}:${string}`]?: ElementStyleNew<
+    S,
+    AvailablePseudo,
+    AvailableBreakpoints,
+    ET,
+    Host,
+    Parts,
+    false
+  >
 } & {
-  [B in AvailableBreakpoints as `@${B & string}`]?: TokenStyle<S, ET>
+  [B in AvailableBreakpoints as `@${B & string}` | `@media ${B & string}`]?: ElementStyleNew<
+    S,
+    AvailablePseudo,
+    AvailableBreakpoints,
+    ET,
+    Host,
+    Parts,
+    false
+  >
 } & {
-  /**
-   * Platform-conditional styling: the block matching the running config's
-   * `platform` merges into this element (winning over siblings); other
-   * platforms' blocks are dropped before compilation. See utils/platform.ts.
-   */
-  [P in Platform as `@platform.${P}`]?: TokenStyle<S, ET> & {
-    [Q in AvailablePseudo]?: TokenStyle<S, ET>
-  }
+  [K in InferContainerAliases<S>]?: ElementStyleNew<
+    S,
+    AvailablePseudo,
+    AvailableBreakpoints,
+    ET,
+    Host,
+    Parts,
+    false
+  >
+} & {
+  [P in Platform as `@platform.${P}` | `@platform ${P}`]?: Host extends Platform
+    ? P extends Host
+      ? ElementStyleNew<S, AvailablePseudo, AvailableBreakpoints, ET, P, Parts, false>
+      : never
+    : ElementStyleNew<S, AvailablePseudo, AvailableBreakpoints, ET, P, Parts, false>
+} & {
+  [K in `${Parts}${AvailablePseudo}`]?: ElementStyleNew<
+    S,
+    AvailablePseudo,
+    AvailableBreakpoints,
+    ET,
+    Host,
+    Parts,
+    false
+  >
+} & (Host extends 'web' ? { $grid?: GridDefinition; $area?: GridArea } : {})
+
+type InferContainerAliases<S> = S extends {
+  containers?: infer C extends Record<string, Record<string, number | string>>
 }
+  ? { [N in keyof C & string]: `@container ${N} ${keyof C[N] & string}` }[keyof C & string]
+  : never
 
 /** The `$$type` an element declared in the input, if any. */
-export type InferElementType<T, K> = K extends keyof T
-  ? T[K] extends { $$type: infer TT extends ElementType }
+export type InferElementType<
+  T,
+  K,
+  Default extends ElementType | undefined = undefined,
+> = K extends keyof T
+  ? T[K] extends { $kind: infer TT extends ElementType }
     ? TT
-    : undefined
+    : T[K] extends { $$type: infer TT extends ElementType }
+      ? TT
+      : T[K] extends { $style: unknown }
+        ? 'view'
+        : Default
   : undefined
 
 /** Extract element names from stylesheet input (excluding selectors) */
 export type ExtractElements<T> = {
-  [K in keyof T]: K extends
-    | `${string}:${string}`
-    | `[${string}]`
-    | `@${string}`
-    | 'prototype'
+  [K in keyof T]: K extends `${string}:${string}` | `[${string}]` | `@${string}` | 'prototype'
     ? never
     : K
 }[keyof T]
@@ -193,11 +257,8 @@ export type ExtractElements<T> = {
  * Map of element names to their styles.
  * Used in cross-element selectors and variants.
  */
-export type ElementMap<
-  S extends TokenStyleDeclaration,
-  Elements extends string,
-> = {
-  [E in Elements]?: TokenStyle<S>
+export type ElementMap<S extends TokenStyleDeclaration, Elements extends string> = {
+  [E in Elements]?: AuthoredElementStyle<S>
 }
 
 /**
@@ -207,10 +268,7 @@ export type ElementMap<
  * (`'trigger:open'`) — a parent's data-state styling a descendant. A single
  * state only: compound `state:hover` cross keys stay out of the CSS channel.
  */
-type CrossElementSelector<
-  Elements extends string,
-  S extends TokenStyleDeclaration,
-> =
+type CrossElementSelector<Elements extends string, S extends TokenStyleDeclaration> =
   | `${Elements}:active`
   | `${Elements}:active:focus`
   | `${Elements}:active:focus:hover`
@@ -239,6 +297,35 @@ export type AuthoredElementStyle<
   ET
 >
 
+/** Validate inferred object keys recursively, including computed atom keys. */
+type ValidCompound<
+  Key extends string,
+  States extends string,
+> = Key extends `:${infer First}:${infer Rest}`
+  ? `:${First}` extends States
+    ? ValidCompound<`:${Rest}`, States>
+    : false
+  : Key extends States
+    ? true
+    : false
+export type ValidateDeclaration<Input, Shape, S extends TokenStyleDeclaration> = {
+  [K in keyof Input]: K extends `:${string}:${string}`
+    ? ValidCompound<K, Pseudo | InferStatePseudos<S> | InferStateChannels<S>> extends true
+      ? K extends keyof Shape
+        ? ValidateDeclaration<Input[K], NonNullable<Shape[K]>, S>
+        : never
+      : never
+    : K extends keyof Shape
+      ? Input[K] extends readonly unknown[]
+        ? Shape[K]
+        : Input[K] extends object
+          ? NonNullable<Shape[K]> extends object
+            ? ValidateDeclaration<Input[K], NonNullable<Shape[K]>, S>
+            : Shape[K]
+          : Shape[K]
+      : never
+}
+
 /**
  * Stylesheet input type - defines elements and cross-element selectors.
  */
@@ -246,14 +333,32 @@ export type StylesheetInput<
   S extends TokenStyleDeclaration,
   T,
   Elements extends string = PickString<ExtractElements<T>>,
+  Kinds extends Partial<Record<string, ElementType | undefined>> = {},
 > = {
-  [K in Elements]?: AuthoredElementStyle<S, InferElementType<T, K>>
+  [K in Elements]?: AuthoredElementStyle<
+    S,
+    K extends keyof Kinds
+      ? Kinds[K]
+      : InferElementType<T, K, S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined>
+  > &
+    (string extends keyof T
+      ? {}
+      : ValidateDeclaration<
+          K extends keyof T ? T[K] : never,
+          AuthoredElementStyle<
+            S,
+            K extends keyof Kinds
+              ? Kinds[K]
+              : InferElementType<T, K, S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined>
+          >,
+          S
+        >)
 } & {
   [K in CrossElementSelector<Elements, S>]?: ElementMap<S, Elements>
 } & {
-  [B in
-    | (keyof InferBreakpoints<S> & string)
-    | InferContainerConditions<S> as `@${B}`]?: ElementMap<S, Elements>
+  [B in (keyof InferBreakpoints<S> & string) | InferContainerConditions<S> as
+    | `@${B}`
+    | `@media ${B}`]?: ElementMap<S, Elements>
 } & {
   /**
    * Condition-EXPRESSION blocks — see ConditionExprKeys for why these are
@@ -262,7 +367,17 @@ export type StylesheetInput<
   [K in ConditionExprKeys<S>]?: ElementMap<S, Elements>
 } & {
   /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
-  [P in Platform as `@platform.${P}`]?: ElementMap<S, Elements>
+  [P in Platform as `@platform.${P}` | `@platform ${P}`]?: {
+    [E in Elements]?: ElementStyleNew<
+      S,
+      Pseudo | InferStatePseudos<S>,
+      keyof InferBreakpoints<S> | InferContainerConditions<S>,
+      E extends keyof Kinds
+        ? Kinds[E]
+        : InferElementType<T, E, S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined>,
+      P
+    >
+  }
 }
 
 // =============================================================================
@@ -293,9 +408,7 @@ type SingleSelector<K extends string, V> = V extends boolean
  * Union of all valid single selectors for a Mods type.
  */
 type AllSingleSelectors<Mods extends ModType> = {
-  [K in keyof Mods]: K extends string
-    ? SingleSelector<K, Exclude<Mods[K], undefined>>
-    : never
+  [K in keyof Mods]: K extends string ? SingleSelector<K, Exclude<Mods[K], undefined>> : never
 }[keyof Mods]
 
 /**
@@ -358,7 +471,10 @@ export type VariantsInput<
 export type VariantElementStyle<
   S extends TokenStyleDeclaration,
   Elements extends string,
-> = TokenStyle<S> & {
+  Kind extends ElementType | undefined = undefined,
+> = AuthoredElementStyle<S, Kind> & {
+  $kind?: never
+  $$type?: never
   /** Compose styles from other elements */
   $compose?: Elements | Elements[]
 }
@@ -369,8 +485,9 @@ export type VariantElementStyle<
 export type NamedStyleDef<
   S extends TokenStyleDeclaration,
   Elements extends string,
+  Kinds extends Record<Elements, ElementType | undefined> = Record<Elements, undefined>,
 > = {
-  [E in Elements]?: TokenStyle<S>
+  [E in Elements]?: VariantElementStyle<S, Elements, Kinds[E]>
 }
 
 /**
@@ -380,24 +497,31 @@ export type VariantStyleDef<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Named extends string,
+  Kinds extends Record<Elements, ElementType | undefined> = Record<Elements, undefined>,
 > = {
   /** Compose styles from named style definitions */
   $compose?: Named | Named[]
 } & {
-  [E in Elements]?: VariantElementStyle<S, Elements>
+  [E in Elements]?: VariantElementStyle<S, Elements, Kinds[E]>
 }
 
 /**
  * Infer the result type of a variants callback
  */
-export type VariantsCallbackResult<
-  S extends TokenStyleDeclaration,
-  Elements extends string,
-  R,
-> = {
+export type VariantsCallbackResult<S extends TokenStyleDeclaration, Elements extends string, R> = {
   [K in keyof R]: K extends NamedStyleKey<string>
     ? NamedStyleDef<S, Elements>
     : VariantStyleDef<S, Elements, ExtractNamedStyles<R>>
+}
+
+/** Explicit constructor for excess-key checking inside callback return values. */
+export type CheckedVariantRules<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+  Input,
+  Kinds extends Record<Elements, ElementType | undefined> = Record<Elements, undefined>,
+> = {
+  [K in keyof Input]: ValidateDeclaration<Input[K], VariantStyleDef<S, Elements, string, Kinds>, S>
 }
 
 /**
@@ -407,16 +531,20 @@ export type VariantsCallback<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Mods extends ModType,
+  Kinds extends Record<Elements, ElementType | undefined> = Record<Elements, undefined>,
 > = (
   $: VariantSelector<Mods>,
-) => Record<
-  string,
-  NamedStyleDef<S, Elements> | VariantStyleDef<S, Elements, string>
->
+  q: QueryBuilder<S, Elements>,
+) => Record<string, NamedStyleDef<S, Elements, Kinds> | VariantStyleDef<S, Elements, string, Kinds>>
 
 /**
  * Stylesheet with variants() method for adding conditional styles.
  */
+type ExtendKinds<Existing, Extension> = {
+  [E in (keyof Existing | PickString<ExtractElements<Extension>>) &
+    string]: E extends keyof Existing ? Existing[E] : InferElementType<Extension, E>
+}
+
 export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
@@ -424,7 +552,18 @@ export interface StylesheetWithVariants<
    * than collapsing to `never`, which is what stopped an override from
    * selecting on the axes its target sheet already had. */
   Mods extends ModType = never,
+  Kinds extends Record<Elements, ElementType | undefined> = Record<Elements, undefined>,
 > {
+  /** Advanced boolean rules are validated separately from element keys. */
+  when<const Rules extends { [E in Elements]?: VariantElementStyle<S, Elements, Kinds[E]> }>(
+    predicate: QueryPredicate,
+    rules: Rules & {
+      [E in keyof Rules]: E extends Elements
+        ? ValidateDeclaration<Rules[E], VariantElementStyle<S, Elements, Kinds[E]>, S>
+        : never
+    },
+  ): Stylesheet<S, Kinds, Mods> & StylesheetWithVariants<S, Elements, Mods, Kinds>
+
   /**
    * Define variants using a callback with type-safe selector proxy
    *
@@ -444,10 +583,17 @@ export interface StylesheetWithVariants<
    * }))
    * ```
    */
+  /** Fully checked factory; the second call infers the actual return keys. */
+  variants<M extends ModType>(): <const Rules extends Record<string, unknown>>(
+    callback: (
+      $: VariantSelector<M>,
+      q: QueryBuilder<S, Elements>,
+    ) => Rules & CheckedVariantRules<S, Elements, Rules, Kinds>,
+  ) => Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
+
   variants<M extends ModType>(
-    callback: VariantsCallback<S, Elements, M>,
-  ): Stylesheet<S, Record<Elements, undefined>, M> &
-    StylesheetWithVariants<S, Elements, M>
+    callback: VariantsCallback<S, Elements, M, Kinds>,
+  ): Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
 
   /**
    * Define variants using an object (legacy API)
@@ -455,8 +601,7 @@ export interface StylesheetWithVariants<
    */
   variants<M extends ModType>(
     variants: VariantsInput<S, Elements, M>,
-  ): Stylesheet<S, Record<Elements, undefined>, M> &
-    StylesheetWithVariants<S, Elements, M>
+  ): Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
 
   /**
    * Compose a new stylesheet by deep-merging additional rules into this one.
@@ -468,7 +613,14 @@ export interface StylesheetWithVariants<
    * const primary = base.extend({ container: { bgColor: 'action' } })
    * ```
    */
-  extend<Extension extends StylesheetInput<S, Extension>>(
+  extend<
+    const Extension extends StylesheetInput<
+      S,
+      Extension,
+      PickString<ExtractElements<Extension>>,
+      Kinds
+    >,
+  >(
     rules: Extension,
     /**
      * Variant rules to merge into the sheet's own table, over the SHEET's
@@ -480,17 +632,15 @@ export interface StylesheetWithVariants<
     variants?: VariantsCallback<
       S,
       Elements | PickString<ExtractElements<Extension>>,
-      Mods
+      Mods,
+      ExtendKinds<Kinds, Extension>
     >,
-  ): Stylesheet<
-    S,
-    Record<Elements | PickString<ExtractElements<Extension>>, undefined>,
-    Mods
-  > &
+  ): Stylesheet<S, ExtendKinds<Kinds, Extension>, Mods> &
     StylesheetWithVariants<
       S,
       Elements | PickString<ExtractElements<Extension>>,
-      Mods
+      Mods,
+      ExtendKinds<Kinds, Extension>
     >
 }
 
@@ -561,7 +711,13 @@ export type PreVariantsStylesheet<
   S extends TokenStyleDeclaration,
   T extends Record<string, ElementType | undefined>,
   Elements extends string,
-> = Stylesheet<S, T, never> & StylesheetWithVariants<S, Elements>
+> = Stylesheet<S, T, never> &
+  StylesheetWithVariants<
+    S,
+    Elements,
+    never,
+    { [E in Elements]: E extends keyof T ? T[E] : undefined }
+  >
 
 /**
  * Stylesheet factory function type.
@@ -571,7 +727,7 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   // string during inference and the token constraint silently never applies.
   const T extends StylesheetInput<S, T>,
 >(
-  style: T,
+  style: T | ((q: QueryBuilder<S>) => T),
 ) => PreVariantsStylesheet<
   S,
   /*
@@ -585,7 +741,13 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
    * what tsc will serialize (TS7056), which is what forced them to be
    * exported with their typing erased.
    */
-  { [K in PickString<ExtractElements<T>>]: InferElementType<T, K> },
+  {
+    [K in PickString<ExtractElements<T>>]: InferElementType<
+      T,
+      K,
+      S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
+    >
+  },
   PickString<ExtractElements<T>>
 >
 

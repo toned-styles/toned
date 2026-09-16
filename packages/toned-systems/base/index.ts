@@ -22,10 +22,12 @@ import * as shadow from './shadow.ts'
 import * as sizes from './sizes.ts'
 import * as text from './text.ts'
 import * as typo from './typo.ts'
+import { typography } from './typography.ts'
 
 export const { system, stylesheet, t } = defineSystem(
   {
     ...typo,
+    typography,
     ...text,
     ...border,
     ...colour,

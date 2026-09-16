@@ -388,18 +388,18 @@ describe('generate', () => {
   })
 
   describe('handles empty system', () => {
-    test('returns empty string when no tokens are provided', () => {
+    test('emits interaction infrastructure even without semantic tokens', () => {
       const result = generate({})
 
-      expect(result).toBe('')
+      expect(result).toContain('--toned_hover')
     })
 
-    test('returns empty string when tokens have no values or resolve', () => {
+    test('ignores invalid tokens but keeps interaction infrastructure', () => {
       const result = generate({
         notAToken: undefined,
       })
 
-      expect(result).toBe('')
+      expect(result).toContain('--toned_hover')
     })
   })
 

@@ -18,6 +18,8 @@
  * @module utils/platform
  */
 
+import { resolveGrid } from '../grid/index.ts'
+
 // biome-ignore lint/suspicious/noExplicitAny: rules are dynamically shaped
 type AnyValue = any
 
@@ -31,12 +33,15 @@ const isPlainObject = (v: unknown): v is Record<string, AnyValue> =>
   !(v instanceof String)
 
 function hasPlatformKeys(node: AnyValue): boolean {
+  if (Array.isArray(node)) return node.some(hasPlatformKeys)
   if (!isPlainObject(node)) return false
   for (const key in node) {
-    if (key.startsWith(PREFIX)) return true
+    if (key.startsWith(PREFIX) || key === '$grid' || key === '$area') return true
     if (hasPlatformKeys(node[key])) return true
   }
-  return false
+  return Object.getOwnPropertySymbols(node).some(symbol =>
+    hasPlatformKeys(node[symbol as unknown as string]),
+  )
 }
 
 function deepMerge(base: AnyValue, over: AnyValue): AnyValue {
@@ -49,6 +54,7 @@ function deepMerge(base: AnyValue, over: AnyValue): AnyValue {
 }
 
 function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
+  if (Array.isArray(node)) return node.map(value => resolveNode(value, platform))
   if (!isPlainObject(node)) return node
   let out: Record<string, AnyValue> = {}
   let matched: AnyValue[] = []
@@ -57,7 +63,23 @@ function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
       if (key.slice(PREFIX.length) === platform) matched.push(node[key])
       continue
     }
-    out[key] = resolveNode(node[key], platform)
+    if (key === '$grid' || key === '$area') {
+      out[key] = node[key]
+      out['style'] = {
+        ...out['style'],
+        ...resolveGrid(node[key], platform === 'native' ? 'native' : 'web'),
+      }
+    } else {
+      const value = resolveNode(node[key], platform)
+      out[key] = key === 'style' ? { ...out['style'], ...value } : value
+    }
+  }
+  for (const symbol of Object.getOwnPropertySymbols(node)) {
+    Object.defineProperty(out, symbol, {
+      value: resolveNode(node[symbol as unknown as string], platform),
+      enumerable: true,
+      configurable: true,
+    })
   }
   // Platform content merges LAST, so it overrides sibling base keys — the same
   // relationship a more specific declaration always has here.
@@ -74,17 +96,12 @@ function resolveNode(node: AnyValue, platform: string | undefined): AnyValue {
  */
 const CACHE = new WeakMap<object, Map<string, AnyValue>>()
 
-export function resolvePlatformKeys<T>(
-  rules: T,
-  platform: string | undefined,
-): T {
+export function resolvePlatformKeys<T>(rules: T, platform: string | undefined): T {
   if (!isPlainObject(rules)) return rules
   const cacheKey = platform ?? ''
   let byPlatform = CACHE.get(rules)
   if (byPlatform?.has(cacheKey)) return byPlatform.get(cacheKey) as T
-  const resolved = hasPlatformKeys(rules)
-    ? (resolveNode(rules, platform) as T)
-    : rules
+  const resolved = hasPlatformKeys(rules) ? (resolveNode(rules, platform) as T) : rules
   if (!byPlatform) {
     byPlatform = new Map()
     CACHE.set(rules, byPlatform)

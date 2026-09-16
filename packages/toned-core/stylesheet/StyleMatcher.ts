@@ -1,657 +1,198 @@
-import { mergeStyle } from '../utils/mergeStyle.ts'
-import { resolveCrossHoverCss } from './crossHover.ts'
-import { warnOnce } from '../utils/warn.ts'
+import {
+  addBit,
+  type BitPosition,
+  type BitSet,
+  bitKey,
+  type CompiledPredicate,
+  emptyBits,
+  equalBits,
+  matchesBits,
+  position,
+  type WordRequirement,
+} from './matcher/bitset.ts'
+import {
+  applyOperations,
+  CONDITIONAL_RULES,
+  type ConditionalRule,
+  type Conditions,
+  type NormalizedRule,
+  normalizeRules,
+  type RuleObject,
+  TOKEN_OPERATIONS,
+  type TokenOperation,
+} from './matcher/normalizeRules.ts'
+import {
+  compilePredicate,
+  evaluatePredicate,
+  type PredicatePlan,
+} from './matcher/predicate.ts'
 
-// Upper bound on distinct match() results retained. The cache key is a
-// schema-derived bitmask (a finite space), but never evicting means a
-// long-lived session can still accumulate every reachable combination, so cap
-// it and evict the least-recently-used entries past the limit.
 const DEFAULT_CACHE_MAX = 1024
 
-type StyleValue = string | number | number
-type StyleObject = Record<string, StyleValue>
-type StyleRules = Record<string, StyleObject>
-
-interface NestedStyleRules {
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic nested style structure
-  [selector: string]: any
+type PropertyMap = Record<string, Record<string, BitPosition>>
+interface CompiledPart {
+  readonly name: string
+  readonly style: RuleObject
+  readonly operations: readonly TokenOperation[]
+}
+interface CompiledRule extends CompiledPredicate {
+  readonly original: string
+  readonly rule: RuleObject
+  readonly membership: BitPosition
+  readonly expression?: PredicatePlan
+  readonly parts: readonly CompiledPart[]
 }
 
-type ModValue = string
-
-type PropertyMap = {
-  [key: string]: {
-    [value: string]: number
-  }
+function compileParts(rule: RuleObject): CompiledPart[] {
+  return Object.entries(rule).map(([name, style]) => ({
+    name,
+    style,
+    operations:
+      style[TOKEN_OPERATIONS] ??
+      Object.entries(style).map(([key, value]) => ({ key, value, layer: 0 })),
+  }))
 }
 
-type SchemeConfig = {
-  [key: string]: Set<string>
-}
-
-type RulesList = {
-  [key: string]: {
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic rule structure
-    rule: any
-  }
-}
-
-// NOTE: might be generalised to any mod
-type InteractionList = Record<string, Record<string, boolean>>
-
-type Config = {
-  scheme: SchemeConfig
-  list: RulesList
-}
-
-const WILDCARD = '*' as const
-
-/**
- * The listKey encoding joins `key=value` pairs with `|`, and both delimiters
- * legally occur inside condition mod keys (`'@card/>=400'`, OR expressions).
- * Percent-escape them (and `%` itself) so the encoding round-trips.
- */
-function escapeListKeyPart(part: string): string {
-  return part.replace(/%/g, '%25').replace(/=/g, '%3D').replace(/\|/g, '%7C')
-}
-
-function unescapeListKeyPart(part: string): string {
-  return part.replace(/%7C/g, '|').replace(/%3D/g, '=').replace(/%25/g, '%')
-}
-
-type MatcherScheme = Record<string, Set<ModValue>>
-
-type MatcherList = Record<string, { rule: StyleRules }>
-
-export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
-  propertyBits: PropertyMap = {}
-  compiledRules: Array<{
-    bitMask: number
-    bitValue: number
-    original: string
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic rule structure
-    rule: any
-  }> = []
-
-  useAtPrefix: boolean
-  cssMediaMode: boolean
-  cssPseudoMode: boolean
-
-  scheme: MatcherScheme
-  list: MatcherList
-  interactions: InteractionList
-  elementSet: Set<string>
-
-  bits: Array<[string, PropertyMap[string]]>
-
-  // biome-ignore lint/suspicious/noExplicitAny: cache stores dynamic style results
-  cache = new Map<number, any>()
-
-  /** Whether any rule keys on a breakpoint — lets the host warn when media
-   * handling is disabled and these styles would be silently dropped. */
-  hasMediaRules = false
-
-  cacheMax: number
-
-  private stateAliases: readonly string[]
+/** Immutable normalized plan and bounded cache. No selector parsing on updates. */
+export class StyleMatcher<Schema extends RuleObject = RuleObject> {
+  propertyBits: PropertyMap = Object.create(null)
+  compiledRules: CompiledRule[] = []
+  readonly cssMediaMode: boolean
+  readonly cssPseudoMode: boolean
+  readonly useAtPrefix = false
+  readonly platform: 'web' | 'native'
+  readonly scheme: Record<string, Set<string>>
+  readonly list: Record<string, { rule: RuleObject }>
+  readonly interactions: Record<string, Record<string, boolean>>
+  readonly elementSet: Set<string>
+  readonly hasMediaRules: boolean
+  readonly cacheMax: number
+  readonly bits: Array<[string, PropertyMap[string]]>
+  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous element token values
+  readonly cache = new Map<number | string, any>()
+  private bitCount = 0
+  private readonly baseParts: readonly CompiledPart[]
+  private readonly results = new WeakMap<
+    object,
+    {
+      membership: Record<string, BitSet>
+      predicates: Record<string, string>
+    }
+  >()
 
   constructor(
-    rules: NestedStyleRules,
+    rules: RuleObject,
     options?: {
       cssMediaMode?: boolean
       cssPseudoMode?: boolean
       cacheMax?: number
-      // Declared-state alias names, so base-level `'source:<alias>'` cross-element
-      // keys compile to the CSS src-state channel (see crossHover).
       stateAliases?: readonly string[]
+      platform?: 'web' | 'native'
     },
   ) {
     this.cssMediaMode = options?.cssMediaMode ?? false
     this.cssPseudoMode = options?.cssPseudoMode ?? false
+    this.platform = options?.platform ?? 'web'
     this.cacheMax = options?.cacheMax ?? DEFAULT_CACHE_MAX
-    this.stateAliases = options?.stateAliases ?? []
-
-    const { scheme, list, interactions, elementSet } = this.flattenRules(rules)
-
-    this.elementSet = elementSet
-
-    this.interactions = interactions
-
-    this.scheme = scheme
-    this.list = list
-
-    this.useAtPrefix = false
-
-    this.compile({ scheme, list })
-
+    if (!Number.isInteger(this.cacheMax) || this.cacheMax < 0) {
+      throw new Error('StyleMatcher cacheMax must be a non-negative integer')
+    }
+    const normalized = normalizeRules(rules, {
+      cssMediaMode: this.cssMediaMode,
+      cssPseudoMode: this.cssPseudoMode,
+      stateAliases: options?.stateAliases,
+    })
+    this.scheme = normalized.scheme
+    this.list = normalized.list
+    this.interactions = normalized.interactions
+    this.elementSet = normalized.elementSet
+    this.hasMediaRules = normalized.hasMediaRules
+    this.baseParts = compileParts(this.list['']?.rule ?? {})
+    this.compile(normalized.ordered)
     this.bits = Object.entries(this.propertyBits)
   }
 
-  /**
-   * Check if a key looks like an element name (not a selector)
-   */
-  private isElementKey(key: string): boolean {
-    return (
-      key[0] !== '[' &&
-      key[0] !== '@' &&
-      key[0] !== ':' &&
-      key[0] !== '$' &&
-      !key.includes(':') &&
-      key !== 'prototype'
-    )
-  }
-
-  /**
-   * Check if a key is a cross-element selector like 'container:hover'
-   */
-  private isCrossElementSelector(key: string): boolean {
-    return (
-      key.includes(':') && key[0] !== '[' && key[0] !== '@' && key[0] !== ':'
-    )
-  }
-
-  private flattenRules(rules: NestedStyleRules) {
-    if (this.cssPseudoMode)
-      rules = resolveCrossHoverCss(rules, this.stateAliases)
-    const elementSet = new Set<string>()
-    const interactions: InteractionList = {}
-    const list: MatcherList = {}
-    const scheme: MatcherScheme = {}
-
-    const modIndex = new Map<string, number>()
-
-    type Selector = Map<string, string>
-
-    // First pass: collect all element names
-    for (const key in rules) {
-      if (this.isElementKey(key)) {
-        elementSet.add(key)
-      } else if (this.isCrossElementSelector(key)) {
-        // Extract element from cross-element selector like 'container:hover'
-        const elementName = key.split(':')[0]
-        if (elementName) elementSet.add(elementName)
-        // Also add target elements from the element map
-        const elementMap = rules[key]
-        if (elementMap) {
-          for (const targetKey in elementMap) {
-            if (this.isElementKey(targetKey)) {
-              elementSet.add(targetKey)
-            }
-          }
-        }
-      } else if (key[0] === '@') {
-        // Root-level breakpoint - collect elements inside
-        const bpNode = rules[key]
-        if (bpNode) {
-          for (const targetKey in bpNode) {
-            const actualKey = targetKey.replace(/^\$/, '')
-            if (this.isElementKey(actualKey)) {
-              elementSet.add(actualKey)
-            }
-          }
-        }
-      } else if (key[0] === '[') {
-        // Variant selector - collect elements from element map
-        const elementMap = rules[key]
-        if (elementMap) {
-          for (const targetKey in elementMap) {
-            const actualKey = targetKey.replace(/^\$/, '')
-            if (this.isElementKey(actualKey)) {
-              elementSet.add(actualKey)
-            }
-          }
-        }
-      }
+  private compile(rules: readonly NormalizedRule[]) {
+    for (const [property, values] of Object.entries(this.scheme)) {
+      const entries: Record<string, BitPosition> = Object.create(null)
+      this.propertyBits[property] = entries
+      for (const value of values) entries[value] = position(this.bitCount++)
     }
-
-    const traverseMod = (
-      selector: Selector,
-      mod: string,
-      modValue: string,
-      rule: StyleRules,
-      propPrefix?: string,
-    ) => {
-      scheme[mod] ??= new Set()
-      scheme[mod].add(modValue)
-
-      const nextMap = new Map(selector)
-      nextMap.set(mod, modValue)
-
-      traverse(nextMap, rule, propPrefix)
-    }
-
-    /**
-     * Process element rule, handling both $element and plain element references
-     */
-    const processElementRule = (elementKey: string, rule: NestedStyleRules) => {
-      const currentRule: NestedStyleRules = {}
-
-      for (const ruleKey in rule) {
-        if (ruleKey[0] === '$') {
-          // $element reference
-          const targetElement = ruleKey.slice(1)
-          currentRule[targetElement] = rule[ruleKey]
-        } else if (elementSet.has(ruleKey)) {
-          // Plain element reference (new API)
-          currentRule[ruleKey] = rule[ruleKey]
-        } else {
-          // Style property - add to current element
-          currentRule[elementKey] ??= {}
-          currentRule[elementKey][ruleKey] = rule[ruleKey]
-        }
-      }
-
-      return currentRule
-    }
-
-    const traverseElement = (
-      selector: Map<string, string>,
-      elementKey: string,
-      elementRule: NestedStyleRules[string],
-      propPrefix = '',
-    ) => {
-      const result: StyleObject = {}
-
-      elementSet.add(elementKey)
-
-      for (const key in elementRule) {
-        if (key[0] === ':' && key.includes('_')) {
-          // Already flattened (`:src-hover_bgColor` from resolveCrossHoverCss)
-          // — pass through; the value is the style value, not a pseudo block.
-          result[`${propPrefix}${key}`] = elementRule[key]
-        } else if (key[0] === ':') {
-          if (this.cssPseudoMode) {
-            // CSS mode: flatten pseudo-state styles with prefixed keys
-            // e.g. :hover { bgColor: 'red' } → { ':hover_bgColor': 'red' }
-            const pseudoRule = elementRule[key]
-            for (const prop in pseudoRule) {
-              if (prop[0] === '$' || elementSet.has(prop)) {
-                // Element reference inside pseudo — not supported in CSS mode flat output
-                continue
+    for (const normalized of rules) {
+      const entries = normalized.predicate
+        ? Object.entries(normalized.rule).map(([part, style]) => ({
+            [part]: style,
+          }))
+        : [normalized.rule]
+      for (const rule of entries) {
+        const part = Object.keys(rule)[0]!
+        this.compiledRules.push({
+          ...this.compileMask(normalized.conditions),
+          original: normalized.original,
+          rule,
+          parts: compileParts(rule),
+          membership: position(this.compiledRules.length),
+          ...(normalized.predicate
+            ? {
+                expression: compilePredicate(
+                  normalized.predicate,
+                  { ...this, part },
+                  (conditions) => this.compileMask(conditions),
+                ),
               }
-              result[`${propPrefix}${key}_${prop}`] = pseudoRule[prop]
-            }
-          } else {
-            // Runtime mode: create mod selector for bitwise matching
-            const mod = `${elementKey}${key}`
-            const modValue = 'true'
+            : {}),
+        })
+      }
+    }
+  }
 
-            interactions[elementKey] ??= {}
-            interactions[elementKey][key] = true
-
-            const currentRule = processElementRule(elementKey, elementRule[key])
-
-            traverseMod(selector, mod, modValue, currentRule)
-          }
-        } else if (key[0] === '[') {
-          // Variant selector inside element
-          const [mod, modValue] = this.parseSelector(key)
-
-          const currentRule = processElementRule(elementKey, elementRule[key])
-
-          traverseMod(selector, mod, modValue, currentRule)
-        } else if (key[0] === '@') {
-          this.hasMediaRules = true
-          if (this.cssMediaMode) {
-            // CSS mode: flatten breakpoint styles with prefixed keys
-            // e.g. @sm { bgColor: 'red' } → { '@sm_bgColor': 'red' }
-            const breakpointRule = elementRule[key]
-            for (const prop in breakpointRule) {
-              if (prop[0] === '$' || elementSet.has(prop)) {
-                // Element reference inside breakpoint — not supported in CSS mode flat output
-                continue
-              }
-              result[`${propPrefix}${key}_${prop}`] = breakpointRule[prop]
-            }
-          } else {
-            // Runtime mode: create mod selector for bitwise matching
-            const [mod, modValue] = this.parseAtSelector(key)
-
-            const currentRule = processElementRule(elementKey, elementRule[key])
-
-            traverseMod(
-              selector,
-              mod,
-              modValue,
-              currentRule,
-              this.useAtPrefix ? `${mod}_${modValue}_` : undefined,
-            )
-          }
-        } else {
-          // Regular style property
-          result[propPrefix + key] = elementRule[key]
+  private compileMask(conditions: Conditions): CompiledPredicate {
+    const required = new Map<number, { mask: number; value: number }>()
+    const any: CompiledPredicate['any'][number][] = []
+    for (const [property, allowed] of conditions) {
+      if (!allowed.length) continue
+      const values = this.propertyBits[property]!
+      if (allowed.length > 1) {
+        const masks = new Map<number, number>()
+        for (const value of allowed) {
+          const at = values[value]!
+          masks.set(at.word, ((masks.get(at.word) ?? 0) | at.bit) >>> 0)
         }
+        any.push({ words: [...masks].map(([word, mask]) => ({ word, mask })) })
+        continue
       }
-
-      return result
+      for (const at of Object.values(values)) {
+        const word = required.get(at.word) ?? { mask: 0, value: 0 }
+        word.mask = (word.mask | at.bit) >>> 0
+        required.set(at.word, word)
+      }
+      const at = values[allowed[0]!]!
+      const word = required.get(at.word)!
+      word.value = (word.value | at.bit) >>> 0
     }
-
-    const traverse = (
-      selector: Map<string, string>,
-      node: NestedStyleRules,
-      propPrefix?: string,
-    ) => {
-      const selectorRule: NestedStyleRules = Object.create(null)
-
-      for (const [key] of selector) {
-        if (!modIndex.has(key)) {
-          modIndex.set(key, modIndex.size)
-        }
-      }
-
-      // Build listKey using modIndex order. Key and value are ESCAPED: the
-      // encoding's own delimiters (`=`, `|`) legally occur inside condition
-      // mod keys (`'@card/>=400'`, an OR expression), and unescaped they made
-      // compile() parse the rule as an empty mask — a rule that matched
-      // EVERYTHING.
-      let listKey = ''
-      let first = true
-      for (const key of modIndex.keys()) {
-        if (!first) listKey += '|'
-        first = false
-        listKey += `${escapeListKeyPart(key)}=${escapeListKeyPart(String(selector.get(key) || WILDCARD))}`
-      }
-
-      list[listKey] ??= { rule: selectorRule }
-      // biome-ignore lint/style/noNonNullAssertion: guaranteed by ??= above
-      Object.assign(list[listKey]!.rule, selectorRule)
-
-      for (const key in node) {
-        if (key[0] === '[') {
-          // Variant selector like '[size=sm]' or '[disabled]'
-          const mods = this.parseCombinedSelector(key)
-
-          if (mods.length === 1 && mods[0]) {
-            // Single selector
-            const [mod, modValue] = mods[0]
-            // Check if node[key] contains element references (new API)
-            const nodeValue = node[key]
-            const transformedRule: NestedStyleRules = {}
-
-            for (const targetKey in nodeValue) {
-              if (targetKey[0] === '$') {
-                // Already in internal format
-                transformedRule[targetKey.slice(1)] = nodeValue[targetKey]
-              } else if (elementSet.has(targetKey)) {
-                // New API: plain element reference
-                transformedRule[targetKey] = nodeValue[targetKey]
-              } else {
-                // Style property (shouldn't happen at root variant level)
-                transformedRule[targetKey] = nodeValue[targetKey]
-              }
-            }
-
-            traverseMod(selector, mod, modValue, transformedRule)
-          } else {
-            // Combined selector - apply all mods at once
-            const currentSelector = new Map(selector)
-            for (const [mod, modValue] of mods) {
-              scheme[mod] ??= new Set()
-              scheme[mod].add(modValue)
-              currentSelector.set(mod, modValue)
-
-              if (!modIndex.has(mod)) {
-                modIndex.set(mod, modIndex.size)
-              }
-            }
-
-            // Transform element references
-            const nodeValue = node[key]
-            const transformedRule: NestedStyleRules = {}
-
-            for (const targetKey in nodeValue) {
-              if (targetKey[0] === '$') {
-                transformedRule[targetKey.slice(1)] = nodeValue[targetKey]
-              } else if (elementSet.has(targetKey)) {
-                transformedRule[targetKey] = nodeValue[targetKey]
-              } else {
-                transformedRule[targetKey] = nodeValue[targetKey]
-              }
-            }
-
-            traverse(currentSelector, transformedRule, propPrefix)
-          }
-        } else if (key[0] === '@') {
-          this.hasMediaRules = true
-          if (this.cssMediaMode) {
-            // CSS mode: flatten root-level breakpoint into each element's rule
-            // e.g. '@md': { link: { paddingX: 4 } } → link: { '@md_paddingX': 4 }
-            const bpNode = node[key]
-            for (const elemKey in bpNode) {
-              const actualKey = elemKey.replace(/^\$/, '')
-              if (!elementSet.has(actualKey)) continue
-              const elemProps = bpNode[elemKey]
-              selectorRule[actualKey] ??= {}
-              for (const prop in elemProps) {
-                if (prop[0] === '$' || elementSet.has(prop)) {
-                  continue
-                }
-                ;(selectorRule[actualKey] as Record<string, unknown>)[
-                  `${key}_${prop}`
-                ] = elemProps[prop]
-              }
-            }
-          } else {
-            const [mod, modValue] = this.parseAtSelector(key)
-
-            traverseMod(selector, mod, modValue, node[key])
-          }
-        } else if (this.isCrossElementSelector(key)) {
-          // Cross-element selector like 'container:hover'.
-          //
-          // Under cssPseudoMode, the ':hover' form at BASE level compiles to
-          // pure CSS through the shared source channel: the source element
-          // gains the `_s` marker class and each target property rides a
-          // `--toned_src-hover` chain (toggled by `._s:hover` in the system
-          // css, hover-gated). Nearest-source-wins: a nested `_s` resets the
-          // channel, so a target answers its closest cross-element source.
-          // (Base-level ':hover' sources were rewritten to `:src-hover_*` keys
-          // by resolveCrossHoverCss before flattening — reaching here in css
-          // mode means a form the channel cannot express.)
-          if (this.cssPseudoMode) {
-            warnOnce(
-              'cross-element-pseudo-css-mode',
-              `'${key}' is a cross-element pseudo selector — it runs through runtime ` +
-                'event handlers even though pseudoMode is css. Self pseudos and base-level ' +
-                `':hover' sources stay pure CSS.`,
-            )
-          }
-          const parts = key.split(':')
-          const elementName = parts[0]
-          if (!elementName) return
-          const pseudoClasses = parts.slice(1).map((p) => `:${p}`)
-
-          if (!elementSet.has(elementName)) return
-
-          const elementMap = node[key]
-          if (!elementMap) return
-
-          // Register interactions
-          interactions[elementName] ??= {}
-          for (const pseudo of pseudoClasses) {
-            interactions[elementName][pseudo] = true
-          }
-
-          // Build the modifier chain
-          const crossSelector = new Map(selector)
-          for (const pseudo of pseudoClasses) {
-            const mod = `${elementName}${pseudo}`
-            const modValue = 'true'
-            scheme[mod] ??= new Set()
-            scheme[mod].add(modValue)
-            crossSelector.set(mod, modValue)
-
-            if (!modIndex.has(mod)) {
-              modIndex.set(mod, modIndex.size)
-            }
-          }
-
-          // Process target elements
-          const transformedRule: NestedStyleRules = {}
-          for (const targetKey in elementMap) {
-            if (targetKey[0] === '$') {
-              transformedRule[targetKey.slice(1)] = elementMap[targetKey]
-            } else if (elementSet.has(targetKey)) {
-              transformedRule[targetKey] = elementMap[targetKey]
-            }
-          }
-
-          traverse(crossSelector, transformedRule, propPrefix)
-        } else {
-          // Element definition
-          const elementKey = key.replace(/^\$/, '')
-          const elementRule = traverseElement(
-            selector,
-            elementKey,
-            node[key],
-            propPrefix,
-          )
-          if (selectorRule[elementKey]) {
-            Object.assign(selectorRule[elementKey], elementRule)
-          } else {
-            selectorRule[elementKey] = elementRule
-          }
-        }
-      }
-    }
-
-    traverse(new Map(), rules)
-
-    return { scheme, list, interactions, elementSet }
-  }
-
-  private parseSelector(selector: string): [string, string] {
-    const inner = selector.slice(1, -1)
-    // Check if it's a boolean variant (no '=' sign)
-    if (!inner.includes('=')) {
-      return [inner, 'true']
-    }
-    const parts = inner.split('=')
-    const name = parts[0] || inner
-    const value = parts[1] ?? '*'
-    return [name, value]
-  }
-
-  /**
-   * Parse combined selectors like '[size=sm][variant=accent]' or '[disabled][size=sm]'
-   * Returns array of [mod, value] pairs
-   * Supports both key=value and boolean (key only) formats
-   */
-  private parseCombinedSelector(selector: string): Array<[string, string]> {
-    const results: Array<[string, string]> = []
-    // Match both [key=value] and [key] (boolean) formats
-    const regex = /\[([^\]=\]]+)(?:=([^\]]+))?\]/g
-    let match = regex.exec(selector)
-
-    while (match !== null) {
-      const key = match[1]
-      if (key) {
-        const value = match[2] ?? 'true' // Boolean variant if no value
-        results.push([key, value])
-      }
-      match = regex.exec(selector)
-    }
-
-    return results
-  }
-
-  private parseAtSelector(selector: string): [string, string] {
-    return [selector, String(true)]
-  }
-
-  compile(config: Config) {
-    // First, create a mapping of each property:value to a unique bit position
-    let bitPosition = 0
-
-    for (const property in config.scheme) {
-      this.propertyBits[property] = {}
-      // biome-ignore lint/style/noNonNullAssertion: for...in guarantees property exists
-      const values = config.scheme[property]!
-      for (const value of values) {
-        this.propertyBits[property][value] = 1 << bitPosition
-        bitPosition++
-      }
-    }
-
-    // Then compile each rule into its bitmask
-    for (const ruleStr in config.list) {
-      // biome-ignore lint/style/noNonNullAssertion: for...in guarantees ruleStr exists
-      const ruleData = config.list[ruleStr]!
-      if (ruleStr === '') continue // Skip empty rule
-
-      let bitMask = 0
-      let bitValue = 0
-
-      const conditions = ruleStr.split('|')
-      for (const condition of conditions) {
-        // Symmetric to the escaped listKey encoding above: split on the FIRST
-        // `=` only, then unescape both halves.
-        const eq = condition.indexOf('=')
-        const property = unescapeListKeyPart(
-          eq === -1 ? condition : condition.slice(0, eq),
-        )
-        const value = eq === -1 ? '*' : unescapeListKeyPart(condition.slice(eq + 1))
-
-        // Skip wildcards (unspecified optional variants use * too)
-        if (value === WILDCARD) continue
-
-        // Skip unknown properties - this handles dynamic or undefined variant values gracefully
-        if (
-          !(
-            property &&
-            this.propertyBits[property] &&
-            this.propertyBits[property][value] !== undefined
-          )
-        )
-          continue
-
-        const propertyBitValue = this.propertyBits[property][value]
-
-        bitMask |= this.getMask(this.propertyBits[property])
-        bitValue |= propertyBitValue
-      }
-
-      this.compiledRules.push({
-        bitMask,
-        bitValue,
-        original: ruleStr,
-        // biome-ignore lint/style/noNonNullAssertion: ruleData assigned above
-        rule: ruleData!.rule,
-      })
+    const words: WordRequirement[] = [...required].map(([word, rule]) => ({
+      word,
+      ...rule,
+    }))
+    return {
+      words,
+      any,
+      bitMask: required.get(0)?.mask ?? 0,
+      bitValue: required.get(0)?.value ?? 0,
     }
   }
 
-  private getMask(valuesMap: PropertyMap[string]): number {
-    let mask = 0
-    for (const key in valuesMap) {
-      // biome-ignore lint/style/noNonNullAssertion: for...in guarantees key exists
-      mask |= valuesMap[key]!
+  /** Numeric for <=32 facts; larger schemes return the complete unsigned vector. */
+  getPropsBits(props: Partial<Schema>): BitSet {
+    let bits = emptyBits(this.bitCount)
+    for (const [property, values] of this.bits) {
+      const value = props[property]
+      if (value === undefined) continue
+      const at = values[value]
+      if (at) bits = addBit(bits, at)
     }
-    return mask
-  }
-
-  getPropsBits(props: Partial<Schema>) {
-    let bits = 0
-    const bitsLen = this.bits.length
-
-    for (let i = 0; i < bitsLen; i++) {
-      // biome-ignore lint/style/noNonNullAssertion: bounds checked by bitsLen
-      const entry = this.bits[i]!
-      const prop = entry[0]
-      const values = entry[1]
-      const value = props[prop]
-
-      // Skip undefined values or unknown property values - allows partial state matching
-      if (value === undefined || values[value] === undefined) continue
-
-      bits |= values[value]
-    }
-
     return bits
   }
-
-  #elementHash = Symbol.for('@toned/core/StyleMatcher/elementHash')
-  #propsBits = Symbol.for('@toned/core/StyleMatcher/propsBits')
 
   match(
     props: Partial<
@@ -661,60 +202,84 @@ export class StyleMatcher<Schema extends NestedStyleRules = NestedStyleRules> {
     >,
   ) {
     const propsBits = this.getPropsBits(props)
-
-    const cached = this.cache.get(propsBits)
+    const key = bitKey(propsBits)
+    const cached = this.cache.get(key)
     if (cached !== undefined) {
-      // Refresh recency so the entry survives LRU eviction.
-      this.cache.delete(propsBits)
-      this.cache.set(propsBits, cached)
+      this.cache.delete(key)
+      this.cache.set(key, cached)
       return cached
     }
 
-    // Match against compiled rules
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic style result structure
-    const result: Record<string | symbol, any> = {}
+    // biome-ignore lint/suspicious/noExplicitAny: output maps tokens for each element
+    const result: Record<string | symbol, any> = Object.create(null)
+    for (const element of this.elementSet) result[element] = {}
+    for (const part of this.baseParts)
+      applyOperations(result[part.name], part.operations)
+    const membership: Record<string, BitSet> = Object.create(null)
+    const predicates: Record<string, string> = Object.create(null)
 
-    for (const elementKey in this.list['']?.rule) {
-      result[elementKey] ??= {}
-      Object.assign(result[elementKey], this.list[''].rule[elementKey])
-    }
-
-    result[this.#elementHash] = {}
-    result[this.#propsBits] = propsBits
-
-    for (const compiledRule of this.compiledRules) {
-      if ((propsBits & compiledRule.bitMask) !== compiledRule.bitValue) continue
-
-      for (const elementKey in compiledRule.rule) {
-        result[elementKey] ??= {}
-        const target = result[elementKey]
-        const source = compiledRule.rule[elementKey]
-        for (const key in source) {
-          // `style` layers deep (one level) so a pseudo/variant rule extends the
-          // base style; every other property is replaced. See utils/mergeStyle.
-          target[key] =
-            key === 'style' ? mergeStyle(target[key], source[key]) : source[key]
+    for (const rule of this.compiledRules) {
+      if (!matchesBits(propsBits, rule)) continue
+      const predicate = rule.expression
+        ? evaluatePredicate(rule.expression, propsBits)
+        : true
+      if (predicate === false) continue
+      if (rule.expression && (this.cssMediaMode || this.cssPseudoMode)) {
+        for (const part of rule.parts) {
+          result[part.name][CONDITIONAL_RULES] ??= []
+          const entries: ConditionalRule[] =
+            result[part.name][CONDITIONAL_RULES]
+          const record: ConditionalRule = {
+            predicate:
+              predicate === true ? { op: 'all', operands: [] } : predicate,
+            style: part.style,
+            part: part.name,
+            order: rule.membership.word * 32 + Math.log2(rule.membership.bit),
+          }
+          entries.push(record)
+          applyOperations(result[part.name], [
+            {
+              key: '$when',
+              value: undefined,
+              layer: part.operations[0]?.layer ?? 0,
+              conditional: record,
+            },
+          ])
+          const identity = JSON.stringify(predicate)
+          predicates[part.name] =
+            `${predicates[part.name] ?? ''}${identity.length}:${identity}`
         }
-
-        result[this.#elementHash][elementKey] ^= compiledRule.bitValue
+      } else
+        for (const part of rule.parts)
+          applyOperations(result[part.name], part.operations)
+      for (const part of rule.parts) {
+        membership[part.name] = addBit(
+          membership[part.name] ?? emptyBits(this.compiledRules.length),
+          rule.membership,
+        )
       }
     }
+    this.results.set(result, { membership, predicates })
 
-    // Evict the least-recently-used entry once the cache is full.
-    if (this.cache.size >= this.cacheMax) {
-      const oldest = this.cache.keys().next().value
-      if (oldest !== undefined) this.cache.delete(oldest)
+    if (this.cacheMax > 0) {
+      if (this.cache.size >= this.cacheMax) {
+        const oldest = this.cache.keys().next().value
+        if (oldest !== undefined) this.cache.delete(oldest)
+      }
+      this.cache.set(key, result)
     }
-    this.cache.set(propsBits, result)
-
     return result
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: style objects have dynamic structure with internal hash
+  /** Exact rule membership within this plan; different plans never compare equal. */
+  // biome-ignore lint/suspicious/noExplicitAny: result metadata is private to the matcher
   isEqual(elementKey: string, style1: any, style2: any) {
+    const before = this.results.get(style1)
+    const after = this.results.get(style2)
+    if (!before || !after) return false
     return (
-      style1?.[this.#elementHash]?.[elementKey] ===
-      style2?.[this.#elementHash]?.[elementKey]
+      before.predicates[elementKey] === after.predicates[elementKey] &&
+      equalBits(before.membership[elementKey], after.membership[elementKey])
     )
   }
 }

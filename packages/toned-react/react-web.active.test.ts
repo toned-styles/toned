@@ -45,6 +45,10 @@ function makeBaseMock() {
     matcher: { interactions: { box: { ':hover': true, ':active': true } } },
     refs: {} as Record<string, AnyValue>,
     applyState: vi.fn(),
+    eventOwner() {
+      return this
+    },
+    onHostDetach: () => () => {},
     getRestingStyle: () => ({ style: {} }),
     reapplyInteraction: vi.fn(),
     pruneDisconnected: vi.fn(),
@@ -64,8 +68,7 @@ function makeBaseMock() {
   }
 }
 
-const getProps = (base: AnyValue): AnyValue =>
-  reactWebConfig.getProps.call(base, 'box')
+const getProps = (base: AnyValue): AnyValue => reactWebConfig.getProps.call(base, 'box')
 
 let doc: ReturnType<typeof fakeEventTarget>
 let win: ReturnType<typeof fakeEventTarget>

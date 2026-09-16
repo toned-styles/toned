@@ -5,11 +5,7 @@ import { defineToken } from '../system/index.ts'
 import { setStyles } from './applyStyles.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
-import {
-  createVariantSelector,
-  getNamedStyleName,
-  isNamedStyleKey,
-} from './variantSelector.ts'
+import { createVariantSelector, getNamedStyleName, isNamedStyleKey } from './variantSelector.ts'
 
 /*
  * Mock TokenSystem for testing.
@@ -21,32 +17,24 @@ import {
  */
 const testTokens = {
   bgColor: defineToken({
-    values: [
-      'base',
-      'blue',
-      'green',
-      'hover',
-      'muted',
-      'red',
-      'yellow',
-    ] as const,
-    resolve: (value) => ({ backgroundColor: String(value) }),
+    values: ['base', 'blue', 'green', 'hover', 'muted', 'red', 'yellow'] as const,
+    resolve: value => ({ backgroundColor: String(value) }),
   }),
   textColor: defineToken({
     values: ['base', 'black', 'white'] as const,
-    resolve: (value) => ({ color: String(value) }),
+    resolve: value => ({ color: String(value) }),
   }),
   color: defineToken({
     values: ['hover'] as const,
-    resolve: (value) => ({ color: String(value) }),
+    resolve: value => ({ color: String(value) }),
   }),
   borderRadius: defineToken({
     values: ['medium'] as const,
-    resolve: (value) => ({ borderRadius: String(value) }),
+    resolve: value => ({ borderRadius: String(value) }),
   }),
   paddingX: defineToken({
     values: [0, 2, 4] as const,
-    resolve: (value) => ({
+    resolve: value => ({
       paddingLeft: Number(value),
       paddingRight: Number(value),
     }),
@@ -143,7 +131,7 @@ describe('createStylesheet', () => {
   })
 
   describe('extend method', () => {
-    test('extend beats variant values for the properties it names', () => {
+    test('extend changes defaults while variants retain their precedence', () => {
       const rules = { container: { bgColor: 'base' } }
       const sheet = createStylesheet(mockTokenSystem, rules).variants({
         '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
@@ -155,13 +143,21 @@ describe('createStylesheet', () => {
         { getProps() {}, getTokens: () => ({}), tokens: {} } as any,
         {},
       )
-      // The derived sheet's variant entry no longer carries the overridden
-      // property — a caller overriding `width` means the width, not "the
-      // width unless a size variant says otherwise" — while untouched
-      // properties survive.
-      expect(base.rules['[size=icon]'].container.bgColor).toBe('green')
+      expect(base.rules['[size=icon]'].container.bgColor).toBe('blue')
       expect(base.rules['[size=icon]'].container.textColor).toBe('black')
       expect(base.rules.container.bgColor).toBe('green')
+    })
+
+    test('explicit override layers beat matching variants without rewriting their declarations', () => {
+      const sheet = createStylesheet(mockTokenSystem, { container: { bgColor: 'base' } }).variants({
+        '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
+      })
+      const overridden = (sheet as any)[Symbol.for('@toned/override')]({
+        container: { bgColor: 'green' },
+      })
+      const base = overridden[SYMBOL_INIT](mockConfig, { size: 'icon' })
+      expect(base.modsStyle.container).toMatchObject({ bgColor: 'green', textColor: 'black' })
+      expect(base.rules['[size=icon]'].container.bgColor).toBe('blue')
     })
 
     test('extend method returns new stylesheet', () => {
@@ -481,14 +477,14 @@ describe('variantSelector', () => {
     expect(key2).toBe('[size=sm][variant=accent]')
   })
 
-  test('uses wildcard for unspecified variants', () => {
+  test('omitted axes remain wildcard without adding fictitious typed segments', () => {
     const $ = createVariantSelector<{
       size: 'sm' | 'md'
       variant: 'accent' | 'danger'
     }>(['size', 'variant'])
 
     const key = String($.size('sm'))
-    expect(key).toBe('[size=sm][variant=*]')
+    expect(key).toBe('[size=sm]')
   })
 
   test('handles multi-value selectors', () => {
@@ -605,8 +601,13 @@ describe('multi-instance interaction state', () => {
     const el = {
       isConnected: true,
       recorded: undefined as Record<string, unknown> | undefined,
+      visible: {} as Record<string, unknown>,
       setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
-        el.recorded = style
+        for (const key in style) {
+          if (style[key] === null) delete el.visible[key]
+          else el.visible[key] = style[key]
+        }
+        el.recorded = { ...el.visible }
       },
     }
     return el
@@ -631,10 +632,7 @@ describe('multi-instance interaction state', () => {
     const { base, a, b } = setup()
     base._activeEls['box:hover'] = new Set([a])
 
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
 
     expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
     expect(b.recorded).toEqual({ bgColor: 'base' })
@@ -645,18 +643,12 @@ describe('multi-instance interaction state', () => {
 
     // 1. Hover A.
     base._activeEls['box:hover'] = new Set([a])
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
 
     // 2. Press A (still hovered). Global modsState now has hover=true AND
     // active=true, but only A is in either set.
     base._activeEls['box:active'] = new Set([a])
-    base.applyState(
-      { 'box:active': true },
-      { triggerKey: 'box', pseudo: ':active' },
-    )
+    base.applyState({ 'box:active': true }, { triggerKey: 'box', pseudo: ':active' })
 
     expect(a.recorded).toEqual({
       bgColor: 'base',
@@ -672,10 +664,7 @@ describe('multi-instance interaction state', () => {
     const { base, a, b } = setup()
     base._activeEls['box:focus'] = new Set([a])
 
-    base.applyState(
-      { 'box:focus': true },
-      { triggerKey: 'box', pseudo: ':focus' },
-    )
+    base.applyState({ 'box:focus': true }, { triggerKey: 'box', pseudo: ':focus' })
 
     expect(a.recorded).toEqual({ bgColor: 'base', outlineColor: 'focus' })
     expect(b.recorded).toEqual({ bgColor: 'base' })
@@ -692,10 +681,7 @@ describe('multi-instance interaction state', () => {
     base.refs[boxKey] = new Set([only])
     base._activeEls['box:hover'] = new Set([only])
 
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
 
     expect(only.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
@@ -730,24 +716,21 @@ const interactiveRules = {
   },
 }
 
-/*
- * KNOWN-STALE (quarantined, not muted): the three `test.skip`s below broke at
- * e2c3bba ("restore inline style baselines by ownership"), which restructured
- * setStyles so the elision/baseline machinery lives only on the web branch —
- * these fakes drive the setNativeProps branch, which replaces wholesale by
- * documented limitation. Un-skipping requires either RN-branch elision or a
- * web-shaped fake (a real `.style` CSSStyleDeclaration stub). Runtime mode is
- * unused by the hq consumer (css mode everywhere), so this is recorded debt,
- * not silent red.
- */
+// The fake models native merge patches; `recorded` is the resulting visible
+// style, while resetting it to undefined still detects an unnecessary write.
 function fakeInteractiveEl() {
   const el = {
     isConnected: true,
     recorded: undefined as Record<string, unknown> | undefined,
+    visible: {} as Record<string, unknown>,
     // Mimic a DOM node closely enough for setStyles' web branch AND the RN
     // branch. We drive setStyles through setNativeProps to avoid needing a DOM.
     setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
-      el.recorded = style
+      for (const key in style) {
+        if (style[key] === null) delete el.visible[key]
+        else el.visible[key] = style[key]
+      }
+      el.recorded = { ...el.visible }
     },
   }
   return el
@@ -772,10 +755,7 @@ describe('declarative re-render isolation (multi-instance)', () => {
 
     // Hover A: global modsState now has box:hover = true (shared across siblings).
     base._activeEls['box:hover'] = new Set([a])
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
     expect(base.modsState['box:hover']).toBe(true)
 
     // The style React spreads declaratively must be the *resting* style, i.e.
@@ -788,10 +768,7 @@ describe('declarative re-render isolation (multi-instance)', () => {
 
     // Hover A imperatively (no React render).
     base._activeEls['box:hover'] = new Set([a])
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
     expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
     expect(b.recorded).toEqual({ bgColor: 'base' })
 
@@ -830,10 +807,7 @@ describe('unmount cleanup (multi-instance, lazy prune)', () => {
     b.isConnected = false
 
     // Any subsequent style application prunes the disconnected node in-place.
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
 
     expect([...(base.refs['box'] as Set<unknown>)]).toEqual([a])
     expect([...base._activeEls['box:hover']]).toEqual([a])
@@ -848,10 +822,7 @@ describe('unmount cleanup (multi-instance, lazy prune)', () => {
     b.isConnected = false
     b.recorded = { sentinel: true }
 
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
 
     // B was skipped (and pruned), so its recorded style is untouched.
     expect(b.recorded).toEqual({ sentinel: true })
@@ -890,10 +861,7 @@ describe('contextless updates do not leak interaction across instances', () => {
 
     // Hover A (interaction-triggered, carries context). A → hover, B → resting.
     base._activeEls['box:hover'] = new Set([a])
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
     expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
     expect(b.recorded).toEqual({ bgColor: 'base' })
 
@@ -918,10 +886,7 @@ describe('contextless updates do not leak interaction across instances', () => {
 
     // Hover A, then A unmounts without firing mouseleave (global stays hover=true).
     base._activeEls['box:hover'] = new Set([a])
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
     a.isConnected = false
 
     // A contextless tick must not paint the survivor with A's stale hover. The
@@ -976,7 +941,7 @@ describe('cross-element interaction isolation (multi-instance)', () => {
     })
   }
 
-  test.skip('hovering one instance does not paint sibling cross-element targets', () => {
+  test('hovering one instance does not paint sibling cross-element targets', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const base = newBase()
     const [c1, c2, l1, l2] = [
@@ -985,14 +950,11 @@ describe('cross-element interaction isolation (multi-instance)', () => {
       fakeInteractiveEl(),
       fakeInteractiveEl(),
     ]
-    base.refs['container'] = [c1, c2]
-    base.refs['label'] = [l1, l2]
+    base.refs['container'] = new Set([c1, c2])
+    base.refs['label'] = new Set([l1, l2])
 
     base.setElementActive('container', ':hover', c1, true)
-    base.applyState(
-      { 'container:hover': true },
-      { triggerKey: 'container', pseudo: ':hover' },
-    )
+    base.applyState({ 'container:hover': true }, { triggerKey: 'container', pseudo: ':hover' })
 
     // The hovered container gets its hover style; its sibling stays resting.
     expect(c1.recorded).toEqual({ bgColor: 'hover' })
@@ -1008,19 +970,16 @@ describe('cross-element interaction isolation (multi-instance)', () => {
     warn.mockRestore()
   })
 
-  test.skip('a single shared instance keeps full cross-element interaction', () => {
+  test('a single shared instance keeps full cross-element interaction', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const base = newBase()
     const c = fakeInteractiveEl()
     const l = fakeInteractiveEl()
-    base.refs['container'] = [c]
-    base.refs['label'] = [l]
+    base.refs['container'] = new Set([c])
+    base.refs['label'] = new Set([l])
 
     base.setElementActive('container', ':hover', c, true)
-    base.applyState(
-      { 'container:hover': true },
-      { triggerKey: 'container', pseudo: ':hover' },
-    )
+    base.applyState({ 'container:hover': true }, { triggerKey: 'container', pseudo: ':hover' })
 
     expect(c.recorded).toEqual({ bgColor: 'hover' })
     // Single instance → the cross-element hover applies live, no suppression.
@@ -1031,15 +990,12 @@ describe('cross-element interaction isolation (multi-instance)', () => {
 })
 
 describe('redundant write elision (multi-instance)', () => {
-  test.skip('an unrelated interaction does not rewrite resting siblings', () => {
+  test('an unrelated interaction does not rewrite resting siblings', () => {
     const { base, a, b } = setupPair()
 
     // Hover A → A hover, B resting (both written once).
     base.setElementActive('box', ':hover', a, true)
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
     expect(a.recorded).toEqual({ bgColor: 'base', color: 'hover' })
     expect(b.recorded).toEqual({ bgColor: 'base' })
 
@@ -1048,10 +1004,7 @@ describe('redundant write elision (multi-instance)', () => {
 
     // Press A. B's resting rule is unchanged, so it must be skipped.
     base.setElementActive('box', ':active', a, true)
-    base.applyState(
-      { 'box:active': true },
-      { triggerKey: 'box', pseudo: ':active' },
-    )
+    base.applyState({ 'box:active': true }, { triggerKey: 'box', pseudo: ':active' })
 
     expect(a.recorded).toEqual({
       bgColor: 'base',
@@ -1066,18 +1019,12 @@ describe('redundant write elision (multi-instance)', () => {
     const { base, a, b } = setupPair()
 
     base.setElementActive('box', ':hover', a, true)
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
     b.recorded = { sentinel: true }
 
     // Hover B too: its rule changes (resting → hover), so it must be written.
     base.setElementActive('box', ':hover', b, true)
-    base.applyState(
-      { 'box:hover': true },
-      { triggerKey: 'box', pseudo: ':hover' },
-    )
+    base.applyState({ 'box:hover': true }, { triggerKey: 'box', pseudo: ':hover' })
 
     expect(b.recorded).toEqual({ bgColor: 'base', color: 'hover' })
   })
@@ -1093,9 +1040,7 @@ describe('elementDescriptors', () => {
     const stylesheet = createStylesheet(mockTokenSystem, rules)
     const base = stylesheet[SYMBOL_INIT](mockConfig, undefined)
 
-    const got = base
-      .elementDescriptors()
-      .sort((a, b) => a.key.localeCompare(b.key))
+    const got = base.elementDescriptors().sort((a, b) => a.key.localeCompare(b.key))
 
     expect(got).toEqual([
       { key: 'label', type: 'text' },
@@ -1222,8 +1167,7 @@ describe('runtime condition algebra (Base)', () => {
     })
     expect(sheet).toBeDefined()
     expect([
-      ...(cqTokenSystem as unknown as { usedConditions: Set<string> })
-        .usedConditions,
+      ...(cqTokenSystem as unknown as { usedConditions: Set<string> }).usedConditions,
     ]).toContain('card/>=612')
   })
 })

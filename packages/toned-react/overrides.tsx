@@ -1,11 +1,6 @@
-import { getConfig } from '@toned/core'
-import {
-  createContext,
-  createElement,
-  type ReactNode,
-  useContext,
-  useMemo,
-} from 'react'
+import { useRuntimeConfig } from './runtime-config.ts'
+import type { Config } from '@toned/core'
+import { createContext, createElement, type ReactNode, useContext, useMemo } from 'react'
 
 /**
  * Stylesheet overrides — the styling analogue of a slot/implementation
@@ -21,11 +16,9 @@ import {
  * whatever it decided applies at that point. Core stays a context and a merge.
  *
  * Resolution: entries accumulate outer→inner (nesting concatenates), and a
- * sheet's matching entries apply in that order — the innermost provider wins
- * where keys collide. The derived sheet is built with the sheet's own
- * `extend`, so an override participates in resolution exactly like declared
- * rules (atomic classes, chains, variants preserved; nested pseudo/breakpoint
- * blocks deep-merge).
+ * sheet's matching entries become complete ordered override layers. The
+ * selected scoped/provider policy chooses their order; later layers win
+ * overlapping output fields, including variant and condition output.
  *
  * Scope: render-time only. Module-level `bind()` cannot read context and is
  * never overridden.
@@ -67,9 +60,7 @@ export function overrideStyles(
   opts?: { scope?: string },
 ): StyleOverrideEntry {
   const base: StyleOverrideEntry =
-    opts?.scope !== undefined
-      ? { sheet, rules, scope: opts.scope }
-      : { sheet, rules }
+    opts?.scope !== undefined ? { sheet, rules, scope: opts.scope } : { sheet, rules }
   return withVariants(base)
 }
 
@@ -77,18 +68,14 @@ export function overrideStyles(
 function withVariants(entry: StyleOverrideEntry): StyleOverrideEntry {
   return Object.defineProperty(entry, 'variants', {
     // biome-ignore lint/suspicious/noExplicitAny: the selector is the sheet's own; index.ts types it
-    value: (fn: ($: any) => AnyRules) =>
-      withVariants({ ...entry, variantRules: fn }),
+    value: (fn: ($: any) => AnyRules) => withVariants({ ...entry, variantRules: fn }),
     enumerable: false,
   }) as StyleOverrideEntry
 }
 
 /** Default scope match: the entry's scope appears in the ambient path as a
  * contiguous run of whole segments. */
-export function matchesScopeDefault(
-  scope: string,
-  ambient: string | null | undefined,
-): boolean {
+export function matchesScopeDefault(scope: string, ambient: string | null | undefined): boolean {
   if (!ambient) return false
   if (scope === ambient) return true
   const a = ambient.split('/')
@@ -113,14 +100,11 @@ export function StyleOverrides({
 }) {
   const outer = useContext(StyleOverridesContext)
   const merged = useMemo(() => [...outer, ...value], [outer, value])
-  return createElement(
-    StyleOverridesContext.Provider,
-    { value: merged },
-    children,
-  )
+  return createElement(StyleOverridesContext.Provider, { value: merged }, children)
 }
 
 interface DerivedCache {
+  config: Config
   /** The full context array the derivation was computed against. */
   context: readonly StyleOverrideEntry[]
   /** The ambient scope at derivation time — scoped matching depends on it. */
@@ -137,10 +121,7 @@ interface DerivedCache {
  */
 const derivedCache = new WeakMap<object, DerivedCache>()
 
-function sameEntries(
-  a: readonly StyleOverrideEntry[],
-  b: readonly StyleOverrideEntry[],
-): boolean {
+function sameEntries(a: readonly StyleOverrideEntry[], b: readonly StyleOverrideEntry[]): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
   return true
@@ -151,25 +132,29 @@ function sameEntries(
  * provided entry matches it, else a derived sheet with the matching rules
  * extended in (cached, so identity is stable while the overrides are).
  */
+const useNoOverrideScope = () => undefined
+
 export function useOverriddenSheet<T extends object>(sheet: T): T {
   const entries = useContext(StyleOverridesContext)
   // The host integration's ambient scope. The hook identity is fixed at config
   // install time, so the call pattern is render-stable; absent hook = no scope.
-  const config = getConfig()
-  const ambient = config.useStyleOverrideScope
-    ? config.useStyleOverrideScope()
-    : undefined
+  const config = useRuntimeConfig()
+  const useOverrideScope = config.useStyleOverrideScope ?? useNoOverrideScope
+  const ambient = useOverrideScope()
   if (entries.length === 0) return sheet
 
   const cached = derivedCache.get(sheet)
-  if (cached && cached.context === entries && cached.ambient === ambient)
+  if (
+    cached &&
+    cached.config === config &&
+    cached.context === entries &&
+    cached.ambient === ambient
+  )
     return cached.derived as T
 
   const matchScope = config.matchStyleOverrideScope ?? matchesScopeDefault
   const applicable = entries.filter(
-    (e) =>
-      e.sheet === sheet &&
-      (e.scope === undefined || matchScope(e.scope, ambient)),
+    e => e.sheet === sheet && (e.scope === undefined || matchScope(e.scope, ambient)),
   )
   // Scoped entries apply after unscoped, most specific (deepest scope) last —
   // so specificity wins over provider order among scoped entries, matching the
@@ -182,6 +167,7 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
   if (matched.length === 0) {
     // Remember the miss so the filter re-runs only when the context changes.
     derivedCache.set(sheet, {
+      config,
       context: entries,
       ambient,
       matched,
@@ -189,8 +175,9 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
     })
     return sheet
   }
-  if (cached && sameEntries(cached.matched, matched)) {
+  if (cached && cached.config === config && sameEntries(cached.matched, matched)) {
     derivedCache.set(sheet, {
+      config,
       context: entries,
       ambient,
       matched,
@@ -201,19 +188,14 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
 
   let derived: object = sheet
   for (const entry of matched) {
-    const extend = (
-      derived as {
-        // biome-ignore lint/suspicious/noExplicitAny: the selector is the sheet's own
-        extend?: (rules: AnyRules, variants?: ($: any) => AnyRules) => object
-      }
-    ).extend
-    if (typeof extend !== 'function') {
+    const applyOverride = (derived as Record<symbol, unknown>)[Symbol.for('@toned/override')]
+    if (typeof applyOverride !== 'function') {
       throw new Error(
-        'StyleOverrides: this stylesheet has no extend() — only sheets from createStylesheet/stylesheet() can be overridden.',
+        'StyleOverrides requires a Toned stylesheet with explicit override-layer support.',
       )
     }
-    derived = extend.call(derived, entry.rules, entry.variantRules)
+    derived = applyOverride.call(derived, entry.rules, entry.variantRules)
   }
-  derivedCache.set(sheet, { context: entries, ambient, matched, derived })
+  derivedCache.set(sheet, { config, context: entries, ambient, matched, derived })
   return derived as T
 }
