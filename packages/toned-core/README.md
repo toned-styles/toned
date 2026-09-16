@@ -1,281 +1,173 @@
 # @toned/core
 
-Minimal core utilities for defining token systems, building stylesheets and runtime style matching rules.
+Toned declares a typed design vocabulary, named parts, variants and conditions.
+The matcher compiles declarations once; output backends resolve them; mounted
+hosts own direct updates. React is a separate integration.
 
-## Quick start
-
-1. Define tokens and units
-
-```ts
-import { defineToken, defineUnit, defineSystem } from '@toned/core'
-```
-
-2. Create a system
+## Declare a system
 
 ```ts
-const color = defineToken({
-  values: ['red','blue'] as const,
-  resolve: (v) => ({ color: v }),
-})
+import { defineSystem, defineToken } from '@toned/core'
 
-const system = defineSystem({ color })
-```
-
-3. Optional - inject generated CSS to DOM (browser)
-
-```ts
-import { generate, inject } from '@toned/core/dom'
-
-const css = generate(system) // returns CSS string
-inject(system) // injects into <style id="toned/main">
-```
-
-## Stylesheet API
-
-### Basic Usage
-
-Create stylesheets with element definitions:
-
-```ts
-import { stylesheet } from '@toned/systems/base'
-
-export const styles = stylesheet({
-  container: {
-    textColor: 'on_action',
-    bgColor: 'default',
-    alignItems: 'flex-start',
-    flexLayout: 'column',
+export const ui = defineSystem({
+  id: 'example',
+  tokens: {
+    bgColor: defineToken({
+      values: ['primary', 'primary-hover'],
+      resolve: value => ({ backgroundColor: value === 'primary' ? '#2563eb' : '#1d4ed8' }),
+    }),
+    opacity: defineToken({ values: [0, 0.5, 1], resolve: value => ({ opacity: value }) }),
   },
-  label: { textColor: 'destructive' },
+  conditions: {
+    media: { md: 768 },
+    containers: { field: { wide: 448 } },
+  },
 })
-```
 
-### Pseudo Classes (Self-Styling)
-
-Add pseudo classes that only affect the element they're defined in:
-
-```ts
-const styles = stylesheet({
-  button: {
+export const button = ui.stylesheet(q => ({
+  Root: {
+    $kind: 'pressable',
     bgColor: 'primary',
-    // Pseudo class only affects button itself
-    ':hover': {
-      bgColor: 'primary_hover',
-    },
-    ':active': {
-      bgColor: 'primary_active',
-    },
+    [q.state('hover')]: { bgColor: 'primary-hover' },
+    '@platform web': { $style: { cursor: 'pointer' } },
   },
-  label: {
-    textColor: 'white',
-  },
-})
-```
-
-### Cross-Element Pseudo Classes
-
-Use flat selectors to affect multiple elements when an element's pseudo state changes:
-
-```ts
-const styles = stylesheet({
-  button: { bgColor: 'primary' },
-  icon: { color: 'white' },
-  label: { textColor: 'white' },
-
-  // When button is hovered, both button and label change
-  'button:hover': {
-    button: { bgColor: 'primary_hover' },
-    label: { textColor: 'primary_text' },
-  },
-
-  // Multiple pseudo classes (must be in alphabetical order)
-  'button:active:hover': {
-    icon: { color: 'accent' },
-  },
-})
-```
-
-### Breakpoints
-
-Add responsive styles using breakpoint selectors:
-
-```ts
-const styles = stylesheet({
-  container: {
-    paddingX: 2,
-    // Breakpoint for small screens
-    '@sm': {
-      paddingX: 4,
-    },
-    '@md': {
-      paddingX: 6,
-    },
-  },
-})
-```
-
-### Variants
-
-Use the `.variants()` chain with a callback for type-safe variant definitions:
-
-```ts
-const styles = stylesheet({
-  container: {
-    bgColor: 'default',
-    borderRadius: 'medium',
-  },
-  label: {
-    textColor: 'primary',
-  },
-}).variants<{
-  size: 'sm' | 'md' | 'lg'
-  variant: 'primary' | 'secondary' | 'danger'
-}>(($) => ({
-  // Single variant
-  [$.size('sm')]: {
-    container: { paddingX: 2, paddingY: 1 },
-    label: { fontSize: 'small' },
-  },
-
-  [$.size('md')]: {
-    container: { paddingX: 4, paddingY: 2 },
-    label: { fontSize: 'medium' },
-  },
-
-  [$.variant('primary')]: {
-    container: { bgColor: 'action' },
-    label: { textColor: 'on_action' },
-  },
-
-  [$.variant('danger')]: {
-    container: { bgColor: 'destructive' },
-    label: { textColor: 'on_destructive' },
-  },
-
-  // Combined variants (order doesn't matter - keys are stable)
-  [$.size('sm').variant('primary')]: {
-    container: { borderColor: 'primary_border' },
+})).variants<{ size: 's' | 'm'; variant: 'accent' | 'quiet' }>()(($, q) => ({
+  [$.size('s').variant('quiet')]: {
+    Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
   },
 }))
 ```
 
-### Named Styles and Composition
+Keep token properties camelCase and named values kebab-case. A semantic
+`typography: 'body-small'` token can resolve several fields; the core does not
+force a CSS vocabulary. `$kind` is static metadata (`view` by default), `$style`
+is low-level styling, `@` introduces a query, and `:` introduces a state.
+Conditional rules inherit the part kind and cannot change it.
 
-Use `$("name")` to define reusable named styles, and `$compose` to compose them:
+`$style` is a portable property/value intersection. Inside `@platform web` it
+accepts web CSS types; inside `@platform native` it accepts the declared native
+style subset for that part kind. Foreign platform blocks are filtered before
+capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
+shorthand because their web/native meanings differ; use semantic typography or
+explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
+in its platform block. Legacy `$$type`, `style`, `@md`, `@field/wide`, and
+`@platform.web` remain compatibility spellings. New code should use canonical
+metadata and explicit platform scopes for platform-specific styles.
+
+New descriptor systems use fixed logical pixels for both viewport and container
+thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
+negative and nonfinite thresholds are rejected. Legacy `defineSystem(tokens,
+config)` retains its spacing-scale container behavior for migration.
+
+## Conditions and precedence
+
+The finite builders `q.state`, `q.media`, `q.container(name, step)`,
+`q.part(name).state`, and `q.platform` return literal keys. Human aliases include
+`:hover`, `@media md`, `@container field wide`, and `@platform web`.
+Use advanced boolean expressions at sheet level:
 
 ```ts
-const styles = stylesheet({
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    borderRadius: 'medium',
-  },
-  label: {
-    textColor: 'primary',
-  },
-}).variants<{
-  size: 'm' | 's'
-  variant: 'accent' | 'danger'
-}>(($) => ({
-  // Named style definition
-  [$('base_button')]: {
-    container: { borderWidth: 'thin' },
-    label: { fontWeight: 'bold' },
-  },
-
-  [$.variant('accent')]: {
-    // Compose named style at variant level
-    $compose: 'base_button',
-    container: {
-      bgColor: 'action',
-      // Compose elements at element level
-      $compose: ['centered'],
-    },
-    label: {
-      textColor: 'on_action',
-    },
-  },
-
-  // Multi-value selectors (OR semantics)
-  [$.size('m').variant('accent', 'danger')]: {
-    container: { paddingX: 4 },
-  },
-}))
+const emphasis = ui.stylesheet({ Root: { opacity: 1 } }).when(
+  ui.q.not(ui.q.any(ui.q.media('md'), ui.q.part('Root').state('hover'))),
+  { Root: { opacity: 0 } },
+)
 ```
 
-### Using Styles in React
+In descriptor systems, later matching declarations within a precedence layer win
+each resolved field. Legacy systems retain their historical pseudo/breakpoint
+order within a layer; a higher override layer still wins over the whole lower layer.
+A compound variant has no implicit specificity bonus. The curried `.variants<Mods>()(factory)` form also checks the complete
+factory result; the old direct callback overload retains structural TypeScript
+compatibility and cannot catch every excess property. Variant keys are canonical
+literal strings at runtime and in TypeScript, including multi-value selections.
+The matcher keeps a fast unsigned single-word path and uses multiple words beyond
+32 allocated values. Equality uses exact rule membership and output operations,
+not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
-```tsx
-import { useStyles } from '@toned/react'
-import { styles } from './styles'
+## Build CSS before rendering
 
-function Button({ size = 'md', variant = 'primary' }) {
-  const s = useStyles(styles, { size, variant })
-
-  return (
-    <button {...s.container}>
-      <span {...s.label}>Click me</span>
-    </button>
-  )
-}
+```ts
+// Build script; include lazy stylesheet declarations explicitly.
+import { buildStyles } from '@toned/core/build'
+const { css, manifest } = buildStyles(ui, { sheets: [button, emphasis], layer: 'components' })
+// Write css to an application asset and manifest to a generated module.
 ```
 
-## Type Safety
+Deliver the asset before first paint. Namespaced systems prefix generated classes,
+condition variables and keyframes with their ID. Theme variables consumed by such
+a system must use the same namespace; `namespaceCss` in the system subpath can
+namespace a generated palette. Application-provided external CSS is not discovered. Resolver implementation
+changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
+The build manifest records ad-hoc conditions and the exact static system schema,
+including named query thresholds. A pure web renderer rejects a changed schema
+or an undeclared condition with a regeneration instruction; it never injects a rule.
 
-The API provides full type inference for:
+`@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
+explicit optional development tool. The old `dom` entry remains compatible.
+The Vite plugin serves `virtual:toned.css`; import it explicitly, supply watched
+`inputs`, and use a fresh `conditions` collector for declaration changes. It no
+longer inserts an extra style node into HTML implicitly.
 
-- Token properties (autocomplete for valid token values)
-- Element names (autocomplete when referencing elements)
-- Pseudo classes (`:hover`, `:active`, `:focus`)
-- Breakpoints (from system configuration)
-- Variant selectors (from `.variants<T>()` type parameter)
+## Pure server and alternative output
 
-## API Reference
+```ts
+import { createWebRenderer } from '@toned/core/server'
+const web = createWebRenderer(ui, { manifest, tokens: {} })
+const props = web.resolve(button, { variants: { size: 's', variant: 'accent' } })
+// <button {...props.Root} /> works in an RSC/server entry: no hooks or refs.
+```
 
-### `stylesheet(rules)`
+`createNativeRenderer` evaluates the same declarations with explicit host facts
+and rejects fields outside its documented finite native profile. Unsupported CSS
+properties and values fail visibly instead of reaching a native host silently.
+`createRenderer` accepts an output backend. `createTailwindBackend` in
+`@toned/core/backends` takes exact field/value/utility mappings and optional fixed
+parameter utilities. Its `source` is complete Tailwind v4 `@source inline()` input,
+including dynamic parameter candidates. It rejects unmapped fields, conflicting
+mapping definitions and CSS condition chains outside its initial runtime-facts
+profile. Matching utility names alone does not establish scale equivalence.
+A classes-only profile rejects dynamic channels. Browser condition support remains
+a declared backend capability, not a promise that every backend supports every rule.
 
-Creates a stylesheet with element definitions.
+`ui.style(declaration)` is a pure immutable declaration helper. Human-authored
+`t(...)` convenience remains compatible; agents should introduce named sheets and
+bindings instead. The legacy `t` resolution getters depend on the installed
+configuration; use the explicit renderer for server/request-isolated output.
 
-**Parameters:**
-- `rules` - Object with element keys and their token styles
+## Typed web grid
 
-**Returns:** Pre-variants stylesheet with `.variants()` method
+```ts
+import { defineGrid, dp, fr } from '@toned/core'
+const message = defineGrid('message', {
+  columns: [dp(48), fr(1)],
+  areas: [['avatar', 'title'], ['.', 'body']],
+})
+const sheet = ui.stylesheet({
+  Root: { '@platform web': { $grid: message } },
+  Avatar: { '@platform web': { $area: message.area('avatar') } },
+  Title: { '@platform web': { $area: message.area('title') } },
+  Body: { '@platform web': { $area: message.area('body') } },
+})
+```
 
-### `.variants<Mods>(callback)`
+Areas infer their names, exclude `.`, retain definition identity, and compile to
+one-based line placements. Construction checks rectangular regions, track counts,
+and finite lengths. Hosts validate direct layout parentage and isolate repeated
+grid instances. Multiple occupants intentionally overlap in source order. Grid
+is enabled on web; native use throws a capability error. A web-scoped grid can
+have an ordinary shared/native fallback. No measured JavaScript grid solver is
+installed; native support awaits a verified integrated layout engine.
 
-Adds variant-based styles to a stylesheet using a type-safe callback.
+## Source map
 
-**Type Parameter:**
-- `Mods` - Object type defining variant names and their possible values
+- `system/`: definitions, normalization, predicate lowering, namespaces.
+- `stylesheet/matcher/`: bitsets, ordered rules, selector and predicate compilation.
+- `stylesheet/StyleSheet.ts`: immutable plan construction and mounted controllers.
+- `stylesheet/applyStyles.ts`: ownership-aware host patching and stale-field reset.
+- `backends/`, `server/`, `build/`: output, pure resolution and build delivery.
+- `grid/`: geometry compilation and host identity checks.
 
-**Parameters:**
-- `callback` - Function receiving `$` selector proxy, returning variant rules
-
-**Returns:** Final stylesheet ready for use with `useStyles`
-
-### Variant Selector (`$`) API
-
-| Selector | Description | Example |
-|----------|-------------|---------|
-| `$("name")` | Named style definition | `[$("base")]: { ... }` |
-| `$.key("value")` | Single variant | `[$.size("sm")]: { ... }` |
-| `$.key("v1", "v2")` | Multi-value (OR) | `[$.size("sm", "md")]: { ... }` |
-| `$.k1("v1").k2("v2")` | Combined variants | `[$.size("sm").variant("primary")]: { ... }` |
-
-### Composition (`$compose`)
-
-| Level | Composes | Example |
-|-------|----------|---------|
-| Variant level | Named styles | `$compose: "base_button"` |
-| Element level | Other elements | `$compose: ["centered", "flex"]` |
-
-### Base Selector Syntax
-
-| Selector | Description | Example |
-|----------|-------------|---------|
-| `element` | Element definition | `container: { ... }` |
-| `:pseudo` | Pseudo class (self only) | `':hover': { ... }` |
-| `@breakpoint` | Breakpoint (self only) | `'@sm': { ... }` |
-| `element:pseudo` | Cross-element pseudo | `'container:hover': { ... }` |
+Tests cover bit boundaries, reference evaluation, zero/conditional properties,
+selector types, suspended React work, ref cleanup, theme updates and owned native
+patches. The HQ integration adds real-browser first-paint and showcase gates.
+A fixture is not certification of a React Native/Fabric device integration.

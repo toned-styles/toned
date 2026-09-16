@@ -11,7 +11,7 @@ import { bind, overrideStyles, useBind, useStyles } from './index.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent'] as const,
-  resolve: (value) => ({ backgroundColor: value }),
+  resolve: value => ({ backgroundColor: value }),
 })
 
 const system = defineSystem({ bgColor })
@@ -23,7 +23,7 @@ const plain = system.stylesheet({
 
 const varianted = system
   .stylesheet({ root: { bgColor: 'base' } })
-  .variants<{ tone: 'calm' | 'loud' }>(($) => ({
+  .variants<{ tone: 'calm' | 'loud' }>($ => ({
     [$.tone('loud')]: { root: { bgColor: 'accent' } },
   }))
 
@@ -114,7 +114,7 @@ export function ModlessBind() {
  */
 const overridable = system
   .stylesheet({ root: { bgColor: 'base' }, icon: { bgColor: 'accent' } })
-  .variants<{ size: 'sm' | 'lg' }>(($) => ({
+  .variants<{ size: 'sm' | 'lg' }>($ => ({
     [$.size('sm')]: { root: { bgColor: 'accent' } },
   }))
 
@@ -130,27 +130,53 @@ overrideStyles(overridable, { nope: { bgColor: 'base' } })
 overrideStyles(overridable, { root: { bgColor: 'nope' } })
 
 // Variants: the sheet's own axes, replacing a matcher or adding one.
-overrideStyles(overridable, {}).variants(($) => ({
+overrideStyles(overridable, {}).variants($ => ({
   [$.size('sm')]: { root: { bgColor: 'base' } },
   [$.size('lg')]: { icon: { ':hover': { bgColor: 'accent' } } },
 }))
 
-overrideStyles(overridable, {}).variants(($) => ({
+overrideStyles(overridable, {}).variants($ => ({
   // @ts-expect-error — a value the axis does not have
   [$.size('xl')]: { root: { bgColor: 'base' } },
 }))
 
-overrideStyles(overridable, {}).variants(($) => ({
+overrideStyles(overridable, {}).variants($ => {
   // @ts-expect-error — an axis the sheet does not declare
-  [$.tone('quiet')]: { root: { bgColor: 'base' } },
-}))
+  $.tone('quiet')
+  return {}
+})
 
 // @ts-expect-error — an unknown element inside a matcher
-overrideStyles(overridable, {}).variants(($) => ({
+overrideStyles(overridable, {}).variants($ => ({
   [$.size('sm')]: { nope: { bgColor: 'base' } },
 }))
 
 // @ts-expect-error — a bad token value inside a matcher
-overrideStyles(overridable, {}).variants(($) => ({
+overrideStyles(overridable, {}).variants($ => ({
   [$.size('sm')]: { root: { bgColor: 'nope' } },
+}))
+
+export function TypedHostProps() {
+  const s = useStyles(plain)
+  s.container.withProps<'button'>({ type: 'submit', disabled: true, 'data-testid': 'save' })
+  s.container.withProps<'input'>({ value: 'text', onChange: event => event.currentTarget.value })
+  // @ts-expect-error button type is restricted by the selected host
+  s.container.withProps<'button'>({ type: 'arbitrary' })
+  // @ts-expect-error semantic tokens are declarations, not host props
+  s.container.withProps({ bgColor: 'accent' })
+  return null
+}
+
+// Override factories share the same finite query builder and check inferred keys.
+overrideStyles(overridable, q => ({ root: { [q.state('hover')]: { bgColor: 'base' } } }))
+overrideStyles(overridable, {}).variants(($, q) => ({
+  [$.size('sm')]: { root: { [q.state('hover')]: { bgColor: 'accent' } } },
+}))
+// @ts-expect-error override variants reject a token typo beside a computed atom
+overrideStyles(overridable, {}).variants(($, q) => ({
+  [$.size('sm')]: { root: { [q.state('hover')]: { bgColor: 'accent' }, bgClor: 'base' } },
+}))
+// @ts-expect-error override factories reject extra token keys
+overrideStyles(overridable, q => ({
+  root: { [q.state('hover')]: { bgColor: 'base' }, bgClor: 'base' },
 }))

@@ -107,8 +107,6 @@ cqSystem.stylesheet({
   },
   // condition EXPRESSIONS are root-level blocks — ad-hoc widths on declared
   // names, negation, algebra, and the system's typed builders as computed keys
-  '@card/>=100': { root: { bgColor: 'accent' } },
-  '@!card/>=100': { root: { bgColor: 'accent' } },
   '@md&card/>=100': { root: { bgColor: 'accent' } },
   [cqSystem.cq('card').min(100)]: { root: { bgColor: 'accent' } },
   [cqSystem.cq('card').below(100)]: { root: { bgColor: 'accent' } },

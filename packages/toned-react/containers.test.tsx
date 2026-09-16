@@ -114,7 +114,8 @@ describe('runtime container queries (binding)', () => {
     })
     try {
       const hideStyles = stylesheet({
-        Label: { w: 'narrow', [String(cq('card').below(100))]: { style: { display: 'none' } } },
+        Label: { w: 'narrow' },
+        [cq('card').below(100)]: { Label: { style: { display: 'none' } } },
       })
       function HideChild() {
         const s = useBind(hideStyles)

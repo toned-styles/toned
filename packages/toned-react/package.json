@@ -33,7 +33,8 @@
     "@types/react19": "npm:@types/react@^19.2.2",
     "happy-dom": "^20.11.1",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "@types/react-dom": "^19.2.3"
   },
   "exports": {
     ".": "./index.ts",

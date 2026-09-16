@@ -1,5 +1,7 @@
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import { generate } from '../dom/generate.ts'
+import type { Plugin } from 'vite'
+import { resolve } from 'node:path'
 
 const VIRTUAL_ID = 'virtual:toned.css'
 const RESOLVED_ID = '\0virtual:toned.css'
@@ -17,48 +19,44 @@ export interface TonedPluginOptions {
    * (the default), the generated rules beat every layered rule on the page.
    */
   layer?: string
+  id?: string
+  scope?: string
+  /** Explicit declaration modules/assets watched by the build. */
+  inputs?: readonly string[]
+  /** Recollect after a watched declaration changes; include lazy sheets. */
+  conditions?: readonly string[] | (() => readonly string[] | Promise<readonly string[]>)
 }
 
-export default function toned(options: TonedPluginOptions) {
-  const generated = generate(options.system)
-  const css = options.layer
-    ? `@layer ${options.layer} {\n${generated}\n}`
-    : generated
+export default function toned(options: TonedPluginOptions): Plugin {
+  let inputs = new Set<string>()
+  const render = async () => {
+    const conditions = typeof options.conditions === 'function' ? await options.conditions() : options.conditions
+    const generated = generate(options.system, { id: options.id, scope: options.scope, conditions })
+    return options.layer ? `@layer ${options.layer} {\n${generated}\n}` : generated
+  }
 
   return {
     name: 'toned',
+    configResolved(config) {
+      inputs = new Set((options.inputs ?? []).map(file => resolve(config.root, file)))
+    },
+    buildStart() {
+      for (const file of inputs) this.addWatchFile(file)
+    },
     resolveId(id: string) {
       if (id === VIRTUAL_ID) return RESOLVED_ID
     },
-    load(id: string) {
+    async load(id: string) {
       if (id === RESOLVED_ID) {
-        return css
+        return render()
       }
     },
-    transformIndexHtml(
-      _html: string,
-      ctx: {
-        server?: { moduleGraph: { urlToModuleMap: Map<string, unknown> } }
-      },
-    ) {
-      if (!ctx.server) return
-
-      const cssLinks = Array.from(ctx.server.moduleGraph.urlToModuleMap.keys())
-        .filter((url) => url.endsWith('.css') && !url.includes('?'))
-        .map((url) => ({
-          tag: 'link' as const,
-          attrs: { rel: 'stylesheet', href: url },
-          injectTo: 'head' as const,
-        }))
-
-      return [
-        {
-          tag: 'style',
-          children: css,
-          injectTo: 'head' as const,
-        },
-        ...cssLinks,
-      ]
+    handleHotUpdate(ctx) {
+      if (!inputs.has(ctx.file)) return
+      const module = ctx.server.moduleGraph.getModuleById(RESOLVED_ID)
+      if (!module) return
+      ctx.server.moduleGraph.invalidateModule(module)
+      return [module]
     },
   }
 }

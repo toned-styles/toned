@@ -84,7 +84,8 @@ describe('shared compiled matcher', () => {
 describe('shared media emitter', () => {
   test('runtime media mode registers matchMedia listeners once per system, not per instance', () => {
     const addListener = vi.fn()
-    const matchMedia = vi.fn(() => ({ matches: false, addListener }))
+    const removeListener = vi.fn()
+    const matchMedia = vi.fn(() => ({ matches: false, addListener, removeListener }))
     // biome-ignore lint/suspicious/noExplicitAny: test window stub
     ;(globalThis as any).window = { matchMedia }
 
@@ -94,13 +95,20 @@ describe('shared media emitter', () => {
       useMedia: true,
       mediaMode: 'runtime' as const,
     }
-    init(sheet, runtimeConfig)
+    const first = init(sheet, runtimeConfig)
+    expect(matchMedia).not.toHaveBeenCalled()
+    const stopFirst = first.mount()
     const callsAfterFirst = matchMedia.mock.calls.length
     expect(callsAfterFirst).toBeGreaterThan(0)
 
-    init(sheet, runtimeConfig)
-    init(system.stylesheet({ root: { bgColor: 'accent' } }), runtimeConfig)
+    const stopSecond = init(sheet, runtimeConfig).mount()
+    const stopThird = init(system.stylesheet({ root: { bgColor: 'accent' } }), runtimeConfig).mount()
     expect(matchMedia.mock.calls.length).toBe(callsAfterFirst)
+    stopFirst()
+    stopSecond()
+    expect(removeListener).not.toHaveBeenCalled()
+    stopThird()
+    expect(removeListener).toHaveBeenCalledTimes(callsAfterFirst)
   })
 })
 

@@ -45,6 +45,7 @@ const HOVER = ':hover'
 export function resolveCrossHoverCss(
   rules: AnyValue,
   stateAliases: readonly string[] = [],
+  knownParts?: ReadonlySet<string>,
 ): AnyValue {
   let out: AnyValue | undefined
   for (const key in rules) {
@@ -82,7 +83,7 @@ export function resolveCrossHoverCss(
       channel = `${prefix}-${suffix.slice(1)}`
     if (!channel) continue
 
-    if (!(bareSource in rules)) continue
+    if (!(bareSource in rules) && !knownParts?.has(bareSource)) continue
     const elementMap = rules[key]
     if (!elementMap || typeof elementMap !== 'object') continue
 
@@ -99,7 +100,7 @@ export function resolveCrossHoverCss(
 
     for (const targetKeyRaw in elementMap) {
       const targetKey = targetKeyRaw.replace(/^\$/, '')
-      if (!(targetKey in rules)) continue
+      if (!(targetKey in rules) && !knownParts?.has(targetKey)) continue
       const styles = elementMap[targetKeyRaw]
       if (!styles || typeof styles !== 'object') continue
       const target = { ...(out[targetKey] ?? {}) }

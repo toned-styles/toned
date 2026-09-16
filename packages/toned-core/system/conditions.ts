@@ -24,7 +24,6 @@ import {
   type ConditionExpr,
 } from '../utils/conditions.ts'
 
-const SYMBOL_EXPR = Symbol.for('@toned/core/CONDITION_EXPR')
 
 /**
  * A condition node. TYPED as its serialized key intersected with the carried
@@ -34,9 +33,7 @@ const SYMBOL_EXPR = Symbol.for('@toned/core/CONDITION_EXPR')
  * check it. At runtime it is an object whose toString/toPrimitive yield the
  * key.
  */
-export type Condition<K extends `@${string}` = `@${string}`> = K & {
-  readonly [SYMBOL_EXPR]: ConditionExpr
-}
+export type Condition<K extends `@${string}` = `@${string}`> = K
 
 /**
  * What a combinator's key can look like — one of the expression-shaped
@@ -50,20 +47,13 @@ export type CombinedConditionKey =
 
 function node<K extends `@${string}`>(expr: ConditionExpr): Condition<K> {
   const key = `@${serializeExpr(expr)}`
-  return {
-    [SYMBOL_EXPR]: expr,
-    toString: () => key,
-    [Symbol.toPrimitive]: () => key,
-  } as unknown as Condition<K>
+  return key as Condition<K>
 }
 
 function exprOf(c: Condition | string): ConditionExpr {
-  if (typeof c === 'string') {
-    const parsed = parseConditionKey(c[0] === '@' ? c.slice(1) : c)
-    if (!parsed) throw new Error(`not a condition key: ${JSON.stringify(c)}`)
-    return parsed
-  }
-  return (c as unknown as { [SYMBOL_EXPR]: ConditionExpr })[SYMBOL_EXPR]
+  const parsed = parseConditionKey(c[0] === '@' ? c.slice(1) : c)
+  if (!parsed) throw new Error(`not a condition key: ${JSON.stringify(c)}`)
+  return parsed
 }
 
 const atom = <K extends `@${string}`>(a: ConditionAtom): Condition<K> =>

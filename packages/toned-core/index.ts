@@ -64,3 +64,8 @@ export type {
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'
 export { bridgeVarName } from './utils/css.ts'
+export { defineGrid, dp, fr, percent } from './grid/index.ts'
+export type { GridArea, GridDefinition, GridPlacement, GridTrack } from './grid/index.ts'
+export type { QueryBuilder, QueryPredicate, QueryAtom } from './system/queries.ts'
+export type { PortableInlineStyle, PlatformStyle, NativeInlineStyle, WebInlineStyle } from './types/style.ts'
+export type { SystemOptions, SystemDefinition } from './system/definers.ts'

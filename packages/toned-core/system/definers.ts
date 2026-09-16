@@ -4,13 +4,21 @@
  * @module system/definers
  */
 
+import type { DEFAULT_KIND } from '../types/stylesheet.ts'
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import { bp, cq } from './conditions.ts'
+import { fixedConditions, type SystemDefinition, type SystemOptions } from './definition.ts'
+import { immutableSnapshot } from '../utils/immutable.ts'
+export type { SystemDefinition, SystemOptions } from './definition.ts'
+import { createQueries } from './queries.ts'
+import { applyOperationOrder, applyConditionalOrder } from './operation-order.ts'
+import type { TokenOperation } from '../stylesheet/matcher/normalizeRules.ts'
+import { compilePredicateGuard, CONDITIONAL_RULES, type ConditionalRule } from './predicate-css.ts'
+import { namespaceOutput, validateSystemId } from './namespace.ts'
+import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
 import { isAnimationDefinition } from '../types/index.ts'
 import type {
   AnimationInput,
-  Breakpoints,
-  BridgeConfig,
   ResolveContext,
   StylesheetInput,
   StylesheetType,
@@ -62,6 +70,21 @@ export type { TokenSystem }
  * ```
  */
 export function defineToken<
+  const Values extends readonly unknown[],
+  Result extends {},
+  const Dynamic extends 'number' | 'string',
+  const Extra extends TokenAlphaConfig & TokenTypeConfig = {},
+>(
+  config: Omit<TokenConfig<Values, Result>, 'resolve' | 'dynamic'> & {
+    dynamic: Dynamic
+    resolve: (
+      value: Values[number] | (Dynamic extends 'number' ? number : string),
+      tokens: Tokens,
+      context?: ResolveContext,
+    ) => Result
+  } & Extra,
+): TokenConfig<Values, Result> & Extra & { dynamic: Dynamic }
+export function defineToken<
   // biome-ignore lint/suspicious/noExplicitAny: Values must accept any const array for token definitions
   const Values extends readonly any[],
   // Result type is intentionally loose - could be CSSProperties but allows custom token styles
@@ -69,9 +92,8 @@ export function defineToken<
   // Preserved so TokenStyle can see whether the token declared an alphaChannel
   // and widen its accepted values to `'value/alpha'`.
   const Extra extends TokenAlphaConfig & TokenTypeConfig = {},
->(
-  config: TokenConfig<Values, Result> & Extra,
-): TokenConfig<Values, Result> & Extra {
+>(config: TokenConfig<Values, Result> & Extra): TokenConfig<Values, Result> & Extra
+export function defineToken(config: any): any {
   return config
 }
 
@@ -95,19 +117,16 @@ export function defineToken<
  * )
  * ```
  */
-export function defineAnimations<
-  const A extends Record<string, AnimationInput>,
->(animations: A) {
+export function defineAnimations<const A extends Record<string, AnimationInput>>(animations: A) {
   const ms = (v: number | string | undefined) =>
     v === undefined ? undefined : typeof v === 'number' ? `${v}ms` : v
   return {
     animations,
     animation: defineToken({
       values: Object.keys(animations) as (keyof A & string)[],
-      resolve: (value) => {
+      resolve: value => {
         const def = animations[value]
-        const timing =
-          def !== undefined && isAnimationDefinition(def) ? def : undefined
+        const timing = def !== undefined && isAnimationDefinition(def) ? def : undefined
         // Timing compiles INTO the animation's class, so `animation: 'pulse'`
         // is self-contained; a consumer can still override any piece.
         return {
@@ -146,9 +165,7 @@ export function defineAnimations<
  * )
  * ```
  */
-export function defineUnit<T>(
-  resolver: (value: T, tokens: Tokens) => number | string | undefined,
-) {
+export function defineUnit<T>(resolver: (value: T, tokens: Tokens) => number | string | undefined) {
   return resolver
 }
 
@@ -191,10 +208,7 @@ function resolveTokenValue(
   if (tokenCfg.alphaChannel) {
     const parsed = splitAlphaValue(value)
     if (parsed && tokenCfg.values.includes(parsed.base)) {
-      const resolved = tokenCfg.resolve(parsed.base, tokens, ctx) as Record<
-        string,
-        unknown
-      >
+      const resolved = tokenCfg.resolve(parsed.base, tokens, ctx) as Record<string, unknown>
       // biome-ignore lint/suspicious/noExplicitAny: dynamic result shape
       const out: Record<string, any> = {}
       for (const prop in resolved) {
@@ -246,36 +260,58 @@ function resolveForChain(
 }
 
 export function defineSystem<
-  // biome-ignore lint/suspicious/noExplicitAny: generic token system requires flexible types
   const S extends Record<string, TokenConfig<any, any>>,
-  const C extends {
-    // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
-    breakpoints?: Breakpoints<any>
-    animations?: Record<string, AnimationInput>
-    bridges?: Record<string, BridgeConfig>
-    states?: Record<string, string>
-    /** See `TokenStyleDeclaration.responsiveTokens`. */
-    responsiveTokens?: readonly string[]
-    /** See `TokenStyleDeclaration.containers`. */
-    containers?: Record<string, Record<string, number | string>>
-    /** See `TokenStyleDeclaration.base` — px per numeric unit (default 4). */
-    base?: number
-  },
->(system: S, config?: C): TokenSystem<S & C, C> {
+  const C extends SystemOptions = {},
+>(definition: SystemDefinition<S, C>): TokenSystem<S & C & { readonly [DEFAULT_KIND]: 'view' }, C>
+export function defineSystem<
+  const S extends Record<string, TokenConfig<any, any>>,
+  const C extends SystemOptions = {},
+>(system: S, config?: C): TokenSystem<S & C, C>
+export function defineSystem<
+  const S extends Record<string, TokenConfig<any, any>>,
+  const C extends SystemOptions = {},
+>(input: S | SystemDefinition<S, C>, legacyConfig?: C): TokenSystem<S & C, C> {
+  const descriptor =
+    typeof input['id'] === 'string' && 'tokens' in input
+      ? (input as SystemDefinition<S, C>)
+      : undefined
+  const system = descriptor ? immutableSnapshot(descriptor.tokens) : (input as S)
+  const config = descriptor ? fixedConditions(descriptor.conditions) : immutableSnapshot(legacyConfig)
+  const id = descriptor ? validateSystemId(descriptor.id) : undefined
+  for (const key of Object.keys(system)) {
+    if (
+      /^[$@:]/.test(key) ||
+      [
+        'media',
+        'breakpoints',
+        'containers',
+        'states',
+        'base',
+        'animations',
+        'bridges',
+        'responsiveTokens',
+      ].includes(key)
+    )
+      throw new Error(`Toned: reserved token name ${JSON.stringify(key)}`)
+  }
   const ref: TokenSystem<S & C, C> = {
-    system: { ...system, ...config } as S & C,
+    id,
+    tokens: Object.freeze({ ...system }) as unknown as TokenSystem<S & C, C>['tokens'],
+    themes: descriptor?.themes ? immutableSnapshot(descriptor.themes) : undefined,
+    system: Object.freeze({ ...system, ...config }) as S & C,
     config,
+    q: createQueries<C>(),
     usedConditions: new Set<string>(),
     // The generic builders, retyped to this system's declared names.
     cq: cq as TokenSystem<S & C, C>['cq'],
     bp: bp as TokenSystem<S & C, C>['bp'],
+    style: value => immutableSnapshot(normalizeDeclarations(value)),
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
-        const src = (SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v) as Record<
-          string,
-          unknown
-        > & { style?: unknown }
+        const src = (SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v) as Record<string, unknown> & {
+          style?: unknown
+        }
         // Deep-merge the `style` object so later arguments extend earlier
         // entries instead of replacing them. A shallow copy would drop style
         // props set by earlier arguments.
@@ -324,11 +360,16 @@ export function defineSystem<
       // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on S & C intersection
       return result as any
     },
-    stylesheet: (<T extends StylesheetInput<S & C, T>>(rules: T) => {
+    stylesheet: (<T extends StylesheetInput<S & C, T>>(
+      rules: T | ((q: TokenSystem<S & C, C>['q']) => T),
+    ) => {
       // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
-      return createStylesheet(ref as any, rules)
+      const declaration = normalizeDeclarations(typeof rules === 'function' ? rules(ref.q) : rules)
+      if (id) validateDeclarations(declaration, config ?? {})
+      return createStylesheet(ref as any, declaration)
     }) as StylesheetType<S & C>,
-    exec: (execConfig, tokenStyle) => {
+    exec: function execute(execConfig, tokenStyle, unnamespaced = false) {
+      tokenStyle = normalizeDeclarations(tokenStyle)
       // Threaded into every token's resolve so a token can branch per platform
       // (elevation → box-shadow on web, shadow* on native). Defaults to 'web'
       // when no binding set a platform — the same baseline generate.ts uses, so
@@ -338,15 +379,15 @@ export function defineSystem<
       // interaction pseudos): a `data-state=on` paint beats `:hover`. Config
       // order decides precedence among states.
       const stateAliases = config?.states ? Object.keys(config.states) : []
-      const stateOrder = stateAliases.map((k) => `:${k}` as const)
+      const stateOrder = stateAliases.map(k => `:${k}` as const)
       // Their cross-element counterparts (`'source:<alias>'` → `:src-<alias>` on a
       // descendant target) sit INNERMOST, below every self state/pseudo, so a
       // target that also styles its own state keeps the more specific answer —
       // exactly as `:src-hover` sits below `:hover`.
-      const srcStateOrder = stateAliases.map((k) => `:src-${k}` as const)
+      const srcStateOrder = stateAliases.map(k => `:src-${k}` as const)
       // The sibling channels ('source~:<alias>' → ':sib-<alias>' on a
       // following-sibling target) sit below even the descendant channels.
-      const sibStateOrder = stateAliases.map((k) => `:sib-${k}` as const)
+      const sibStateOrder = stateAliases.map(k => `:sib-${k}` as const)
       const cascadeOrder = [
         ...sibStateOrder,
         ...srcStateOrder,
@@ -363,21 +404,17 @@ export function defineSystem<
        * compound needs no new generated css. Runtime pseudo mode does not
        * track compounds — they are a css-mode capability.
        */
-      const chainVarName = (pseudo: string): string =>
-        pseudo.slice(1).replaceAll(':', '--')
+      const chainVarName = (pseudo: string): string => pseudo.slice(1).replaceAll(':', '--')
       const chainGuard = (pseudo: string): string =>
         pseudo
           .slice(1)
           .split(':')
-          .map((part) => `var(--toned_${part})`)
+          .map(part => `var(--toned_${part})`)
           .join(' ')
-      const withCompounds = (
-        overrides: Array<{ pseudo: string }>,
-      ): readonly string[] => {
+      const withCompounds = (overrides: Array<{ pseudo: string }>): readonly string[] => {
         const compounds: string[] = []
         for (const { pseudo } of overrides) {
-          if (pseudo.indexOf(':', 1) !== -1 && !compounds.includes(pseudo))
-            compounds.push(pseudo)
+          if (pseudo.indexOf(':', 1) !== -1 && !compounds.includes(pseudo)) compounds.push(pseudo)
         }
         if (compounds.length === 0) return cascadeOrder
         compounds.sort((a, b) => a.split(':').length - b.split(':').length)
@@ -408,15 +445,8 @@ export function defineSystem<
         // path flattens them into `':hover_prop'`/`'@md_prop'` keys before
         // exec ever sees them. Flatten here so both paths agree; before this,
         // `t()` silently dropped every such block.
-        if (
-          (k[0] === ':' || k[0] === '@') &&
-          !k.includes('_') &&
-          v &&
-          typeof v === 'object'
-        ) {
-          for (const [prop, val] of Object.entries(
-            v as Record<string, unknown>,
-          )) {
+        if ((k[0] === ':' || k[0] === '@') && !k.includes('_') && v && typeof v === 'object') {
+          for (const [prop, val] of Object.entries(v as Record<string, unknown>)) {
             if (val == null) continue
             if (k[0] === '@') {
               breakpointOverrides[prop] ??= []
@@ -485,10 +515,7 @@ export function defineSystem<
         if (tokenCfg?.alphaChannel) {
           const parsed = splitAlphaValue(v)
           if (parsed && tokenCfg.values.includes(parsed.base)) {
-            if (
-              execConfig.useClassName &&
-              tokenCfg.values.includes(parsed.base)
-            ) {
+            if (execConfig.useClassName && tokenCfg.values.includes(parsed.base)) {
               const steps = tokenCfg.alphaSteps ?? DEFAULT_ALPHA_STEPS
               acc.className ??= ''
               acc.className += ` ${k}_${parsed.base}`
@@ -507,17 +534,13 @@ export function defineSystem<
             // Inline path (no className mode, or native): resolve the base and
             // alpha the channel values directly — var() refs route through
             // relative colour syntax, literals compute an rgba.
-            const resolved = tokenCfg.resolve(
-              parsed.base,
-              execConfig.tokens,
-              ctx,
-            ) as Record<string, unknown>
+            const resolved = tokenCfg.resolve(parsed.base, execConfig.tokens, ctx) as Record<
+              string,
+              unknown
+            >
             for (const prop in resolved) {
               const value = resolved[prop]
-              if (
-                tokenCfg.alphaChannel.includes(prop) &&
-                alphaWrappable(value)
-              ) {
+              if (tokenCfg.alphaChannel.includes(prop) && alphaWrappable(value)) {
                 resolved[prop] = applyAlpha(value, parsed.alpha / 100)
               }
             }
@@ -559,12 +582,12 @@ export function defineSystem<
             const body = o.breakpoint.slice(1)
             if (exprByKey.has(body)) continue
             const expr = parseConditionKey(body)
-            if (!expr || !expr.every((clause) => clause.every(atomDeclared))) {
+            if (!expr || !expr.every(clause => clause.every(atomDeclared))) {
               warnOnce(
                 `condition:${body}`,
                 `the condition key '@${body}' names an undeclared breakpoint or ` +
-                  `container (or does not parse) — the override is dropped. ` +
-                  `Container NAMES must be declared in the system's ` +
+                  'container (or does not parse) — the override is dropped. ' +
+                  "Container NAMES must be declared in the system's " +
                   `\`containers\`; only their condition VALUES are free.`,
               )
               continue
@@ -592,10 +615,7 @@ export function defineSystem<
             : [
                 1,
                 containerOrder.indexOf(a.container),
-                lengthToPx(
-                  a.step !== null ? cqValues![a.container]![a.step]! : a.min!,
-                  basePx,
-                ),
+                lengthToPx(a.step !== null ? cqValues![a.container]![a.step]! : a.min!, basePx),
               ]
         const simpleKeys: string[] = []
         const complexKeys: string[] = []
@@ -618,8 +638,7 @@ export function defineSystem<
             const allCssProps = new Set<string>()
             for (const { value } of overrides) {
               if (value && typeof value === 'object') {
-                for (const cssProp in value as Record<string, unknown>)
-                  allCssProps.add(cssProp)
+                for (const cssProp in value as Record<string, unknown>) allCssProps.add(cssProp)
               }
             }
             for (const cssProp of allCssProps) {
@@ -638,12 +657,11 @@ export function defineSystem<
                     `${clauseGuard(clause)} ${styleVal[cssProp]}`
                 }
               }
-              const baseValue =
-                acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
+              const baseValue = acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
               for (const condKey of orderedKeys) {
                 if (
-                  !overrides.some((o) => {
+                  !overrides.some(o => {
                     const sv = o.value as Record<string, unknown> | null
                     return o.breakpoint === `@${condKey}` && sv?.[cssProp] != null
                   })
@@ -652,9 +670,7 @@ export function defineSystem<
                 for (const clause of exprByKey.get(condKey)!) {
                   const varName = `--${clauseSlug(clause)}__${kebabProp}__style`
                   chain =
-                    chain === null
-                      ? `var(${varName}, revert-layer)`
-                      : `var(${varName}, ${chain})`
+                    chain === null ? `var(${varName}, revert-layer)` : `var(${varName}, ${chain})`
                 }
               }
               if (chain !== null) acc.style[cssProp] = chain
@@ -668,25 +684,21 @@ export function defineSystem<
           // the resting atomic. All-or-nothing per property: a mixed set
           // (one boxed-primitive escape) keeps the whole chain so the
           // breakpoint ORDER stays inside one mechanism.
-          const responsive = (config as { responsiveTokens?: readonly string[] })
-            ?.responsiveTokens
+          const responsive = (config as { responsiveTokens?: readonly string[] })?.responsiveTokens
           if (
             execConfig.useClassName &&
             responsive?.includes(prop) &&
             // Only simple positive BREAKPOINT atoms have responsive atomic
             // classes — container conditions and algebraic expressions always
             // ride the chain.
-            overrides.every((o) => {
+            overrides.every(o => {
               const expr = exprByKey.get(o.breakpoint.slice(1))
-              return (
-                expr !== undefined &&
-                isSimpleExpr(expr) &&
-                expr[0]![0]!.container === null
-              )
+              return expr !== undefined && isSimpleExpr(expr) && expr[0]![0]!.container === null
             }) &&
-            overrides.every((o) =>
-              (system[prop] as { values?: readonly unknown[] } | undefined)
-                ?.values?.includes(o.value),
+            overrides.every(o =>
+              (system[prop] as { values?: readonly unknown[] } | undefined)?.values?.includes(
+                o.value,
+              ),
             )
           ) {
             for (const o of overrides) {
@@ -708,14 +720,9 @@ export function defineSystem<
             : null
           if (hasBase && !resolvedBase) continue
 
-          const resolvedOverrides = overrides.map((o) => ({
+          const resolvedOverrides = overrides.map(o => ({
             breakpoint: o.breakpoint,
-            resolved: resolveForChain(
-              system[prop],
-              o.value,
-              execConfig.tokens,
-              ctx,
-            ),
+            resolved: resolveForChain(system[prop], o.value, execConfig.tokens, ctx),
           }))
 
           // CSS property names come from the base AND the overrides, so a
@@ -734,7 +741,7 @@ export function defineSystem<
             // same product guard compound pseudo keys use; NOT rides the
             // `-not` complement toggle inside the guard).
             for (const { breakpoint, resolved } of resolvedOverrides) {
-              if (!resolved?.[cssProp]) continue
+              if (resolved?.[cssProp] == null) continue
               const expr = exprByKey.get(breakpoint.slice(1))
               if (!expr) continue
               for (const clause of expr) {
@@ -752,23 +759,23 @@ export function defineSystem<
             // resting ATOMIC CLASS for the same property still applies — where
             // an open-ended chain computed to unset and stomped it.
             let chain =
-              resolvedBase?.[cssProp] != null
-                ? String(resolvedBase[cssProp])
-                : null
+              acc.style[cssProp] != null
+                ? String(acc.style[cssProp])
+                : resolvedBase?.[cssProp] != null
+                  ? String(resolvedBase[cssProp])
+                  : null
             for (const condKey of orderedKeys) {
               const condAtKey = `@${condKey}`
               if (
                 !resolvedOverrides.some(
-                  (o) => o.breakpoint === condAtKey && o.resolved?.[cssProp],
+                  o => o.breakpoint === condAtKey && o.resolved?.[cssProp] != null,
                 )
               )
                 continue
               for (const clause of exprByKey.get(condKey)!) {
                 const varName = `--${clauseSlug(clause)}__${kebabProp}`
                 chain =
-                  chain === null
-                    ? `var(${varName}, revert-layer)`
-                    : `var(${varName}, ${chain})`
+                  chain === null ? `var(${varName}, revert-layer)` : `var(${varName}, ${chain})`
               }
             }
 
@@ -798,8 +805,7 @@ export function defineSystem<
             const allCssProps = new Set<string>()
             for (const { value } of overrides) {
               if (value && typeof value === 'object') {
-                for (const cssProp in value as Record<string, unknown>)
-                  allCssProps.add(cssProp)
+                for (const cssProp in value as Record<string, unknown>) allCssProps.add(cssProp)
               }
             }
             for (const cssProp of allCssProps) {
@@ -810,20 +816,17 @@ export function defineSystem<
                 const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}__style`
                 acc.style[varName] = `${chainGuard(pseudo)} ${styleVal[cssProp]}`
               }
-              const baseValue =
-                acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
+              const baseValue = acc.style[cssProp] != null ? String(acc.style[cssProp]) : null
               let chain = baseValue
               for (const pseudo of withCompounds(overrides)) {
                 if (
-                  overrides.some((o) => {
+                  overrides.some(o => {
                     const sv = o.value as Record<string, unknown> | null
                     return o.pseudo === pseudo && sv?.[cssProp] != null
                   })
                 ) {
                   const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}__style`
-                  chain = chain
-                    ? `var(${varName}, ${chain})`
-                    : `var(${varName})`
+                  chain = chain ? `var(${varName}, ${chain})` : `var(${varName})`
                 }
               }
               if (chain) {
@@ -837,36 +840,23 @@ export function defineSystem<
           const baseTokenValue = tokenStyle[prop]
           const resolvedBase =
             baseTokenValue != null
-              ? resolveForChain(
-                  system[prop],
-                  baseTokenValue,
-                  execConfig.tokens,
-                  ctx,
-                )
+              ? resolveForChain(system[prop], baseTokenValue, execConfig.tokens, ctx)
               : null
 
-          // Get CSS property names from any override's resolution
-          const sampleResolved = resolveTokenValue(
-            system[prop],
-            overrides[0]?.value,
-            execConfig.tokens,
-            ctx,
-          )
-          if (!sampleResolved) continue
-
-          for (const cssProp in sampleResolved) {
+          // A resolver may emit different fields for different values. Resolve
+          // once and collect every field, including zero-valued overrides.
+          const resolvedOverrides = overrides.map(({ pseudo, value }) => ({
+            pseudo,
+            resolved: resolveForChain(system[prop], value, execConfig.tokens, ctx),
+          }))
+          const cssProps = new Set(Object.keys(resolvedBase ?? {}))
+          for (const { resolved } of resolvedOverrides) {
+            for (const key of Object.keys(resolved ?? {})) cssProps.add(key)
+          }
+          for (const cssProp of cssProps) {
             const kebabProp = camelToKebab(cssProp)
-
-            // Generate --toned_pseudo__css-prop custom properties for each override
-            for (const { pseudo, value } of overrides) {
-              const resolved = resolveForChain(
-                system[prop],
-                value,
-                execConfig.tokens,
-                ctx,
-              )
-              if (!resolved?.[cssProp]) continue
-
+            for (const { pseudo, resolved } of resolvedOverrides) {
+              if (resolved?.[cssProp] == null) continue
               const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}`
               acc.style[varName] = `${chainGuard(pseudo)} ${resolved[cssProp]}`
             }
@@ -889,31 +879,24 @@ export function defineSystem<
               for (const baseKey in tokenStyle) {
                 if (baseKey === prop || baseKey === 'style') continue
                 const cfg = system[baseKey]
-                if (!cfg || typeof cfg !== 'object' || !('resolve' in cfg))
-                  continue
-                const other = resolveForChain(
-                  cfg,
-                  tokenStyle[baseKey],
-                  execConfig.tokens,
-                  ctx,
-                )
+                if (!cfg || typeof cfg !== 'object' || !('resolve' in cfg)) continue
+                const other = resolveForChain(cfg, tokenStyle[baseKey], execConfig.tokens, ctx)
                 if (other?.[cssProp] != null) {
                   innerValue = String(other[cssProp])
                   break
                 }
               }
               if (innerValue == null) {
-                const rawStyle = tokenStyle['style'] as
-                  | Record<string, unknown>
-                  | undefined
-                if (rawStyle && rawStyle[cssProp] != null)
-                  innerValue = String(rawStyle[cssProp])
+                const rawStyle = tokenStyle['style'] as Record<string, unknown> | undefined
+                if (rawStyle && rawStyle[cssProp] != null) innerValue = String(rawStyle[cssProp])
               }
             }
 
             let chain = innerValue
             for (const pseudo of withCompounds(overrides)) {
-              if (overrides.some((o) => o.pseudo === pseudo)) {
+              if (
+                resolvedOverrides.some(o => o.pseudo === pseudo && o.resolved?.[cssProp] != null)
+              ) {
                 const varName = `--toned_${chainVarName(pseudo)}__${kebabProp}`
                 chain = chain ? `var(${varName}, ${chain})` : `var(${varName})`
               }
@@ -926,7 +909,37 @@ export function defineSystem<
         }
       }
 
-      return acc
+      const operations = (tokenStyle as Record<symbol, unknown>)[
+        Symbol.for('@toned/operations')
+      ] as readonly TokenOperation[] | undefined
+      const resolveOrdered = (declaration: Record<string, unknown>) =>
+        execute({ ...execConfig, useClassName: false }, declaration as TokenStyle<S & C>, true)
+          .style as Record<string, unknown>
+      const applyConditional = (output: Record<string, unknown>, record: ConditionalRule) => {
+        const guard = compilePredicateGuard(record.predicate, record.part, `${record.order}-0`, output)
+        const resolved = resolveOrdered(record.style)
+        for (const [property, value] of Object.entries(resolved)) {
+          if (property.startsWith('--')) {
+            output[property] = value
+            continue
+          }
+          const key = `--toned-rule-${record.order}-0-${camelToKebab(property)}`
+          output[key] = `${guard} ${value}`
+          output[property] = `var(${key}, ${output[property] ?? 'revert-layer'})`
+        }
+      }
+      if (operations?.some(operation => operation.conditional)) {
+        Object.assign(acc.style, applyConditionalOrder(operations, resolveOrdered, applyConditional))
+      } else {
+        if (operations?.length)
+          applyOperationOrder(operations, acc.style, !!id, resolveOrdered)
+        // Compatibility for directly executed declarations carrying the public
+        // conditional-record symbol rather than a matcher occurrence stream.
+        const conditional = (tokenStyle as Record<symbol, unknown>)[CONDITIONAL_RULES] as
+          | ConditionalRule[] | undefined
+        for (const record of conditional ?? []) applyConditional(acc.style, record)
+      }
+      return id && !unnamespaced ? namespaceOutput(acc, id) : acc
     },
   }
 

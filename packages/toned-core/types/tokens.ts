@@ -50,6 +50,10 @@ export type ResolveContext = { platform: import('./config.ts').Platform }
 
 // biome-ignore lint/suspicious/noExplicitAny: const generic requires any[] for tuple inference
 export type TokenConfig<Values extends readonly any[], Result> = {
+  /** Exact emitted field footprint when it is independent of the value. */
+  properties?: readonly string[]
+  /** Explicit dynamic input channel; boxed sentinel values remain legacy aliases. */
+  dynamic?: 'number' | 'string'
   values: Values
   resolve: (value: Values[number], tokens: Tokens, ctx?: ResolveContext) => Result
   /**
@@ -197,12 +201,8 @@ export type BridgeConfig = {
 }
 
 /** Narrow an input to its two halves. */
-export const isAnimationDefinition = (
-  a: AnimationInput,
-): a is AnimationDefinition =>
-  'keyframes' in a &&
-  typeof a.keyframes === 'object' &&
-  !Array.isArray(a.keyframes)
+export const isAnimationDefinition = (a: AnimationInput): a is AnimationDefinition =>
+  'keyframes' in a && typeof a.keyframes === 'object' && !Array.isArray(a.keyframes)
 
 export type TokenStyleDeclaration = {
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
@@ -212,12 +212,14 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
+    | Record<string, number>
     | Containers
     | readonly string[]
     | number
     | undefined
   // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
+  media?: Record<string, number>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
   /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
@@ -258,9 +260,11 @@ export type TokenStyleDeclaration = {
 /** Filter out 'breakpoints' key from token style keys */
 export type TokenKeys<S> = Exclude<
   keyof S,
-  'breakpoints' | 'responsiveTokens' | 'containers' | 'base'
+  'media' | 'breakpoints' | 'responsiveTokens' | 'containers' | 'base'
 >
 
+import type { PlatformStyle } from './style.ts'
+import type { Platform } from './config.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
 
 /**
@@ -292,10 +296,7 @@ export type InlineStyle = TonedTypeRegistry extends { inlineStyle: infer T }
  * Does a token apply to an element of type ET? Untyped elements (ET =
  * undefined) accept everything; tokens without `$types` apply everywhere.
  */
-type TokenAllowedOn<
-  C,
-  ET extends ElementType | undefined,
-> = ET extends ElementType
+type TokenAllowedOn<C, ET extends ElementType | undefined> = ET extends ElementType
   ? Extract<C, { $types: readonly ElementType[] }> extends never
     ? true
     : Extract<C, { $types: readonly ElementType[] }> extends {
@@ -327,8 +328,19 @@ type TokenInheritAllows<C, ET extends ElementType> = C extends { inherit: true }
 export type TokenStyle<
   S extends TokenStyleDeclaration,
   ET extends ElementType | undefined = undefined,
+  Host extends Platform | undefined = undefined,
 > = TokenStyleAllowed<S, ET> &
-  TokenStyleForbidden<S, ET> & { style?: InlineStyle }
+  TokenStyleForbidden<S, ET> & {
+    /** @deprecated Use $style; the compatibility spelling retains host tuning. */
+    style?: InlineStyle
+    $style?: PlatformStyle<ET, Host>
+  }
+
+type DynamicTokenValue<C> = C extends { dynamic: 'number' }
+  ? number
+  : C extends { dynamic: 'string' }
+    ? string
+    : never
 
 type TokenStyleAllowed<
   S extends TokenStyleDeclaration,
@@ -345,9 +357,7 @@ type TokenStyleAllowed<
   //
   // The `as` clause drops tokens whose `$types` excludes this element's
   // declared `$$type` — they are not offered, and using one is an error.
-  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true
-    ? key
-    : never]: Extract<
+  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true ? key : never]: Extract<
     S[key],
     // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
     TokenConfig<any, unknown>
@@ -356,8 +366,8 @@ type TokenStyleAllowed<
       // The presence test is on a REQUIRED alphaChannel, so the open system
       // (where the field is merely optional) stays exactly as strict as before.
       Extract<S[key], { alphaChannel: readonly string[] }> extends never
-      ? V[number]
-      : V[number] | `${V[number] & string}/${number}`
+      ? V[number] | DynamicTokenValue<S[key]>
+      : V[number] | DynamicTokenValue<S[key]> | `${V[number] & string}/${number}`
     : never
 }>
 
@@ -373,8 +383,6 @@ type TokenStyleForbidden<
   ET extends ElementType | undefined,
 > = ET extends ElementType
   ? {
-      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false
-        ? key
-        : never]?: never
+      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false ? key : never]?: never
     }
   : {}

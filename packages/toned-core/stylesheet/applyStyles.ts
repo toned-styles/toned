@@ -1,114 +1,154 @@
-/**
- * DOM/RN style application utilities.
- *
- * @module stylesheet/applyStyles
- */
-
+/** Owned, differential host patches. Host bindings record declarative baselines at commit. */
 import { camelToKebab } from '../utils/css.ts'
 import { unitlessNumbers } from './unitlessNumbers.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
-type AnyValue = any
-
-type Ref = AnyValue
-type RefStyle = AnyValue
-
-const prevStyleKeys = new WeakMap<object, Set<string>>()
-// Pre-toned value of each property: captured before toned's first write and
-// refreshed whenever a non-toned source changes it. Restored when toned drops
-// the property.
-const baselineValues = new WeakMap<object, Record<string, string>>()
-// The value toned last wrote for each property, read back from the DOM so
-// ownership checks compare against the browser's normalized form. Lets us tell
-// "toned still owns this property" from "another source has since changed it".
-const lastWrittenValues = new WeakMap<object, Record<string, string>>()
-// The className toned last wrote to each element. The attribute also carries
-// classes toned never wrote — marker classes, caller utilities, the host
-// framework's merged className prop — which an imperative write must not
-// clobber: a style-only diff leaves the framework's className prop unchanged,
-// so nothing would ever restore them. Toned therefore swaps only its own
-// previous set for the new one instead of replacing the whole attribute.
-const lastWrittenClasses = new WeakMap<object, string>()
-
-export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
-  if (!curr) return
-
-  // An element with neither branch's API cannot be styled; returning beats
-  // the TypeError the baseline reads below would otherwise throw on it.
-  if (!curr.setNativeProps && !curr.style) return
-
-  // React Native path - uses setNativeProps for direct style updates
-  // Note: Could be abstracted to config.applyStyles for platform-specific handling
-  if (curr.setNativeProps) {
-    // Note: Currently replaces all styles; merging would require tracking previous toned styles
-    curr.setNativeProps({ style: styleObject.style })
-  } else {
-    if (styleObject.style) {
-      const result: Record<string, unknown> = {}
-
-      const prev = prevStyleKeys.get(curr)
-      const baselines = baselineValues.get(curr) || {}
-      const lastWritten = lastWrittenValues.get(curr) || {}
-
-      // Restore properties toned wrote last time but isn't writing now.
-      if (prev) {
-        for (const key of prev) {
-          if (key in styleObject.style) continue
-          const live: string = curr.style.getPropertyValue(camelToKebab(key))
-          // If the live value isn't what toned last wrote, another source now
-          // owns this property — leave it untouched rather than clobber it.
-          if (key in lastWritten && live !== lastWritten[key]) continue
-          // Otherwise toned still owns it, so restore the pre-toned baseline.
-          // This also clears a now-stale `var(--toned_*)` chain on drop.
-          result[key] = baselines[key] ?? ''
-          delete lastWritten[key]
-        }
-      }
-
-      const currentKeys = new Set<string>()
-      for (const key in styleObject.style) {
-        // Capture the pre-toned baseline on first sight, and refresh it if a
-        // non-toned source has changed the live value since toned last wrote.
-        if (!(key in baselines)) {
-          baselines[key] = curr.style.getPropertyValue(camelToKebab(key))
-        } else if (key in lastWritten) {
-          const live = curr.style.getPropertyValue(camelToKebab(key))
-          if (live !== lastWritten[key]) baselines[key] = live
-        }
-        const v = styleObject.style[key]
-        if (typeof v === 'number' && !unitlessNumbers.has(key)) {
-          result[key] = `${v}px`
-        } else {
-          result[key] = v
-        }
-        currentKeys.add(key)
-      }
-
-      Object.assign(curr.style, result)
-
-      // Record what toned actually wrote (read back so later comparisons use the
-      // DOM's normalized form) to detect future foreign writes.
-      for (const key of currentKeys) {
-        lastWritten[key] = curr.style.getPropertyValue(camelToKebab(key))
-      }
-
-      prevStyleKeys.set(curr, currentKeys)
-      baselineValues.set(curr, baselines)
-      lastWrittenValues.set(curr, lastWritten)
+type Host = any
+type Style = Record<string, any>
+type Ownership = {
+  previous: Style
+  desired: Style
+  baseline: Style
+  classes: Set<string>
+  callerClasses: Set<string>
+  caller: Style
+  nativeProps: Style
+  callerProps: Style
+}
+const DEFAULT_OWNER = {}
+const ownership = new WeakMap<object, WeakMap<object, Ownership>>()
+const stateFor = (host: object, owner: object): Ownership => {
+  let owners = ownership.get(host)
+  if (!owners) {
+    owners = new WeakMap()
+    ownership.set(host, owners)
+  }
+  let state = owners.get(owner)
+  if (!state) {
+    state = {
+      previous: {},
+      desired: {},
+      baseline: {},
+      classes: new Set(),
+      callerClasses: new Set(),
+      caller: {},
+      nativeProps: {},
+      callerProps: {},
     }
-    if (styleObject.className) {
-      const next: string = styleObject.className
-      const prev = lastWrittenClasses.get(curr)
-      if (prev && prev !== next) {
-        const nextPadded = ` ${next} `
-        for (const cls of prev.split(' ')) {
-          if (cls && !nextPadded.includes(` ${cls} `)) curr.classList.remove(cls)
-        }
-      }
-      for (const cls of next.split(' ')) {
-        if (cls) curr.classList.add(cls)
-      }
-      lastWrittenClasses.set(curr, next)
+    owners.set(owner, state)
+  }
+  return state
+}
+const cssValue = (key: string, value: unknown) =>
+  value == null
+    ? ''
+    : typeof value === 'number' && !unitlessNumbers.has(key) && !key.startsWith('--')
+      ? `${value}px`
+      : String(value)
+const read = (host: Host, key: string) => host.style.getPropertyValue(camelToKebab(key))
+
+/** Called by the ref after React's declarative writes, never during render. */
+export function recordHostCommit(
+  host: Host,
+  toned: Style,
+  caller: Style = {},
+  owner: object = DEFAULT_OWNER,
+) {
+  if (!host) return
+  const state = stateFor(host, owner)
+  const nextCaller = { ...(caller['style'] ?? {}) }
+  for (const key in state.caller) if (!(key in nextCaller)) delete state.baseline[key]
+  state.caller = nextCaller
+  state.baseline = { ...state.baseline, ...state.caller }
+  // React may skip a declarative write whose prop has not changed even if an
+  // event changed the live host. Keep those previous imperative keys until the
+  // layout reconciliation explicitly removes them.
+  for (const key in { ...toned['style'], ...caller['style'] }) {
+    if (host.setNativeProps) {
+      if (!(key in state.previous))
+        state.previous[key] = caller['style']?.[key] ?? toned['style']?.[key]
+    } else {
+      const live = read(host, key)
+      if (state.previous[key] !== live) delete state.desired[key]
+      state.previous[key] = live
     }
   }
+  state.callerProps = caller
+  for (const [key, value] of Object.entries(toned)) {
+    if (key === 'style' || key === 'className' || key === 'ref' || key.startsWith('on')) continue
+    if (!(key in state.nativeProps)) state.nativeProps[key] = caller[key] ?? value
+  }
+  state.classes = new Set([
+    ...state.classes,
+    ...(toned['className'] ?? '').split(/\s+/).filter(Boolean),
+  ])
+  state.callerClasses = new Set((caller['className'] ?? '').split(/\s+/).filter(Boolean))
+}
+
+export const setStyles = (
+  host: Host | undefined,
+  output: Style = {},
+  owner: object = DEFAULT_OWNER,
+) => {
+  if (!host || (!host.setNativeProps && !host.style)) return
+  const state = stateFor(host, owner)
+  const next = { ...output['style'], ...state.caller }
+  const patch: Style = {}
+  for (const key in state.previous) {
+    if (key in next) continue
+    if (host.setNativeProps) patch[key] = state.baseline[key] ?? null
+    else if (read(host, key) === state.previous[key]) {
+      const value = cssValue(key, state.baseline[key])
+      if (read(host, key) !== value) patch[key] = value
+    }
+  }
+  const previous: Style = {}
+  const desired: Style = {}
+  for (const key in next) {
+    const value = host.setNativeProps ? next[key] : cssValue(key, next[key])
+    if (host.setNativeProps) {
+      if (!(key in state.previous) || !Object.is(state.previous[key], value)) patch[key] = value
+    } else {
+      const live = read(host, key)
+      if (!(key in state.previous) || live !== state.previous[key]) state.baseline[key] = live
+      if (live !== value && !(state.desired[key] === value && live === state.previous[key]))
+        patch[key] = value
+    }
+    previous[key] = value
+    desired[key] = value
+  }
+  const nativePatch: Style = {}
+  if (host.setNativeProps) {
+    const props = Object.fromEntries(
+      Object.entries(output).filter(([key]) => key !== 'style' && key !== 'className'),
+    )
+    for (const key in state.nativeProps)
+      if (!(key in props)) {
+        const reset = state.callerProps[key] ?? null
+        if (!Object.is(state.nativeProps[key], reset)) nativePatch[key] = reset
+      }
+    for (const key in props) {
+      const value = state.callerProps[key] ?? props[key]
+      if (!Object.is(state.nativeProps[key], value)) nativePatch[key] = value
+      props[key] = value
+    }
+    state.nativeProps = props
+    if (Object.keys(patch).length) nativePatch['style'] = patch
+    if (Object.keys(nativePatch).length) host.setNativeProps(nativePatch)
+  } else if (Object.keys(patch).length) {
+    for (const key in patch) {
+      if (key.startsWith('--')) host.style.setProperty(key, patch[key])
+      else host.style[key] = patch[key]
+    }
+  }
+  if (!host.setNativeProps) {
+    for (const key in previous) previous[key] = read(host, key)
+    const classes = new Set<string>((output['className'] ?? '').split(/\s+/).filter(Boolean))
+    for (const cls of state.classes) {
+      if (!classes.has(cls) && !state.callerClasses.has(cls)) host.classList.remove(cls)
+    }
+    for (const cls of classes) if (!host.classList.contains(cls)) host.classList.add(cls)
+    state.classes = classes
+  }
+  state.previous = previous
+  state.desired = desired
 }

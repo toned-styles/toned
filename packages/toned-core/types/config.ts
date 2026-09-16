@@ -1,3 +1,4 @@
+import type { OutputBackend } from '../backends/index.ts'
 /**
  * Configuration type definitions.
  *
@@ -17,6 +18,9 @@ import type { ElementType, Tokens } from './tokens.ts'
 export type Platform = 'web' | 'native'
 
 export type Config = Readonly<{
+  /** Explicit output adapter; host platform must agree. */
+  backend?: OutputBackend
+
   /** Returns the token values for style resolution */
   getTokens: () => Tokens
 
@@ -103,9 +107,7 @@ export type Config = Readonly<{
    * ResizeObserver-attaching ref. Unset: container elements render unmeasured
    * and every container condition stays false.
    */
-  measureContainerProps?: (
-    onSize: (width: number) => void,
-  ) => Record<string, unknown>
+  measureContainerProps?: (onSize: (width: number) => void) => Record<string, unknown>
 
   /**
    * The runtime half of the ':rtl' declared state (whose web half is a

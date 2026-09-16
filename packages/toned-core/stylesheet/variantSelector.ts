@@ -1,259 +1,275 @@
-/**
- * Variant selector proxy for type-safe variant definitions.
- *
- * @module stylesheet/variantSelector
- */
-
+/** CSS-like selector keys with the same canonical order at type and runtime. */
 import type { ModType } from '../types/stylesheet.ts'
 
-/** Marker for named style keys */
 const NAMED_PREFIX = '$named$_' as const
-
-/** Marker for unspecified optional variants (wildcard) */
 const NONE_VALUE = '*' as const
-
-type NoneValue = typeof NONE_VALUE
-
-/**
- * Named style key type
- */
 export type NamedStyleKey<Name extends string> = `$named$_${Name}`
-
-/**
- * Extract named style names from a variants result object
- */
 export type ExtractNamedStyles<R> = {
   [K in keyof R]: K extends `$named$_${infer Name}` ? Name : never
 }[keyof R]
-
-/**
- * Variant key type - for backwards compatibility
- */
 export type VariantKey = string
 
-/**
- * Keys that have been accumulated in a builder
- */
-type AccumulatedKeys = Record<string, string | number | boolean>
+type Scalar = string | number | boolean
+type Selection = readonly [string, readonly string[]]
+type Replace<
+  S extends string,
+  From extends string,
+  To extends string,
+> = S extends `${infer Head}${From}${infer Tail}`
+  ? `${Head}${To}${Replace<Tail, From, To>}`
+  : S
+// Escape syntax delimiters once. Literal percent sequences remain distinguishable.
+type Escape<S extends string> = Replace<
+  Replace<
+    Replace<
+      Replace<
+        Replace<Replace<Replace<S, '%', '%25'>, '[', '%5B'>, ']', '%5D'>,
+        '=',
+        '%3D'
+      >,
+      '|',
+      '%7C'
+    >,
+    ',',
+    '%2C'
+  >,
+  '*',
+  '%2A'
+>
+// Printable ASCII code-point order is the common token vocabulary. For other
+// characters, widen the ordering to both possibilities instead of promising a
+// false literal spelling. Runtime still orders all Unicode strings correctly.
+type Alphabet =
+  ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
+type Before<A extends string, B extends string> = string extends A | B
+  ? boolean
+  : A extends B
+    ? false
+    : A extends ''
+      ? true
+      : B extends ''
+        ? false
+        : A extends `${infer AH}${infer AT}`
+          ? B extends `${infer BH}${infer BT}`
+            ? AH extends BH
+              ? Before<AT, BT>
+              : Alphabet extends `${string}${AH}${infer Rest}`
+                ? Rest extends `${string}${BH}${string}`
+                  ? true
+                  : Alphabet extends `${string}${BH}${string}`
+                    ? false
+                    : boolean
+                : boolean
+            : false
+          : false
 
-/**
- * Concatenate existing key with new segment
- */
-type AppendKey<
-  Existing extends string,
+type InsertString<
+  Values extends readonly string[],
+  Value extends string,
+> = Values extends readonly [
+  infer Head extends string,
+  ...infer Tail extends string[],
+]
+  ? Value extends Head
+    ? Values
+    : Before<Value, Head> extends infer Order
+      ? Order extends true
+        ? readonly [Value, ...Values]
+        : readonly [Head, ...InsertString<Tail, Value>]
+      : never
+  : readonly [Value]
+type SortValues<
+  Values extends readonly Scalar[],
+  Out extends readonly string[] = [],
+> = Values extends readonly [
+  infer Head extends Scalar,
+  ...infer Tail extends Scalar[],
+]
+  ? SortValues<Tail, InsertString<Out, `${Head}`>>
+  : Out
+
+type InsertSelection<
+  Selections extends readonly Selection[],
+  Value extends Selection,
+> = Selections extends readonly [
+  infer Head extends Selection,
+  ...infer Tail extends Selection[],
+]
+  ? Before<Value[0], Head[0]> extends infer Order
+    ? Order extends true
+      ? readonly [Value, ...Selections]
+      : readonly [Head, ...InsertSelection<Tail, Value>]
+    : never
+  : readonly [Value]
+type ValueKey<
+  Key extends string,
+  Values extends readonly string[],
+> = Values extends readonly [
+  infer Head extends string,
+  ...infer Tail extends string[],
+]
+  ? `[${Escape<Key>}=${Escape<Head>}]${ValueKey<Key, Tail>}`
+  : ''
+type SelectionKey<Selections extends readonly Selection[]> =
+  Selections extends readonly [
+    infer Head extends Selection,
+    ...infer Tail extends Selection[],
+  ]
+    ? `${ValueKey<Head[0], Head[1]>}${SelectionKey<Tail>}`
+    : ''
+
+type Next<
+  Mods extends ModType,
+  Acc,
+  Selections extends readonly Selection[],
   K extends string,
-  V extends string | number | boolean,
-> = `${Existing}[${K}=${V}]`
+  Values extends readonly Scalar[],
+> = InsertSelection<
+  Selections,
+  readonly [K, SortValues<Values>]
+> extends infer Sorted extends readonly Selection[]
+  ? VariantBuilder<
+      Mods,
+      Acc & Record<K, Values[number]>,
+      SelectionKey<Sorted>,
+      Sorted
+    >
+  : never
 
-/**
- * Variant builder - returned after each variant selection.
- * The Key type parameter is the accumulated key string as a template literal.
- *
- * @template Mods - The full modifier type
- * @template Acc - Record of accumulated key-value selections
- * @template Key - The accumulated key string (template literal)
- */
 export type VariantBuilder<
   Mods extends ModType,
-  Acc extends AccumulatedKeys = {},
+  Acc = {},
   Key extends string = '',
+  Selections extends readonly Selection[] = [],
 > = Key & {
-  /**
-   * Select a variant value (or multiple values for OR semantics)
-   */
   [K in Exclude<keyof Mods, keyof Acc> as K extends string
     ? K
-    : never]: K extends string
+    : never]-?: K extends string
     ? <
-        const V extends Exclude<Mods[K], undefined> &
-          (string | number | boolean),
+        const Values extends readonly [
+          Exclude<Mods[K], undefined> & Scalar,
+          ...(Exclude<Mods[K], undefined> & Scalar)[],
+        ],
       >(
-        ...values: [V, ...V[]]
-      ) => VariantBuilder<Mods, Acc & Record<K, V>, AppendKey<Key, K, V>>
+        ...values: Values
+      ) => Next<Mods, Acc, Selections, K, Values>
     : never
 }
 
-/**
- * Variant selector - the `$` parameter in variants callback
- */
-export type VariantSelector<Mods extends ModType> = {
-  /**
-   * Define a named style that can be composed
-   * @example $("reusable_style")
-   */
-  <Name extends string>(name: Name): NamedStyleKey<Name>
-} & {
-  /**
-   * Select a variant value (or multiple values for OR semantics)
-   * @example $.size("m") or $.alignment("icon-only", "icon-left")
-   */
+export type VariantSelector<Mods extends ModType> = (<Name extends string>(
+  name: Name,
+) => NamedStyleKey<Name>) & {
   [K in keyof Mods as K extends string ? K : never]-?: K extends string
     ? <
-        const V extends Exclude<Mods[K], undefined> &
-          (string | number | boolean),
+        const Values extends readonly [
+          Exclude<Mods[K], undefined> & Scalar,
+          ...(Exclude<Mods[K], undefined> & Scalar)[],
+        ],
       >(
-        ...values: [V, ...V[]]
-      ) => VariantBuilder<Mods, { [P in K]: V }, `[${K}=${V}]`>
+        ...values: Values
+      ) => Next<Mods, {}, [], K, Values>
     : never
 }
 
-/**
- * Runtime state for the variant builder
- */
-interface BuilderRuntime {
-  orderedKeys: string[]
-  accumulated: Record<string, unknown>
+export function escapeSelectorPart(value: string): string {
+  return value
+    .replace(/%/g, '%25')
+    .replace(/\[/g, '%5B')
+    .replace(/\]/g, '%5D')
+    .replace(/=/g, '%3D')
+    .replace(/\|/g, '%7C')
+    .replace(/,/g, '%2C')
+    .replace(/\*/g, '%2A')
+}
+export function unescapeSelectorPart(value: string): string {
+  return value
+    .replace(/%2A/g, '*')
+    .replace(/%2C/g, ',')
+    .replace(/%7C/g, '|')
+    .replace(/%3D/g, '=')
+    .replace(/%5D/g, ']')
+    .replace(/%5B/g, '[')
+    .replace(/%25/g, '%')
 }
 
-/**
- * Create a variant builder that generates stable keys
- */
-function createBuilder(runtime: BuilderRuntime): VariantBuilder<ModType, {}> {
-  const generateKey = (): string => {
-    const segments: string[] = []
-    const orderedKeysSet = new Set(runtime.orderedKeys)
+/** Omitted axes are wildcards; no invented wildcard segments enter typed keys. */
+export function canonicalSelectorKey(
+  selections: ReadonlyMap<string, readonly Scalar[]>,
+): string {
+  return [...selections.keys()]
+    .sort()
+    .map((key) =>
+      [...new Set(selections.get(key)!.map(String))]
+        .sort()
+        .map(
+          (value) =>
+            `[${escapeSelectorPart(key)}=${escapeSelectorPart(value)}]`,
+        )
+        .join(''),
+    )
+    .join('')
+}
 
-    for (const key of runtime.orderedKeys) {
-      const value = runtime.accumulated[key]
-
-      if (value === undefined) {
-        // Optional variant not specified
-        segments.push(`[${key}=${NONE_VALUE}]`)
-      } else if (Array.isArray(value)) {
-        // Multiple values - sort for stability, create separate segments
-        const sorted = [...value].sort()
-        for (const v of sorted) {
-          segments.push(`[${key}=${v}]`)
-        }
-      } else {
-        segments.push(`[${key}=${value}]`)
-      }
-    }
-
-    // Include accumulated keys not in orderedKeys (needed for first pass
-    // where orderedKeys is empty, so extractOrderedKeys can find them)
-    for (const key of Object.keys(runtime.accumulated)) {
-      if (orderedKeysSet.has(key)) continue
-      const value = runtime.accumulated[key]
-      if (value === undefined) continue
-      if (Array.isArray(value)) {
-        const sorted = [...value].sort()
-        for (const v of sorted) {
-          segments.push(`[${key}=${v}]`)
-        }
-      } else {
-        segments.push(`[${key}=${value}]`)
-      }
-    }
-
-    return segments.join('')
-  }
-
-  return new Proxy({} as VariantBuilder<ModType, {}>, {
+function createBuilder(
+  selections: ReadonlyMap<string, readonly Scalar[]>,
+  emit: (key: string) => string,
+): VariantBuilder<ModType> {
+  return new Proxy({} as VariantBuilder<ModType>, {
     get(_, prop) {
-      if (prop === Symbol.toPrimitive || prop === 'toString') {
-        return () => generateKey()
+      if (prop === Symbol.toPrimitive || prop === 'toString')
+        return () => emit(canonicalSelectorKey(selections))
+      if (typeof prop !== 'string') return undefined
+      return (...values: Scalar[]) => {
+        if (!values.length)
+          throw new Error(`Variant ${prop} needs at least one value`)
+        if (selections.has(prop))
+          throw new Error(`Variant ${prop} was already selected in this chain`)
+        return createBuilder(new Map([...selections, [prop, values]]), emit)
       }
-
-      if (typeof prop === 'string') {
-        // Return a function that adds this variant to accumulated state
-        return (...values: unknown[]) => {
-          const newAccumulated = {
-            ...runtime.accumulated,
-            [prop]: values.length === 1 ? values[0] : values,
-          }
-
-          return createBuilder({
-            orderedKeys: runtime.orderedKeys,
-            accumulated: newAccumulated,
-          })
-        }
-      }
-
-      return undefined
     },
   })
 }
 
 /**
- * Create a variant selector proxy
- *
- * @param orderedKeys - Keys in definition order (from the Mods type)
- * @returns The $ proxy for defining variants
- *
- * @example
- * ```ts
- * const $ = createVariantSelector(['size', 'variant', 'alignment'])
- *
- * // Named style
- * $("reusable_style") // => "$named$_reusable_style"
- *
- * // Single variant
- * $.size("m") // => "[size=m][variant=$NONE$][alignment=$NONE$]"
- *
- * // Compound variants
- * $.size("m").variant("accent") // => "[size=m][variant=accent][alignment=$NONE$]"
- *
- * // Multi-value (OR semantics)
- * $.alignment("icon-only", "icon-left") // => "[alignment=icon-left][alignment=icon-only][size=$NONE$][variant=$NONE$]"
- * ```
+ * `orderedKeys` remains accepted for older callers; canonical identity depends
+ * only on selected axes/values, so declaration factories need only one pass.
+ * Factories can reject duplicate emitted keys before JS object construction
+ * silently discards their earlier declaration.
  */
 export function createVariantSelector<Mods extends ModType>(
-  orderedKeys: (keyof Mods)[],
+  _orderedKeys: readonly (keyof Mods)[] = [],
+  options?: { rejectDuplicates?: boolean },
 ): VariantSelector<Mods> {
-  const keys = orderedKeys.map(String)
-
-  const handler: ProxyHandler<(...args: unknown[]) => unknown> = {
-    // Handle $("name") calls
-    apply(_, __, args) {
-      const name = args[0]
-      if (typeof name === 'string') {
-        return `${NAMED_PREFIX}${name}`
-      }
-      throw new Error('Named style requires a string name')
-    },
-
-    // Handle $.variant, $.size, etc.
-    get(_, prop) {
-      if (typeof prop === 'string') {
-        // Return a function that starts a builder chain
-        return (...values: unknown[]) => {
-          const accumulated = {
-            [prop]: values.length === 1 ? values[0] : values,
-          }
-
-          return createBuilder({
-            orderedKeys: keys,
-            accumulated,
-          })
-        }
-      }
-
-      return undefined
-    },
+  const emitted = new Set<string>()
+  const emit = (key: string) => {
+    if (options?.rejectDuplicates && emitted.has(key))
+      throw new Error(`Duplicate Toned variant selector: ${key}`)
+    emitted.add(key)
+    return key
   }
-
-  // biome-ignore lint/suspicious/noExplicitAny: proxy requires flexible base function
-  return new Proxy((() => {}) as any, handler)
+  return new Proxy((() => {}) as unknown as VariantSelector<Mods>, {
+    apply(_, __, args) {
+      if (typeof args[0] !== 'string')
+        throw new Error('Named style requires a string name')
+      return emit(`${NAMED_PREFIX}${args[0]}`)
+    },
+    get(_, prop) {
+      if (typeof prop !== 'string') return undefined
+      return (...values: Scalar[]) => {
+        if (!values.length)
+          throw new Error(`Variant ${prop} needs at least one value`)
+        return createBuilder(new Map([[prop, values]]), emit)
+      }
+    },
+  })
 }
 
-/**
- * Check if a key is a named style key
- */
 export function isNamedStyleKey(key: string): key is `$named$_${string}` {
   return key.startsWith(NAMED_PREFIX)
 }
-
-/**
- * Extract the name from a named style key
- */
 export function getNamedStyleName(key: `$named$_${string}`): string {
   return key.slice(NAMED_PREFIX.length)
 }
-
-/**
- * Check if a selector segment represents $NONE$
- */
-export function isNoneValue(value: string): value is NoneValue {
+export function isNoneValue(value: string): value is typeof NONE_VALUE {
   return value === NONE_VALUE
 }

@@ -13,7 +13,12 @@
     "./utils": "./utils/index.ts",
     "./vite": "./vite/index.ts",
     "./registry": "./registry.ts",
-    "./types/stylesheet": "./types/stylesheet.ts"
+    "./types/stylesheet": "./types/stylesheet.ts",
+    "./grid": "./grid/index.ts",
+    "./build": "./build/index.ts",
+    "./dev/inject": "./dom/inject.ts",
+    "./server": "./server/index.ts",
+    "./backends": "./backends/index.ts"
   },
   "publishConfig": {
     "access": "public",
@@ -41,5 +46,8 @@
     "@toned-config/build": "workspace:*",
     "@toned-config/typescript": "workspace:*",
     "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "csstype": "^3.2.3"
   }
 }

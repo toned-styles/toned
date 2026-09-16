@@ -1,3 +1,4 @@
+import { addWith } from './host-props.ts'
 import { defineConfig } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
 import reactConfig from './config.native.ts'
@@ -7,63 +8,21 @@ type AnyValue = any
 
 type Ref = AnyValue
 
-function attachWith(result: Record<string, AnyValue>) {
-  Object.defineProperty(result, 'with', {
-    value: (props: Record<string, AnyValue>) => {
-      const merged: Record<string, AnyValue> = {}
-
-      for (const key in result) {
-        merged[key] = result[key]
-      }
-
-      for (const key in props) {
-        if (props[key] == null) continue
-
-        if (key === 'style') {
-          const tonedStyle = merged[key]
-          const userStyle = props[key]
-
-          if (typeof tonedStyle === 'function') {
-            merged[key] = (state: AnyValue) => ({
-              ...tonedStyle(state),
-              ...userStyle,
-            })
-          } else {
-            merged[key] = merged[key]
-              ? { ...merged[key], ...userStyle }
-              : userStyle
-          }
-        } else if (key === 'ref') {
-          const tonedRef = merged[key]
-          const userRef = props[key]
-          merged[key] = (node: AnyValue) => {
-            tonedRef(node)
-            if (typeof userRef === 'function') return userRef(node)
-            if (userRef) userRef.current = node
-          }
-        } else if (key.startsWith('on') && typeof merged[key] === 'function') {
-          const tonedHandler = merged[key]
-          const userHandler = props[key]
-          merged[key] = (...args: AnyValue[]) => {
-            tonedHandler(...args)
-            userHandler(...args)
-          }
-        } else {
-          merged[key] = props[key]
-        }
-      }
-
-      attachWith(merged)
-      return merged
-    },
-    enumerable: false,
-    configurable: false,
-  })
-}
-
 function getProps(this: Base, elementKey: string) {
-  const ref = (current: Ref) => {
-    this.refs[elementKey] = current
+  let host: Ref
+  let detach: (() => void) | undefined
+  const ref = (current: Ref, caller?: AnyValue) => {
+    detach?.()
+    detach = undefined
+    host = current
+    if (!current) return
+    if (typeof current.setNativeProps !== 'function') {
+      throw new Error(
+        '[toned/native] Mounted targets must expose setNativeProps with merge patches and null resets; forward the native host ref or install a supported host adapter.',
+      )
+    }
+    detach = this.attach(elementKey, current, result, caller)
+    return detach
   }
 
   let result: Record<string, AnyValue>
@@ -87,10 +46,28 @@ function getProps(this: Base, elementKey: string) {
   if (this.matcher.interactions[elementKey]) {
     result = {
       ref,
-      ...this.getCurrentStyle(elementKey),
-      ...this.setOn(elementKey, ':active', 'onPressIn', 'onPressOut'),
-      ...this.setOn(elementKey, ':hover', 'onHoverIn', 'onHoverOut'),
-      ...this.setOn(elementKey, ':focus', 'onFocus', 'onBlur'),
+      ...this.getRestingStyle(elementKey),
+      ...Object.fromEntries(
+        [
+          ['onPressIn', ':active', true],
+          ['onPressOut', ':active', false],
+          ['onHoverIn', ':hover', true],
+          ['onHoverOut', ':hover', false],
+          ['onFocus', ':focus', true],
+          ['onBlur', ':focus', false],
+        ].map(([event, pseudo, on]) => [
+          event,
+          () => {
+            if (!host) return
+            const owner = this.eventOwner(host)
+            owner.setElementActive(elementKey, pseudo as string, host, on as boolean)
+            owner.applyState(
+              { [`${elementKey}${pseudo}`]: owner.anyElementActive(elementKey, pseudo as string) },
+              { triggerKey: elementKey, pseudo: pseudo as string },
+            )
+          },
+        ]),
+      ),
     }
   } else {
     result = {
@@ -112,7 +89,7 @@ function getProps(this: Base, elementKey: string) {
     delete (style as Record<string, unknown>)['containerName']
   }
 
-  attachWith(result)
+  addWith(result)
 
   return result
 }
@@ -130,8 +107,8 @@ function resolveElement(type?: string): never {
     `useBind/bind on native need a host resolveElement (got $$type ${JSON.stringify(
       type,
     )}). Install one via setConfig before the first bound component renders — ` +
-      `e.g. @lib/haelo-primitives mapping view→View, text→Text, image→Image, pressable→Pressable. ` +
-      `toned-react ships no native default because it has no react-native dependency.`,
+      'e.g. @lib/haelo-primitives mapping view→View, text→Text, image→Image, pressable→Pressable. ' +
+      'toned-react ships no native default because it has no react-native dependency.',
   )
 }
 

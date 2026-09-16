@@ -1,30 +1,35 @@
+import type { SystemOptions } from '../system/definition.ts'
 /**
  * Token system type definitions.
  *
  * @module types/system
  */
 
+import type { Condition, ContainerConditionBuilder } from '../system/conditions.ts'
+import type { QueryBuilder } from '../system/queries.ts'
 import type {
-  Condition,
-  ContainerConditionBuilder,
-} from '../system/conditions.ts'
-import type { StylesheetType, TFun } from './stylesheet.ts'
+  AuthoredElementStyle,
+  StylesheetType,
+  TFun,
+  ValidateDeclaration,
+} from './stylesheet.ts'
 import type {
   Breakpoints,
   TokenStyle,
+  TokenConfig,
   TokenStyleDeclaration,
   Tokens,
 } from './tokens.ts'
 
 /** The container names a system config declares — never matches when absent. */
-type ContainerNamesOf<C> = C extends { containers: infer Ct }
-  ? keyof Ct & string
-  : never
+type ContainerNamesOf<C> = C extends { containers: infer Ct } ? keyof Ct & string : never
 
 /** The breakpoint names a system config declares. */
-type BreakpointNamesOf<C> = C extends { breakpoints: Breakpoints<infer B> }
-  ? keyof B & string
-  : never
+type BreakpointNamesOf<C> = C extends { media: infer M }
+  ? keyof M & string
+  : C extends { breakpoints: Breakpoints<infer B> }
+    ? keyof B & string
+    : never
 
 /**
  * Complete token system - returned from defineSystem().
@@ -43,17 +48,19 @@ type BreakpointNamesOf<C> = C extends { breakpoints: Breakpoints<infer B> }
  */
 export type TokenSystem<
   S extends TokenStyleDeclaration,
-  // biome-ignore lint/suspicious/noExplicitAny: breakpoints config is generic
-  SystemConfig extends { breakpoints?: Breakpoints<any> } = {
-    // biome-ignore lint/suspicious/noExplicitAny: default config type
-    breakpoints?: Breakpoints<any>
-  },
+  SystemConfig extends SystemOptions = SystemOptions,
 > = {
-  /** The token definitions */
+  readonly id?: string
+  readonly tokens: Readonly<
+    Pick<S, { [K in keyof S]: S[K] extends TokenConfig<any, any> ? K : never }[keyof S]>
+  >
+  readonly themes?: Readonly<Record<string, Tokens>>
+
+  /** Legacy combined token/config view; prefer tokens and config. */
   system: S
 
   /** Optional system configuration (breakpoints, etc.) */
-  config?: SystemConfig
+  readonly config?: SystemConfig
 
   /**
    * Ad-hoc condition atoms (`name/>=len`) used by stylesheets of this system —
@@ -68,13 +75,18 @@ export type TokenSystem<
    * remain for generic tooling; combinators (`and`/`or`/`not`) are
    * name-agnostic and stay standalone.
    */
-  cq: <N extends ContainerNamesOf<SystemConfig>>(
-    name: N,
-  ) => ContainerConditionBuilder<N>
+  cq: <N extends ContainerNamesOf<SystemConfig>>(name: N) => ContainerConditionBuilder<N>
   bp: <N extends BreakpointNamesOf<SystemConfig>>(name: N) => Condition<`@${N}`>
+
+  q: QueryBuilder<SystemConfig>
 
   /** Create a stylesheet with element definitions */
   stylesheet: StylesheetType<S>
+
+  /** Pure immutable declaration helper: does not consult the renderer or theme. */
+  style: <const T extends AuthoredElementStyle<S>>(
+    declaration: T & ValidateDeclaration<T, AuthoredElementStyle<S>, S>,
+  ) => Readonly<T>
 
   /** Create inline styles from token values */
   t: TFun<S>

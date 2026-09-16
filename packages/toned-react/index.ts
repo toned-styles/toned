@@ -1,7 +1,10 @@
+import type { ValidateDeclaration } from '@toned/core/types/stylesheet'
+import type { QueryBuilder } from '@toned/core/system'
+export { ConfigProvider } from './runtime-config.ts'
+import { useRuntimeConfig } from './runtime-config.ts'
 import {
   type AuthoredElementStyle,
   type ElementType,
-  getConfig,
   type ModType,
   SYMBOL_INIT,
   type TokenStyle,
@@ -12,8 +15,10 @@ import {
   type ComponentPropsWithRef,
   type ElementType as HostElement,
   type ReactElement,
+  type ReactNode,
   useContext,
   useRef,
+  useLayoutEffect,
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
 import { ContainerSizesContext } from './containers.tsx'
@@ -35,7 +40,7 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   // biome-ignore lint/suspicious/noExplicitAny: platform node type varies
   ref?: (node: any) => void
   /**
-   * Layer one-off token styles (and plain props) onto this element.
+   * Merge host props onto this element. Token overrides belong in overrideStyles().
    *
    * Implemented by `addWith` in react-web.ts / react-native.ts, so it exists
    * only when one of those configs is installed — `@toned/react/config` alone
@@ -45,19 +50,18 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
    * must still satisfy a consumer whose `value` is required — with() merges
    * className/style/ref/handlers and passes everything else through.
    */
-  with: <
-    P extends
-      | TokenStyle<S>
-      | Record<string, unknown>
+  with: <P extends Record<string, unknown> | false | null | undefined>(
+    props: P,
+  ) => ElementProps<S> &
+    (P extends Record<string, unknown> ? Omit<P, 'className' | 'style' | 'ref' | 'with'> : {})
+  /** Explicit host-prop composition; `with` is its compatibility alias. */
+  withProps: <As extends HostElement = 'div'>(
+    props:
+      | (ComponentPropsWithRef<As> & { [K in `data-${string}`]?: unknown })
       | false
       | null
       | undefined,
-  >(
-    props: P,
-  ) => ElementProps<S> &
-    (P extends Record<string, unknown>
-      ? Omit<P, 'className' | 'style' | 'ref' | 'with'>
-      : {})
+  ) => ElementProps<S> & ComponentPropsWithRef<As>
 } & InteractionHandlerProps
 
 /**
@@ -119,21 +123,22 @@ type StylesheetLike = {
  */
 type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
 
-type InferElements<S> = InferMeta<S> extends {
-  system: infer Sys extends TokenStyleDeclaration
-  elements: infer T
-}
-  ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
-  : {
-      // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
-      // key, so the composition methods have to be excluded by name — otherwise
-      // `s.extend` types as an element and a typo'd element name resolves to it.
-      [K in keyof S as K extends StylesheetMethod
-        ? never
-        : K extends string
-          ? K
-          : never]: ElementProps
-    }
+type InferElements<S> =
+  InferMeta<S> extends {
+    system: infer Sys extends TokenStyleDeclaration
+    elements: infer T
+  }
+    ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
+    : {
+        // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
+        // key, so the composition methods have to be excluded by name — otherwise
+        // `s.extend` types as an element and a typo'd element name resolves to it.
+        [K in keyof S as K extends StylesheetMethod
+          ? never
+          : K extends string
+            ? K
+            : never]: ElementProps
+      }
 
 type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
 
@@ -155,54 +160,28 @@ export function useStyles<T extends StylesheetLike>(
   ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
 ): InferElements<T>
 
-export function useStyles<T extends StylesheetLike>(
-  stylesheet: T,
-  state?: object,
-) {
-  // An ancestor may have overridden this sheet for the subtree (see
-  // overrides.tsx); everything below resolves the derived sheet instead.
+export function useStyles<T extends StylesheetLike>(stylesheet: T, state?: object) {
+  const sourceSheet = stylesheet
   stylesheet = useOverriddenSheet(stylesheet)
-  // Runtime container queries: the nearest measured ancestor sizes. Read
-  // unconditionally (hooks); folded into the applied state only when the
-  // resolved sheet actually queries a condition — conditionState answers null
-  // otherwise, and in css mode always (the matcher flattened the keys away).
   const containerSizes = useContext(ContainerSizesContext)
-  const ref = useRef<{
-    stylesheet: T
-    state?: object
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic result type
-    result: any
-  }>(null)
-
-  if (ref.current?.stylesheet !== stylesheet) {
-    const config = getConfig()
-    ref.current = {
-      stylesheet,
-      state,
-      result: stylesheet[SYMBOL_INIT](config, state),
-    }
+  const committed = useRef<any>(null)
+  const config = useRuntimeConfig()
+  // A candidate is private to this render. In particular a suspended render
+  // cannot publish mods, refs, subscriptions, or token values to the live tree.
+  const candidate = stylesheet[SYMBOL_INIT](config, state)
+  candidate.prepare?.(
+    committed.current?.stylesheet === sourceSheet ? committed.current.candidate : undefined,
+  )
+  const conditions = candidate.conditionState?.(containerSizes)
+  if (conditions) {
+    Object.assign(candidate.modsState, conditions)
+    candidate.matchStyles()
   }
-
-  const cqState = ref.current.result.conditionState?.(containerSizes) as
-    | Record<string, boolean>
-    | null
-    | undefined
-  // A container-querying sheet applies a MERGED state each render (a fresh
-  // object, so the identity guard below never holds for it — applyState's own
-  // value-equality check is its short-circuit). Everyone else keeps the
-  // identity fast path untouched.
-  const applied = cqState ? { ...state, ...cqState } : state
-
-  if (ref.current?.state !== applied) {
-    ref.current.result.applyState(applied)
-    // Record what was applied so a caller holding a STABLE mods object skips
-    // applyState entirely on re-render. (An inline literal still differs by
-    // identity every render; for those, applyState's own value-equality check
-    // is the short-circuit.) Without this line the guard never held for anyone.
-    ref.current.state = applied
-  }
-
-  return ref.current?.result
+  useLayoutEffect(() => {
+    committed.current = { stylesheet: sourceSheet, candidate }
+    return candidate.mount?.()
+  }, [candidate, sourceSheet])
+  return candidate
 }
 
 /**
@@ -220,9 +199,7 @@ export function useStyles<T extends StylesheetLike>(
  * and silently pass.
  */
 type BoundCallable = {
-  <As extends HostElement>(
-    props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>,
-  ): ReactElement
+  <As extends HostElement>(props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>): ReactElement
   (props?: { as?: never } & Record<string, unknown>): ReactElement
 }
 
@@ -241,9 +218,7 @@ type BoundElementsOf<T> = {
  * Mod-less module-level binding for a stylesheet with no variants:
  * `const { Root, Label } = bind(styles)`. The general form is `useBind`.
  */
-export const bind = _bind as <T extends StylesheetLike>(
-  stylesheet: T,
-) => BoundElementsOf<T>
+export const bind = _bind as <T extends StylesheetLike>(stylesheet: T) => BoundElementsOf<T>
 
 /**
  * The bound counterpart of `useStyles`: same arguments (mods in the hook call),
@@ -270,9 +245,7 @@ export type StyleOverrideRules<T extends StylesheetLike> =
         /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
          * the override's base rules; the matcher resolves them on the derived
          * sheet exactly as on an authored one. */
-        [K in
-          | `${keyof E & string}:${string}`
-          | `${keyof E & string}~:${string}`]?: {
+        [K in `${keyof E & string}:${string}` | `${keyof E & string}~:${string}`]?: {
           [T2 in keyof E as T2 extends string ? T2 : never]?: TokenStyle<Sys>
         }
       }
@@ -312,20 +285,29 @@ export type StyleOverrideVariantRules<T extends StylesheetLike> =
  * invent, and one that could be invented would be dead code that type-checks.
  * A matcher the sheet declared is replaced; one it did not is added.
  */
-export interface OverrideEntry<T extends StylesheetLike>
-  extends StyleOverrideEntry {
-  variants(
+type OverrideSystem<T> =
+  InferMeta<T> extends { system: infer S extends TokenStyleDeclaration } ? S : TokenStyleDeclaration
+type OverrideParts<T> = InferMeta<T> extends { elements: infer E } ? keyof E & string : string
+export interface OverrideEntry<T extends StylesheetLike> extends StyleOverrideEntry {
+  variants<const Rules extends Record<string, unknown>>(
     callback: (
-      selector: VariantSelector<
-        InferMods<T> extends ModType ? InferMods<T> : never
-      >,
-    ) => Record<string, StyleOverrideVariantRules<T>>,
+      selector: VariantSelector<InferMods<T> extends ModType ? InferMods<T> : never>,
+      q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
+    ) => Rules &
+      ValidateDeclaration<Rules, Record<string, StyleOverrideVariantRules<T>>, OverrideSystem<T>>,
   ): OverrideEntry<T>
 }
 
-export const overrideStyles = _overrideStyles as <T extends StylesheetLike>(
+export const overrideStyles = _overrideStyles as <
+  T extends StylesheetLike,
+  const Rules extends StyleOverrideRules<T>,
+>(
   sheet: T,
-  rules: StyleOverrideRules<T>,
+  rules:
+    | (Rules & ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>)
+    | ((
+        q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
+      ) => Rules & ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>),
   opts?: { scope?: string },
 ) => OverrideEntry<T>
 
@@ -345,4 +327,7 @@ export type OverridableStylesheet = StylesheetLike
 export const useBind = _useBind as <T extends StylesheetLike>(
   stylesheet: T,
   ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
-) => BoundElementsOf<T>
+) => BoundElementsOf<T> & {
+  readonly $props: InferElements<T>
+  $scope: (children: ReactNode) => ReactElement
+}
