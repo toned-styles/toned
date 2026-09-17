@@ -73,12 +73,16 @@ export function createDomIntegration(
       const stop = current.sub(() => notify(current.data))
       return { state: current.data, stop }
     },
-    attach(target, declaration) {
+    attach(target, declaration, invalidate) {
       if (!declaration['$grid'] && !declaration['$area']) return
-      return attachGridElement(target as Element, {
-        grid: declaration['$grid'] as GridDefinition | undefined,
-        area: declaration['$area'] as GridArea | undefined,
-      })
+      return attachGridElement(
+        target as Element,
+        {
+          grid: declaration['$grid'] as GridDefinition | undefined,
+          area: declaration['$area'] as GridArea | undefined,
+        },
+        invalidate,
+      )
     },
     validate: (target) => validateGridElement(target as Element),
   }

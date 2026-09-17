@@ -67,9 +67,10 @@ export function createElements(sheet: StylesheetLike) {
     }
 
     function Scoped({ instance, props }: { instance: Base; props: HostProps }) {
-      // Provider mount validates initial refs; this also validates parts mounted
-      // later by a child update, after every ancestor ref has been attached.
-      useEffect(() => instance.validateHosts())
+      // Provider mount validates initial refs. Drain later host attachments once
+      // per commit, after every ancestor ref has attached, including child-only
+      // updates that do not render the provider.
+      useEffect(() => instance.validatePendingHosts())
       return createElement(PartHost, { instance, part, props })
     }
 

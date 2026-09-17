@@ -184,6 +184,30 @@ export function ReservedNameContracts() {
   createElements(system.stylesheet({ name: {} }))
   // @ts-expect-error a part cannot replace an inherited function operation
   createElements(system.stylesheet({ bind: {} }))
+  // @ts-expect-error functions also inherit the Object prototype's constructor
+  createElements(system.stylesheet({ constructor: {} }))
+  // @ts-expect-error inherited Object operations are present on the provider
+  createElements(system.stylesheet({ hasOwnProperty: {} }))
+  // @ts-expect-error inherited Object operations are present on the provider
+  createElements(system.stylesheet({ isPrototypeOf: {} }))
+  // @ts-expect-error inherited Object operations are present on the provider
+  createElements(system.stylesheet({ propertyIsEnumerable: {} }))
+  // @ts-expect-error inherited Object operations are present on the provider
+  createElements(system.stylesheet({ toLocaleString: {} }))
+  // @ts-expect-error inherited Object operations are present on the provider
+  createElements(system.stylesheet({ valueOf: {} }))
+  // @ts-expect-error the computed spelling is a real own part, not object-literal prototype syntax
+  createElements(system.stylesheet({ ['__proto__']: {} }))
+  // @ts-expect-error legacy Object prototype methods also collide at runtime
+  createElements(system.stylesheet({ __defineGetter__: {} }))
+  // @ts-expect-error legacy Object prototype methods also collide at runtime
+  createElements(system.stylesheet({ __defineSetter__: {} }))
+  // @ts-expect-error legacy Object prototype methods also collide at runtime
+  createElements(system.stylesheet({ __lookupGetter__: {} }))
+  // @ts-expect-error legacy Object prototype methods also collide at runtime
+  createElements(system.stylesheet({ __lookupSetter__: {} }))
+  // These are not runtime collisions: ordinary JSX props are valid PART names.
+  createElements(system.stylesheet({ children: {}, key: {}, ref: {} }))
   // @ts-expect-error displayName names the provider component itself
   createElements(system.stylesheet({ displayName: {} }))
   // @ts-expect-error React reserves render as component metadata

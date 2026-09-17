@@ -323,6 +323,14 @@ export type ElementsOf<T> = ((
 
 type ReservedElementName =
   | keyof Function
+  | keyof Object
+  // Legacy Object.prototype members also satisfy the runtime `part in Elements`
+  // check, although modern TypeScript's Object interface omits them.
+  | '__proto__'
+  | '__defineGetter__'
+  | '__defineSetter__'
+  | '__lookupGetter__'
+  | '__lookupSetter__'
   | 'displayName'
   | '$$typeof'
   | 'render'

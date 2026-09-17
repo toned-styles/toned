@@ -21,6 +21,7 @@ export interface HostIntegration {
   attach(
     target: object,
     declaration: Readonly<Record<string, unknown>>,
+    invalidate?: (target: object) => void,
   ): (() => void) | undefined
   validate(target: object): void
 }

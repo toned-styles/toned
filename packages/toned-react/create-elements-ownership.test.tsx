@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem } from '@toned/core'
 import { defineGrid, fr } from '@toned/core/grid'
+import { Base } from '@toned/core/stylesheet'
 import type { Window } from 'happy-dom'
 import * as React from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -238,6 +239,127 @@ test('a local descendant host replacement validates grid ownership without reren
   )
   withBrowserErrorReporting(() => fireEvent.click(view.getByText('Wrap area')))
   expect(providerCommits).toBe(1)
+  expect(errors.length).toBeGreaterThan(0)
+  for (const error of errors) expect(error.message).toMatch(/direct parent/)
+})
+
+test('validating repeated hosts stays linear through provider and descendant-only commits', () => {
+  const count = 24
+  const items = Array.from({ length: count }, (_, id) => ({ id }))
+  const Repeated = createElements(
+    system
+      .stylesheet({ Item: { $style: { opacity: 1 } } })
+      .variants<{ compact: boolean }>()(($) => ({
+      [$.compact(true)]: { Item: { $style: { opacity: 0.5 } } },
+    })),
+  )
+  // The host integration is shared by system. Instrument it through a probe
+  // controller without introducing a public export just for this assertion.
+  const probe = new Base({ ref: system, rules: {}, config })
+  const validate = vi.spyOn(
+    Reflect.get(probe, 'host') as { validate(node: object): void },
+    'validate',
+  )
+  function Items() {
+    const [revision, setRevision] = React.useState(0)
+    return (
+      <>
+        <button type="button" onClick={() => setRevision((value) => value + 1)}>
+          Refresh items
+        </button>
+        {items.map(({ id }) => (
+          <Repeated.Item key={id} data-item={id} data-revision={revision} />
+        ))}
+      </>
+    )
+  }
+  const ui = (compact: boolean) => (
+    <ConfigProvider config={config}>
+      <Repeated compact={compact}>
+        <Items />
+      </Repeated>
+    </ConfigProvider>
+  )
+  const assertLinear = () => {
+    expect(new Set(validate.mock.calls.map(([node]) => node)).size).toBe(count)
+    // Allow one ownership pass and one attachment pass; a pass for every
+    // repeated part would make this grow quadratically with the list length.
+    expect(validate.mock.calls.length).toBeLessThanOrEqual(count * 2)
+  }
+  const view = render(ui(false))
+  assertLinear()
+  validate.mockClear()
+  view.rerender(ui(true))
+  assertLinear()
+  for (const node of view.container.querySelectorAll<HTMLElement>(
+    '[data-item]',
+  ))
+    expect(node.style.opacity).toBe('0.5')
+  validate.mockClear()
+  fireEvent.click(view.getByText('Refresh items'))
+  assertLinear()
+})
+
+test('moving the owner ref revalidates grid areas whose host refs did not change', () => {
+  const grid = defineGrid('retained-child-layout', {
+    columns: [fr(1)],
+    areas: [['body']],
+  })
+  const G = createElements(
+    system.stylesheet({
+      Root: { '@platform web': { $grid: grid } },
+      Body: { '@platform web': { $area: grid.area('body') } },
+    }),
+  )
+  const Shell = React.forwardRef<
+    HTMLDivElement,
+    React.ComponentProps<'div'> & { attachOuter: boolean }
+  >(({ children, attachOuter, ...props }, ref) => (
+    <div {...(attachOuter ? props : {})} ref={attachOuter ? ref : undefined}>
+      <div {...(attachOuter ? {} : props)} ref={attachOuter ? undefined : ref}>
+        {children}
+      </div>
+    </div>
+  ))
+  let bodyAttachments = 0
+  const bodyRef = (node: HTMLDivElement | null) => {
+    if (node) bodyAttachments++
+  }
+  function ChangingOwner() {
+    const [attachOuter, setAttachOuter] = React.useState(false)
+    const body = React.useMemo(
+      () => <G.Body as="div" ref={bodyRef} data-testid="retained-body" />,
+      [],
+    )
+    return (
+      <>
+        <button type="button" onClick={() => setAttachOuter(true)}>
+          Move owner ref
+        </button>
+        <G.Root as={Shell} attachOuter={attachOuter} data-testid="owner-ref">
+          {body}
+        </G.Root>
+      </>
+    )
+  }
+  const errors: Error[] = []
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  const view = mount(
+    <GridBoundary errors={errors}>
+      <G>
+        <ChangingOwner />
+      </G>
+    </GridBoundary>,
+  )
+  expect(errors).toEqual([])
+  expect(bodyAttachments).toBe(1)
+  expect(view.getByTestId('retained-body').parentElement).toBe(
+    view.getByTestId('owner-ref'),
+  )
+  withBrowserErrorReporting(() =>
+    fireEvent.click(view.getByText('Move owner ref')),
+  )
+  expect(bodyAttachments).toBe(1)
   expect(errors.length).toBeGreaterThan(0)
   for (const error of errors) expect(error.message).toMatch(/direct parent/)
 })
