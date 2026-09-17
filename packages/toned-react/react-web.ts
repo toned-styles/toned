@@ -1,5 +1,6 @@
-import { defineConfig } from '@toned/core'
+import { defineConfig, type HostConditions } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
+import { attachPart } from './attach-part.ts'
 import reactConfig from './config.ts'
 import { addWith, supportsRefCleanup } from './host-props.ts'
 
@@ -8,13 +9,13 @@ type AnyValue = any
 
 type Ref = AnyValue
 
-function getProps(this: Base, elementKey: string) {
+function getProps(this: Base, elementKey: string, conditions?: HostConditions) {
   let detach: (() => void) | undefined
   const ref = (current: Ref, caller?: AnyValue) => {
     detach?.()
     detach = undefined
     if (!current) return
-    detach = this.attach(elementKey, current, result, caller)
+    detach = attachPart(this, elementKey, current, result, caller, conditions)
     return supportsRefCleanup ? detach : undefined
   }
 
@@ -74,7 +75,7 @@ function getProps(this: Base, elementKey: string) {
 
     result = {
       ref,
-      ...this.getRestingStyle(elementKey),
+      ...this.getRestingStyle(elementKey, conditions?.readSizes()),
       onMouseEnter,
       onMouseLeave,
       onMouseDown,
@@ -85,7 +86,7 @@ function getProps(this: Base, elementKey: string) {
     result = {
       ref,
 
-      ...this.getCurrentStyle(elementKey),
+      ...this.getCurrentStyle(elementKey, conditions?.readSizes()),
     }
   }
 

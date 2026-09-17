@@ -17,6 +17,13 @@ import type { ElementType, Tokens } from './tokens.ts'
  */
 export type Platform = 'web' | 'native'
 
+/** Nearest-container facts for one rendered host. Reads are pure; subscriptions
+ * belong to host attachment, never to stylesheet resolution during render. */
+export interface HostConditions {
+  readSizes(): Record<string, number>
+  subscribe(listener: () => void): () => void
+}
+
 export type Config = Readonly<{
   /** Native host writes require an explicitly integrated renderer adapter. */
   nativeHost?: import('../stylesheet/native-host.ts').NativeHostAdapter
@@ -70,7 +77,11 @@ export type Config = Readonly<{
 
   /** Get props for an element - returns style/className based on config */
   // biome-ignore lint/suspicious/noExplicitAny: context type varies by usage
-  getProps(this: any, elementKey: string): Record<string, unknown>
+  getProps(
+    this: any,
+    elementKey: string,
+    conditions?: HostConditions,
+  ): Record<string, unknown>
 
   /**
    * Maps an element's `$$type` to the host element a binding should render for

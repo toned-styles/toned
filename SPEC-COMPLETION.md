@@ -13,8 +13,9 @@ point-in-time design document and has not been rewritten to match the code.
 | Conditions | Boolean queries, colocated media/container/state rules, cross-part state facts, and `q.part(source).has(target, state, { scope })`. Relations use registered-part child/descendant semantics within one mounted stylesheet family. Portals require explicit logical topology. |
 | Portable evaluation | Immutable semantic plans, ordered field operations, shared token evaluation, explicit backend capabilities, declaration provenance, explanations including emitted props, finite subset-shadow diagnostics, and checked resolver footprints. CSS lowering is separated from system definitions. |
 | Precedence and overrides | Descriptor source order, exact multiword bitsets, exact matched-rule membership, authoritative layers, structural null deletion, and a bounded cache of sibling override sequences. Legacy specialization order remains a deliberate compatibility mode. |
-| React lifecycle | Candidate/committed separation, layout-phase publication, direct host patches, ownership and baseline restoration, ref replacement/cleanup, Suspense isolation, and real React 18/19 compatibility. Existing bound-part internals received compatibility fixes; their public redesign is excluded below. |
-| External measurements | Stable container-size stores publish facts directly without styling renders. Native viewport facts come from an explicit host capability instead of a browser-global fallback. |
+| React lifecycle | Candidate/committed separation, layout-phase publication, direct host patches, ownership and baseline restoration, ref replacement/cleanup, Suspense isolation, and real React 18/19 compatibility. |
+| Element families | `createElements(sheet)` creates stable module-level part components and a hostless provider carrying typed variant inputs. Independent standalone parts use base/default declarations; scoped parts share the nearest matching family's render snapshot and controller. Dependent standalone relationship/grid parts report a named missing-scope error. Existing binding APIs remain compatible. |
+| External measurements | Stable container-size stores publish host-local facts directly without styling renders, including repeated and nested containers within one element family. Native viewport facts come from an explicit host capability instead of a browser-global fallback. |
 | Configuration | Pure renderers and `TonedProvider` separate output, tokens, and host integration. Theme changes preserve bound component identity. Legacy configuration remains a migration adapter. |
 | Web delivery | Deterministic assets/manifests, complete explicit/lazy inputs, namespaces, Vite dependency/HMR support, package smoke checks, and browser checks with JavaScript disabled. Rendering and updates do not inject stylesheets. |
 | Tailwind | Actual compiler validation, exact finite/parameter mappings, complete candidate and declaration inventories, JSON manifest runtime reconstruction, Boolean helper CSS, source-order field winners, SSR output, and direct owned class/parameter updates. |
@@ -24,10 +25,12 @@ point-in-time design document and has not been rewritten to match the code.
 
 ## Explicit exclusions and architectural boundaries
 
-- **`useBind` / `createElements` redesign:** deferred by Artur's instruction. There
-  is no new `createElements` export. Existing `useBind`, `bind`, and `$scope`
-  retain their public model. Correctness fixes such as React 18 ref forwarding
-  are included; they do not settle the later API discussion.
+- **Existing `useBind` redesign:** remains deferred. The later API discussion
+  selected and authorized `createElements(sheet)`, implemented as described
+  above and in [the React package](packages/toned-react/README.md#element-families).
+  Its provider is optional for independent base/default parts and required to
+  share variant inputs or cross-part ownership. Existing `useBind`, `bind`, and
+  `$scope` retain their public model. No custom JSX runtime or compiler is needed.
 - **Native vertical writing modes:** the portable logical-layout contract defaults
   to horizontal LTR and supports an explicit immutable direction/writing mode.
   Native rejects vertical logical layout because the shipped host contract has

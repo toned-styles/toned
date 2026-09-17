@@ -1,4 +1,4 @@
-import type { Config } from '@toned/core'
+import type { Config, HostConditions } from '@toned/core'
 
 const CONTROLLER = Symbol.for('@toned/react/styles-controller')
 type Controller = {
@@ -6,8 +6,12 @@ type Controller = {
   elementDescriptors(): Array<{ key: string }>
 }
 /** Public part names never share a namespace with controller internals. */
-export function elementProps(controller: Controller, key: string) {
-  return controller.config.getProps.call(controller, key)
+export function elementProps(
+  controller: Controller,
+  key: string,
+  conditions?: HostConditions,
+) {
+  return controller.config.getProps.call(controller, key, conditions)
 }
 export function styleView(controller: Controller): object {
   const view = Object.create(null)

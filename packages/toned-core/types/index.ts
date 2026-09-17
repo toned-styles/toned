@@ -9,7 +9,7 @@ export type { _symInit, _symRef } from '../utils/symbols.ts'
 // Other symbols are internal and should be imported from utils/symbols.ts directly
 export { SYMBOL_INIT } from '../utils/symbols.ts'
 // Config types
-export type { Config, Platform } from './config.ts'
+export type { Config, HostConditions, Platform } from './config.ts'
 export type { PortableTokenStyle } from './style.ts'
 // Stylesheet types.
 // StylesheetInstance and the brand declarations (_internalBrand, _symRef,
