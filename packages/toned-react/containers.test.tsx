@@ -16,7 +16,6 @@ import {
   getConfig,
   setConfig,
 } from '@toned/core'
-// The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
 import * as React from 'react'
 import { afterEach, describe, expect, test } from 'vitest'
 import { bind, ContainerSizesContext, useBind } from './index.ts'
