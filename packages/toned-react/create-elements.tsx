@@ -9,8 +9,10 @@ import {
   createElement,
   forwardRef,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useSyncExternalStore,
 } from 'react'
 import { useStyles } from './index.ts'
 import { type HostProps, PartHost } from './part-host.tsx'
@@ -20,6 +22,31 @@ import { controllerOf } from './style-view.ts'
 // The typed public export in index.ts preserves each stylesheet's axes and parts.
 // biome-ignore lint/suspicious/noExplicitAny: stylesheet adapter boundary
 type StylesheetLike = { [SYMBOL_INIT]: (...args: any[]) => any }
+
+const serverValidationRevision = () => 0
+
+/** A custom host may move its forwarded ref using only its own internal state.
+ * Observe committed invalidations separately so that validating that topology
+ * neither rerenders the provider/parts nor throws outside React's boundaries. */
+function ValidationObserver({ instance }: { instance: Base }) {
+  const subscribe = useCallback(
+    (notify: () => void) => instance.subscribeHostValidation(notify),
+    [instance],
+  )
+  const snapshot = useCallback(
+    () => instance.hostValidationRevision,
+    [instance],
+  )
+  const revision = useSyncExternalStore(
+    subscribe,
+    snapshot,
+    serverValidationRevision,
+  )
+  useEffect(() => {
+    if (revision > 0) instance.validatePendingHosts()
+  }, [instance, revision])
+  return null
+}
 
 function useController(sheet: StylesheetLike, variants?: object): Base {
   return controllerOf(
@@ -45,7 +72,12 @@ export function createElements(sheet: StylesheetLike) {
     ...variants
   }: HostProps & { children?: ReactNode }) {
     const instance = useController(sheet, variants)
-    return createElement(Context.Provider, { value: instance }, children)
+    return createElement(
+      Context.Provider,
+      { value: instance },
+      children,
+      createElement(ValidationObserver, { instance }),
+    )
   }
   Elements.displayName = 'TonedElements'
 
@@ -66,20 +98,12 @@ export function createElements(sheet: StylesheetLike) {
       return createElement(PartHost, { instance, part, props })
     }
 
-    function Scoped({ instance, props }: { instance: Base; props: HostProps }) {
-      // Provider mount validates initial refs. Drain later host attachments once
-      // per commit, after every ancestor ref has attached, including child-only
-      // updates that do not render the provider.
-      useEffect(() => instance.validatePendingHosts())
-      return createElement(PartHost, { instance, part, props })
-    }
-
     const Component = forwardRef<unknown, HostProps>(
       function Element(props, ref) {
         const instance = useContext(Context)
         const hostProps = ref ? { ...props, ref } : props
         return instance
-          ? createElement(Scoped, { instance, props: hostProps })
+          ? createElement(PartHost, { instance, part, props: hostProps })
           : createElement(Standalone, { props: hostProps })
       },
     )
