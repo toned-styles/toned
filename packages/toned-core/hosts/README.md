@@ -13,6 +13,16 @@ a controller commits and are released during disposal. Writer ownership remains
 in the shared `stylesheet/applyStyles.ts` registry, which selects the registered
 native patch adapter or the DOM writer behind its target-based API.
 
+Attachment may receive an `invalidate(target)` callback for local ownership
+dependencies. The DOM grid adapter calls it for retained area children when
+their owner detaches: a forwarded parent ref can move while those child refs
+remain unchanged. Controllers queue attached or invalidated targets and expose
+`validatePendingHosts()` to flush them after all commit refs have attached.
+Repeated part effects drain one shared queue, rather than scanning every host
+once per rendered part. Full provider validation also drains the entries it
+checks. Detached ref cleanup removes only its own pending generation; detached
+grid children have no binding and therefore validate as a no-op.
+
 Relations keep their portable registered-part semantics in `PartRelations`.
 Host topology supplies the facts; it does not alter source-order resolution,
 instance boundaries, or event-state ownership. Hover, active, and focus facts

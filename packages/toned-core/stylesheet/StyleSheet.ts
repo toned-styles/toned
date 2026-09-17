@@ -64,7 +64,10 @@ type AnyValue = any
 
 type ElementKey = string
 type ContainerSizes = Readonly<Record<string, number>>
-type HostConditions = { part: string; readSizes: () => ContainerSizes }
+type HostConditionRegistration = {
+  part: string
+  readSizes: () => ContainerSizes
+}
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
 const ATTACHMENTS = new WeakMap<
@@ -563,7 +566,8 @@ export class Base {
     current: Base
     relations: PartRelations
     relationHosts: Map<object, { part: string; detach: () => void }>
-    hostConditions: Map<object, HostConditions>
+    hostConditions: Map<object, HostConditionRegistration>
+    pendingHostValidation: Set<object>
     stopRelations: (() => void)[]
     stopStates?: () => void
   } = {
@@ -571,6 +575,7 @@ export class Base {
     relations: new PartRelations(),
     relationHosts: new Map(),
     hostConditions: new Map(),
+    pendingHostValidation: new Set(),
     stopRelations: [],
   }
 
@@ -829,6 +834,7 @@ export class Base {
       ATTACHMENTS.set(node, owners)
     }
     owners.set(this.family, { owner: this, generation })
+    this.family.pendingHostValidation.add(node)
     recordHostCommit(node, toned, caller, this.family)
     if (this.relationQueries().length) {
       const existing = this.family.relationHosts.get(node)
@@ -848,6 +854,7 @@ export class Base {
     const detachHost = this.host.attach(
       node,
       gridRegistrations(this.rules)[elementKey] ?? {},
+      (target) => this.family.pendingHostValidation.add(target),
     )
     // Callback refs are commit work too. A child layout effect can dispatch
     // an event before its parent's layout effect, so its candidate must already
@@ -864,8 +871,10 @@ export class Base {
       attached = false
       detachHost?.()
       refs.delete(node)
-      if (ATTACHMENTS.get(node)?.get(this.family)?.generation === generation)
+      if (ATTACHMENTS.get(node)?.get(this.family)?.generation === generation) {
+        this.family.pendingHostValidation.delete(node)
         prepareHostRelease(node, this.family)
+      }
       // React detaches and reattaches callback refs in one commit. Retain
       // transient facts through that handoff, then discard true unmounts.
       queueMicrotask(() => {
@@ -898,7 +907,25 @@ export class Base {
   validateHosts() {
     for (const key in this.refs) {
       const refs = this.refs[key]
-      if (refs instanceof Set) for (const node of refs) this.host.validate(node)
+      if (refs instanceof Set)
+        for (const node of refs) {
+          this.host.validate(node)
+          this.family.pendingHostValidation.delete(node)
+        }
+    }
+  }
+
+  /** Flush committed ref changes after every ancestor ref has attached.
+   * Many parts may request this in one commit: each queued host is validated
+   * once, and subsequent requests return without walking the mounted tree. */
+  validatePendingHosts(): void {
+    for (const node of this.family.pendingHostValidation) {
+      const attachment = ATTACHMENTS.get(node)?.get(this.family)
+      // A removed grid owner can invalidate a child whose own ref was retained
+      // (including a child from another family). Validate that local edge too;
+      // a fully detached child has no host registration and validates as a no-op.
+      ;(attachment?.owner ?? this.family.current).host.validate(node)
+      this.family.pendingHostValidation.delete(node)
     }
   }
 
@@ -1365,6 +1392,7 @@ export class Base {
   }
 
   applyElementStyles(context?: ApplyContext) {
+    const hasHostConditions = this.family.hostConditions.size > 0
     for (const elementKey of this.matcher.elementSet) {
       const ref = this.refs[elementKey]
       // Web stores every mounted element for a key in a Set (O(1) add/has/delete);
@@ -1377,7 +1405,7 @@ export class Base {
       // A shared matched rule cannot tell us whether a host's local container
       // crossed a threshold. Resolve registered hosts before the shared skip;
       // the matcher/token caches and final writer still avoid redundant work.
-      if (isSet) {
+      if (hasHostConditions && isSet) {
         for (const el of ref) {
           const conditions = this.family.hostConditions.get(el)
           if (conditions?.part !== elementKey) continue
@@ -1413,7 +1441,10 @@ export class Base {
           // delete during for..of is safe).
           const styleBySignature = new Map<string, AnyValue>()
           for (const el of ref) {
-            if (this.family.hostConditions.get(el)?.part === elementKey)
+            if (
+              hasHostConditions &&
+              this.family.hostConditions.get(el)?.part === elementKey
+            )
               continue
             if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
@@ -1444,7 +1475,10 @@ export class Base {
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
           for (const el of ref) {
-            if (this.family.hostConditions.get(el)?.part === elementKey)
+            if (
+              hasHostConditions &&
+              this.family.hostConditions.get(el)?.part === elementKey
+            )
               continue
             if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
@@ -1456,7 +1490,10 @@ export class Base {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
           for (const el of ref) {
-            if (this.family.hostConditions.get(el)?.part === elementKey)
+            if (
+              hasHostConditions &&
+              this.family.hostConditions.get(el)?.part === elementKey
+            )
               continue
             if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)

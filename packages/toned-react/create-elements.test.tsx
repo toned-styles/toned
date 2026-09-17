@@ -86,6 +86,16 @@ test.each([
   'render',
   '$$typeof',
   'toString',
+  'constructor',
+  'hasOwnProperty',
+  'isPrototypeOf',
+  'propertyIsEnumerable',
+  'toLocaleString',
+  'valueOf',
+  '__defineGetter__',
+  '__defineSetter__',
+  '__lookupGetter__',
+  '__lookupSetter__',
 ])('factory diagnoses component metadata collision for part %s', (part) => {
   // Deliberately bypass authoring types to exercise JavaScript callers of the
   // runtime guard with a dynamically selected, reserved component member.

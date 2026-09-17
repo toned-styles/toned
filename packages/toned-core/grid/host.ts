@@ -39,6 +39,7 @@ function connect(element: GridHostElement, strict: boolean): void {
 export function attachGridElement(
   element: GridHostElement,
   metadata: { grid?: GridDefinition; area?: GridArea },
+  invalidate?: (target: GridHostElement) => void,
 ): () => void {
   const previous = bindings.get(element)
   previous?.detachArea?.()
@@ -57,6 +58,7 @@ export function attachGridElement(
       const childBinding = bindings.get(child)
       childBinding?.detachArea?.()
       if (childBinding) delete childBinding.detachArea
+      if (childBinding?.area) invalidate?.(child)
     }
   }
 }
@@ -64,4 +66,8 @@ export function attachGridElement(
 /** Call in the host's layout commit, never during speculative rendering. */
 export function validateGridElement(element: GridHostElement): void {
   connect(element, true)
+  // A parent host can be replaced/reconfigured while its child refs remain
+  // stable. Validate those immediate ownership edges without scanning any
+  // unrelated mounted parts or walking arbitrary descendant subtrees.
+  for (const child of Array.from(element.children)) connect(child, true)
 }
