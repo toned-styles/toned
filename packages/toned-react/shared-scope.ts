@@ -12,7 +12,7 @@ function scopeRequirements(plan: CompiledPlan): ReadonlyMap<string, string> {
   const cached = requirements.get(plan)
   if (cached) return cached
   const result = new Map<string, string>()
-  const require = (part: string, reason: string) => {
+  const requireScope = (part: string, reason: string) => {
     if (!result.has(part)) result.set(part, reason)
   }
   const visit = (predicate: Predicate, target: string): void => {
@@ -23,17 +23,17 @@ function scopeRequirements(plan: CompiledPlan): ReadonlyMap<string, string> {
     } else if (predicate.fact.kind === 'relation') {
       const { sourcePart, part } = predicate.fact.relation
       const reason = `the relationship between ${sourcePart} and ${part}`
-      require(sourcePart, reason)
-      require(part, reason)
-      require(target, reason)
+      requireScope(sourcePart, reason)
+      requireScope(part, reason)
+      requireScope(target, reason)
     } else if (predicate.fact.kind === 'state') {
       // Legacy sibling channels spell their source as "Part~". Local state
       // facts (including bare q.state predicates) need no shared controller.
       const source = predicate.fact.part.replace(/~$/, '')
       if (source && source !== target) {
         const reason = `state shared between ${source} and ${target}`
-        require(source, reason)
-        require(target, reason)
+        requireScope(source, reason)
+        requireScope(target, reason)
       }
     }
   }
@@ -50,7 +50,7 @@ function scopeRequirements(plan: CompiledPlan): ReadonlyMap<string, string> {
     // Layout ownership is an explicit createElements boundary even though a
     // browser grid can otherwise connect hosts through their DOM parent alone.
     if (operation.token === '$grid' || operation.token === '$area')
-      require(part, `${operation.token} layout ownership`)
+      requireScope(part, `${operation.token} layout ownership`)
   }
   requirements.set(plan, result)
   return result

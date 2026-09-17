@@ -101,10 +101,13 @@ change and is not green: the preceding `07cd173` checkout produces 472 errors
 with the same error-only command. This is not presented as a passing release
 gate or hidden by a new exclusion list.
 
-React Doctor reports no errors and four warnings. The `useBind` memo intentionally
+React Doctor reports no errors. Four existing warnings remain, plus one
+React-18 cleanup warning in the new binding conformance fixture. The `useBind` memo intentionally
 seeds a stable component family once per stylesheet/config; later candidates
 publish in a layout effect. Adding the candidate to that memo's dependencies
 would recreate component types on every render and violate the identity contract.
 The other three warnings concern exporting library helpers beside the override
-provider, which limits Fast Refresh granularity for library development. Neither
+provider, which limits Fast Refresh granularity for library development. The new fixture passes a cleanup-returning ref to a Toned part, whose composed
+ref implements cleanup on React 18 and 19; it is not passed straight to a
+React-18 host. Both actual-version matrix legs verify balanced cleanup. No
 warning is suppressed by a new configuration change.
