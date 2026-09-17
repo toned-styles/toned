@@ -79,6 +79,7 @@ export type {
   DefaultSystemKind,
   ElementStyleNew,
   ElementType,
+  HostConditions,
   ModType,
   Platform,
   PreVariantsStylesheet,

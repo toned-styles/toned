@@ -53,6 +53,7 @@ import { APPLY_OVERRIDE, RULE_LAYERS, WHEN_RULES } from './rule-protocol.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import {
   deepMerge,
+  extractOrderedKeys,
   mergeRules,
   processVariantRules,
 } from './variantProcessing.ts'
@@ -62,6 +63,8 @@ import { createVariantSelector } from './variantSelector.ts'
 type AnyValue = any
 
 type ElementKey = string
+type ContainerSizes = Readonly<Record<string, number>>
+type HostConditions = { part: string; readSizes: () => ContainerSizes }
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
 const ATTACHMENTS = new WeakMap<
@@ -415,6 +418,13 @@ export function createStylesheet<
   registerStylesheetPlan(stylesheet, {
     ref: ref as AnyValue,
     rules: mergedRules,
+    parts: Object.freeze([...elementNamesOf(rules)]),
+    variantAxes: Object.freeze([
+      ...new Set([
+        ...extractOrderedKeys(variantRules),
+        ...Object.keys(defaults),
+      ]),
+    ]),
   })
   return stylesheet
 }
@@ -553,12 +563,14 @@ export class Base {
     current: Base
     relations: PartRelations
     relationHosts: Map<object, { part: string; detach: () => void }>
+    hostConditions: Map<object, HostConditions>
     stopRelations: (() => void)[]
     stopStates?: () => void
   } = {
     current: this,
     relations: new PartRelations(),
     relationHosts: new Map(),
+    hostConditions: new Map(),
     stopRelations: [],
   }
 
@@ -860,6 +872,7 @@ export class Base {
         if (ATTACHMENTS.get(node)?.get(this.family)?.generation !== generation)
           return
         ATTACHMENTS.get(node)?.delete(this.family)
+        this.family.hostConditions.delete(node)
         releaseHost(node, this.family)
         const relationship = this.family.relationHosts.get(node)
         this.family.relationHosts.delete(node)
@@ -893,6 +906,36 @@ export class Base {
     return ATTACHMENTS.get(node)?.get(this.family)?.owner ?? this.family.current
   }
 
+  /** Register committed host-local conditions. The adapter subscribes next,
+   * then calls refreshHostConditions to catch changes during the handoff.
+   * A render candidate only reads sizes; it never replaces a live environment. */
+  bindHostConditions(
+    part: string,
+    node: object,
+    readSizes: () => ContainerSizes,
+  ): () => void {
+    const registration = { part, readSizes }
+    this.family.hostConditions.set(node, registration)
+    return () => {
+      if (this.family.hostConditions.get(node) === registration)
+        this.family.hostConditions.delete(node)
+    }
+  }
+
+  /** Called by a host's measurement subscription, without rerendering React.
+   * During ref attachment the attachment owner can already be the new committed
+   * candidate, before the provider's layout effect publishes family.current. */
+  refreshHostConditions(part: string, node: object): void {
+    const registration = this.family.hostConditions.get(node)
+    if (!registration || registration.part !== part) return
+    const owner = this.eventOwner(node)
+    setStyles(
+      node,
+      owner.styleForHostConditions(part, node, registration.readSizes()),
+      this.family,
+    )
+  }
+
   onHostDetach(node: AnyValue, cleanup: () => void) {
     let owners = HOST_CLEANUPS.get(node)
     if (!owners) {
@@ -922,10 +965,17 @@ export class Base {
     const out: Array<{ key: string; type?: ElementType }> = []
     for (const key of this.matcher.elementSet) {
       if (key.includes(':') || key[0] === '[') continue
-      const rule = (this.rules as Record<string, { $$type?: ElementType }>)[key]
-      out.push({ key, type: (rule as AnyValue)?.$kind ?? rule?.$$type })
+      out.push({ key, type: this.elementKind(key) })
     }
     return out
+  }
+
+  /** A single host must not allocate/scan every part descriptor on each render. */
+  elementKind(key: ElementKey): ElementType | undefined {
+    const rule = this.rules[key] as
+      | { $kind?: ElementType; $$type?: ElementType }
+      | undefined
+    return rule?.$kind ?? rule?.$$type
   }
 
   /**
@@ -942,7 +992,7 @@ export class Base {
   }
 
   /** The container sizes last fed to conditionState — see applyState. */
-  private lastContainerSizes: Record<string, number> | null = null
+  private lastContainerSizes: ContainerSizes | null = null
 
   /**
    * Condition mods for the given measured ancestor sizes (px per container
@@ -960,7 +1010,8 @@ export class Base {
   >()
 
   conditionState(
-    sizes: Record<string, number>,
+    sizes: ContainerSizes,
+    remember = true,
   ): Record<string, boolean> | null {
     const containers = (
       this.ref as {
@@ -1013,7 +1064,7 @@ export class Base {
         out[mod] = dir === 'rtl'
       }
     }
-    if (out) this.lastContainerSizes = sizes
+    if (out && remember) this.lastContainerSizes = sizes
     return out
   }
 
@@ -1029,10 +1080,10 @@ export class Base {
     }
   }
 
-  getCurrentStyle(key: ElementKey) {
-    const result = this.applyTokens(this.modsStyle[key], key)
-
-    return result
+  getCurrentStyle(key: ElementKey, sizes?: ContainerSizes) {
+    if (sizes === undefined) return this.applyTokens(this.modsStyle[key], key)
+    const facts = { ...this.modsState, ...this.conditionState(sizes, false) }
+    return this.applyTokens(this.matcher.match(facts)[key], key, facts)
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
@@ -1189,34 +1240,20 @@ export class Base {
     return activePseudos.join(PSEUDO_SIGNATURE_SEPARATOR)
   }
 
-  // The compiled match rule for an element with exactly `activePseudos` forced
-  // on (and every other interaction pseudo off), ignoring the shared global
-  // pseudo mods (which can only represent a single element's state at a time).
-  // StyleMatcher caches by mod bitmask, so the returned reference is stable
-  // across identical (pseudo + variant + media) state — which drives the
-  // redundant-write skip in applyElementStyles.
-  private matchedRule(
-    elementKey: ElementKey,
-    activePseudos: string[],
-  ): AnyValue {
-    const active = new Set(activePseudos)
-    const elMods = { ...this.modsState }
-    for (const pseudo of this.trackedPseudos(elementKey)) {
-      elMods[this.stateKey(elementKey, pseudo)] = active.has(pseudo)
-    }
-    return this.matcher.match(elMods)[elementKey]
-  }
-
   // Resolve an element's style for exactly `activePseudos`.
   private styleForPseudos(
     elementKey: ElementKey,
     activePseudos: string[],
+    sizes?: ContainerSizes,
   ): AnyValue {
-    const facts = { ...this.modsState }
+    const facts = {
+      ...this.modsState,
+      ...(sizes === undefined ? {} : this.conditionState(sizes, false)),
+    }
     for (const pseudo of this.trackedPseudos(elementKey))
       facts[this.stateKey(elementKey, pseudo)] = activePseudos.includes(pseudo)
     return this.applyTokens(
-      this.matchedRule(elementKey, activePseudos),
+      this.matcher.match(facts)[elementKey],
       elementKey,
       facts,
     )
@@ -1226,8 +1263,40 @@ export class Base {
   // pseudo-states forced off. The web binding spreads this declaratively so a
   // sibling's live hover/active/focus (tracked in the shared global modsState)
   // can never leak across instances when React re-applies props on re-render.
-  getRestingStyle(elementKey: ElementKey): AnyValue {
-    return this.styleForPseudos(elementKey, [])
+  getRestingStyle(elementKey: ElementKey, sizes?: ContainerSizes): AnyValue {
+    return this.styleForPseudos(elementKey, [], sizes)
+  }
+
+  private styleForHostConditions(
+    elementKey: ElementKey,
+    node: object,
+    sizes: ContainerSizes,
+  ): AnyValue {
+    const targets = this.refs[elementKey]
+    if (
+      !this.matcher.interactions[elementKey] &&
+      targets instanceof Set &&
+      targets.size > 1
+    ) {
+      // Preserve the existing rule for ambiguous cross-part interactions on
+      // repeated non-interactive targets, while keeping each host's geometry.
+      const facts = {
+        ...this.restingModsState(),
+        ...this.conditionState(sizes, false),
+      }
+      const style = this.applyTokens(
+        this.matcher.match(facts)[elementKey],
+        elementKey,
+        facts,
+      )
+      this.warnCrossElementMultiInstance(elementKey, style, sizes)
+      return style
+    }
+    return this.styleForPseudos(
+      elementKey,
+      this.activePseudos(elementKey, node),
+      sizes,
+    )
   }
 
   // Re-apply a single element's own interaction state imperatively. Called from
@@ -1235,6 +1304,15 @@ export class Base {
   // resting style to every element, so an element that is genuinely hovered/
   // active/focused needs its state restored here (and only that element).
   reapplyInteraction(elementKey: ElementKey, el: AnyValue) {
+    const conditions = this.family.hostConditions.get(el)
+    if (conditions?.part === elementKey) {
+      setStyles(
+        el,
+        this.styleForHostConditions(elementKey, el, conditions.readSizes()),
+        this.family,
+      )
+      return
+    }
     const active = this.activePseudos(elementKey, el)
     if (active.length === 0) return
     setStyles(el, this.styleForPseudos(elementKey, active), this.family)
@@ -1246,6 +1324,7 @@ export class Base {
   private pruneEl(elementKey: ElementKey, el: AnyValue) {
     const ref = this.refs[elementKey]
     if (ref instanceof Set) ref.delete(el)
+    this.family.hostConditions.delete(el)
     for (const pseudo of this.trackedPseudos(elementKey)) {
       this._activeEls[`${elementKey}${pseudo}`]?.delete(el)
     }
@@ -1271,9 +1350,10 @@ export class Base {
   private warnCrossElementMultiInstance(
     elementKey: ElementKey,
     restingStyle: AnyValue,
+    sizes?: ContainerSizes,
   ) {
     if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
-    const liveStyle = this.getCurrentStyle(elementKey)
+    const liveStyle = this.getCurrentStyle(elementKey, sizes)
     if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
     this._warnedCrossElement.add(elementKey)
     console.warn(
@@ -1293,6 +1373,25 @@ export class Base {
       const isMultiInstance = isSet && ref.size > 1
       const isSelfTarget = context?.triggerKey === elementKey
       const isInteractive = !!this.matcher.interactions[elementKey]
+
+      // A shared matched rule cannot tell us whether a host's local container
+      // crossed a threshold. Resolve registered hosts before the shared skip;
+      // the matcher/token caches and final writer still avoid redundant work.
+      if (isSet) {
+        for (const el of ref) {
+          const conditions = this.family.hostConditions.get(el)
+          if (conditions?.part !== elementKey) continue
+          if (!this.host.connected(el)) {
+            this.pruneEl(elementKey, el)
+            continue
+          }
+          setStyles(
+            el,
+            this.styleForHostConditions(elementKey, el, conditions.readSizes()),
+            this.family,
+          )
+        }
+      }
 
       // For multi-instance self-targets, bypass isEqual (element-level state differs)
       if (!(isMultiInstance && isSelfTarget)) {
@@ -1314,6 +1413,8 @@ export class Base {
           // delete during for..of is safe).
           const styleBySignature = new Map<string, AnyValue>()
           for (const el of ref) {
+            if (this.family.hostConditions.get(el)?.part === elementKey)
+              continue
             if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
               continue
@@ -1343,6 +1444,8 @@ export class Base {
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
           for (const el of ref) {
+            if (this.family.hostConditions.get(el)?.part === elementKey)
+              continue
             if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
               continue
@@ -1353,6 +1456,8 @@ export class Base {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
           for (const el of ref) {
+            if (this.family.hostConditions.get(el)?.part === elementKey)
+              continue
             if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
               continue

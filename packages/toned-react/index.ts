@@ -34,6 +34,7 @@ import {
 } from 'react'
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
 import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
+import { createElements as _createElements } from './create-elements.tsx'
 import {
   overrideStyles as _overrideStyles,
   isStyleOverrideEntry,
@@ -311,6 +312,39 @@ type BoundCallable = {
 type BoundElementsOf<T> = {
   [K in keyof InferElements<T>]: BoundCallable & InferElements<T>[K]
 }
+
+/** Stable parts and an optional, hostless variant provider. Parts used outside
+ * their family provider resolve base styles plus declared defaults. */
+export type ElementsOf<T> = ((
+  props: ([InferMods<T>] extends [never] ? {} : InputMods<T>) & {
+    children?: ReactNode
+  },
+) => ReactElement) & { [K in keyof InferElements<T>]: BoundCallable }
+
+type ReservedElementName =
+  | keyof Function
+  | 'displayName'
+  | '$$typeof'
+  | 'render'
+  | 'defaultProps'
+  | 'propTypes'
+type ElementsConstraint<T> = Extract<
+  keyof InferElements<T>,
+  ReservedElementName
+> extends never
+  ? [InferMods<T>] extends [never]
+    ? unknown
+    : Extract<keyof InferMods<T>, 'children' | 'key' | 'ref'> extends never
+      ? unknown
+      : { readonly 'Toned: variant axes cannot be children, key or ref': never }
+  : { readonly 'Toned: part name conflicts with component metadata': never }
+
+/** Call at module scope; no host configuration or token values are read here. */
+export const createElements = _createElements as unknown as <
+  T extends StylesheetLike,
+>(
+  stylesheet: T & ElementsConstraint<T>,
+) => ElementsOf<T>
 
 /**
  * Mod-less module-level binding for a stylesheet with no variants:

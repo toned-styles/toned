@@ -1,7 +1,7 @@
 # @toned/react
 
 React 18/19 bindings for Toned's web and native hosts. Declarations are immutable;
-matching plans are shared; each mounted hook owns its committed runtime state.
+matching plans are shared; each mounted instance owns its committed runtime state.
 The React entry and context subpaths declare a client boundary; server-only
 resolution imports `@toned/core/server`.
 
@@ -9,7 +9,7 @@ resolution imports `@toned/core/server`.
 
 ```tsx
 import { defineConfig, defineSystem, defineToken } from '@toned/core'
-import { ConfigProvider, useBind } from '@toned/react'
+import { ConfigProvider, createElements } from '@toned/react'
 import web from '@toned/react/react-web'
 
 export const system = defineSystem({
@@ -32,13 +32,13 @@ export const buttonStyles = system
 }))
 
 const config = defineConfig({ ...web, mediaMode: 'css', pseudoMode: 'css' })
+const S = createElements(buttonStyles)
 
 function Button() {
-  const s = useBind(buttonStyles, { size: 's' })
   return (
-    <s.Root as="button" type="button">
-      Save
-    </s.Root>
+    <S size="s">
+      <S.Root as="button" type="button">Save</S.Root>
+    </S>
   )
 }
 
@@ -66,6 +66,61 @@ The example declarations should live in a pure module (`button-styles.ts`), with
 React components/configuration in another module. CSS generation never runs in
 render. The host chooses the React DOM root, framework, or native application
 entry; Toned does not mount the application.
+
+## Element families
+
+Call `createElements(sheet)` once at module scope. It returns stable named part
+components and a provider component on the same value. Creating the family does
+not read tokens, install a host, or construct a mounted controller; configuration
+and theme are read in the rendering tree.
+
+```tsx
+const S = createElements(buttonStyles)
+
+// Standalone: base declarations plus any declared variant defaults.
+<S.Root as="button">Default appearance</S.Root>
+
+// Two independent instances of the same component family.
+<S size="s"><S.Root as="button">Small</S.Root></S>
+<S size="m"><S.Root as="button">Medium</S.Root></S>
+```
+
+`S` renders no DOM/native host or layout wrapper. Its props are the sheet's variant
+axes and `children`; required axes remain required and axes with declared defaults
+are optional. Put host props, refs and `as` on the named part. An explicit `as`
+checks that intrinsic element's or custom component's props and ref type. Without
+`as`, the host configuration resolves the part's semantic `$kind`. New family
+parts are components only; they do not carry the compatibility prop bags exposed
+by `useBind`.
+
+Each part uses the nearest provider from its own family, even through other
+component families. Sibling providers own separate state. A nested provider starts
+its own instance from its inputs and the sheet's defaults; it does not inherit
+variant inputs or interaction state from the outer instance. A standalone part
+also owns its own instance: missing axes without defaults match no variant value.
+Place `StyleOverrides` around the provider or standalone part to apply ambient
+overrides; the family provider has no `overrides` prop.
+
+Use a provider whenever parts must share ownership, including cross-part state
+relations and named grid/area placement. A dependent part rendered standalone
+throws `TonedMissingScopeError`, even if the sheet has no variants. Independent
+parts in that sheet can still render standalone. The check includes effective
+override declarations, so adding a relationship cannot silently turn an isolated
+part into a disconnected instance. JSX types cannot prove component ancestry;
+this ownership check runs when the part renders.
+
+Variant updates travel with the provider's render snapshot. Descendant layout
+effects observe the updated declarative host styles during that commit, and
+suspended renders cannot publish their pending state. Local interaction and
+measurement updates still patch committed hosts directly. The public component
+references stay stable across variant and theme changes, preserving child state
+and host identity.
+
+React reserves `children`, `key`, and `ref` on JSX elements, so these cannot name
+provider variant axes. Part names must also avoid properties reserved by the
+callable family object. Types reject these collisions; factory checks also reject
+reserved part names and axes present in runtime declarations/defaults. An unused
+axis declared only in a TypeScript type has no runtime representation to inspect.
 
 ## Prop bags and overrides
 
@@ -97,7 +152,7 @@ must be defined scalar values; `null` never means a variant value. Defaults pers
 through `extend`, `when`, and override layers. The existing `useBind` flat modifier
 argument remains unchanged.
 
- `useBind` returns
+The existing `useBind`, `bind`, and `$scope` APIs remain supported. `useBind` returns
 stable component functions and an immutable `$props` map for this render:
 
 ```tsx
@@ -133,7 +188,9 @@ theme values, refs, or subscriptions. Events continue to update the committed
 controller and patch hosts directly, without rendering React. Runtime container
 measurements use a stable hierarchical store: nearest same-name containers shadow
 ancestors, subscriptions exist only for committed controllers, and width changes
-patch selected declarations without changing a React context value. Legacy manual
+patch selected declarations without changing a React context value. Measurements
+are selected per mounted host, so repeated parts inside different containers can
+share one element-family provider without sharing the wrong container width. Legacy manual
 `ContainerSizesContext` inputs still participate in ordinary React renders.
 
 Web callback-ref cleanup restores the departing controller's last committed
@@ -142,9 +199,10 @@ styles that React never declared. Deferred final release only drops bookkeeping,
 so a reused DOM node keeps its new caller's styles and classes, including values
 identical to the old declaration. Surviving controllers retain their own requests.
 
-Bare bound components refresh from the committed store in layout, before paint.
-When child layout effects must measure the new styles during that same commit,
-use the optional render scope:
+`createElements` providers already carry the render snapshot described above.
+For the compatibility `useBind` API, bare bound components refresh from the
+committed store in layout, before paint. When child layout effects must measure
+the new styles during that same commit, use the optional render scope:
 
 ```tsx
 const s = useBind(buttonStyles, { size: 'm' })
@@ -211,7 +269,9 @@ an inconsistent hook count.
 Module-level `bind(sheet)` and legacy `t` getters are pure, static snapshots of the
 installed configuration. They cannot consume provider context outside React.
 Web's fallback supplies CSS variable references; literal/native theme consumers
-must use `useStyles`/`useBind` or a pure renderer with explicit tokens.
+must use `createElements`, `useStyles`/`useBind`, or a pure renderer with explicit
+tokens. Module-level `createElements` differs from `bind`: it creates component
+identities only and reads the current provider configuration when they render.
 
 ## Backends and native hosts
 

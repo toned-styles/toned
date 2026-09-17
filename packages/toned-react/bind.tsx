@@ -1,14 +1,9 @@
-import {
-  type Config,
-  type ElementType,
-  getConfig,
-  SYMBOL_INIT,
-} from '@toned/core'
+import { type Config, getConfig, SYMBOL_INIT } from '@toned/core'
+import type { Base } from '@toned/core/stylesheet'
 import {
   type Context,
   createContext,
   createElement,
-  type ForwardedRef,
   forwardRef,
   type ReactElement,
   type ReactNode,
@@ -17,59 +12,14 @@ import {
   useMemo,
   useSyncExternalStore,
 } from 'react'
-import { ContainerSizesStore } from './container-store.ts'
-import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
-import { addWith } from './host-props.ts'
-import { useRuntimeConfig } from './runtime-config.ts'
-import { controllerOf, elementProps } from './style-view.ts'
-
-/**
- * What a web intrinsic IMPLIES about the element's nature, for the native
- * fallback: `as="h2"` names a text element, so native renders the Text
- * primitive, not the default View. Only tags whose implication is
- * unambiguous are mapped; a declared `$$type` always wins over inference,
- * and anything unmapped falls back to it (default 'view'). `button`/`a` are
- * deliberately NOT mapped to 'pressable': press behavior must be declared,
- * never inferred from a tag.
- */
-const TYPE_BY_TAG: Record<string, ElementType> = {
-  h1: 'text',
-  h2: 'text',
-  h3: 'text',
-  h4: 'text',
-  h5: 'text',
-  h6: 'text',
-  p: 'text',
-  span: 'text',
-  label: 'text',
-  legend: 'text',
-  caption: 'text',
-  figcaption: 'text',
-  strong: 'text',
-  em: 'text',
-  b: 'text',
-  i: 'text',
-  s: 'text',
-  u: 'text',
-  small: 'text',
-  mark: 'text',
-  code: 'text',
-  blockquote: 'text',
-  cite: 'text',
-  abbr: 'text',
-  time: 'text',
-  kbd: 'text',
-  samp: 'text',
-  sub: 'text',
-  sup: 'text',
-  img: 'image',
-}
-
 // Cycle-safe: index.ts imports this module for its typed re-exports, and this
 // line imports back. `useStyles` is a hoisted function declaration, so its
 // binding is live before index.ts finishes evaluating; `useBind` only calls it
 // at render time regardless. No runtime state crosses at module load.
 import { useStyles } from './index.ts'
+import { type HostProps, PartHost } from './part-host.tsx'
+import { useRuntimeConfig } from './runtime-config.ts'
+import { controllerOf, elementProps } from './style-view.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: the runtime binding is stylesheet-agnostic; index.ts provides the precise typed surface.
 type AnyProps = Record<string, any>
@@ -87,10 +37,7 @@ export type BoundElement = ((props?: AnyProps) => ReactElement) & Bag
 
 const EmptyRenderContext = createContext<Instance | null>(null)
 
-type Instance = Record<string, Bag> & {
-  config: Config
-  elementDescriptors: () => Array<{ key: string; type?: ElementType }>
-}
+type Instance = Base
 
 // biome-ignore lint/suspicious/noExplicitAny: matches StylesheetLike in index.ts.
 type StylesheetLike = { [SYMBOL_INIT]: (...args: any[]) => any }
@@ -118,8 +65,7 @@ export function buildBoundMap(
   for (const descriptor of getInstance().elementDescriptors()) {
     map[descriptor.key] = buildBoundElement(
       getInstance,
-      config,
-      descriptor,
+      descriptor.key,
       subscribe,
       renderContext,
     )
@@ -129,25 +75,12 @@ export function buildBoundMap(
 
 function buildBoundElement(
   getInstance: () => Instance,
-  config: Config,
-  { key, type }: { key: string; type?: ElementType },
+  key: string,
   subscribe: ((listener: () => void) => () => void) | undefined,
   renderContext: Context<Instance | null>,
 ): BoundElement {
   const subscribeToInstance = subscribe ?? (() => () => {})
-  const resolveElement = config.resolveElement!
-  // Resolve the host element LAZILY, on first render, not here. `resolveElement`
-  // can throw (the native seam does until a host installs one), and building
-  // the map runs at module import for `bind()`; a throw there would fault an
-  // import from a component nobody rendered. Deferring it to render keeps the
-  // component identity stable (identity is `Comp`, cached once — not `El`).
-  let El: unknown
-  function RenderCore(
-    props: AnyProps = {},
-    forwardedRef?: ForwardedRef<unknown>,
-  ): ReactElement {
-    if (forwardedRef) props = { ...props, ref: forwardedRef }
-    // `key` is a declared element, so the getter never yields undefined.
+  const Comp = forwardRef<unknown, HostProps>(function BoundPart(props, ref) {
     const snapshot = useContext(renderContext)
     const committed = useSyncExternalStore(
       subscribeToInstance,
@@ -156,114 +89,16 @@ function buildBoundElement(
     )
     const instance = snapshot ?? committed
     useLayoutEffect(() => {
-      // Module-level bind has no owning hook; the mounted host supplies its
-      // lifecycle. useBind's parent owns commit publication instead.
-      if (!subscribe) return (instance as AnyProps)['mount']?.()
-      ;(instance as AnyProps)['validateHosts']?.()
+      // Module-level bind has no owning hook; the host owns its lifecycle.
+      if (!subscribe) return instance.mount()
+      instance.validateHosts()
     }, [instance, subscribe])
-    const bag = elementProps(instance, key) as Bag
-    // `as` overrides the `$$type`-selected primitive for this render: the
-    // element renders exactly that component/intrinsic, with every other
-    // prop merged through the same with() path. It never reaches the DOM.
-    //
-    // A STRING `as` is a WEB refinement only: an intrinsic tag has no
-    // meaning on native, so there the element falls back to a primitive —
-    // the declared `$$type` first, else what the tag itself implies
-    // (`as="h2"` is a text element → Text; see TYPE_BY_TAG), else View.
-    // Behavior is never inferred: press/input semantics need an explicit
-    // interactive `$$type`. A COMPONENT `as` renders on every platform —
-    // the component is expected to be universal or platform-split itself.
-    if (props?.['as'] !== undefined) {
-      const { as, ...rest } = props
-      if (typeof as === 'string' && config.platform === 'native') {
-        const native = resolveElement(type ?? TYPE_BY_TAG[as] ?? 'view')
-        return createElement(native as never, bag.with(rest))
-      }
-      return createElement(as as never, bag.with(rest))
-    }
-    // No `as`, no `$$type`: the default element is a View — the universal
-    // box. `'view'` is resolved here, not left to each host's resolver, so
-    // the default is part of the core contract.
-    if (El === undefined) El = resolveElement(type ?? 'view')
-    const merged = props ? bag.with(props) : bag
-    return createElement(El as never, merged)
-  }
-
-  // Runtime container roots (mediaMode 'runtime', an element declaring
-  // `container: '<name>'`): the component measures its own inline size
-  // through the platform's `measureContainerProps` seam and provides the
-  // sizes map to its subtree, shadowing an outer same-name container —
-  // the runtime mirror of the `@container` nearest-ancestor lookup. In css
-  // mode the generated toggles carry all of this, so the plain component
-  // renders with zero extra hooks. Container-ness is static in the rules,
-  // so each element key takes ONE of these branches for its whole life.
-  const containerOf =
-    config.mediaMode === 'runtime'
-      ? (
-          getInstance() as Instance & {
-            containerName?: (k: string) => string | undefined
-          }
-        ).containerName?.(key)
-      : undefined
-
-  const MeasuredHost = forwardRef(RenderCore)
-  const Comp =
-    containerOf === undefined
-      ? MeasuredHost
-      : forwardRef<unknown, AnyProps>(
-          function ContainerPart(props, ref): ReactElement {
-            const legacy = useContext(ContainerSizesContext)
-            const parent = useContext(ContainerStoreContext)
-            // containerOf belongs to this component factory and cannot change
-            // during the lifetime of a mounted ContainerPart.
-            const ownMeasurement = useMemo(
-              () => new ContainerSizesStore(undefined, { [containerOf]: 0 }),
-              [],
-            )
-            const scope = useMemo(
-              () => ({
-                store: new ContainerSizesStore(parent?.store, {
-                  ...(parent?.legacy === legacy ? {} : legacy),
-                  [containerOf]: ownMeasurement.snapshot()[containerOf]!,
-                }),
-                legacy,
-              }),
-              [parent, legacy, ownMeasurement],
-            )
-            useLayoutEffect(() => {
-              const sync = () =>
-                scope.store.set(
-                  containerOf,
-                  ownMeasurement.snapshot()[containerOf]!,
-                )
-              const stop = ownMeasurement.subscribe(sync)
-              sync()
-              return stop
-            }, [scope, ownMeasurement])
-            // Measurement facts update the stable store directly. React is only
-            // involved when the actual parent scope or host config changes.
-            // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally once
-            const measureProps = useMemo(
-              () =>
-                config.measureContainerProps?.((width) =>
-                  ownMeasurement.set(containerOf, width),
-                ),
-              [config, ownMeasurement, containerOf],
-            )
-            const children = createElement(
-              ContainerStoreContext.Provider,
-              { value: scope },
-              props?.['children'] as never,
-            )
-            const measuredProps = addWith({ ...measureProps })['withProps'](
-              ref ? { ...props, ref } : props,
-            )
-            return createElement<AnyProps>(MeasuredHost, {
-              ...measuredProps,
-              children,
-            })
-          },
-        )
+    return createElement(PartHost, {
+      instance,
+      part: key,
+      props: ref ? { ...props, ref } : props,
+    })
+  })
   return Comp as unknown as BoundElement
 }
 

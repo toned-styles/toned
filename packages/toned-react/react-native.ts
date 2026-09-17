@@ -1,6 +1,7 @@
-import { defineConfig } from '@toned/core'
+import { defineConfig, type HostConditions } from '@toned/core'
 import { nativeBackend } from '@toned/core/backends'
 import { type Base, registerNativeHost } from '@toned/core/stylesheet'
+import { attachPart } from './attach-part.ts'
 import reactConfig from './config.native.ts'
 import { addWith, supportsRefCleanup } from './host-props.ts'
 
@@ -9,7 +10,7 @@ type AnyValue = any
 
 type Ref = AnyValue
 
-function getProps(this: Base, elementKey: string) {
+function getProps(this: Base, elementKey: string, conditions?: HostConditions) {
   let host: Ref
   let detach: (() => void) | undefined
   const ref = (current: Ref, caller?: AnyValue) => {
@@ -24,7 +25,14 @@ function getProps(this: Base, elementKey: string) {
       )
     const unregister = registerNativeHost(current, adapter)
     try {
-      const release = this.attach(elementKey, current, result, caller)
+      const release = attachPart(
+        this,
+        elementKey,
+        current,
+        result,
+        caller,
+        conditions,
+      )
       detach = () => {
         release()
         // Base completes ownership release in its queued detach reconciliation.
@@ -58,7 +66,7 @@ function getProps(this: Base, elementKey: string) {
   if (this.matcher.interactions[elementKey]) {
     result = {
       ref,
-      ...this.getRestingStyle(elementKey),
+      ...this.getRestingStyle(elementKey, conditions?.readSizes()),
       ...Object.fromEntries(
         [
           ['onPressIn', ':active', true],
@@ -95,7 +103,7 @@ function getProps(this: Base, elementKey: string) {
     result = {
       ref,
 
-      ...this.getCurrentStyle(elementKey),
+      ...this.getCurrentStyle(elementKey, conditions?.readSizes()),
     }
   }
 
