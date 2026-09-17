@@ -568,6 +568,8 @@ export class Base {
     relationHosts: Map<object, { part: string; detach: () => void }>
     hostConditions: Map<object, HostConditionRegistration>
     pendingHostValidation: Set<object>
+    hostValidationListeners: Set<() => void>
+    hostValidationRevision: number
     stopRelations: (() => void)[]
     stopStates?: () => void
   } = {
@@ -576,6 +578,8 @@ export class Base {
     relationHosts: new Map(),
     hostConditions: new Map(),
     pendingHostValidation: new Set(),
+    hostValidationListeners: new Set(),
+    hostValidationRevision: 0,
     stopRelations: [],
   }
 
@@ -834,7 +838,7 @@ export class Base {
       ATTACHMENTS.set(node, owners)
     }
     owners.set(this.family, { owner: this, generation })
-    this.family.pendingHostValidation.add(node)
+    this.queueHostValidation(node)
     recordHostCommit(node, toned, caller, this.family)
     if (this.relationQueries().length) {
       const existing = this.family.relationHosts.get(node)
@@ -854,7 +858,7 @@ export class Base {
     const detachHost = this.host.attach(
       node,
       gridRegistrations(this.rules)[elementKey] ?? {},
-      (target) => this.family.pendingHostValidation.add(target),
+      (target) => this.queueHostValidation(target),
     )
     // Callback refs are commit work too. A child layout effect can dispatch
     // an event before its parent's layout effect, so its candidate must already
@@ -915,9 +919,30 @@ export class Base {
     }
   }
 
+  /** A committed invalidation signal, independent of variants/style rendering.
+   * The revision never changes while flushing: a flush must not trigger itself. */
+  get hostValidationRevision(): number {
+    return this.family.hostValidationRevision
+  }
+
+  subscribeHostValidation(notify: () => void): () => void {
+    this.family.hostValidationListeners.add(notify)
+    return () => {
+      this.family.hostValidationListeners.delete(notify)
+    }
+  }
+
+  private queueHostValidation(node: object): void {
+    const notify = this.family.pendingHostValidation.size === 0
+    this.family.pendingHostValidation.add(node)
+    if (!notify) return
+    this.family.hostValidationRevision++
+    for (const listener of this.family.hostValidationListeners) listener()
+  }
+
   /** Flush committed ref changes after every ancestor ref has attached.
-   * Many parts may request this in one commit: each queued host is validated
-   * once, and subsequent requests return without walking the mounted tree. */
+   * Repeated requests validate each queued host once, and subsequent requests
+   * return without walking the mounted tree. */
   validatePendingHosts(): void {
     for (const node of this.family.pendingHostValidation) {
       const attachment = ATTACHMENTS.get(node)?.get(this.family)

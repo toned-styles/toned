@@ -18,10 +18,15 @@ dependencies. The DOM grid adapter calls it for retained area children when
 their owner detaches: a forwarded parent ref can move while those child refs
 remain unchanged. Controllers queue attached or invalidated targets and expose
 `validatePendingHosts()` to flush them after all commit refs have attached.
-Repeated part effects drain one shared queue, rather than scanning every host
-once per rendered part. Full provider validation also drains the entries it
-checks. Detached ref cleanup removes only its own pending generation; detached
-grid children have no binding and therefore validate as a no-op.
+The first pending entry advances a monotonic revision and notifies committed
+subscribers. React's `createElements` mounts one hostless validation observer per
+scope: it subscribes with `useSyncExternalStore` and drains the queue in an effect.
+This also catches a custom host moving its own forwarded ref through internal
+state, even when no provider or part renders. Only the observer rerenders, and
+validation errors reach the React error boundary above the scope. Full provider
+validation also drains the entries it checks. Flushing does not advance the
+revision or notify again. Detached ref cleanup removes only its own pending
+generation; detached grid children have no binding and validate as a no-op.
 
 Relations keep their portable registered-part semantics in `PartRelations`.
 Host topology supplies the facts; it does not alter source-order resolution,

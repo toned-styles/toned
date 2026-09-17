@@ -92,6 +92,54 @@ test('initial provider validation drains the subsequent per-part requests', () =
   detach()
 })
 
+test('validation subscribers observe committed work once per pending batch and stop after cleanup', () => {
+  const instance = controller()
+  const notify = vi.fn()
+  const unsubscribe = instance.subscribeHostValidation(notify)
+  const candidate = controller()
+  candidate.prepare(instance)
+  candidate.getCurrentStyle('Label')
+  expect(instance.hostValidationRevision).toBe(0)
+  expect(notify).not.toHaveBeenCalled()
+  const first = document.createElement('div')
+  const second = document.createElement('div')
+  document.body.append(first, second)
+  const detachFirst = instance.attach(
+    'Label',
+    first,
+    instance.getCurrentStyle('Label'),
+  )
+  const detachSecond = instance.attach(
+    'Label',
+    second,
+    instance.getCurrentStyle('Label'),
+  )
+  expect(notify).toHaveBeenCalledTimes(1)
+  expect(candidate.hostValidationRevision).toBe(1)
+  instance.validatePendingHosts()
+  expect(notify).toHaveBeenCalledTimes(1)
+  expect(instance.hostValidationRevision).toBe(1)
+  detachFirst()
+  const detachReplacement = candidate.attach(
+    'Label',
+    first,
+    candidate.getCurrentStyle('Label'),
+  )
+  expect(notify).toHaveBeenCalledTimes(2)
+  expect(instance.hostValidationRevision).toBe(2)
+  unsubscribe()
+  candidate.validatePendingHosts()
+  detachSecond()
+  const detachLast = candidate.attach(
+    'Label',
+    second,
+    candidate.getCurrentStyle('Label'),
+  )
+  expect(notify).toHaveBeenCalledTimes(2)
+  detachReplacement()
+  detachLast()
+})
+
 test('stale ref cleanup cannot erase the current generation from pending validation', () => {
   const instance = controller()
   const validate = vi.spyOn(

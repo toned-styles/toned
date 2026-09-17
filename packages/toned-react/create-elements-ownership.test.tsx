@@ -364,6 +364,89 @@ test('moving the owner ref revalidates grid areas whose host refs did not change
   for (const error of errors) expect(error.message).toMatch(/direct parent/)
 })
 
+test('an internal custom host ref move validates retained grid areas without rerendering styled parts', () => {
+  const grid = defineGrid('internal-ref-layout', {
+    columns: [fr(1)],
+    areas: [['body']],
+  })
+  const G = createElements(
+    system.stylesheet({
+      Root: { '@platform web': { $grid: grid } },
+      Body: { '@platform web': { $area: grid.area('body') } },
+    }),
+  )
+  const getProps = vi.fn(web.getProps)
+  const localConfig = { ...config, getProps }
+  let shellCommits = 0
+  const Shell = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
+    ({ children, ...props }, ref) => {
+      const [attachOuter, setAttachOuter] = React.useState(false)
+      React.useLayoutEffect(() => {
+        shellCommits++
+      })
+      return (
+        <>
+          <button type="button" onClick={() => setAttachOuter(true)}>
+            Move internal ref
+          </button>
+          <div
+            {...(attachOuter ? props : {})}
+            ref={attachOuter ? ref : undefined}
+          >
+            <div
+              {...(attachOuter ? {} : props)}
+              ref={attachOuter ? undefined : ref}
+            >
+              {children}
+            </div>
+          </div>
+        </>
+      )
+    },
+  )
+  let bodyAttachments = 0
+  const bodyRef = (node: HTMLDivElement | null) => {
+    if (node) bodyAttachments++
+  }
+  let ownerCommits = 0
+  function Instance() {
+    React.useLayoutEffect(() => {
+      ownerCommits++
+    })
+    return (
+      <G>
+        <G.Root as={Shell} data-testid="internal-owner">
+          <G.Body as="div" ref={bodyRef} data-testid="internal-body" />
+        </G.Root>
+      </G>
+    )
+  }
+  const errors: Error[] = []
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  const view = render(
+    <ConfigProvider config={localConfig}>
+      <GridBoundary errors={errors}>
+        <Instance />
+      </GridBoundary>
+    </ConfigProvider>,
+  )
+  expect(errors).toEqual([])
+  expect(view.getByTestId('internal-body').parentElement).toBe(
+    view.getByTestId('internal-owner'),
+  )
+  const initialReads = getProps.mock.calls.length
+  expect(initialReads).toBe(2)
+  withBrowserErrorReporting(() =>
+    fireEvent.click(view.getByText('Move internal ref')),
+  )
+  expect(ownerCommits).toBe(1)
+  expect(shellCommits).toBe(2)
+  expect(getProps.mock.calls.length).toBe(initialReads)
+  expect(bodyAttachments).toBe(1)
+  expect(errors.length).toBeGreaterThan(0)
+  for (const error of errors) expect(error.message).toMatch(/direct parent/)
+})
+
 test('a live subtree override can introduce a standalone scope requirement', () => {
   const Independent = createElements(base)
   const added = overrideStyles(base, {
