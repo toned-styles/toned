@@ -306,7 +306,9 @@ The HQ consumer runs `bun scripts/build/test-toned-react-versions.ts` in CI. It
 installs React 18.3.1 and 19.2.7 into disposable directories outside the checkout,
 using `npm ci --ignore-scripts` and a committed complete lockfile per version at
 `scripts/build/fixtures/toned-react-versions`. It then runs the same guarded commit,
-context, container, binding and ref fixtures. Both legs resolve React, React DOM
+context, container, element-family, binding and ref fixtures. The package gate also
+builds core and React, checks their emitted declarations and renders standalone/scoped
+`createElements` from the packed JavaScript in Node; no TypeScript source loader is used. Both legs resolve React, React DOM
 and the testing library from their isolated consumer; version sentinels assert
 the actual React and React DOM versions. The isolated React 19 leg is deliberate:
 it verifies the pinned standalone consumer graph independently of HQ's workspace

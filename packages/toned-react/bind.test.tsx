@@ -2,7 +2,6 @@
 
 import { cleanup, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
-// The classic JSX runtime (jsx: preserve → esbuild transform) needs React in scope.
 import * as React from 'react'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
 import { bind, useBind } from './index.ts'
