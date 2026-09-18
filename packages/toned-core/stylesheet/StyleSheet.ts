@@ -24,13 +24,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
-import {
-  collectAdHocConditions,
-  evalExpr,
-  isSimpleExpr,
-  parseConditionKey,
-  serializeExpr,
-} from '../utils/conditions.ts'
+import { collectAdHocConditions } from '../utils/conditions.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
@@ -47,8 +41,14 @@ import {
   releaseHost,
   setStyles,
 } from './applyStyles.ts'
+import {
+  type ControllerPlan,
+  controllerPlan,
+  evaluateControllerConditions,
+} from './controller-plan.ts'
+import { type ContainerSizes, MountedFamily } from './mounted-family.ts'
 import { registerStylesheetPlan } from './plans.ts'
-import { PartRelations, type Relation, relationFactKey } from './relations.ts'
+import { type Relation, relationFactKey } from './relations.ts'
 import { APPLY_OVERRIDE, RULE_LAYERS, WHEN_RULES } from './rule-protocol.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import {
@@ -63,11 +63,6 @@ import { createVariantSelector } from './variantSelector.ts'
 type AnyValue = any
 
 type ElementKey = string
-type ContainerSizes = Readonly<Record<string, number>>
-type HostConditionRegistration = {
-  part: string
-  readSizes: () => ContainerSizes
-}
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
 const ATTACHMENTS = new WeakMap<
@@ -84,6 +79,7 @@ const IS_PRODUCTION =
 type ElementStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
+const EMPTY_DECLARATION = Object.freeze({})
 
 /*
  * Compiled matchers, shared across every Base built from the same rules.
@@ -100,7 +96,7 @@ function sharedMatcher(
   rules: BaseRules,
   cssMediaMode: boolean,
   cssPseudoMode: boolean,
-  stateAliases: readonly string[],
+  stateAliases: Readonly<Record<string, string>> | undefined,
   platform?: 'web' | 'native',
   sourceOrder = false,
 ): StyleMatcher {
@@ -121,7 +117,7 @@ function sharedMatcher(
     matcher = new StyleMatcher(rules, {
       cssMediaMode,
       cssPseudoMode,
-      stateAliases,
+      stateAliases: Object.keys(stateAliases ?? {}),
       platform,
       sourceOrder,
     })
@@ -464,9 +460,9 @@ export class Base {
 
   // Element keys already warned about unisolated cross-element interaction in
   // multi-instance mode (dev-only; warn once per key).
-  private _warnedCrossElement = new Set<ElementKey>()
+  private _warnedCrossElement?: Set<ElementKey>
 
-  // The compiled rule last written to each mounted element, so applyElementStyles
+  private readonly controllerPlan: ControllerPlan
 
   constructor({
     ref,
@@ -479,7 +475,8 @@ export class Base {
     config?: Config
     modsState?: ModState
   }) {
-    this.config = { ...(config ?? getConfig()) }
+    const resolvedConfig = { ...(config ?? getConfig()) }
+    this.config = resolvedConfig
     const backend = this.config.backend
     if (backend) {
       if (backend.requiresBuild && !backend.manifest)
@@ -491,19 +488,17 @@ export class Base {
           `[toned] Backend ${backend.id} targets ${backend.platform}, but the installed host targets ${this.config.platform}`,
         )
       }
-      this.config = {
-        ...this.config,
-        platform: backend.platform,
-        mediaMode:
-          !backend.browserConditions && this.config.mediaMode === 'css'
-            ? 'runtime'
-            : this.config.mediaMode,
-        pseudoMode:
-          !backend.browserConditions && this.config.pseudoMode === 'css'
-            ? 'runtime'
-            : this.config.pseudoMode,
-        useClassName: backend.id === 'css-vars' && this.config.useClassName,
-      }
+      resolvedConfig.platform = backend.platform
+      resolvedConfig.mediaMode =
+        !backend.browserConditions && this.config.mediaMode === 'css'
+          ? 'runtime'
+          : this.config.mediaMode
+      resolvedConfig.pseudoMode =
+        !backend.browserConditions && this.config.pseudoMode === 'css'
+          ? 'runtime'
+          : this.config.pseudoMode
+      resolvedConfig.useClassName =
+        backend.id === 'css-vars' && this.config.useClassName
     }
 
     this.ref = ref
@@ -523,10 +518,9 @@ export class Base {
     // Declared-state aliases live on the system ref (`defineSystem` spreads the
     // config, incl. `states`, into `.system`). They drive the CSS src-state
     // cross-element channel; absent, only `:hover` cross keys compile to CSS.
-    const stateAliases = Object.keys(
-      (this.ref as { system?: { states?: Record<string, string> } })?.system
-        ?.states ?? {},
-    )
+    const stateAliases = (
+      this.ref as { system?: { states?: Record<string, string> } }
+    ).system?.states
     this.matcher = sharedMatcher(
       rules,
       mediaMode === 'css',
@@ -536,14 +530,7 @@ export class Base {
       !!this.ref.id,
     )
 
-    this.relationDeclarations = Object.keys(this.matcher.scheme)
-      .filter((key) => key.startsWith('relation:'))
-      .map((key) => {
-        const [scope, sourcePart, part, state] = JSON.parse(
-          key.slice('relation:'.length),
-        )
-        return { scope, sourcePart, part, state } as Relation
-      })
+    this.controllerPlan = controllerPlan(this.matcher)
 
     if (mediaMode === false && this.matcher.hasMediaRules) {
       warnOnce(
@@ -562,57 +549,20 @@ export class Base {
 
   private stopMedia?: () => void
   private predecessor?: Base
-  private family: {
-    current: Base
-    relations: PartRelations
-    relationHosts: Map<object, { part: string; detach: () => void }>
-    hostConditions: Map<object, HostConditionRegistration>
-    pendingHostValidation: Set<object>
-    hostValidationListeners: Set<() => void>
-    hostValidationRevision: number
-    stopRelations: (() => void)[]
-    stopStates?: () => void
-  } = {
-    current: this,
-    relations: new PartRelations(),
-    relationHosts: new Map(),
-    hostConditions: new Map(),
-    pendingHostValidation: new Set(),
-    hostValidationListeners: new Set(),
-    hostValidationRevision: 0,
-    stopRelations: [],
+  private _family?: MountedFamily
+  private get family(): MountedFamily {
+    this._family ??= new MountedFamily(this)
+    return this._family
   }
-
-  private readonly relationDeclarations: Relation[]
-  private readonly trackedStateCache = new Map<string, readonly string[]>()
 
   private trackedPseudos(part: string): readonly string[] {
-    if (!this.host.semanticStates) return PSEUDO_STATES
-    let states = this.trackedStateCache.get(part)
-    if (!states) {
-      states = [
-        ...new Set<string>([
-          ...PSEUDO_STATES,
-          ...Object.keys(this.matcher.interactions[part] ?? {}).filter(
-            (state) => state !== ':rtl',
-          ),
-        ]),
-      ]
-      this.trackedStateCache.set(part, states)
-    }
-    return states
+    return this.host.semanticStates
+      ? (this.controllerPlan.trackedPseudos[part] ?? PSEUDO_STATES)
+      : PSEUDO_STATES
   }
 
-  private semanticStateNames(): string[] {
-    return [
-      ...new Set(
-        Object.values(this.matcher.interactions).flatMap((states) =>
-          Object.keys(states)
-            .map((state) => state.slice(1))
-            .filter((state) => state !== 'rtl' && !eventState(state)),
-        ),
-      ),
-    ]
+  private semanticStateNames(): readonly string[] {
+    return this.controllerPlan.semanticStates
   }
 
   private refreshHostStates(publish = false) {
@@ -665,8 +615,8 @@ export class Base {
       this.family.current.refreshHostStates(true),
     )
   }
-  private relationQueries(): Relation[] {
-    return this.relationDeclarations
+  private relationQueries(): readonly Relation[] {
+    return this.controllerPlan.relations
   }
 
   private refreshRelations() {
@@ -711,9 +661,7 @@ export class Base {
   }
 
   private validateRelationCapabilities() {
-    this.host.validateRelations(
-      this.relationQueries().map((relation) => relation.state),
-    )
+    this.host.validateRelations(this.controllerPlan.relationStates)
   }
 
   private startRelations() {
@@ -745,7 +693,7 @@ export class Base {
   prepare(previous?: Base) {
     this.predecessor = previous
     if (previous) {
-      this.family = previous.family
+      this._family = previous.family
       for (const key in previous._activeEls)
         this._activeEls[key] = new Set(previous._activeEls[key])
       for (const key in previous.modsState) {
@@ -773,9 +721,8 @@ export class Base {
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     if (mediaMode === 'runtime' && !this.stopMedia) {
-      const media = this.host.connectMedia(
-        Object.keys(this.matcher.scheme),
-        (state) => this.applyState(state),
+      const media = this.host.connectMedia(this.controllerPlan.keys, (state) =>
+        this.applyState(state),
       )
       this.stopMedia = media.stop
       Object.assign(this.modsState, media.state)
@@ -810,11 +757,12 @@ export class Base {
   dispose() {
     this.stopMedia?.()
     this.stopMedia = undefined
-    if (this.family.current === this) {
-      for (const stop of this.family.stopRelations) stop()
-      this.family.stopRelations = []
-      this.family.stopStates?.()
-      this.family.stopStates = undefined
+    const family = this._family
+    if (family?.current === this) {
+      for (const stop of family.stopRelations) stop()
+      family.stopRelations = []
+      family.stopStates?.()
+      family.stopStates = undefined
     }
   }
 
@@ -922,22 +870,15 @@ export class Base {
   /** A committed invalidation signal, independent of variants/style rendering.
    * The revision never changes while flushing: a flush must not trigger itself. */
   get hostValidationRevision(): number {
-    return this.family.hostValidationRevision
+    return this._family?.hostValidationRevision ?? 0
   }
 
   subscribeHostValidation(notify: () => void): () => void {
-    this.family.hostValidationListeners.add(notify)
-    return () => {
-      this.family.hostValidationListeners.delete(notify)
-    }
+    return this.family.subscribeHostValidation(notify)
   }
 
   private queueHostValidation(node: object): void {
-    const notify = this.family.pendingHostValidation.size === 0
-    this.family.pendingHostValidation.add(node)
-    if (!notify) return
-    this.family.hostValidationRevision++
-    for (const listener of this.family.hostValidationListeners) listener()
+    this.family.queueHostValidation(node)
   }
 
   /** Flush committed ref changes after every ancestor ref has attached.
@@ -1056,66 +997,17 @@ export class Base {
    * expression) evaluates through utils/conditions.ts: an unmeasured
    * container acts as width 0 — the mobile-first base styles.
    */
-  private readonly conditionExpressions = new Map<
-    string,
-    ReturnType<typeof parseConditionKey>
-  >()
-
   conditionState(
     sizes: ContainerSizes,
     remember = true,
   ): Record<string, boolean> | null {
-    const containers = (
-      this.ref as {
-        system?: {
-          containers?: Record<string, Record<string, number | string>>
-        }
-      }
-    ).system?.containers
-    let out: Record<string, boolean> | null = null
-    for (const mod in this.matcher.scheme) {
-      if (mod[0] !== '@') continue
-      const body = mod.slice(1)
-      if (body.startsWith('platform.')) continue
-      if (!this.conditionExpressions.has(mod))
-        this.conditionExpressions.set(mod, parseConditionKey(body))
-      const expr = this.conditionExpressions.get(mod)
-      if (!expr) continue
-      if (isSimpleExpr(expr) && expr[0]![0]!.container === null) continue
-      out ??= {}
-      const environment = {
-        media: (name: string) =>
-          this.modsState[`@${name}`] as boolean | undefined,
-        containerPx: (name: string) => sizes[name],
-        stepWidth: (c: string, s: string) => containers?.[c]?.[s],
-        basePx: (this.ref as { system?: { base?: number } }).system?.base ?? 4,
-      }
-      // Keep atomic host facts alongside matcher keys. The semantic backend
-      // evaluates the same Boolean tree without reparsing composite state keys.
-      for (const clause of expr)
-        for (const atom of clause) {
-          if (atom.container === null) continue
-          const positive = { ...atom, negated: false }
-          out[`@${serializeExpr([[positive]])}`] = evalExpr(
-            [[positive]],
-            environment,
-          )
-        }
-      out[mod] = evalExpr(expr, environment)
-    }
-    // The ':rtl' declared state's runtime half: every `<element>:rtl` mod
-    // answers the host's getDirection seam (unset means never matched — the
-    // web half is the generated `:dir(rtl)` toggle and needs no runtime).
-    const dir = (
-      this.config as { getDirection?: () => 'ltr' | 'rtl' }
-    ).getDirection?.()
-    if (dir !== undefined) {
-      for (const mod in this.matcher.scheme) {
-        if (!mod.endsWith(':rtl')) continue
-        out ??= {}
-        out[mod] = dir === 'rtl'
-      }
-    }
+    const out = evaluateControllerConditions(
+      this.controllerPlan,
+      this.ref.system,
+      this.modsState,
+      sizes,
+      (this.config as { getDirection?: () => 'ltr' | 'rtl' }).getDirection?.(),
+    )
     if (out && remember) this.lastContainerSizes = sizes
     return out
   }
@@ -1139,18 +1031,19 @@ export class Base {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
-  private readonly tokenOutputs = new Map<
+  private tokenOutputs?: Map<
     string | undefined,
     WeakMap<object, { tokens: Tokens; output: AnyValue }>
-  >()
-  private readonly emptyDeclaration = Object.freeze({})
+  >
 
   applyTokens(value: ElementStyle, part?: string, facts = this.modsState): any {
-    const declaration = value ?? this.emptyDeclaration
-    let cache = this.tokenOutputs.get(part)
+    const declaration = value ?? EMPTY_DECLARATION
+    this.tokenOutputs ??= new Map()
+    const outputs = this.tokenOutputs
+    let cache = outputs.get(part)
     if (!cache) {
       cache = new WeakMap()
-      this.tokenOutputs.set(part, cache)
+      outputs.set(part, cache)
     }
     const previous = cache.get(declaration)
     if (previous?.tokens === this.tokens) return previous.output
@@ -1404,9 +1297,10 @@ export class Base {
     restingStyle: AnyValue,
     sizes?: ContainerSizes,
   ) {
-    if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
+    if (IS_PRODUCTION || this._warnedCrossElement?.has(elementKey)) return
     const liveStyle = this.getCurrentStyle(elementKey, sizes)
     if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
+    this._warnedCrossElement ??= new Set()
     this._warnedCrossElement.add(elementKey)
     console.warn(
       `[toned] Cross-element interaction targeting "${elementKey}" is not ` +
@@ -1417,7 +1311,7 @@ export class Base {
   }
 
   applyElementStyles(context?: ApplyContext) {
-    const hasHostConditions = this.family.hostConditions.size > 0
+    const hasHostConditions = (this._family?.hostConditions.size ?? 0) > 0
     for (const elementKey of this.matcher.elementSet) {
       const ref = this.refs[elementKey]
       // Web stores every mounted element for a key in a Set (O(1) add/has/delete);

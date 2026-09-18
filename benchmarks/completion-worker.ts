@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -8,6 +8,7 @@ const version = process.argv[3]!
 const evidenceDirectory = process.argv[4]!
 const moduleAt = (name: string) =>
   import(pathToFileURL(join(source, name)).href)
+const hasModule = (name: string) => existsSync(join(source, name))
 const core = await moduleAt('packages/toned-core/index.ts')
 const { Base } = await moduleAt('packages/toned-core/stylesheet/StyleSheet.ts')
 let resolves = 0
@@ -85,7 +86,7 @@ assert.ok(
   'sharing must count real matcher objects',
 )
 let shared_portable_plans: number | undefined
-if (version === 'current') {
+if (hasModule('packages/toned-core/core/plan.ts')) {
   const { compileRules } = await moduleAt('packages/toned-core/core/plan.ts')
   shared_portable_plans = new Set(
     controllers.map((base) => compileRules(base.ref, base.rules, 'native')),
@@ -94,14 +95,12 @@ if (version === 'current') {
 }
 let writes = 0
 let unregister: (() => void)[] = []
-const native =
-  version === 'current'
-    ? await moduleAt('packages/toned-core/stylesheet/native-host.ts')
-    : undefined
-const writer =
-  version === 'current'
-    ? await moduleAt('packages/toned-core/stylesheet/applyStyles.ts')
-    : undefined
+const native = hasModule('packages/toned-core/stylesheet/native-host.ts')
+  ? await moduleAt('packages/toned-core/stylesheet/native-host.ts')
+  : undefined
+const writer = native
+  ? await moduleAt('packages/toned-core/stylesheet/applyStyles.ts')
+  : undefined
 const hosts = controllers.map((base) => {
   const host = {
     isConnected: true,
@@ -116,7 +115,7 @@ const hosts = controllers.map((base) => {
         renderer: 'custom',
         version: '1',
         accepts: () => true,
-        patch: (_: object, props: unknown) => host.setNativeProps(),
+        patch: () => host.setNativeProps(),
         resetStyle: () => null,
         resetProp: () => null,
       }),
@@ -350,13 +349,11 @@ core.setConfig({ ...core.getConfig(), useClassName: true, pseudoMode: 'css' })
 const cssMarkup = renderToString(overrideCalendar(0))
 const ssr_css_bytes = Buffer.byteLength(cssMarkup)
 const generator = await moduleAt('packages/toned-core/dom/generate.ts')
-const css =
-  version === 'current'
-    ? (await moduleAt('packages/toned-core/build/index.ts')).buildStyles(
-        system,
-        { sheets: [sheet] },
-      ).css
-    : generator.generate(system.system)
+const css = hasModule('packages/toned-core/build/index.ts')
+  ? (await moduleAt('packages/toned-core/build/index.ts')).buildStyles(system, {
+      sheets: [sheet],
+    }).css
+  : generator.generate(system.system)
 const generated_css_bytes = Buffer.byteLength(css)
 writeFileSync(join(evidenceDirectory, `${version}-inline.html`), inlineMarkup)
 writeFileSync(join(evidenceDirectory, `${version}-css.html`), cssMarkup)

@@ -191,3 +191,31 @@ describe('compiled boolean predicates', () => {
     ).toThrow('Unknown .when part/state')
   })
 })
+
+test('large indexed plans retain and distinguish residual browser predicates', () => {
+  const matcher = new StyleMatcher(
+    {
+      Root: {},
+      Label: {},
+      ...Object.fromEntries(
+        Array.from({ length: 65 }, (_, index) => [
+          `[axis${index}]`,
+          { Root: { selected: index } },
+        ]),
+      ),
+      [WHEN_RULES]: [
+        {
+          predicate: q.any(q.media('md'), q.part('Root').state('hover')),
+          rules: { Label: { value: 1 } },
+        },
+      ],
+    },
+    { cssMediaMode: true, cssPseudoMode: true },
+  )
+  const resting = matcher.match({ axis64: true })
+  const hovered = matcher.match({ axis64: true, 'Root:hover': true })
+  expect(resting.Root.selected).toBe(64)
+  expect(resting.Label[CONDITIONAL_RULES][0].predicate).toEqual(atom('@md'))
+  expect(hovered.Label[CONDITIONAL_RULES][0].predicate).toEqual(q.all())
+  expect(matcher.isEqual('Label', resting, hovered)).toBe(false)
+})
