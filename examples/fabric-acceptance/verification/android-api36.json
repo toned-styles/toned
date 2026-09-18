@@ -1,0 +1,703 @@
+{
+  "verifiedOn": "2026-09-18",
+  "java": "OpenJDK 21.0.2",
+  "scope": "Six automatic scenarios and native touch; excludes iOS, topology/recycling and per-frame paint guarantees",
+  "build": {
+    "inputs": "da2d96fa912d6b6b866fe7ce7165eb1e7393c1557a6d70b7c365c7191766fd98",
+    "apk": "f7d0e2577daee49e83baa01900f72cc0e5e86615ea5d7873523e375c07447c0a",
+    "avd": "Medium_Phone_API_36.1",
+    "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE4B.251210.005/14574095:user/release-keys",
+    "abi": "arm64-v8a"
+  },
+  "results": [
+    {
+      "kind": "environment",
+      "react": "19.2.3",
+      "reactNative": {
+        "minor": 86,
+        "prerelease": null,
+        "patch": 0,
+        "major": 0
+      },
+      "fabric": true,
+      "hermes": true,
+      "platform": "android",
+      "api": 36,
+      "density": 2.625,
+      "compositeRejected": true,
+      "runId": 1
+    },
+    {
+      "kind": "scenario",
+      "name": "real primitives and Pressable callback patches",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "View dimensions",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 96,
+            "height": 32
+          },
+          "expected": {
+            "width": 96,
+            "height": 32
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "Text dimensions",
+          "actual": {
+            "x": 16,
+            "y": 67.42855834960938,
+            "width": 88,
+            "height": 28.19049072265625
+          },
+          "expected": {
+            "width": 88,
+            "height": 28
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "TextInput dimensions",
+          "actual": {
+            "x": 16,
+            "y": 95.23809814453125,
+            "width": 120,
+            "height": 40
+          },
+          "expected": {
+            "width": 120,
+            "height": 40
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "Pressable resting width",
+          "actual": {
+            "x": 16,
+            "y": 135.61904907226562,
+            "width": 96,
+            "height": 40
+          },
+          "expected": {
+            "width": 96
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "Pressable active native patch",
+          "actual": {
+            "x": 16,
+            "y": 135.61904907226562,
+            "width": 144,
+            "height": 40
+          },
+          "expected": {
+            "width": 144
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "Pressable released native patch",
+          "actual": {
+            "x": 16,
+            "y": 135.61904907226562,
+            "width": 96,
+            "height": 40
+          },
+          "expected": {
+            "width": 96
+          },
+          "source": "native.measure"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "scenario",
+      "name": "native focus, removal reset and caller baseline",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "caller resting height",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 100.19047546386719,
+            "height": 40
+          },
+          "expected": {
+            "width": 100,
+            "height": 40
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "real native focus applies state",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 148.1904754638672,
+            "height": 64
+          },
+          "expected": {
+            "width": 148,
+            "height": 64
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "TextInput confirms focus",
+          "actual": true,
+          "expected": true,
+          "source": "native.focus"
+        },
+        {
+          "name": "native focus event reached the component",
+          "actual": true,
+          "expected": true,
+          "source": "native.focus"
+        },
+        {
+          "name": "direct focus required no React primitive commit",
+          "actual": 2,
+          "expected": 2,
+          "source": "render.lifecycle"
+        },
+        {
+          "name": "repeated sibling remains resting",
+          "actual": {
+            "x": 16,
+            "y": 99.42855834960938,
+            "width": 100.19047546386719,
+            "height": 40
+          },
+          "expected": {
+            "width": 100,
+            "height": 40
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "state survives caller baseline commit",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 148.1904754638672,
+            "height": 64
+          },
+          "expected": {
+            "width": 148,
+            "height": 64
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "removing minHeight restores new caller height",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 100.19047546386719,
+            "height": 56
+          },
+          "expected": {
+            "width": 100,
+            "height": 56
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "TextInput confirms blur",
+          "actual": false,
+          "expected": false,
+          "source": "native.focus"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "scenario",
+      "name": "native text appearance and placeholder bridge reset",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "appearance target mounted",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 180.1904754638672,
+            "height": 32
+          },
+          "expected": {
+            "width": 180
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "native resting text color and alpha",
+          "actual": {
+            "hintTextColor": -1728053248,
+            "alpha": 1,
+            "textColor": -15649963,
+            "focused": false,
+            "height": 32,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "textColor": 4279317333,
+            "alpha": 1
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "native changed text color and alpha",
+          "actual": {
+            "hintTextColor": -1728053248,
+            "alpha": 0.4000000059604645,
+            "textColor": -2267648,
+            "focused": false,
+            "height": 32,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "textColor": 4292699648,
+            "alpha": 0.4
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "native restored text color and alpha",
+          "actual": {
+            "hintTextColor": -1728053248,
+            "alpha": 1,
+            "textColor": -15649963,
+            "focused": false,
+            "height": 32,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "textColor": 4279317333,
+            "alpha": 1
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "native reporter supplies actual hint color",
+          "actual": "number",
+          "expected": "number",
+          "source": "native.snapshot"
+        },
+        {
+          "name": "native focus applies placeholder bridge",
+          "actual": {
+            "hintTextColor": -2276352,
+            "alpha": 1,
+            "textColor": -2276352,
+            "focused": true,
+            "height": 40,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "focused": true,
+            "hintTextColor": 4292690944
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "removed bridge resets platform hint color",
+          "actual": {
+            "hintTextColor": -1728053248,
+            "alpha": 1,
+            "textColor": -1728053248,
+            "focused": false,
+            "height": 40,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "focused": false,
+            "hintTextColor": -1728053248
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "caller-owned bridge prop wins while state is active",
+          "actual": {
+            "hintTextColor": -14527096,
+            "alpha": 1,
+            "textColor": -14527096,
+            "focused": true,
+            "height": 40,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "focused": true,
+            "hintTextColor": 4280440200
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "changed caller bridge prop wins without clearing native focus",
+          "actual": {
+            "hintTextColor": -13399996,
+            "alpha": 1,
+            "textColor": -13399996,
+            "focused": true,
+            "height": 40,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "focused": true,
+            "hintTextColor": 4281567300
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "caller bridge baseline survives state removal",
+          "actual": {
+            "hintTextColor": -13399996,
+            "alpha": 1,
+            "textColor": -13399996,
+            "focused": false,
+            "height": 40,
+            "width": 180.1904761904762
+          },
+          "expected": {
+            "focused": false,
+            "hintTextColor": 4281567300
+          },
+          "source": "native.snapshot"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "scenario",
+      "name": "variant host identity, ref replacement and release",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "initial variant",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 80,
+            "height": 32
+          },
+          "expected": {
+            "width": 80
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "committed variant on actual host",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 176,
+            "height": 32
+          },
+          "expected": {
+            "width": 176
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "variant retains actual host object",
+          "actual": true,
+          "expected": true,
+          "source": "host.identity"
+        },
+        {
+          "name": "ref handoff retains native layout",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 176,
+            "height": 32
+          },
+          "expected": {
+            "width": 176
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "ref replacement retains actual host object",
+          "actual": true,
+          "expected": true,
+          "source": "host.identity"
+        },
+        {
+          "name": "previous callback released once",
+          "actual": 2,
+          "expected": 2,
+          "source": "render.lifecycle"
+        },
+        {
+          "name": "unmount clears host ref",
+          "actual": null,
+          "expected": null,
+          "source": "host.identity"
+        },
+        {
+          "name": "all caller ref lifetimes released",
+          "actual": 3,
+          "expected": 3,
+          "source": "render.lifecycle"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "scenario",
+      "name": "suspended variants cannot mutate the committed native host",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "committed small variant",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 80,
+            "height": 32
+          },
+          "expected": {
+            "width": 80
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "pending render leaves native width unchanged",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 80,
+            "height": 32
+          },
+          "expected": {
+            "width": 80
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "pending render retains mounted host",
+          "actual": true,
+          "expected": true,
+          "source": "host.identity"
+        },
+        {
+          "name": "resolved transition commits large width",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 176,
+            "height": 32
+          },
+          "expected": {
+            "width": 176
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "resolved transition retains mounted host",
+          "actual": true,
+          "expected": true,
+          "source": "host.identity"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "scenario",
+      "name": "two controllers share a real native host and detach independently",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "both controllers resting",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 80,
+            "height": 40
+          },
+          "expected": {
+            "width": 80,
+            "height": 40
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "both controller patches reach native layout",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 128,
+            "height": 72
+          },
+          "expected": {
+            "width": 128,
+            "height": 72
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "remaining controller retains active height",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 280,
+            "height": 72
+          },
+          "expected": {
+            "width": 280,
+            "height": 72
+          },
+          "source": "native.measure"
+        },
+        {
+          "name": "detaching one owner retains native host",
+          "actual": true,
+          "expected": true,
+          "source": "host.identity"
+        },
+        {
+          "name": "remaining controller still updates",
+          "actual": {
+            "x": 16,
+            "y": 35.428558349609375,
+            "width": 280,
+            "height": 40
+          },
+          "expected": {
+            "width": 280,
+            "height": 40
+          },
+          "source": "native.measure"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "complete",
+      "name": "android-fabric",
+      "status": "pass",
+      "assertions": [],
+      "limitations": [
+        "Pressable callback composition is exercised programmatically; touch dispatch requires device automation.",
+        "Native text color, alpha and placeholder bridge props use Android reporter readback; background paint still needs screenshots.",
+        "These scenarios do not certify native relationship topology, recycling lists, or native grid."
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "device-probe",
+      "name": "native touch ready",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "native ready state",
+          "expected": {
+            "width": 120,
+            "alpha": 1
+          },
+          "actual": {
+            "focused": false,
+            "alpha": 1,
+            "height": 56,
+            "width": 120
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "device touch target position",
+          "actual": {
+            "x": 16,
+            "y": 98.28570556640625,
+            "width": 120,
+            "height": 56
+          },
+          "expected": {
+            "width": 120,
+            "height": 56
+          },
+          "source": "native.measure"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "device-probe",
+      "name": "native touch press-in",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "native press-in state",
+          "expected": {
+            "width": 200,
+            "alpha": 0.4
+          },
+          "actual": {
+            "focused": false,
+            "alpha": 0.4000000059604645,
+            "height": 56,
+            "width": 200
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "device touch target position",
+          "actual": {
+            "x": 16,
+            "y": 98.28570556640625,
+            "width": 200,
+            "height": 56
+          },
+          "expected": {
+            "width": 200,
+            "height": 56
+          },
+          "source": "native.measure"
+        }
+      ],
+      "runId": 1
+    },
+    {
+      "kind": "device-probe",
+      "name": "native touch press-out",
+      "status": "pass",
+      "assertions": [
+        {
+          "name": "native press-out state",
+          "expected": {
+            "width": 120,
+            "alpha": 1
+          },
+          "actual": {
+            "focused": false,
+            "alpha": 1,
+            "height": 56,
+            "width": 120
+          },
+          "source": "native.snapshot"
+        },
+        {
+          "name": "device touch target position",
+          "actual": {
+            "x": 16,
+            "y": 98.28570556640625,
+            "width": 120,
+            "height": 56
+          },
+          "expected": {
+            "width": 120,
+            "height": 56
+          },
+          "source": "native.measure"
+        }
+      ],
+      "runId": 1
+    }
+  ]
+}

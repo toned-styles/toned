@@ -294,9 +294,11 @@ throw at attachment. Native arrays of plain style objects work; resolve numeric
 registered styles with the host's `StyleSheet.flatten` first. Put interaction
 styles in declarations rather than state-dependent `style` callbacks.
 
-Native host fixtures cover patch semantics and cleanup. They do not certify a
-particular React Native/Fabric release; applications must verify their selected
-host's imperative-update contract. Web grid remains an explicit web capability.
+Native host fixtures cover patch semantics and cleanup. A separate real Android
+acceptance app verifies the RN 0.86.0/React 19.2.3 Fabric/Hermes profile, including
+native layout, text/placeholder paint, focus, touch, refs, ownership and Suspense.
+Other versions/platforms require their own acceptance. Web grid remains an
+explicit web capability; see the exact native scope below.
 
 Native direct patches now require an explicit `nativeHost` adapter. See
 [NATIVE-HOSTS.md](./NATIVE-HOSTS.md) for the integration contract, ownership

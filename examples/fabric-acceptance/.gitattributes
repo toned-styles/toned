@@ -1,0 +1,5 @@
+# Preserve the upstream Windows wrapper's native line endings on checkout.
+*.bat text eol=crlf
+
+# Keep this standalone acceptance fixture usable without Git LFS.
+*.png -filter -diff -merge -text

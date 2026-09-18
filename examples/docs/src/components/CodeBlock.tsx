@@ -1,9 +1,9 @@
 import { useStyles } from '@toned/react'
 import { Fragment, useEffect, useState } from 'react'
-import { type BundledLanguage, codeToTokens } from 'shiki'
+import type { CodeLanguage, highlight } from '../highlight.ts'
 import { proseStyles } from '../styles/prose.ts'
 
-function detectLanguage(code: string): BundledLanguage {
+function detectLanguage(code: string): CodeLanguage {
   if (code.startsWith('npm ') || code.startsWith('pnpm ')) return 'bash'
   if (code.includes('import ') || code.includes('export ')) return 'tsx'
   if (code.includes(':root') || code.includes('@media') || code.includes('--'))
@@ -15,23 +15,24 @@ export function CodeBlock({ children }: { children: string }) {
   const s = useStyles(proseStyles)
   const [highlighted, setHighlighted] = useState<{
     source: string
-    result: Awaited<ReturnType<typeof codeToTokens>>
+    result: Awaited<ReturnType<typeof highlight>>
   } | null>(null)
 
   useEffect(() => {
     let active = true
-    codeToTokens(children.trim(), {
-      lang: detectLanguage(children),
-      theme: 'github-light',
-    }).then(
-      (result) => {
-        if (active) setHighlighted({ source: children, result })
-      },
-      () => {
-        // Plain code stays readable if a highlighter language cannot load.
-        if (active) setHighlighted(null)
-      },
-    )
+    import('../highlight.ts')
+      .then(({ highlight }) =>
+        highlight(children.trim(), detectLanguage(children)),
+      )
+      .then(
+        (result) => {
+          if (active) setHighlighted({ source: children, result })
+        },
+        () => {
+          // Plain code stays readable if a highlighter language cannot load.
+          if (active) setHighlighted(null)
+        },
+      )
     return () => {
       active = false
     }

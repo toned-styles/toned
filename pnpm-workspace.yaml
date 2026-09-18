@@ -2,6 +2,8 @@ packages:
   - packages/*
   - config/*
   - examples/*
+  # Exact React/RN consumer installed only in an OS-temporary acceptance tree.
+  - '!examples/fabric-acceptance'
 
 allowBuilds:
   esbuild: true

@@ -1,5 +1,5 @@
 import path from 'node:path'
-import mdx from '@mdx-js/rollup'
+import { fileURLToPath } from 'node:url'
 import tanstackRouter from '@tanstack/router-plugin/vite'
 import toned from '@toned/core/vite'
 import { system } from '@toned/systems/base'
@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { componentDocs } from './src/plugins/component-docs.ts'
 
-const uiRoot = path.resolve(__dirname, '../ui')
+const uiRoot = fileURLToPath(new URL('../ui', import.meta.url))
 
 export default defineConfig({
   resolve: {
@@ -22,7 +22,6 @@ export default defineConfig({
       tsconfigPath: path.join(uiRoot, 'tsconfig.json'),
     }),
     tanstackRouter({ target: 'react', autoCodeSplitting: false }),
-    mdx(),
     react(),
   ],
 })

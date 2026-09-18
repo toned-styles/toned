@@ -1,11 +1,5 @@
 /// <reference types="vite/client" />
 
-declare module '*.mdx' {
-  import type { ComponentType } from 'react'
-  const component: ComponentType
-  export default component
-}
-
 declare module 'virtual:component-docs/*' {
   export interface PropDoc {
     name: string

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node server.js",
     "build": "vite build --outDir dist/client && vite build --outDir dist/server --ssr src/entry-server.tsx && node prerender.js",
-    "preview": "vite preview --outDir dist/client"
+    "preview": "vite preview --outDir dist/client",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.160.2",
@@ -16,17 +17,17 @@
     "@toned/themes": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "shiki": "^3.22.0"
+    "shiki": "^3.22.0",
+    "@examples/toned-ui": "workspace:*"
   },
   "devDependencies": {
-    "@mdx-js/rollup": "^3.1.0",
     "@tanstack/router-plugin": "^1.160.2",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^4.7.0",
     "react-docgen-typescript": "2.4.0",
-    "typescript": "catalog:",
+    "typescript": "5.9.3",
     "vite": "^6.3.5"
   }
 }

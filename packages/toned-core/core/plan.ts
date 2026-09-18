@@ -1,7 +1,6 @@
 import { validateGridDeclarations } from '../grid/validation.ts'
 import { normalizeRules } from '../stylesheet/matcher/normalizeRules.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
-import { declarationLayers } from '../stylesheet/removals.ts'
 import {
   TOKEN_OPERATIONS,
   type TokenOperation,
@@ -142,12 +141,12 @@ export function compileRules(
   const cached = cache.get(rules)?.get(system)?.get(platform)
   if (cached) return cached
   const prepared = resolvePlatformKeys(rules, platform)
-  const layers = declarationLayers(prepared)
   const normalized = normalizeRules(prepared, {
     cssMediaMode: false,
     cssPseudoMode: false,
     sourceOrder: !!system.id,
   })
+  const layers = normalized.layers
   const operations: DeclarationOperation[] = []
   const extensions: DeclarationOperation[] = []
   let nextOrder = 0

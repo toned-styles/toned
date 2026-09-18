@@ -61,6 +61,53 @@ Consumer declaration output stays below its 64 KiB budget. Do not interpret
 byte differences between a temporary extracted package and the workspace as an
 API-size reduction: TypeScript's inferred imports depend on that resolution layout.
 
+## Normalization and snapshot follow-up against `768182d`
+
+The compiler now reuses the normalizer's effective override layers instead of
+walking tombstones twice. Normalization appends token occurrences directly to
+their destination parts, avoiding temporary per-token rule trees. Neither change
+removes provenance, validation or source-order writes. A differential test checks
+40 overlapping rules across 128 states in both legacy and explicit declaration
+modes, including token/raw-style overlap and override removals.
+
+`immutableSnapshot` also reuses its own recursively immutable outputs. A private
+WeakSet certifies those outputs; caller-owned input objects are never memoized.
+Shallow-frozen objects still get fresh nested snapshots, so mutable direct `exec`
+inputs remain observable. Opaque class, Date, Map, Set and function values keep
+their existing identity and prevent certification of the containing snapshot.
+Arrays with custom mapping/construction or subclass state are also excluded.
+
+The default scalar-token fixture showed mixed cold-compilation and override
+timings across paired runs; these changes do **not** establish an override mount
+or update speedup. It contains no authored raw-style objects in those declarations,
+so it does not directly exercise repeated style snapshotting.
+
+For that workload, run:
+
+```sh
+node benchmarks/completion.mjs 768182d --raw-style
+```
+
+This labeled variant adds `{ paddingTop: day % 4, opacity: 0.9, width: 40,
+height: 32 }` as raw style on each of the 42 cold-sheet day parts and each of the
+42 distinct child override declarations. Other fixtures, assertions and guards
+are unchanged; the report names its workload `raw-style` or `scalar-tokens`.
+Before adding the switch, two guarded runs of that exact source variant measured:
+
+| Raw-style workload | `768182d`, run 1 / run 2 | Follow-up, run 1 / run 2 |
+| --- | ---: | ---: |
+| Cold 43-part compilation, µs | 463.4 / 475.3 | 407.2 / 417.7 |
+| Distinct override mount, ms | 7.566 / 8.015 | 7.658 / 8.473 |
+| Distinct override update, ms | 3.078 / 3.472 | 3.460 / 3.359 |
+
+Cold compilation improved about 12% in both raw-style runs. Override results are
+mixed or slower. These are macOS arm64/Bun 1.3.14 measurements on a shared machine,
+with other agent builds paused, not device or whole-application results. Both
+versions retained the same 42/0/42 host writes, 84 resolver calls, two changed
+override derivations, zero interaction renders and zero retained disposal samples.
+Do not combine the raw-style cold numbers with the default fixture's scalar-token
+numbers; the declarations intentionally contain different work.
+
 ## Controller, host, React and typechecking acceptance
 
 Run `node benchmarks/completion.mjs [checkpoint]` with HQ's root dependencies

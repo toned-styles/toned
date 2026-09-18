@@ -26,13 +26,15 @@ part ownership without adding a host element.
 ## Contracts and verification
 
 - [Implementation status](SPEC-COMPLETION.md) records supported contracts and
-  architectural boundaries. Native grid and concrete RN/Fabric certification are
-  not advertised as shipped capabilities.
+  architectural boundaries. A pinned [Android Fabric profile](packages/toned-react/NATIVE-HOSTS.md)
+  has real native acceptance evidence; native grid remains unsupported.
 - [Examples](examples/README.md) distinguish runnable integrations from historical
   host sketches; they are not a substitute for package conformance tests.
 - [Benchmarks](benchmarks/README.md) report measured improvements and regressions.
 - Embedded in HQ, use the root dependency installation and guarded
   `bun scripts/build/test-toned.ts` and `bun scripts/build/test-toned-react-versions.ts`
-  runners. Do not install a second React tree in this submodule.
+  runners. `bun scripts/build/test-toned-docs.ts` checks the documentation and
+  gallery production build and browser hydration; see the examples guide for
+  browser installation. Do not install a second React tree in this submodule.
 
 MIT; see [LICENSE](LICENSE).

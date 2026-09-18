@@ -127,27 +127,22 @@ export function applyOperations(
   }
 }
 
-export function mergeRule(target: RuleObject, source: RuleObject): void {
-  for (const element in source) {
-    let out = Object.hasOwn(target, element) ? target[element] : undefined
-    if (!out) {
-      out = Object.create(null)
-      Object.defineProperty(target, element, {
-        value: out,
-        enumerable: true,
-        configurable: true,
-        writable: true,
-      })
-    }
-    const incoming: readonly TokenOperation[] =
-      source[element][TOKEN_OPERATIONS] ??
-      Object.entries(source[element]).map(([key, value]) => ({
-        key,
-        value,
-        layer: 0,
-      }))
-    applyOperations(out, incoming)
+function appendOperations(
+  target: RuleObject,
+  element: string,
+  incoming: readonly TokenOperation[],
+): void {
+  let out = Object.hasOwn(target, element) ? target[element] : undefined
+  if (!out) {
+    out = Object.create(null)
+    Object.defineProperty(target, element, {
+      value: out,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    })
   }
+  applyOperations(out, incoming)
 }
 
 /**
@@ -229,26 +224,27 @@ export function normalizeRules(
             conditionIdentity || (conditionDepth ? '*' : ''),
             predicateIdentity,
           ])
-    const chunk = { [element]: { [key]: value } }
-    Object.defineProperty(chunk[element], TOKEN_OPERATIONS, {
-      value: [{ key, value, layer }],
-    })
+    const incoming = [{ key, value, layer }]
     list[original] ??= { rule: {} }
     const entry = list[original]
-    mergeRule(entry.rule, chunk)
+    appendOperations(entry.rule, element, incoming)
     if (!conditions.size && !conditionDepth && !predicate) {
-      if (layer) mergeRule(layerBase, chunk)
+      if (layer) appendOperations(layerBase, element, incoming)
       return
     }
     const previous = ordered[ordered.length - 1]
-    if (previous?.original === original) mergeRule(previous.rule, chunk)
-    else
+    if (previous?.original === original)
+      appendOperations(previous.rule, element, incoming)
+    else {
+      const rule = {}
+      appendOperations(rule, element, incoming)
       ordered.push({
         conditions,
         original,
-        rule: chunk,
+        rule,
         ...(predicate ? { predicate } : {}),
       })
+    }
   }
 
   const withConditions = (
@@ -496,5 +492,13 @@ export function normalizeRules(
     }
     layer++
   }
-  return { scheme, list, ordered, interactions, elementSet, hasMediaRules }
+  return {
+    scheme,
+    list,
+    ordered,
+    interactions,
+    elementSet,
+    hasMediaRules,
+    layers,
+  }
 }

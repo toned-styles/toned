@@ -19,10 +19,16 @@ const routes = [
   '/guides/theming',
   '/guides/interactive',
   '/guides/ssr',
+  '/ui',
+  '/ui/button',
 ]
 
 async function prerender() {
   const template = fs.readFileSync(resolve('dist/client/index.html'), 'utf-8')
+  if (!template.includes('<!--app-html-->'))
+    throw new Error(
+      'The built HTML template is missing its SSR insertion point',
+    )
   const { render } = await import('./dist/server/entry-server.js')
 
   for (const url of routes) {
