@@ -1,6 +1,16 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from './alert-dialog'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from './alert-dialog.tsx'
+import { Button } from './button.tsx'
 
 export default doc({
   components: [
@@ -10,7 +20,10 @@ export default doc({
     c({ AlertDialogHeader }, {}),
     c({ AlertDialogFooter }, {}),
     c({ AlertDialogTitle }, { children: 'Are you sure?' }),
-    c({ AlertDialogDescription }, { children: 'This action cannot be undone.' }),
+    c(
+      { AlertDialogDescription },
+      { children: 'This action cannot be undone.' },
+    ),
     c({ AlertDialogAction }, { children: 'Continue' }),
     c({ AlertDialogCancel }, { children: 'Cancel' }),
   ],

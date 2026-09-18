@@ -1,7 +1,7 @@
-import { system } from '@toned/systems/base'
-import { inject } from '@toned/core/dom'
 import { defineConfig, setConfig } from '@toned/core'
+import { inject } from '@toned/core/dom'
 import reactConfig from '@toned/react/react-web'
+import { system } from '@toned/systems/base'
 
 inject(system)
 

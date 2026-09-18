@@ -1,11 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
-import { ContextMenu as ContextMenuPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
+import { ContextMenu as ContextMenuPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const contextMenuStyles = stylesheet({
   content: {
@@ -230,12 +229,12 @@ function ContextMenuContent({
 function ContextMenuItem({
   className,
   inset,
-  variant = "default",
+  variant = 'default',
   disabled,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Item> & {
   inset?: boolean
-  variant?: "default" | "destructive"
+  variant?: 'default' | 'destructive'
 }) {
   const s = useStyles(contextMenuStyles)
 
@@ -248,7 +247,7 @@ function ContextMenuItem({
       {...s.item
         .with(inset && s.itemInset)
         .with(disabled && s.itemDisabled)
-        .with(variant === "destructive" && s.itemDestructiveFocus)
+        .with(variant === 'destructive' && s.itemDestructiveFocus)
         .with({ className })}
       {...props}
     />
@@ -340,7 +339,7 @@ function ContextMenuSeparator({
 function ContextMenuShortcut({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(contextMenuStyles)
 
   return (

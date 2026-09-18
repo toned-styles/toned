@@ -1,4 +1,4 @@
-import { readdir, rm } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, rm } from 'node:fs/promises'
 import * as path from 'node:path'
 import { $ } from 'bun'
 
@@ -26,6 +26,27 @@ const toDistTarget = (value: unknown): unknown => {
   return value
 }
 
+/** TypeScript emits modules, not stylesheets. Copy only CSS explicitly exposed
+ * by the package's export map, including nested conditional exports. */
+async function copyExportedStyles(value: unknown): Promise<void> {
+  if (typeof value === 'string') {
+    if (!value.endsWith('.css')) return
+    if (
+      !value.startsWith('./') ||
+      value.split('/').includes('..') ||
+      value.includes('*')
+    )
+      throw new Error(
+        `Expected an explicit package-relative CSS export: ${value}`,
+      )
+    const target = path.join(dist, value)
+    await mkdir(path.dirname(target), { recursive: true })
+    await copyFile(path.join(cwd, value), target)
+  } else if (value && typeof value === 'object') {
+    for (const target of Object.values(value)) await copyExportedStyles(target)
+  }
+}
+
 const transformPkg = async () => {
   const {
     scripts: _scripts,
@@ -34,7 +55,10 @@ const transformPkg = async () => {
     ...pkg
   } = await Bun.file('package.json').json()
 
-  if (pkg.exports) pkg.exports = toDistTarget(pkg.exports)
+  if (pkg.exports) {
+    await copyExportedStyles(pkg.exports)
+    pkg.exports = toDistTarget(pkg.exports)
+  }
 
   await Bun.write(
     path.join(dist, 'package.json'),

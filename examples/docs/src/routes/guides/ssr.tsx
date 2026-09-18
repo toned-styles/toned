@@ -3,169 +3,92 @@ import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
-export const Route = createFileRoute('/guides/ssr')({
-  component: GuideSsr,
-})
+export const Route = createFileRoute('/guides/ssr')({ component: GuideSsr })
 
 function GuideSsr() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
-      <h1 {...s.h1}>SSR &amp; SSG</h1>
+      <h1 {...s.h1}>SSR and static generation</h1>
       <p>
-        toned-styles supports SSR and static site generation out of the box.
-        The recommended approach uses the{' '}
-        <code {...s.code}>@toned/core/vite</code> plugin to generate CSS at
-        build time, eliminating the need for manual CSS collection on the
-        server.
+        Generate CSS before rendering and deploy it with its validation
+        manifest. The same immutable sheets, renderer inputs and theme produce
+        the server markup and initial client render. Rendering never injects a
+        stylesheet.
       </p>
-
-      <h2 {...s.h2}>Vite Plugin (Recommended)</h2>
+      <h2 {...s.h2}>Vite delivery</h2>
       <p>
-        The toned Vite plugin generates all token CSS via a virtual module. In
-        production it becomes a static <code {...s.code}>.css</code> file in
-        the bundle.
+        Pass the complete system returned by{' '}
+        <code {...s.code}>defineSystem</code>
+        and every sheet, including lazy routes. The raw token dictionary alone
+        does not carry a stylesheet inventory or system namespace.
       </p>
-
-      <h3 {...s.h3}>1. Vite Config</h3>
       <CodeBlock>{`// vite.config.ts
 import toned from '@toned/core/vite'
-import { system } from '@toned/systems/base'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { ui, buttonStyles } from './styles.ts'
 
 export default defineConfig({
-  plugins: [toned({ system }), react()],
+  plugins: [toned({
+    system: ui,
+    sheets: [buttonStyles],
+    inputs: ['styles.ts'],
+  }), react()],
 })`}</CodeBlock>
-
-      <h3 {...s.h3}>2. Config File</h3>
       <p>
-        Import the virtual module in your{' '}
-        <code {...s.code}>toned.config.ts</code>:
+        Import <code {...s.code}>virtual:toned.css</code> in the application and
+        use <code {...s.code}>virtual:toned.manifest</code> to create the
+        renderer. See <a href="/">Getting Started</a> for the complete provider
+        setup. The production CSS file must be linked from the initial HTML.
       </p>
-      <CodeBlock>{`// toned.config.ts
-import '@toned/themes/shadcn/config.css'
-import 'virtual:toned.css'
+      <h2 {...s.h2}>Without Vite</h2>
+      <CodeBlock>{`// build-styles.ts — run during the application build
+import { mkdir, writeFile } from 'node:fs/promises'
+import { buildStyles } from '@toned/core/build'
+import { ui, buttonStyles } from './styles.ts'
 
-import { defineConfig, setConfig } from '@toned/core'
-import reactConfig from '@toned/react/react-web'
-
-export default setConfig(
-  defineConfig({
-    ...reactConfig,
-    useClassName: true,
-    useMedia: true,
-    mediaMode: 'css',
-  }),
-)`}</CodeBlock>
+const artifact = buildStyles(ui, { sheets: [buttonStyles] })
+await mkdir('public/assets', { recursive: true })
+await writeFile('public/assets/toned.css', artifact.css)
+await writeFile('public/assets/toned.manifest.json', JSON.stringify(artifact.manifest))`}</CodeBlock>
       <p>
-        For TypeScript, add a type reference for the virtual module:
+        Load that manifest into <code {...s.code}>createWebRenderer</code> and
+        pass the renderer and web host to <code {...s.code}>TonedProvider</code>
+        . Missing or stale build inputs are diagnosed instead of repaired by a
+        browser-side injection fallback.
       </p>
-      <CodeBlock>{`// env.d.ts
-/// <reference types="@toned/core/vite/client" />`}</CodeBlock>
-
-      <h3 {...s.h3}>3. Server Entry</h3>
-      <p>
-        The server entry only needs to render the app — the plugin handles CSS:
-      </p>
-      <CodeBlock>{`// src/entry-server.tsx
-import '../toned.config.ts'
-
+      <h2 {...s.h2}>Render and hydrate</h2>
+      <CodeBlock>{`// entry-server.tsx
 import { renderToString } from 'react-dom/server'
-
-export async function render(url: string) {
-  const html = renderToString(<App url={url} />)
-  return html
-}`}</CodeBlock>
-
-      <h3 {...s.h3}>4. Client Hydration</h3>
-      <CodeBlock>{`// src/main.tsx
-import '../toned.config.ts'
-
-import { StrictMode } from 'react'
-import { createRoot, hydrateRoot } from 'react-dom/client'
 import { App } from './App.tsx'
-
-const app = (
-  <StrictMode>
-    <App />
-  </StrictMode>
-)
-
-const rootEl = document.getElementById('root')!
-
-if (rootEl.firstElementChild) {
-  hydrateRoot(rootEl, app)
-} else {
-  createRoot(rootEl).render(app)
-}`}</CodeBlock>
-
-      <h3 {...s.h3}>5. Prerendering (SSG)</h3>
-      <p>
-        For static sites, prerender routes at build time. The production HTML
-        already includes a{' '}
-        <code {...s.code}>{'<link rel="stylesheet">'}</code> to the bundled CSS,
-        so the prerender script only injects rendered HTML:
-      </p>
-      <CodeBlock>{`// prerender.js
-import fs from 'node:fs'
-import path from 'node:path'
-
-const routes = ['/', '/about', '/docs/getting-started']
-
-async function prerender() {
-  const template = fs.readFileSync('dist/client/index.html', 'utf-8')
-  const { render } = await import('./dist/server/entry-server.js')
-
-  for (const url of routes) {
-    const appHtml = await render(url)
-    const html = template.replace('<!--app-html-->', appHtml)
-
-    const filePath = url === '/'
-      ? 'dist/client/index.html'
-      : \`dist/client\${url}.html\`
-
-    fs.mkdirSync(path.dirname(filePath), { recursive: true })
-    fs.writeFileSync(filePath, html)
-  }
+export function render() {
+  return renderToString(<App />)
 }
 
-prerender()`}</CodeBlock>
-
-      <h2 {...s.h2}>Alternative: Runtime inject()</h2>
+// entry-client.tsx
+import { hydrateRoot } from 'react-dom/client'
+import { App } from './App.tsx'
+const root = document.getElementById('root')
+if (!root) throw new Error('Missing application root')
+hydrateRoot(root, <App />)`}</CodeBlock>
       <p>
-        If you are not using Vite, you can use{' '}
-        <code {...s.code}>inject()</code> to generate CSS at runtime:
+        For static generation, insert the rendered HTML into a template linking
+        the generated stylesheet. Use matching theme values and variants for
+        server output and hydration. Request-specific tokens belong in provider
+        inputs, not mutations of a shared global configuration.
       </p>
-      <CodeBlock>{`// toned.config.ts (runtime approach)
-import '@toned/themes/shadcn/config.css'
-import { defineConfig, setConfig } from '@toned/core'
-import { inject } from '@toned/core/dom'
-import reactConfig from '@toned/react/react-web'
-import { system } from '@toned/systems/base'
-
-inject(system)  // inserts <style> tag in the DOM
-
-export default setConfig(
-  defineConfig({ ...reactConfig, useClassName: true, useMedia: true, mediaMode: 'css' }),
-)`}</CodeBlock>
+      <h2 {...s.h2}>Pure server resolution</h2>
       <p>
-        With this approach, use <code {...s.code}>generate(system)</code> in
-        your server entry to collect CSS as a string and inject it into the HTML
-        template manually.
-      </p>
-
-      <h2 {...s.h2}>Caveats</h2>
-      <p>
-        <strong>Config must load before rendering</strong> -- Import{' '}
-        <code {...s.code}>toned.config.ts</code> at the top of your server
-        entry so <code {...s.code}>setConfig</code> runs before any{' '}
-        <code {...s.code}>useStyles</code> call.
+        <code {...s.code}>@toned/core/server</code> can resolve part props
+        without importing React, reading browser globals or mounting hosts.
+        React SSR uses the separate React binding. Module-level{' '}
+        <code {...s.code}>createElements</code>
+        creates stable component identities without reading host configuration.
       </p>
       <p>
-        <strong>Same config on both sides</strong> -- The server and client must
-        run the same configuration. Any differences will cause hydration
-        mismatches.
+        <code {...s.code}>@toned/core/dev/inject</code> remains an explicit
+        development helper. It is not the production or SSR delivery path.
       </p>
     </article>
   )

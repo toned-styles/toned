@@ -1,5 +1,5 @@
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
 
 const kbdStyles = stylesheet({
   root: {
@@ -28,27 +28,17 @@ const kbdStyles = stylesheet({
   },
 })
 
-function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
+function Kbd({ className, ...props }: React.ComponentProps<'kbd'>) {
   const s = useStyles(kbdStyles)
 
-  return (
-    <kbd
-      data-slot="kbd"
-      {...s.root.with({ className })}
-      {...props}
-    />
-  )
+  return <kbd data-slot="kbd" {...s.root.with({ className })} {...props} />
 }
 
-function KbdGroup({ className, ...props }: React.ComponentProps<"div">) {
+function KbdGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(kbdStyles)
 
   return (
-    <kbd
-      data-slot="kbd-group"
-      {...s.group.with({ className })}
-      {...props}
-    />
+    <kbd data-slot="kbd-group" {...s.group.with({ className })} {...props} />
   )
 }
 

@@ -1,5 +1,12 @@
-import { doc, c } from '@/lib/doc'
-import { Menubar, MenubarMenu, MenubarTrigger, MenubarContent, MenubarItem, MenubarSeparator } from './menubar'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Menubar,
+  MenubarContent,
+  MenubarItem,
+  MenubarMenu,
+  MenubarSeparator,
+  MenubarTrigger,
+} from './menubar.tsx'
 
 export default doc({
   components: [

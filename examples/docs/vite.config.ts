@@ -5,14 +5,14 @@ import toned from '@toned/core/vite'
 import { system } from '@toned/systems/base'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { componentDocs } from './src/plugins/component-docs'
+import { componentDocs } from './src/plugins/component-docs.ts'
 
 const uiRoot = path.resolve(__dirname, '../ui')
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@/': path.join(uiRoot, 'src') + '/',
+      '@/': `${path.join(uiRoot, 'src')}/`,
     },
   },
   plugins: [

@@ -1,16 +1,16 @@
+import type { PropDoc } from 'virtual:component-docs/*'
 import { useStyles } from '@toned/react'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import { Input } from '@/components/ui/input.tsx'
+import { Label } from '@/components/ui/label.tsx'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from '@/components/ui/select.tsx'
+import { Switch } from '@/components/ui/switch.tsx'
 import { playgroundStyles } from '../../styles/playground.ts'
-import type { PropDoc } from 'virtual:component-docs/*'
 
 interface PropControlsProps {
   title?: string
@@ -40,7 +40,12 @@ function getControlType(
   return 'readonly'
 }
 
-export function PropControls({ title, props, values, onChange }: PropControlsProps) {
+export function PropControls({
+  title,
+  props,
+  values,
+  onChange,
+}: PropControlsProps) {
   const s = useStyles(playgroundStyles)
 
   const heading = title ?? 'Props'
@@ -89,7 +94,10 @@ function PropControl({
 
   return (
     <div {...s.controlRow}>
-      <Label title={prop.description || undefined} style={{ minWidth: '120px', flexShrink: 0 }}>
+      <Label
+        title={prop.description || undefined}
+        style={{ minWidth: '120px', flexShrink: 0 }}
+      >
         {prop.name}
         {prop.required ? ' *' : ''}
       </Label>

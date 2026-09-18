@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Kbd } from './kbd'
+import { c, doc } from '@/lib/doc.tsx'
+import { Kbd } from './kbd.tsx'
 
 export default doc({
-  components: [
-    c({ Kbd }, { children: '⌘K' }),
-  ],
+  components: [c({ Kbd }, { children: '⌘K' })],
 })

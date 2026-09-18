@@ -1,5 +1,12 @@
-import { doc, c } from '@/lib/doc'
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from './command'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from './command.tsx'
 
 export default doc({
   components: [

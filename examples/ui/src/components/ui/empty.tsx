@@ -1,7 +1,7 @@
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const emptyStyles = stylesheet({
   root: {
@@ -83,19 +83,13 @@ const emptyStyles = stylesheet({
   },
 })
 
-function Empty({ className, ...props }: React.ComponentProps<"div">) {
+function Empty({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(emptyStyles)
 
-  return (
-    <div
-      data-slot="empty"
-      {...s.root.with({ className })}
-      {...props}
-    />
-  )
+  return <div data-slot="empty" {...s.root.with({ className })} {...props} />
 }
 
-function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
+function EmptyHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(emptyStyles)
 
   return (
@@ -109,10 +103,10 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 function EmptyMedia({
   className,
-  variant = "default",
+  variant = 'default',
   ...props
-}: React.ComponentProps<"div"> & {
-  variant?: "default" | "icon"
+}: React.ComponentProps<'div'> & {
+  variant?: 'default' | 'icon'
 }) {
   const s = useStyles(emptyStyles)
 
@@ -130,19 +124,15 @@ function EmptyMedia({
   )
 }
 
-function EmptyTitle({ className, ...props }: React.ComponentProps<"div">) {
+function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(emptyStyles)
 
   return (
-    <div
-      data-slot="empty-title"
-      {...s.title.with({ className })}
-      {...props}
-    />
+    <div data-slot="empty-title" {...s.title.with({ className })} {...props} />
   )
 }
 
-function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
+function EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {
   const s = useStyles(emptyStyles)
 
   return (
@@ -154,7 +144,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
   )
 }
 
-function EmptyContent({ className, ...props }: React.ComponentProps<"div">) {
+function EmptyContent({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(emptyStyles)
 
   return (

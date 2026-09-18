@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Calendar } from './calendar'
+import { c, doc } from '@/lib/doc.tsx'
+import { Calendar } from './calendar.tsx'
 
 export default doc({
-  components: [
-    c({ Calendar }, { mode: 'single' as const }),
-  ],
+  components: [c({ Calendar }, { mode: 'single' as const })],
 })

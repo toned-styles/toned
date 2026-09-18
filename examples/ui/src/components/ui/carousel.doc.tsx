@@ -1,5 +1,11 @@
-import { doc, c } from '@/lib/doc'
-import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from './carousel'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from './carousel.tsx'
 
 export default doc({
   components: [
@@ -15,7 +21,16 @@ export default doc({
         <C.CarouselContent>
           {[1, 2, 3, 4, 5].map((n) => (
             <C.CarouselItem key={n}>
-              <div style={{ padding: '24px', textAlign: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '24px', fontWeight: 600 }}>
+              <div
+                style={{
+                  padding: '24px',
+                  textAlign: 'center',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  fontSize: '24px',
+                  fontWeight: 600,
+                }}
+              >
                 {n}
               </div>
             </C.CarouselItem>

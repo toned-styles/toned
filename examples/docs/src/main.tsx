@@ -25,7 +25,8 @@ const app = (
   </StrictMode>
 )
 
-const rootEl = document.getElementById('root')!
+const rootEl = document.getElementById('root')
+if (!rootEl) throw new Error('Missing documentation application root')
 
 if (rootEl.firstElementChild) {
   // Tell TanStack Router this is an SSR-hydrated page so Matches uses

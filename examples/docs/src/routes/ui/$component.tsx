@@ -1,15 +1,15 @@
+import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
 import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import type { DocDescriptor } from '../../../../ui/src/lib/doc.tsx'
 import { usePlaygroundPortal } from '../../components/PlaygroundContext.tsx'
 import { ComponentPreview } from '../../components/playground/ComponentPreview.tsx'
 import { DocPreview } from '../../components/playground/DocPreview.tsx'
 import { PropControls } from '../../components/playground/PropControls.tsx'
 import { componentModules } from '../../lib/component-registry.ts'
-import type { DocDescriptor } from '../../../../ui/src/lib/doc'
 import { playgroundStyles } from '../../styles/playground.ts'
-import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
 
 export const Route = createFileRoute('/ui/$component')({
   component: ComponentPlayground,
@@ -25,6 +25,7 @@ function ComponentPlayground() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
     setDocs(null)
     setMod(null)
     setDocDescriptor(null)
@@ -54,14 +55,17 @@ function ComponentPlayground() {
 
     Promise.all([loadDocs(), componentModules[name]?.(), loadDocDescriptor()])
       .then(([docData, modData, descriptor]) => {
+        if (!active) return
         setDocDescriptor(descriptor ?? null)
         setMod(modData ?? null)
 
         // If we have a doc descriptor, we don't require react-docgen data
         if (descriptor) {
-          setDocs(docData?.filter(
-            (d: ComponentDoc) => /^[A-Z]/.test(d.displayName),
-          ) ?? [])
+          setDocs(
+            docData?.filter((d: ComponentDoc) =>
+              /^[A-Z]/.test(d.displayName),
+            ) ?? [],
+          )
           return
         }
 
@@ -69,8 +73,8 @@ function ComponentPlayground() {
           setError(`No documentation found for "${name}"`)
           return
         }
-        const componentDocs = docData.filter(
-          (d: ComponentDoc) => /^[A-Z]/.test(d.displayName),
+        const componentDocs = docData.filter((d: ComponentDoc) =>
+          /^[A-Z]/.test(d.displayName),
         )
         if (componentDocs.length === 0) {
           setError(`No components found in "${name}"`)
@@ -78,9 +82,12 @@ function ComponentPlayground() {
         }
         setDocs(componentDocs)
       })
-      .catch((err) => {
-        setError(String(err.message || err))
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : String(err))
       })
+    return () => {
+      active = false
+    }
   }, [name])
 
   if (error) {
@@ -101,17 +108,15 @@ function ComponentPlayground() {
 
   // Doc descriptor path — type-safe previews
   if (docDescriptor) {
-    return (
-      <DocPlayground
-        doc={docDescriptor}
-        docgenDocs={docs ?? []}
-      />
-    )
+    return <DocPlayground doc={docDescriptor} docgenDocs={docs ?? []} />
   }
 
-  // Fallback: react-docgen-typescript only
-  const isCompound = docs!.length > 1
-  const primaryDoc = docs![0]
+  // Fallback: react-docgen-typescript only. A route change or an empty metadata
+  // result must not turn an absent primary entry into a render-time crash.
+  const primaryDoc = docs?.[0]
+  if (!docs || !primaryDoc)
+    return <div {...s.errorBanner}>No component metadata for {name}</div>
+  const isCompound = docs.length > 1
 
   return (
     <div {...s.container}>
@@ -122,13 +127,13 @@ function ComponentPlayground() {
         )}
         {isCompound && (
           <div {...s.exportBadge}>
-            Exports: {docs!.map((d) => d.displayName).join(', ')}
+            Exports: {docs.map((d) => d.displayName).join(', ')}
           </div>
         )}
       </div>
 
       {isCompound ? (
-        <CompoundPlayground docs={docs!} mod={mod} />
+        <CompoundPlayground docs={docs} mod={mod} />
       ) : (
         <SimplePlayground doc={primaryDoc} mod={mod} />
       )}
@@ -372,7 +377,10 @@ function initializeProps(
     if (prop.preview) {
       values[name] = coerceValue(prop.preview, prop.type.name)
     } else if (prop.defaultValue?.value != null) {
-      values[name] = coerceValue(String(prop.defaultValue.value), prop.type.name)
+      values[name] = coerceValue(
+        String(prop.defaultValue.value),
+        prop.type.name,
+      )
     } else if (name === 'children') {
       values[name] = 'Example'
     }

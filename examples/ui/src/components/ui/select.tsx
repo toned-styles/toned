@@ -1,11 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { Select as SelectPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { Select as SelectPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const selectStyles = stylesheet({
   trigger: {
@@ -109,12 +108,12 @@ function SelectValue({
 
 function SelectTrigger({
   className,
-  size = "default",
+  size = 'default',
   disabled,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
-  size?: "sm" | "default"
+  size?: 'sm' | 'default'
 }) {
   const s = useStyles(selectStyles)
 
@@ -137,8 +136,8 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  position = 'item-aligned',
+  align = 'center',
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   const s = useStyles(selectStyles)
@@ -157,11 +156,13 @@ function SelectContent({
           data-slot="select-viewport"
           style={{
             padding: '4px',
-            ...(position === "popper" ? {
-              height: 'var(--radix-select-trigger-height)',
-              width: '100%',
-              minWidth: 'var(--radix-select-trigger-width)',
-            } : {}),
+            ...(position === 'popper'
+              ? {
+                  height: 'var(--radix-select-trigger-height)',
+                  width: '100%',
+                  minWidth: 'var(--radix-select-trigger-width)',
+                }
+              : {}),
           }}
         >
           {children}

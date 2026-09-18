@@ -1,5 +1,5 @@
-import { doc, c } from '@/lib/doc'
-import { Item, ItemContent, ItemTitle, ItemDescription } from './item'
+import { c, doc } from '@/lib/doc.tsx'
+import { Item, ItemContent, ItemDescription, ItemTitle } from './item.tsx'
 
 export default doc({
   components: [

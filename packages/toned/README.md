@@ -1,35 +1,21 @@
-# toned
+# `toned` workspace placeholder
 
-## Configuration
+This private workspace does not provide a public umbrella API. Its empty module
+is retained only to keep existing workspace references valid; it is not a package
+to install or an alternative entry point for the scoped packages.
 
-Define `toned.config.ts`
+Use the implemented packages directly:
 
-```tsx
-import {defineConfig} from '@toned/core'
-
-export default defineConfig()
+```ts
+import { defineSystem, defineToken } from '@toned/core'
+import { createElements, TonedProvider } from '@toned/react'
+import { buildStyles } from '@toned/core/build'
+import { createWebRenderer } from '@toned/core/server'
 ```
 
-Import configuration in your project and set it
+See [the React package](../toned-react/README.md) for the complete authoring,
+configuration and CSS build flow. Build inventories include every stylesheet,
+including lazy routes; production rendering never injects CSS.
 
-```tsx
-import {setConfig} from '@tonec/core'
-
-import config from './toned.config.ts'
-
-setConfig(config)
-```
-
-### React
-
-```tsx
-import {defineConfig} from '@toned/core'
-import {reactPreset} from '@toned/react/config'
-
-import {reactNativePreset} from '@toned/react/config.native'
-import {reactWebPreset} from '@toned/react/config.web'
-
-export default defineConfig({
-  presets: [reactPreset, reactNativePreset, reactWebPreset],
-})
-```
+The scripts in this directory are historical experiments, not supported build
+commands. `@toned/core/build` and the `@toned/core/vite` integration own CSS delivery.

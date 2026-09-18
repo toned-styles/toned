@@ -1,11 +1,14 @@
-import { doc, c } from '@/lib/doc'
-import { Empty, EmptyTitle, EmptyDescription } from './empty'
+import { c, doc } from '@/lib/doc.tsx'
+import { Empty, EmptyDescription, EmptyTitle } from './empty.tsx'
 
 export default doc({
   components: [
     c({ Empty }, {}),
     c({ EmptyTitle }, { children: 'No results found' }),
-    c({ EmptyDescription }, { children: 'Try adjusting your search or filters.' }),
+    c(
+      { EmptyDescription },
+      { children: 'Try adjusting your search or filters.' },
+    ),
   ],
   preview: (C) => (
     <C.Empty>

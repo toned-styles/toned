@@ -1,11 +1,9 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { ButtonGroup } from './button-group'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import { ButtonGroup } from './button-group.tsx'
 
 export default doc({
-  components: [
-    c({ ButtonGroup }, {}),
-  ],
+  components: [c({ ButtonGroup }, {})],
   preview: (C) => (
     <C.ButtonGroup>
       <Button variant="outline">Left</Button>

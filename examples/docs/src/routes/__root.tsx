@@ -22,14 +22,16 @@ function RootLayout() {
 
   return (
     <div {...s.root}>
-      <input type="checkbox" id="menu-toggle" hidden />
-      <label
-        htmlFor="menu-toggle"
-        {...s.hamburger}
-        role="button"
+      <input
+        type="checkbox"
+        id="menu-toggle"
+        className="menu-toggle"
         aria-label="Toggle menu"
-      >
+        aria-controls="docs-navigation"
+      />
+      <label htmlFor="menu-toggle" {...s.hamburger} aria-label="Toggle menu">
         <svg
+          aria-hidden="true"
           width="20"
           height="20"
           viewBox="0 0 20 20"
@@ -46,8 +48,10 @@ function RootLayout() {
         {...s.overlay}
         role="presentation"
         aria-hidden="true"
-      />
-      <nav {...s.sidebar}>
+      >
+        <span className="menu-toggle">Close menu</span>
+      </label>
+      <nav id="docs-navigation" {...s.sidebar}>
         <Sidebar />
       </nav>
       <main {...s.content}>

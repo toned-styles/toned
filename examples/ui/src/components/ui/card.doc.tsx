@@ -1,6 +1,13 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from './card.tsx'
 
 export default doc({
   components: [

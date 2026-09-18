@@ -69,9 +69,7 @@ function GuideInteractive() {
     icon: { textColor: 'action' },
   },
 })`}</CodeBlock>
-      <p>
-        You can combine multiple pseudo-states in a cross-element selector:
-      </p>
+      <p>You can combine multiple pseudo-states in a cross-element selector:</p>
       <CodeBlock>{`'container:active:hover': {
   icon: { textColor: 'on_action' },
 }`}</CodeBlock>
@@ -103,9 +101,7 @@ function GuideInteractive() {
 `}</CodeBlock>
 
       <h2 {...s.h2}>Combining with Breakpoints</h2>
-      <p>
-        Pseudo-classes and breakpoints compose naturally:
-      </p>
+      <p>Pseudo-classes and breakpoints compose naturally:</p>
       <CodeBlock>{`const navStyles = stylesheet({
   link: {
     textColor: 'muted',
@@ -133,8 +129,8 @@ function GuideInteractive() {
 
       <h2 {...s.h2}>Advanced: How It Works</h2>
       <p>
-        On the web, interactive styles use the CSS "space toggle" technique.
-        The system declares a custom property for each pseudo-state:
+        On the web, interactive styles use the CSS "space toggle" technique. The
+        system declares a custom property for each pseudo-state:
       </p>
       <CodeBlock>{`html {
   --toned_hover: initial;   /* "off" */

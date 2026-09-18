@@ -1,10 +1,10 @@
-import * as React from "react"
-import { ChevronRight, MoreHorizontal } from "lucide-react"
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ChevronRight, MoreHorizontal } from 'lucide-react'
+import { Slot } from 'radix-ui'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const breadcrumbStyles = stylesheet({
   list: {
@@ -52,11 +52,11 @@ const breadcrumbStyles = stylesheet({
   },
 })
 
-function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
+function Breadcrumb({ ...props }: React.ComponentProps<'nav'>) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
 }
 
-function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
+function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
@@ -68,7 +68,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
   )
 }
 
-function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
+function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
@@ -84,10 +84,10 @@ function BreadcrumbLink({
   asChild,
   className,
   ...props
-}: React.ComponentProps<"a"> & {
+}: React.ComponentProps<'a'> & {
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "a"
+  const Comp = asChild ? Slot.Root : 'a'
   const s = useStyles(breadcrumbStyles)
 
   return (
@@ -99,14 +99,12 @@ function BreadcrumbLink({
   )
 }
 
-function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+function BreadcrumbPage({ className, ...props }: React.ComponentProps<'span'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
     <span
       data-slot="breadcrumb-page"
-      role="link"
-      aria-disabled="true"
       aria-current="page"
       {...s.page.with({ className })}
       {...props}
@@ -118,7 +116,7 @@ function BreadcrumbSeparator({
   children,
   className,
   ...props
-}: React.ComponentProps<"li">) {
+}: React.ComponentProps<'li'>) {
   return (
     <li
       data-slot="breadcrumb-separator"
@@ -127,7 +125,9 @@ function BreadcrumbSeparator({
       className={cn(className)}
       {...props}
     >
-      {children ?? <ChevronRight style={{ width: '0.875rem', height: '0.875rem' }} />}
+      {children ?? (
+        <ChevronRight style={{ width: '0.875rem', height: '0.875rem' }} />
+      )}
     </li>
   )
 }
@@ -135,7 +135,7 @@ function BreadcrumbSeparator({
 function BreadcrumbEllipsis({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (

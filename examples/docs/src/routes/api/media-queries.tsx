@@ -119,15 +119,15 @@ export const breakpoints = defineBreakpoints({
 })`}</CodeBlock>
       <p>
         Root-level and element-level breakpoints can be mixed freely. They
-        produce the same result — root-level is shorthand for applying
-        overrides to several elements under the same breakpoint.
+        produce the same result — root-level is shorthand for applying overrides
+        to several elements under the same breakpoint.
       </p>
 
       <h2 {...s.h2}>Breakpoints in Variants</h2>
       <p>
-        Responsive overrides work inside variant blocks too, letting you
-        combine conditional and responsive styling. Breakpoints can be set on
-        individual elements within a variant:
+        Responsive overrides work inside variant blocks too, letting you combine
+        conditional and responsive styling. Breakpoints can be set on individual
+        elements within a variant:
       </p>
       <CodeBlock>{`const styles = stylesheet({
   container: { paddingX: 2 },

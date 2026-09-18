@@ -1,19 +1,18 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { Combobox as ComboboxPrimitive } from "@base-ui/react"
-import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Combobox as ComboboxPrimitive } from '@base-ui/react'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react'
+import * as React from 'react'
+import { Button } from '@/components/ui/button.tsx'
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@/components/ui/input-group"
+} from '@/components/ui/input-group.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const comboboxStyles = stylesheet({
   content: {
@@ -33,7 +32,8 @@ const comboboxStyles = stylesheet({
   },
   list: {
     overflowY: 'auto',
-    maxHeight: 'min(calc(24rem - 2.25rem), calc(var(--available-height) - 2.25rem))',
+    maxHeight:
+      'min(calc(24rem - 2.25rem), calc(var(--available-height) - 2.25rem))',
     padding: 1,
     style: {
       scrollPaddingBlock: '0.25rem',
@@ -166,10 +166,7 @@ function ComboboxTrigger({
       {...props}
     >
       {children}
-      <ChevronDownIcon
-        data-slot="combobox-trigger-icon"
-        {...s.triggerIcon}
-      />
+      <ChevronDownIcon data-slot="combobox-trigger-icon" {...s.triggerIcon} />
     </ComboboxPrimitive.Trigger>
   )
 }
@@ -225,16 +222,16 @@ function ComboboxInput({
 
 function ComboboxContent({
   className,
-  side = "bottom",
+  side = 'bottom',
   sideOffset = 6,
-  align = "start",
+  align = 'start',
   alignOffset = 0,
   anchor,
   ...props
 }: ComboboxPrimitive.Popup.Props &
   Pick<
     ComboboxPrimitive.Positioner.Props,
-    "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
+    'side' | 'align' | 'sideOffset' | 'alignOffset' | 'anchor'
   >) {
   const s = useStyles(comboboxStyles)
 
@@ -252,7 +249,7 @@ function ComboboxContent({
           data-slot="combobox-content"
           data-chips={!!anchor}
           {...s.content.with({
-            className: cn("group/combobox-content", className),
+            className: cn('group/combobox-content', className),
             style: {
               width: 'var(--anchor-width)',
               maxWidth: 'var(--available-width)',
@@ -297,11 +294,11 @@ function ComboboxItem({
       {children}
       <ComboboxPrimitive.ItemIndicator
         data-slot="combobox-item-indicator"
-        render={
-          <span {...s.itemIndicator} />
-        }
+        render={<span {...s.itemIndicator} />}
       >
-        <CheckIcon style={{ pointerEvents: 'none', width: '1rem', height: '1rem' }} />
+        <CheckIcon
+          style={{ pointerEvents: 'none', width: '1rem', height: '1rem' }}
+        />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
   )

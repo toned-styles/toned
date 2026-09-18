@@ -1,8 +1,8 @@
 import { bench, describe } from 'vitest'
 import { defineSystem, defineToken, setConfig } from '../system/index.ts'
 import type { Config } from '../types/index.ts'
-import { type Base, createStylesheet } from './StyleSheet.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'
+import { type Base, createStylesheet } from './StyleSheet.ts'
 
 // Create a mock token system
 const mockSystem = defineSystem({

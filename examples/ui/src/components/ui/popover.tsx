@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Popover as PopoverPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Popover as PopoverPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const popoverStyles = stylesheet({
   content: {
@@ -47,7 +47,7 @@ function PopoverTrigger({
 
 function PopoverContent({
   className,
-  align = "center",
+  align = 'center',
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
@@ -72,7 +72,7 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />
 }
 
-function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
+function PopoverHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(popoverStyles)
 
   return (
@@ -84,7 +84,7 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function PopoverTitle({ className, ...props }: React.ComponentProps<"h2">) {
+function PopoverTitle({ className, ...props }: React.ComponentProps<'h2'>) {
   const s = useStyles(popoverStyles)
 
   return (
@@ -99,7 +99,7 @@ function PopoverTitle({ className, ...props }: React.ComponentProps<"h2">) {
 function PopoverDescription({
   className,
   ...props
-}: React.ComponentProps<"p">) {
+}: React.ComponentProps<'p'>) {
   const s = useStyles(popoverStyles)
 
   return (

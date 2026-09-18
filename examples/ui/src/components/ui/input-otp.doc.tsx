@@ -1,5 +1,10 @@
-import { doc, c } from '@/lib/doc'
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from './input-otp'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from './input-otp.tsx'
 
 export default doc({
   components: [

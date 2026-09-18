@@ -47,7 +47,9 @@ describe('condition grammar', () => {
   test('clause slug and guard compose the product', () => {
     const clause = parseConditionKey('md&!card/>=400')![0]!
     expect(clauseSlug(clause)).toBe('media-md-and-not-cq-card-gte400')
-    expect(clauseGuard(clause)).toBe('var(--media-md) var(--cq-card-gte400-not)')
+    expect(clauseGuard(clause)).toBe(
+      'var(--media-md) var(--cq-card-gte400-not)',
+    )
   })
 })
 

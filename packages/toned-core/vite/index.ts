@@ -1,7 +1,7 @@
 import { resolve } from 'node:path'
 import type { Plugin } from 'vite'
-import { buildStyles } from '../build/index.ts'
 import { generateArtifact } from '../build/artifact.ts'
+import { buildStyles } from '../build/index.ts'
 import type { BuildArtifact } from '../build/manifest.ts'
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
@@ -72,7 +72,10 @@ export default function toned<S extends TokenStyleDeclaration>(
     // Legacy raw declarations do not carry their namespace; id remains explicit.
     return generateArtifact(options.system as S, shared)
   }
-  const collect = () => (artifact ??= render())
+  const collect = () => {
+    artifact ??= render()
+    return artifact
+  }
 
   return {
     name: 'toned',

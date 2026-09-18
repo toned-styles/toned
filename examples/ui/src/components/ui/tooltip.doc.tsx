@@ -1,6 +1,11 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './tooltip.tsx'
 
 export default doc({
   components: [

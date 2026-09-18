@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Switch as SwitchPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Switch as SwitchPrimitive } from 'radix-ui'
+import * as React from 'react'
 
 const switchStyles = stylesheet({
   root: {
@@ -39,15 +39,17 @@ const switchStyles = stylesheet({
 function Switch({
   className,
   disabled,
-  size = "default",
+  size = 'default',
   checked: checkedProp,
   defaultChecked,
   onCheckedChange,
   ...props
 }: React.ComponentProps<typeof SwitchPrimitive.Root> & {
-  size?: "sm" | "default"
+  size?: 'sm' | 'default'
 }) {
-  const [internal, setInternal] = React.useState(checkedProp ?? defaultChecked ?? false)
+  const [internal, setInternal] = React.useState(
+    checkedProp ?? defaultChecked ?? false,
+  )
   const checked = checkedProp ?? internal
 
   const s = useStyles(switchStyles, { checked })
@@ -66,10 +68,7 @@ function Switch({
       disabled={disabled}
       {...props}
     >
-      <SwitchPrimitive.Thumb
-        data-slot="switch-thumb"
-        {...s.thumb}
-      />
+      <SwitchPrimitive.Thumb data-slot="switch-thumb" {...s.thumb} />
     </SwitchPrimitive.Root>
   )
 }

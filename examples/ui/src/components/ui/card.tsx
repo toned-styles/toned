@@ -1,6 +1,6 @@
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
 const cardStyles = stylesheet({
   root: {
@@ -51,43 +51,29 @@ const cardStyles = stylesheet({
   },
 })
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+function Card({ className, ...props }: React.ComponentProps<'div'>) {
+  const s = useStyles(cardStyles)
+
+  return <div data-slot="card" {...s.root.with({ className })} {...props} />
+}
+
+function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(cardStyles)
 
   return (
-    <div
-      data-slot="card"
-      {...s.root.with({ className })}
-      {...props}
-    />
+    <div data-slot="card-header" {...s.header.with({ className })} {...props} />
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(cardStyles)
 
   return (
-    <div
-      data-slot="card-header"
-      {...s.header.with({ className })}
-      {...props}
-    />
+    <div data-slot="card-title" {...s.title.with({ className })} {...props} />
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  const s = useStyles(cardStyles)
-
-  return (
-    <div
-      data-slot="card-title"
-      {...s.title.with({ className })}
-      {...props}
-    />
-  )
-}
-
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
+function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(cardStyles)
 
   return (
@@ -99,19 +85,15 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(cardStyles)
 
   return (
-    <div
-      data-slot="card-action"
-      {...s.action.with({ className })}
-      {...props}
-    />
+    <div data-slot="card-action" {...s.action.with({ className })} {...props} />
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(cardStyles)
 
   return (
@@ -123,15 +105,11 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
+function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(cardStyles)
 
   return (
-    <div
-      data-slot="card-footer"
-      {...s.footer.with({ className })}
-      {...props}
-    />
+    <div data-slot="card-footer" {...s.footer.with({ className })} {...props} />
   )
 }
 

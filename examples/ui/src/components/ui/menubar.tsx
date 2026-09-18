@@ -1,11 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
-import { Menubar as MenubarPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
+import { Menubar as MenubarPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const menubarStyles = stylesheet({
   root: {
@@ -215,7 +214,7 @@ function MenubarTrigger({
 
 function MenubarContent({
   className,
-  align = "start",
+  align = 'start',
   alignOffset = -4,
   sideOffset = 8,
   ...props
@@ -239,12 +238,12 @@ function MenubarContent({
 function MenubarItem({
   className,
   inset,
-  variant = "default",
+  variant = 'default',
   disabled,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Item> & {
   inset?: boolean
-  variant?: "default" | "destructive"
+  variant?: 'default' | 'destructive'
 }) {
   const s = useStyles(menubarStyles)
 
@@ -257,7 +256,7 @@ function MenubarItem({
       {...s.item
         .with(inset && s.itemInset)
         .with(disabled && s.itemDisabled)
-        .with(variant === "destructive" && s.itemDestructiveFocus)
+        .with(variant === 'destructive' && s.itemDestructiveFocus)
         .with({ className })}
       {...props}
     />
@@ -349,7 +348,7 @@ function MenubarSeparator({
 function MenubarShortcut({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(menubarStyles)
 
   return (

@@ -40,12 +40,21 @@ point-in-time design document and has not been rewritten to match the code.
   integration. This repository has no integrated native grid layout host.
   Web grid is enabled independently; native requires a real layout
   engine and host conformance before the same capability can be advertised.
-- **Certification of a concrete RN/Fabric renderer:** not claimed. This library
-  owns no React Native app, concrete primitive implementation, renderer version,
-  or native build target. A structural `setNativeProps` check cannot establish
-  commit/reset behavior. Applications must declare their host adapter and pass
-  the scenarios in [NATIVE-HOSTS.md](packages/toned-react/NATIVE-HOSTS.md). Unit/contract fixtures do
-  not substitute for that integration evidence.
+- **Certification of a concrete RN/Fabric renderer:** not claimed. The repository
+  contains an older Expo demo, but it is uninstalled in the inspected HQ workspace
+  and has not been migrated to the current explicit host contract. Its obsolete
+  imports/configuration can be fixed; absence of a ready target is not an
+  architectural impossibility. Certification requires a pinned renderer,
+  concrete primitives, an ownership/reset adapter and actual native acceptance.
+  [NATIVE-HOSTS.md](packages/toned-react/NATIVE-HOSTS.md) records the available
+  Android path and gate. Unit/contract fixtures do not substitute for that evidence.
+- **Other styling engines:** typed custom primitives and host resolvers are
+  available composition boundaries. Opaque foreign styles must travel through
+  separate props and retain their engine's binding lifecycle. A Unistyles engine
+  backend and overlapping imperative ownership are not implemented or certified;
+  they need explicit compilation, writer and CSS-delivery contracts. See
+  [INTEGRATIONS.md](packages/toned-react/INTEGRATIONS.md) for public integration
+  routes, ownership limits and native acceptance requirements.
 - **Arbitrary selectors:** `webRules` is a CSS extension, not portable condition
   algebra. Use anchored selectors within it for pseudo-elements, exact DOM
   children, and arbitrary `:has()` expressions. Portable conditions around an
@@ -94,12 +103,16 @@ showcase result at the delivered submodule pin.
 
 ### Static analysis scope
 
-The changed Toned files are checked with Biome at error severity; HQ's new
-validation scripts are checked with its own oxlint rules. The monorepo-wide
-`ci:lint` command also covers historical examples/configuration outside this
-change and is not green: the preceding `07cd173` checkout produces 472 errors
-with the same error-only command. This is not presented as a passing release
-gate or hidden by a new exclusion list.
+The September 18 cleanup removes the monorepo's error-level Biome backlog,
+including example formatting/imports and concrete accessibility/equality defects.
+HQ's validation scripts are checked with its own oxlint rules. The stricter
+`ci:lint` command includes `--error-on-warnings` and is still not green: its
+remaining warnings primarily concern non-null assertions, explicit `any` and
+banned type forms, plus generated routes and deliberate example CSS/cookie usage.
+An error-only pass is not presented as a passing strict CI gate; no new exclusions
+or blanket rule suppressions hide that distinction. The optional docs application's
+React Doctor check passes, but its production build is not part of HQ's installed
+workspace and is not claimed as validated.
 
 React Doctor reports no errors. Four existing warnings remain, plus one
 React-18 cleanup warning in the new binding conformance fixture. The `useBind` memo intentionally
@@ -111,3 +124,23 @@ provider, which limits Fast Refresh granularity for library development. The new
 ref implements cleanup on React 18 and 19; it is not passed straight to a
 React-18 host. Both actual-version matrix legs verify balanced cleanup. No
 warning is suppressed by a new configuration change.
+
+
+### Follow-up consolidation and external styles
+
+The matcher now indexes large plans by necessary positive facts while preserving
+complete predicate checks, source order and exact membership. Controller metadata
+is immutable and shared; mounted-family resources are lazy and reused by render
+candidates. [Measurements](benchmarks/README.md#september-18-follow-up-against-the-previously-delivered-version)
+record both the targeted gains and the remaining cold/mount costs.
+
+The empty `toned` umbrella is explicitly private, and the optional compiler stub
+is documented as unimplemented; supported consumers import scoped packages.
+Theme CSS has an explicit export and is copied into built packages, with the
+actual built CSS/module resolved by HQ's guarded consumer smoke test.
+
+External style handles travel through a typed custom component prop and remain
+opaque to Toned. Generic DOM/native-fixture tests cover this composition boundary;
+they do not certify Unistyles or Fabric. A full external engine integration needs
+one authoritative writer and its own compilation/dependency and CSS-delivery
+contract. See [the integration guide](packages/toned-react/INTEGRATIONS.md).

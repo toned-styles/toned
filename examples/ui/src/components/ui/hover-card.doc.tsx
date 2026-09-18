@@ -1,5 +1,5 @@
-import { doc, c } from '@/lib/doc'
-import { HoverCard, HoverCardTrigger, HoverCardContent } from './hover-card'
+import { c, doc } from '@/lib/doc.tsx'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from './hover-card.tsx'
 
 export default doc({
   components: [
@@ -10,7 +10,9 @@ export default doc({
   preview: (C) => (
     <C.HoverCard>
       <C.HoverCardTrigger>
-        <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>@nextjs</span>
+        <span style={{ textDecoration: 'underline', cursor: 'pointer' }}>
+          @nextjs
+        </span>
       </C.HoverCardTrigger>
       <C.HoverCardContent />
     </C.HoverCard>

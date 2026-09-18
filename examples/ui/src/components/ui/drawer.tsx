@@ -1,9 +1,9 @@
-import * as React from "react"
-import { Drawer as DrawerPrimitive } from "vaul"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
+import { Drawer as DrawerPrimitive } from 'vaul'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const drawerStyles = stylesheet({
   overlay: {
@@ -105,20 +105,19 @@ function DrawerContent({
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
-        {...s.content.with({ className: cn("group/drawer-content", className) })}
+        {...s.content.with({
+          className: cn('group/drawer-content', className),
+        })}
         {...props}
       >
-        <div
-          {...s.handle}
-          data-slot="drawer-handle"
-        />
+        <div {...s.handle} data-slot="drawer-handle" />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
   )
 }
 
-function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DrawerHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(drawerStyles)
 
   return (
@@ -130,7 +129,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
+function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(drawerStyles)
 
   return (

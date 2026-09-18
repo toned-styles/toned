@@ -13,75 +13,65 @@ function ApiDefineSystem() {
     <article {...s.container}>
       <h1 {...s.h1}>defineSystem</h1>
       <p>
-        <code {...s.code}>defineSystem</code> creates a styling system from a
-        set of token definitions and configuration. It is the foundation of
-        every toned-styles project.
+        A system owns the typed token vocabulary, conditions and namespace used
+        by its sheets. Keep the complete returned object for renderers and
+        builds.
       </p>
+      <CodeBlock>{`import { defineSystem, defineToken } from '@toned/core'
 
-      <h2 {...s.h2}>Signature</h2>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
-
-const { system, stylesheet, t } = defineSystem(tokens, config)`}</CodeBlock>
-
-      <h3 {...s.h3}>Parameters</h3>
-      <p>
-        <strong>tokens</strong> -- An object whose values are token definitions
-        created with <code {...s.code}>defineToken</code> or{' '}
-        <code {...s.code}>defineCssToken</code>. Each token describes a semantic
-        property (e.g. <code {...s.code}>bgColor</code>,{' '}
-        <code {...s.code}>paddingX</code>) and its allowed values.
-      </p>
-      <p>
-        <strong>config</strong> -- System configuration including breakpoints.
-        The base system ships with <code {...s.code}>xs</code> (0),{' '}
-        <code {...s.code}>sm</code> (480), <code {...s.code}>md</code> (768),{' '}
-        <code {...s.code}>lg</code> (992), and <code {...s.code}>xl</code>{' '}
-        (1200).
-      </p>
-
-      <h3 {...s.h3}>Return Value</h3>
-      <p>An object with three properties:</p>
-      <p>
-        <strong>system</strong> -- The compiled system object. Pass this to
-        the Vite plugin (<code {...s.code}>toned({'{ system }'})</code>) or to{' '}
-        <code {...s.code}>inject(system)</code> for runtime CSS generation.
-      </p>
-      <p>
-        <strong>stylesheet</strong> -- A factory function for creating type-safe
-        stylesheets bound to this system's tokens. Every token property gets
-        full autocompletion.
-      </p>
-      <p>
-        <strong>t</strong> -- A utility for creating inline token styles. Useful
-        for one-off styling without defining a full stylesheet.
-      </p>
-
-      <h2 {...s.h2}>Example</h2>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
-import * as colour from './colour.ts'
-import * as border from './border.ts'
-import * as layout from './layout.ts'
-import * as config from './config.ts'
-
-export const { system, stylesheet, t } = defineSystem(
-  {
-    ...colour,
-    ...border,
-    ...layout,
+export const ui = defineSystem({
+  id: 'controls',
+  tokens: {
+    opacity: defineToken({
+      values: [0, 0.5, 1] as const,
+      resolve: opacity => ({ opacity }),
+    }),
   },
-  config,
-)`}</CodeBlock>
+  conditions: {
+    media: { compact: 640, wide: 1024 },
+    containers: { field: { wide: 448 } },
+  },
+})
 
-      <h2 {...s.h2}>Using the t Utility</h2>
+export const styles = ui.stylesheet(q => ({
+  Root: {
+    $kind: 'view',
+    opacity: 0.5,
+    [q.media('wide')]: { opacity: 1 },
+    [q.container('field', 'wide')]: { $style: { padding: 16 } },
+  },
+}))`}</CodeBlock>
+      <h2 {...s.h2}>Token and condition contracts</h2>
       <p>
-        The <code {...s.code}>t</code> function lets you apply tokens inline
-        without defining a stylesheet. This is handy for one-off styles:
+        Token properties use camelCase; named values use kebab-case. Resolvers
+        translate semantic values into output fields and may read the current
+        token snapshot. Declarations and compiled matching plans are immutable.
       </p>
-      <CodeBlock>{`import { t } from '@toned/systems/base'
+      <p>
+        Descriptor-system media and container thresholds are fixed logical
+        pixels. Query preludes cannot read CSS custom properties. Colocated
+        conditions use the same typed builder in base and variant declarations.
+      </p>
+      <h2 {...s.h2}>Use the complete system</h2>
+      <CodeBlock>{`import { buildStyles } from '@toned/core/build'
+import { createWebRenderer } from '@toned/core/server'
 
-function Heading() {
-  return <h1 {...t({ typo: 'heading_1' })}>Hello</h1>
-}`}</CodeBlock>
+const artifact = buildStyles(ui, { sheets: [styles] })
+const renderer = createWebRenderer(ui, { manifest: artifact.manifest, tokens: {} })
+const props = renderer.resolve(styles)`}</CodeBlock>
+      <p>
+        The <code {...s.code}>system</code> property is the raw token
+        dictionary. Retaining only that property loses the system's
+        configuration and identity; pass <code {...s.code}>ui</code> to new
+        build/render integrations.
+      </p>
+      <h2 {...s.h2}>Compatibility</h2>
+      <p>
+        The older <code {...s.code}>defineSystem(tokens, config)</code> form and
+        <code {...s.code}>t</code> utility remain available for existing
+        consumers. New components should use named sheets and explicit bindings
+        rather than introduce new ambient inline-token calls.
+      </p>
     </article>
   )
 }

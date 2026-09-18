@@ -1,6 +1,6 @@
-import { Loader2Icon } from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Loader2Icon } from 'lucide-react'
 
 const spinnerStyles = stylesheet({
   root: {
@@ -12,7 +12,7 @@ const spinnerStyles = stylesheet({
   },
 })
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+function Spinner({ className, ...props }: React.ComponentProps<'svg'>) {
   const s = useStyles(spinnerStyles)
 
   return (

@@ -1,6 +1,13 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './sheet'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from './sheet.tsx'
 
 export default doc({
   components: [
@@ -9,7 +16,10 @@ export default doc({
     c({ SheetContent }, {}),
     c({ SheetHeader }, {}),
     c({ SheetTitle }, { children: 'Sheet Title' }),
-    c({ SheetDescription }, { children: 'Make changes to your settings here.' }),
+    c(
+      { SheetDescription },
+      { children: 'Make changes to your settings here.' },
+    ),
   ],
   preview: (C) => (
     <C.Sheet>

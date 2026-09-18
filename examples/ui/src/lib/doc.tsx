@@ -1,6 +1,8 @@
-import type { ComponentType, ComponentProps, ReactNode } from 'react'
+import type { ComponentProps, ComponentType, ReactNode } from 'react'
 
-export interface ComponentEntry<C extends ComponentType<any> = ComponentType<any>> {
+export interface ComponentEntry<
+  C extends ComponentType<any> = ComponentType<any>,
+> {
   name: string
   component: C
   defaultProps: Partial<ComponentProps<C>>

@@ -1,6 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { Popover, PopoverTrigger, PopoverContent } from './popover'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import { Popover, PopoverContent, PopoverTrigger } from './popover.tsx'
 
 export default doc({
   components: [

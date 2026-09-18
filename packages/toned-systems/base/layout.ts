@@ -213,20 +213,38 @@ export const placeSelf = defineCssToken('placeSelf', [
 ])
 
 // Margin tokens (padding scale + negatives + auto)
-const MarginUnit = (value: Number | String, tokens: Parameters<typeof SpaceUnit>[1]) =>
-  value === 'auto' ? 'auto' : SpaceUnit(value, tokens)
+const MarginUnit = (
+  value: Parameters<typeof SpaceUnit>[0],
+  tokens: Parameters<typeof SpaceUnit>[1],
+) => (value === 'auto' ? 'auto' : SpaceUnit(value, tokens))
 
 export const margin = defineCssToken(
   ['marginLeft', 'marginTop', 'marginBottom', 'marginRight'],
   marginValues,
   MarginUnit,
 )
-export const marginX = defineCssToken(['marginLeft', 'marginRight'], marginValues, MarginUnit)
-export const marginY = defineCssToken(['marginTop', 'marginBottom'], marginValues, MarginUnit)
+export const marginX = defineCssToken(
+  ['marginLeft', 'marginRight'],
+  marginValues,
+  MarginUnit,
+)
+export const marginY = defineCssToken(
+  ['marginTop', 'marginBottom'],
+  marginValues,
+  MarginUnit,
+)
 export const marginTop = defineCssToken('marginTop', marginValues, MarginUnit)
-export const marginBottom = defineCssToken('marginBottom', marginValues, MarginUnit)
+export const marginBottom = defineCssToken(
+  'marginBottom',
+  marginValues,
+  MarginUnit,
+)
 export const marginLeft = defineCssToken('marginLeft', marginValues, MarginUnit)
-export const marginRight = defineCssToken('marginRight', marginValues, MarginUnit)
+export const marginRight = defineCssToken(
+  'marginRight',
+  marginValues,
+  MarginUnit,
+)
 
 /*
  * The LOGICAL inline margins, which flip with writing direction where the
@@ -235,8 +253,16 @@ export const marginRight = defineCssToken('marginRight', marginValues, MarginUni
  * had no token for it, so the value rode a raw-style escape with the base
  * arithmetic written out by hand.
  */
-export const marginInlineStart = defineCssToken('marginInlineStart', marginValues, MarginUnit)
-export const marginInlineEnd = defineCssToken('marginInlineEnd', marginValues, MarginUnit)
+export const marginInlineStart = defineCssToken(
+  'marginInlineStart',
+  marginValues,
+  MarginUnit,
+)
+export const marginInlineEnd = defineCssToken(
+  'marginInlineEnd',
+  marginValues,
+  MarginUnit,
+)
 
 // Sizing lives in sizes.ts (base-relative, enumerated) — the spread order in
 // index.ts lets it own width/height and friends.
@@ -284,7 +310,6 @@ export const zIndex = defineCssToken('zIndex', [
   50,
 ] as const)
 
-
 // Interaction
 export const cursor = defineCssToken('cursor', [
   'auto',
@@ -296,7 +321,4 @@ export const cursor = defineCssToken('cursor', [
   'grabbing',
 ])
 export const opacity = defineCssToken('opacity', [new Number()] as const)
-export const pointerEvents = defineCssToken('pointerEvents', [
-  'auto',
-  'none',
-])
+export const pointerEvents = defineCssToken('pointerEvents', ['auto', 'none'])

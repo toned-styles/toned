@@ -1,14 +1,14 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
   DialogDescription,
-} from './dialog'
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './dialog.tsx'
 
 export default doc({
   components: [
@@ -18,9 +18,13 @@ export default doc({
     c({ DialogHeader }, {}),
     c({ DialogFooter }, { showCloseButton: true }),
     c({ DialogTitle }, { children: 'Edit Profile' }),
-    c({ DialogDescription }, {
-      children: 'Make changes to your profile here. Click save when you\'re done.',
-    }),
+    c(
+      { DialogDescription },
+      {
+        children:
+          "Make changes to your profile here. Click save when you're done.",
+      },
+    ),
   ],
   preview: (C) => (
     <C.Dialog>

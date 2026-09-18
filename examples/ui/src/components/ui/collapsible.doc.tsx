@@ -1,6 +1,10 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from './collapsible'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from './collapsible.tsx'
 
 export default doc({
   components: [
@@ -11,7 +15,9 @@ export default doc({
   preview: (C) => (
     <C.Collapsible>
       <C.CollapsibleTrigger>
-        <Button variant="outline" size="sm">Toggle</Button>
+        <Button variant="outline" size="sm">
+          Toggle
+        </Button>
       </C.CollapsibleTrigger>
       <C.CollapsibleContent />
     </C.Collapsible>

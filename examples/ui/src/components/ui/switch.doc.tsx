@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Switch } from './switch'
+import { c, doc } from '@/lib/doc.tsx'
+import { Switch } from './switch.tsx'
 
 export default doc({
-  components: [
-    c({ Switch }, {}),
-  ],
+  components: [c({ Switch }, {})],
 })

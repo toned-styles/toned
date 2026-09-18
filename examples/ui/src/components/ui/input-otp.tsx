@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { OTPInput, OTPInputContext } from "input-otp"
-import { MinusIcon } from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { OTPInput, OTPInputContext } from 'input-otp'
+import { MinusIcon } from 'lucide-react'
+import * as React from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const inputOtpStyles = stylesheet({
   container: {
@@ -83,7 +83,7 @@ function InputOTP({
   )
 }
 
-function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
+function InputOTPGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(inputOtpStyles)
 
   return (
@@ -99,7 +99,7 @@ function InputOTPSlot({
   index,
   className,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   index: number
 }) {
   const inputOTPContext = React.useContext(OTPInputContext)
@@ -123,9 +123,9 @@ function InputOTPSlot({
   )
 }
 
-function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
+function InputOTPSeparator({ ...props }: React.ComponentProps<'div'>) {
   return (
-    <div data-slot="input-otp-separator" role="separator" {...props}>
+    <div data-slot="input-otp-separator" aria-hidden="true" {...props}>
       <MinusIcon />
     </div>
   )

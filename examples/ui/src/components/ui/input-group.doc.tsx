@@ -1,5 +1,5 @@
-import { doc, c } from '@/lib/doc'
-import { InputGroup, InputGroupInput, InputGroupText } from './input-group'
+import { c, doc } from '@/lib/doc.tsx'
+import { InputGroup, InputGroupInput, InputGroupText } from './input-group.tsx'
 
 export default doc({
   components: [

@@ -1,6 +1,6 @@
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
 const inputStyles = stylesheet({
   root: {
@@ -29,18 +29,29 @@ const inputStyles = stylesheet({
   },
   invalid: {
     borderColor: 'destructive',
-    style: { boxShadow: '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)' },
+    style: {
+      boxShadow:
+        '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)',
+    },
   },
 })
 
-function Input({ className, type, disabled, ...props }: React.ComponentProps<"input">) {
+function Input({
+  className,
+  type,
+  disabled,
+  ...props
+}: React.ComponentProps<'input'>) {
   const s = useStyles(inputStyles)
 
   return (
     <input
       type={type}
       data-slot="input"
-      {...s.root.with(disabled && s.disabled).with(props['aria-invalid'] === 'true' && s.invalid).with({ className })}
+      {...s.root
+        .with(disabled && s.disabled)
+        .with(props['aria-invalid'] === 'true' && s.invalid)
+        .with({ className })}
       disabled={disabled}
       {...props}
     />

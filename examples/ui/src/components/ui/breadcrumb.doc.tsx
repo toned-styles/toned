@@ -1,5 +1,12 @@
-import { doc, c } from '@/lib/doc'
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from './breadcrumb'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from './breadcrumb.tsx'
 
 export default doc({
   components: [

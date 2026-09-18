@@ -1,11 +1,11 @@
-import { doc, c } from '@/lib/doc'
+import { c, doc } from '@/lib/doc.tsx'
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
-} from './select'
+  SelectTrigger,
+  SelectValue,
+} from './select.tsx'
 
 export default doc({
   components: [

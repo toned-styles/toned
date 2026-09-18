@@ -7,7 +7,7 @@ const globModules = import.meta.glob<Record<string, unknown>>(
 )
 
 export const componentNames: string[] = Object.keys(globModules)
-  .map((p) => p.split('/').pop()!.replace('.tsx', ''))
+  .map((p) => p.slice(p.lastIndexOf('/') + 1).replace(/\.tsx$/, ''))
   .filter((name) => !name.endsWith('.doc'))
   .sort()
 
@@ -17,8 +17,9 @@ export const componentModules: Record<
 > = {}
 
 for (const [filePath, loader] of Object.entries(globModules)) {
-  const name = filePath.split('/').pop()!.replace('.tsx', '')
+  const name = filePath
+    .slice(filePath.lastIndexOf('/') + 1)
+    .replace(/\.tsx$/, '')
   if (name.endsWith('.doc')) continue
   componentModules[name] = loader
 }
-

@@ -1,9 +1,9 @@
-import * as React from "react"
-import { Tabs as TabsPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Tabs as TabsPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const tabsStyles = stylesheet({
   root: {
@@ -66,7 +66,7 @@ const tabsStyles = stylesheet({
 
 function Tabs({
   className,
-  orientation = "horizontal",
+  orientation = 'horizontal',
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   const s = useStyles(tabsStyles)
@@ -79,7 +79,7 @@ function Tabs({
       {...s.root.with({
         className,
         style: {
-          flexDirection: orientation === "horizontal" ? "column" : undefined,
+          flexDirection: orientation === 'horizontal' ? 'column' : undefined,
         },
       })}
       {...props}
@@ -89,10 +89,10 @@ function Tabs({
 
 function TabsList({
   className,
-  variant = "default",
+  variant = 'default',
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> & {
-  variant?: "default" | "line"
+  variant?: 'default' | 'line'
 }) {
   const s = useStyles(tabsStyles)
 
@@ -102,14 +102,14 @@ function TabsList({
       data-variant={variant}
       className={cn(
         s.list.className,
-        variant === "default" && s.listDefault.className,
-        variant === "line" && s.listLine.className,
-        className
+        variant === 'default' && s.listDefault.className,
+        variant === 'line' && s.listLine.className,
+        className,
       )}
       style={{
         ...s.list.style,
-        ...(variant === "default" ? s.listDefault.style : undefined),
-        ...(variant === "line" ? s.listLine.style : undefined),
+        ...(variant === 'default' ? s.listDefault.style : undefined),
+        ...(variant === 'line' ? s.listLine.style : undefined),
       }}
       {...props}
     />

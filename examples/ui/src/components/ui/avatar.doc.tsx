@@ -1,5 +1,5 @@
-import { doc, c } from '@/lib/doc'
-import { Avatar, AvatarImage, AvatarFallback } from './avatar'
+import { c, doc } from '@/lib/doc.tsx'
+import { Avatar, AvatarFallback, AvatarImage } from './avatar.tsx'
 
 export default doc({
   components: [

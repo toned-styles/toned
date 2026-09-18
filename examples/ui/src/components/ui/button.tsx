@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slot } from 'radix-ui'
+import type * as React from 'react'
 
 const buttonStyles = stylesheet({
   root: {
@@ -16,7 +16,8 @@ const buttonStyles = stylesheet({
     cursor: 'pointer',
     style: {
       whiteSpace: 'nowrap' as const,
-      transition: 'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s, text-decoration 0.15s',
+      transition:
+        'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s, text-decoration 0.15s',
     },
   },
   disabled: {
@@ -24,8 +25,22 @@ const buttonStyles = stylesheet({
     opacity: 0.5,
   },
 }).variants<{
-  variant: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-  size: 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
+  variant:
+    | 'default'
+    | 'destructive'
+    | 'outline'
+    | 'secondary'
+    | 'ghost'
+    | 'link'
+  size:
+    | 'default'
+    | 'xs'
+    | 'sm'
+    | 'lg'
+    | 'icon'
+    | 'icon-xs'
+    | 'icon-sm'
+    | 'icon-lg'
 }>(($) => ({
   // Variants
   [$.variant('default')]: {
@@ -116,22 +131,36 @@ const buttonStyles = stylesheet({
   },
 }))
 
-type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-type ButtonSize = 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
+type ButtonVariant =
+  | 'default'
+  | 'destructive'
+  | 'outline'
+  | 'secondary'
+  | 'ghost'
+  | 'link'
+type ButtonSize =
+  | 'default'
+  | 'xs'
+  | 'sm'
+  | 'lg'
+  | 'icon'
+  | 'icon-xs'
+  | 'icon-sm'
+  | 'icon-lg'
 
 function Button({
   className,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   asChild = false,
   disabled,
   ...props
-}: React.ComponentProps<"button"> & {
+}: React.ComponentProps<'button'> & {
   variant?: ButtonVariant
   size?: ButtonSize
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "button"
+  const Comp = asChild ? Slot.Root : 'button'
   const s = useStyles(buttonStyles, { variant, size })
 
   return (

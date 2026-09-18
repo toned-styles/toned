@@ -1,6 +1,6 @@
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
 const alertStyles = stylesheet({
   root: {
@@ -62,9 +62,9 @@ type AlertVariant = 'default' | 'destructive'
 
 function Alert({
   className,
-  variant = "default",
+  variant = 'default',
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   variant?: AlertVariant
 }) {
   const s = useStyles(alertStyles, { variant })
@@ -80,22 +80,18 @@ function Alert({
   )
 }
 
-function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
+function AlertTitle({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(alertStyles, { variant: 'default' })
 
   return (
-    <div
-      data-slot="alert-title"
-      {...s.title.with({ className })}
-      {...props}
-    />
+    <div data-slot="alert-title" {...s.title.with({ className })} {...props} />
   )
 }
 
 function AlertDescription({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertStyles, { variant: 'default' })
 
   return (

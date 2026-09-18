@@ -1,11 +1,16 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { lazy, Suspense } from 'react'
-import { PlaygroundProvider, usePlaygroundPortal } from '../../components/PlaygroundContext.tsx'
+import {
+  PlaygroundProvider,
+  usePlaygroundPortal,
+} from '../../components/PlaygroundContext.tsx'
 import { uiLayoutStyles } from '../../styles/ui-layout.ts'
 
 const UiSidebar = lazy(() =>
-  import('../../components/UiSidebar.tsx').then((m) => ({ default: m.UiSidebar })),
+  import('../../components/UiSidebar.tsx').then((m) => ({
+    default: m.UiSidebar,
+  })),
 )
 
 export const Route = createFileRoute('/ui')({

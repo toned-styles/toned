@@ -1,8 +1,8 @@
-import * as React from "react"
-import { CircleIcon } from "lucide-react"
-import { RadioGroup as RadioGroupPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CircleIcon } from 'lucide-react'
+import { RadioGroup as RadioGroupPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const radioGroupStyles = stylesheet({
   root: {

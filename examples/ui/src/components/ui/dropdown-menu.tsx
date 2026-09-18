@@ -1,11 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
-import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
+import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const menuStyles = stylesheet({
   content: {
@@ -179,12 +178,12 @@ function DropdownMenuGroup({
 function DropdownMenuItem({
   className,
   inset,
-  variant = "default",
+  variant = 'default',
   disabled,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   inset?: boolean
-  variant?: "default" | "destructive"
+  variant?: 'default' | 'destructive'
 }) {
   const s = useStyles(menuStyles)
 
@@ -197,7 +196,7 @@ function DropdownMenuItem({
       {...s.item
         .with(inset && s.itemInset)
         .with(disabled && s.itemDisabled)
-        .with(variant === "destructive" && s.itemDestructiveFocus)
+        .with(variant === 'destructive' && s.itemDestructiveFocus)
         .with({ className })}
       {...props}
     />
@@ -300,7 +299,7 @@ function DropdownMenuSeparator({
 function DropdownMenuShortcut({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(menuStyles)
 
   return (

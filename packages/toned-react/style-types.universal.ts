@@ -19,9 +19,21 @@ type Dimension = number | `${number}%`
  * shapes valid on BOTH. */
 export interface UniversalInlineStyle {
   // Layout (Yoga ∩ CSS flexbox)
-  alignContent?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'space-between' | 'space-around'
+  alignContent?:
+    | 'flex-start'
+    | 'flex-end'
+    | 'center'
+    | 'stretch'
+    | 'space-between'
+    | 'space-around'
   alignItems?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'
-  alignSelf?: 'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline'
+  alignSelf?:
+    | 'auto'
+    | 'flex-start'
+    | 'flex-end'
+    | 'center'
+    | 'stretch'
+    | 'baseline'
   aspectRatio?: number | string
   bottom?: Dimension
   columnGap?: number
@@ -104,12 +116,18 @@ export interface UniversalInlineStyle {
   letterSpacing?: number
   lineHeight?: number
   textAlign?: 'auto' | 'left' | 'right' | 'center' | 'justify'
-  textDecorationLine?: 'none' | 'underline' | 'line-through' | 'underline line-through'
+  textDecorationLine?:
+    | 'none'
+    | 'underline'
+    | 'line-through'
+    | 'underline line-through'
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
 }
 
 // Sanity: every universal property must be a legal web property name.
-type AssertWebSubset = keyof UniversalInlineStyle extends keyof CSSProperties ? true : never
+type AssertWebSubset = keyof UniversalInlineStyle extends keyof CSSProperties
+  ? true
+  : never
 declare const _assertWebSubset: AssertWebSubset
 
 declare module '@toned/core/registry' {
