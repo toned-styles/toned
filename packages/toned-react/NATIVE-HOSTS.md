@@ -31,67 +31,71 @@ reset values if needed. Caller baselines come from committed host props; native
 nodes do not expose a reliable generic style readback API. Other imperative
 writers must coordinate ownership through the same integration.
 
-## Support boundary and required host acceptance
+## Verified Android profile
 
-No concrete RN/Fabric host is certified by this repository. `toned-react` has no
-React Native dependency and ships no View/Text implementation. The repository does
-contain an older [Expo demo](../../examples/expo-app), but it is not an integrated
-acceptance target for the current host contract. Choosing the renderer/version,
-concrete primitives and ownership model is an integration decision; a simulated
-object or JS test renderer cannot certify the native mounting layer. The chosen
-application must run the following gate before advertising that host as supported:
+The [Fabric acceptance app](../../examples/fabric-acceptance/README.md) runs
+Toned's built JavaScript against real Android hosts. The verified profile is
+**React Native 0.86.0 / React 19.2.3 / Fabric / Hermes / Android 16 API 36 / arm64**.
+This is a versioned application adapter, not a claim that every Fabric release,
+platform or object exposing `setNativeProps` is supported.
 
-1. Mount real View, Text and TextInput targets with caller resting styles and
-   bridge props; reject composite refs and hosts from another renderer.
-2. Commit a state change, then remove it. Verify dimensions through native layout
-   measurement and appearance/bridge properties through renderer assertions or
-   device screenshots. Removed fields must reset, caller values must survive,
-   repeated equal updates must not write.
-3. Change React-owned baseline props while an imperative state is active. Confirm
-   the final committed result before paint; include interrupted/Suspense renders.
-4. Attach two owners, detach one, reuse a mounted host and finally unmount it.
-   Verify no surviving owner loses its values and no delayed write reaches a
-   recycled host.
-5. For relationships, provide committed parent links (`nativeHost.parentOf`), topology notifications
-   (`subscribeTopology`), and `readState` for semantic states beyond hover/active/focus;
-   verify child versus descendant, moves, portals, multiple instances and cleanup.
-   No public native parent traversal is assumed.
+The September 18 run passes six automatic scenarios and a real emulator-driven
+press/release gesture, with 49 assertions. Native measurements, Android drawing
+paint and hint colour readback establish the result; requested JavaScript patches
+are not substituted for those observations. The retained
+[acceptance evidence](../../examples/fabric-acceptance/verification/android-api36.json)
+records the exact runtime, emulator fingerprint, input/APK hashes and assertions.
 
-The executable tests beside `native-host.ts`, `applyStyles.ts` and
-`native-patches.test.ts` establish Toned's adapter/ownership behavior. Their adapters
-are explicitly named **fixtures**, not Fabric evidence. The acceptance gate above
-remains the responsibility of the chosen concrete host integration; bypassing it
-would create a support claim the library cannot substantiate.
+| Contract | Device evidence |
+| --- | --- |
+| Primitive mounting | Real View, Text, TextInput and Pressable dimensions; only connected native Element refs are accepted, and a method-forwarding composite is rejected. |
+| Direct interaction updates | Native focus/blur and physical press/release change layout/opacity and restore resting values. Focus does not require a React primitive commit. |
+| Caller ownership and removal | Removing imperative minHeight reveals the caller's changed height; placeholder removal restores the platform default; explicit caller hint colours survive active state and later caller commits. |
+| Appearance | Native text drawing paint changes/restores colour and alpha. RN Text uses spans, so the probe resolves the first glyph's paint rather than reading the unused TextView default. |
+| Concurrent rendering | An actually suspended variant render leaves the committed native width unchanged; resolving it updates the same host. |
+| Host lifetime | Variant updates and callback-ref handoffs preserve the mounted host; cleanup balances; detaching one of two controllers preserves the survivor's active style and future updates. |
 
-### Existing demo and a concrete acceptance path
+The APK bundles JavaScript with dev support disabled and has no Internet
+permission. The runner checks installed permissions, waits for Android's install
+broadcasts, starts its own read-only emulator and requires every scenario plus the
+native gesture to pass in one mounted run. It records an input/APK receipt and
+rejects stale builds. The isolated consumer has one exact React installation
+outside the embedded checkout. See the app README for the repeatable command.
 
-The Expo demo declares Expo 53 and enables `newArchEnabled`, but still uses
-obsolete package subpaths (`@toned/react/index` and theme config/CSS imports).
-Its configuration installs the native binding without the mandatory `nativeHost`
-adapter or a concrete primitive resolver. Its shared button also contains an
-unscoped web cursor style. These are migration tasks, not reasons native acceptance
-cannot be implemented.
+The native reporter is test instrumentation, not a library dependency. It reads
+mounted Android views on the UI thread; Toned still writes through the declared
+`setNativeProps`/null-reset adapter. Native mount latency is retried only for an
+explicit `NOT_MOUNTED` response and has a bounded deadline.
 
-In the inspected HQ checkout on 2026-09-18, the demo was outside HQ's installed
-workspace and had no dependencies installed. HQ's active Android application uses
-Capacitor over its web app; the separate Expo application is under `_retired`,
-and HQ's native primitive surface supplies types only. The nested Toned and HQ
-catalogs select different RN versions, so an acceptance app must pin a compatible
-Expo/RN/React set explicitly rather than infer its renderer from those catalogs.
+## Scope of that evidence
 
-The inspected machine has an Android ARM64 emulator/AVD, SDK platforms and Java
-21 available. It has no running device or installed demo; NDK/CMake were absent.
-Xcode and `simctl` were unavailable, so iOS cannot be validated on that installation
-without adding its toolchain. This is an environment snapshot, not an architectural
-claim that a native target is impossible.
+The verified profile covers the contracts listed above. It does not establish:
 
-The concrete path is to modernize the demo into an Android Fabric acceptance app:
-pin its runtime, migrate its declarations/imports, supply real primitive and host
-identity/reset/viewport/topology adapters, and automate native measurements and
-appearance checks for the scenarios above. If Unistyles owns style execution,
-select and test that ownership model explicitly as described in
-[INTEGRATIONS.md](./INTEGRATIONS.md); its native code requires a custom development
-build. No actual device/renderer acceptance result is claimed until that app runs.
+- iOS, Paper, other React Native versions or external styling engines. Unistyles
+  is explicitly outside the current work. The inspected host has Android SDK,
+  NDK/CMake and a verified JDK 21 build, but only Apple's Command Line Tools,
+  without the full Xcode/iOS simulator toolchain.
+- Native relationship topology, virtualized-list recycling, arbitrary semantic
+  state readers, rotation/viewport/container acceptance or native grid. Library
+  fixture tests cover the declared protocols; each concrete integration needs its
+  own native scenarios before advertising those capabilities.
+- A frame-by-frame absence of transient paint between all possible native commits.
+  The app checks the final native result and the suspended committed tree; its
+  bounded readback polling is not a native drawing-frame trace.
+
+For relationships, a host supplies committed parent links (`parentOf`), topology
+notifications (`subscribeTopology`) and semantic state readers as needed. Modern
+RN primitive refs provide public node traversal, which can help implement parent
+lookup; traversal alone does not notify the library of committed moves or certify
+portals, recycling and cleanup. The core does not invent a missing observer.
+
+The older [Expo demo](../../examples/expo-app) remains a historical integration
+sketch. It is superseded as the native acceptance target by the pinned app above;
+its obsolete configuration is not used to make support claims. `toned-react`
+continues to have no React Native dependency and ships no View/Text implementation.
+Applications choose their concrete primitives and adapter. Fixtures beside
+`native-host.ts`, `applyStyles.ts` and `native-patches.test.ts` remain useful unit
+coverage, but are distinct from this actual renderer evidence.
 
 ## Native grid
 

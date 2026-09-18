@@ -23,7 +23,7 @@ point-in-time design document and has not been rewritten to match the code.
 | Web extensions | Typed anchored `webRules` with an explicit build inventory, and typed grid definitions/areas and complete responsive layout variants with stable family ownership, CSS-only container/media resizing, and web ownership checks. |
 | Validation and performance | Guarded tests/types/packed consumer, actual React version matrix, actual browser backend parity, HQ consumer/showcase checks, and comparative cold compilation, construction, mount/update, per-child overrides, SSR/CSS/declaration size, typecheck and retention measurements with structural CI assertions. Performance findings are reported individually, including regressions. |
 
-## Explicit exclusions and architectural boundaries
+## Explicit decisions and capability boundaries
 
 - **Existing `useBind` redesign:** remains deferred. The later API discussion
   selected and authorized `createElements(sheet)`, implemented as described
@@ -40,17 +40,17 @@ point-in-time design document and has not been rewritten to match the code.
   integration. This repository has no integrated native grid layout host.
   Web grid is enabled independently; native requires a real layout
   engine and host conformance before the same capability can be advertised.
-- **Certification of a concrete RN/Fabric renderer:** not claimed. The repository
-  contains an older Expo demo, but it is uninstalled in the inspected HQ workspace
-  and has not been migrated to the current explicit host contract. Its obsolete
-  imports/configuration can be fixed; absence of a ready target is not an
-  architectural impossibility. Certification requires a pinned renderer,
-  concrete primitives, an ownership/reset adapter and actual native acceptance.
-  [NATIVE-HOSTS.md](packages/toned-react/NATIVE-HOSTS.md) records the available
-  Android path and gate. Unit/contract fixtures do not substitute for that evidence.
+- **Concrete RN/Fabric acceptance:** the pinned Android profile now passes real
+  native acceptance: RN 0.86.0, React 19.2.3, Fabric/Hermes, Android API 36 arm64.
+  Six automatic scenarios and a real press/release gesture verify 49 assertions
+  across native layout, focus, text/placeholder paint, caller baselines, resets,
+  host ownership, refs and Suspense. This does not certify iOS, other versions,
+  native topology/recycling or every native drawing frame. See
+  [NATIVE-HOSTS.md](packages/toned-react/NATIVE-HOSTS.md) for exact evidence and
+  capability boundaries. Unit fixtures are not substituted for device results.
 - **Other styling engines:** typed custom primitives and host resolvers are
   available composition boundaries. Opaque foreign styles must travel through
-  separate props and retain their engine's binding lifecycle. A Unistyles engine
+  separate props and retain their engine's binding lifecycle. Unistyles is explicitly out of scope for this follow-up. Its engine
   backend and overlapping imperative ownership are not implemented or certified;
   they need explicit compilation, writer and CSS-delivery contracts. See
   [INTEGRATIONS.md](packages/toned-react/INTEGRATIONS.md) for public integration
@@ -89,6 +89,8 @@ Run from the HQ workspace root (one dependency installation):
 ```sh
 bun scripts/build/test-toned.ts
 bun scripts/build/test-toned-react-versions.ts
+bun scripts/build/test-toned-docs.ts
+bun scripts/build/test-toned-docs.ts
 bun scripts/build/toned-browser.ts
 bun scripts/build/toned-css-plan-browser.ts
 bun scripts/build/toned-tailwind-browser.ts
@@ -110,9 +112,19 @@ HQ's validation scripts are checked with its own oxlint rules. The stricter
 remaining warnings primarily concern non-null assertions, explicit `any` and
 banned type forms, plus generated routes and deliberate example CSS/cookie usage.
 An error-only pass is not presented as a passing strict CI gate; no new exclusions
-or blanket rule suppressions hide that distinction. The optional docs application's
-React Doctor check passes, but its production build is not part of HQ's installed
-workspace and is not claimed as validated.
+or blanket rule suppressions hide that distinction.
+
+The maintained docs/gallery now belong to HQ's pnpm workspace and resolve the
+same physical React installation as the runtime. The guarded docs runner checks
+both projects with HQ's TypeScript compiler, builds client and server bundles,
+prerenders 14 routes, and verifies hydration, syntax highlighting, lazy gallery
+loading and generated button dimensions in Chromium against an owned server.
+The metadata generator uses a separate TypeScript 5 compiler API and shares one
+program across components; application typechecking still uses HQ's compiler.
+Only the three used syntax grammars are loaded, on demand. The browser check
+also caught and now covers a base-system bug that treated literal dimensions
+such as `2.25rem` as missing named spacing tokens. Native backends still reject
+CSS-only dimensions; percentages and named spacing aliases retain their behavior.
 
 The expanded React Doctor scan (library plus changed examples) reports zero
 errors and six warnings, scoring 70/100. The example carousel now releases both
@@ -142,6 +154,7 @@ actual built CSS/module resolved by HQ's guarded consumer smoke test.
 
 External style handles travel through a typed custom component prop and remain
 opaque to Toned. Generic DOM/native-fixture tests cover this composition boundary;
-they do not certify Unistyles or Fabric. A full external engine integration needs
+they do not certify Unistyles. The separate Android acceptance app verifies the
+pinned Fabric profile described above. A full external engine integration needs
 one authoritative writer and its own compilation/dependency and CSS-delivery
 contract. See [the integration guide](packages/toned-react/INTEGRATIONS.md).

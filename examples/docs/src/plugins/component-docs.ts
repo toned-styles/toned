@@ -1,5 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { withCompilerOptions } from 'react-docgen-typescript'
+import ts from 'typescript'
 import type { Plugin, ViteDevServer } from 'vite'
 
 const VIRTUAL_PREFIX = 'virtual:component-docs/'
@@ -22,39 +24,45 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
   const cache = new Map<string, { mtimeMs: number; data: string }>()
   let server: ViteDevServer | undefined
 
-  let parserPromise: ReturnType<typeof createParser> | null = null
+  let parser: ReturnType<typeof createParser> | undefined
+  let program: ts.Program | undefined
+  const compilerOptions: ts.CompilerOptions = {
+    noEmit: true,
+    jsx: ts.JsxEmit.ReactJSX,
+    strict: true,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+    skipLibCheck: true,
+    allowImportingTsExtensions: true,
+    baseUrl: path.dirname(options.tsconfigPath),
+    paths: { '@/*': ['./src/*'] },
+  }
 
-  async function createParser() {
-    const docgen = await import('react-docgen-typescript')
-    return docgen.withCompilerOptions(
-      {
-        noEmit: true,
-        jsx: 4 /* JsxEmit.ReactJSX */,
-        strict: true,
-        moduleResolution: 100 /* ModuleResolutionKind.Bundler */,
-        target: 9 /* ScriptTarget.ES2022 */,
-        module: 99 /* ModuleKind.ESNext */,
-        skipLibCheck: true,
-        allowImportingTsExtensions: true,
-        baseUrl: path.dirname(options.tsconfigPath),
-        paths: { '@/*': ['./src/*'] },
-      },
-      {
-        propFilter: (prop: { parent?: { fileName: string } }) => {
-          if (prop.parent?.fileName.includes('node_modules')) return false
-          return true
-        },
-        shouldExtractLiteralValuesFromEnum: true,
-        savePropValueAsString: true,
-      },
+  function getProgram() {
+    program ??= ts.createProgram(
+      getComponentNames(options.componentsDir).map((name) =>
+        path.join(options.componentsDir, `${name}.tsx`),
+      ),
+      compilerOptions,
     )
+    return program
+  }
+
+  function createParser() {
+    return withCompilerOptions(compilerOptions, {
+      propFilter: (prop: { parent?: { fileName: string } }) => {
+        if (prop.parent?.fileName.includes('node_modules')) return false
+        return true
+      },
+      shouldExtractLiteralValuesFromEnum: true,
+      savePropValueAsString: true,
+    })
   }
 
   function getParser() {
-    if (!parserPromise) {
-      parserPromise = createParser()
-    }
-    return parserPromise
+    parser ??= createParser()
+    return parser
   }
 
   return {
@@ -100,8 +108,10 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
         return cached.data
       }
 
-      const parser = await getParser()
-      const docs = parser.parse(filePath)
+      const parser = getParser()
+      // All component modules share one compiler graph instead of rebuilding
+      // React, Toned and third-party declarations for every virtual module.
+      const docs = parser.parseWithProgramProvider(filePath, getProgram)
 
       // Process docs to extract @preview tags
       const processed = docs.map(
@@ -160,23 +170,20 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
       cache.set(name, { mtimeMs: stat.mtimeMs, data })
       return data
     },
-    handleHotUpdate({ file }) {
-      if (!file.startsWith(options.componentsDir) || !file.endsWith('.tsx'))
+    handleHotUpdate({ file, modules }) {
+      const sourceRoot = path.join(path.dirname(options.tsconfigPath), 'src')
+      if (!file.startsWith(`${sourceRoot}${path.sep}`) || !/\.tsx?$/.test(file))
         return
-
-      const name = path.basename(file, '.tsx')
-      cache.delete(name)
-
-      // Invalidate just the specific virtual module, not the whole page
-      const virtualId = RESOLVED_PREFIX + name
+      // A shared type/helper can change several components' public props.
+      program = undefined
+      cache.clear()
       const graph = server?.moduleGraph
-      const mod = graph?.getModuleById(virtualId)
-      if (graph && mod) {
-        graph.invalidateModule(mod)
-        // Return empty array to prevent Vite's default full-reload behavior
-        return []
-      }
-      return []
+      if (!graph) return
+      const metadataModules = [...graph.idToModuleMap.values()].filter((mod) =>
+        mod.id?.startsWith(RESOLVED_PREFIX),
+      )
+      for (const mod of metadataModules) graph.invalidateModule(mod)
+      return [...modules, ...metadataModules]
     },
   }
 }

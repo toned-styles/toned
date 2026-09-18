@@ -17,8 +17,11 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('../', import.meta.url))
 const hq = resolve(root, '../..')
 const currentOnly = process.argv.includes('--current-only')
+const rawStyle = process.argv.includes('--raw-style')
 const checkpoint =
-  (currentOnly ? undefined : process.argv[2]) ??
+  (currentOnly
+    ? undefined
+    : process.argv.slice(2).find((arg) => !arg.startsWith('--'))) ??
   'ebd10355fb9c2d7178e256e442ee24ba7526406b'
 const temp = mkdtempSync(join(tmpdir(), 'toned-completion-'))
 const baseline = join(temp, 'checkpoint')
@@ -83,6 +86,7 @@ for (const [version, source] of currentOnly
       source,
       version,
       temp,
+      ...(rawStyle ? ['--raw-style'] : []),
     ],
     {
       cwd: hq,
@@ -244,6 +248,7 @@ void sheet;`,
 }
 const report = {
   checkpoint,
+  workload: rawStyle ? 'raw-style' : 'scalar-tokens',
   environment: { platform: process.platform, arch: process.arch },
   fixture:
     'Synthetic 42-cell calendar: shared sheet and 42 distinct per-child override scopes; cold 43-part compilation, happy-dom React mounts, SSR/CSS and exported consumer declaration sizes; no browser layout or device measurement.',
