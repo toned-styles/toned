@@ -1,5 +1,5 @@
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
 
 const skeletonStyles = stylesheet({
   root: {
@@ -11,16 +11,10 @@ const skeletonStyles = stylesheet({
   },
 })
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+function Skeleton({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(skeletonStyles)
 
-  return (
-    <div
-      data-slot="skeleton"
-      {...s.root.with({ className })}
-      {...props}
-    />
-  )
+  return <div data-slot="skeleton" {...s.root.with({ className })} {...props} />
 }
 
 export { Skeleton }

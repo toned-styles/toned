@@ -8,22 +8,22 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as ConceptsRouteImport } from './routes/concepts'
-import { Route as UiRouteRouteImport } from './routes/ui/route'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as UiIndexRouteImport } from './routes/ui/index'
-import { Route as UiComponentRouteImport } from './routes/ui/$component'
-import { Route as GuidesThemingRouteImport } from './routes/guides/theming'
-import { Route as GuidesSsrRouteImport } from './routes/guides/ssr'
-import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web'
-import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native'
-import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive'
-import { Route as ApiVariantsRouteImport } from './routes/api/variants'
-import { Route as ApiUseStylesRouteImport } from './routes/api/use-styles'
-import { Route as ApiStylesheetRouteImport } from './routes/api/stylesheet'
-import { Route as ApiMediaQueriesRouteImport } from './routes/api/media-queries'
-import { Route as ApiDefineSystemRouteImport } from './routes/api/define-system'
+import { Route as rootRouteImport } from './routes/__root.tsx'
+import { Route as ApiDefineSystemRouteImport } from './routes/api/define-system.tsx'
+import { Route as ApiMediaQueriesRouteImport } from './routes/api/media-queries.tsx'
+import { Route as ApiStylesheetRouteImport } from './routes/api/stylesheet.tsx'
+import { Route as ApiUseStylesRouteImport } from './routes/api/use-styles.tsx'
+import { Route as ApiVariantsRouteImport } from './routes/api/variants.tsx'
+import { Route as ConceptsRouteImport } from './routes/concepts.tsx'
+import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive.tsx'
+import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native.tsx'
+import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web.tsx'
+import { Route as GuidesSsrRouteImport } from './routes/guides/ssr.tsx'
+import { Route as GuidesThemingRouteImport } from './routes/guides/theming.tsx'
+import { Route as IndexRouteImport } from './routes/index.tsx'
+import { Route as UiComponentRouteImport } from './routes/ui/$component.tsx'
+import { Route as UiIndexRouteImport } from './routes/ui/index.tsx'
+import { Route as UiRouteRouteImport } from './routes/ui/route.tsx'
 
 const ConceptsRoute = ConceptsRouteImport.update({
   id: '/concepts',

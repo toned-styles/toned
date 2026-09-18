@@ -1,19 +1,18 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
-import { SearchIcon } from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Command as CommandPrimitive } from 'cmdk'
+import { SearchIcon } from 'lucide-react'
+import type * as React from 'react'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const commandStyles = stylesheet({
   root: {
@@ -122,8 +121,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
+  title = 'Command Palette',
+  description = 'Search for a command to run...',
   children,
   className,
   showCloseButton = true,
@@ -145,9 +144,7 @@ function CommandDialog({
         style={{ overflow: 'hidden', padding: 0 }}
         showCloseButton={showCloseButton}
       >
-        <Command>
-          {children}
-        </Command>
+        <Command>{children}</Command>
       </DialogContent>
     </Dialog>
   )
@@ -261,7 +258,7 @@ function CommandItem({
 function CommandShortcut({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(commandStyles)
 
   return (

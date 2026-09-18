@@ -1,12 +1,11 @@
-"use client"
+'use client'
 
-import { useMemo } from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { useMemo } from 'react'
+import { Label } from '@/components/ui/label.tsx'
+import { Separator } from '@/components/ui/separator.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const fieldStyles = stylesheet({
   fieldSet: {
@@ -118,7 +117,7 @@ const fieldStyles = stylesheet({
   },
 })
 
-function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
+function FieldSet({ className, ...props }: React.ComponentProps<'fieldset'>) {
   const s = useStyles(fieldStyles)
 
   return (
@@ -132,12 +131,13 @@ function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
 
 function FieldLegend({
   className,
-  variant = "legend",
+  variant = 'legend',
   ...props
-}: React.ComponentProps<"legend"> & { variant?: "legend" | "label" }) {
+}: React.ComponentProps<'legend'> & { variant?: 'legend' | 'label' }) {
   const s = useStyles(fieldStyles)
 
-  const variantStyle = variant === 'label' ? s.legendVariantLabel : s.legendVariantLegend
+  const variantStyle =
+    variant === 'label' ? s.legendVariantLabel : s.legendVariantLegend
 
   return (
     <legend
@@ -150,13 +150,13 @@ function FieldLegend({
   )
 }
 
-function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
+function FieldGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(fieldStyles)
 
   return (
     <div
       data-slot="field-group"
-      {...s.fieldGroup.with({ className: cn("group/field-group", className) })}
+      {...s.fieldGroup.with({ className: cn('group/field-group', className) })}
       {...props}
     />
   )
@@ -164,34 +164,42 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 
 function Field({
   className,
-  orientation = "vertical",
+  orientation = 'vertical',
   ...props
-}: React.ComponentProps<"div"> & {
-  orientation?: "vertical" | "horizontal" | "responsive"
+}: React.ComponentProps<'div'> & {
+  orientation?: 'vertical' | 'horizontal' | 'responsive'
 }) {
   const s = useStyles(fieldStyles)
 
-  const orientationStyle = orientation === 'horizontal' ? s.fieldHorizontal : s.fieldVertical
+  const orientationStyle =
+    orientation === 'horizontal' ? s.fieldHorizontal : s.fieldVertical
 
   return (
     <div
       role="group"
       data-slot="field"
       data-orientation={orientation}
-      className={cn("group/field", s.field.className, orientationStyle.className, className)}
+      className={cn(
+        'group/field',
+        s.field.className,
+        orientationStyle.className,
+        className,
+      )}
       style={{ ...s.field.style, ...orientationStyle.style }}
       {...props}
     />
   )
 }
 
-function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
+function FieldContent({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(fieldStyles)
 
   return (
     <div
       data-slot="field-content"
-      {...s.fieldContent.with({ className: cn("group/field-content", className) })}
+      {...s.fieldContent.with({
+        className: cn('group/field-content', className),
+      })}
       {...props}
     />
   )
@@ -206,13 +214,13 @@ function FieldLabel({
   return (
     <Label
       data-slot="field-label"
-      {...s.fieldLabel.with({ className: cn("group/field-label", className) })}
+      {...s.fieldLabel.with({ className: cn('group/field-label', className) })}
       {...props}
     />
   )
 }
 
-function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
+function FieldTitle({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(fieldStyles)
 
   return (
@@ -224,7 +232,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
+function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
   const s = useStyles(fieldStyles)
 
   return (
@@ -240,7 +248,7 @@ function FieldSeparator({
   children,
   className,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   children?: React.ReactNode
 }) {
   const s = useStyles(fieldStyles)
@@ -254,10 +262,7 @@ function FieldSeparator({
     >
       <Separator style={{ position: 'absolute', inset: 0, top: '50%' }} />
       {children && (
-        <span
-          {...s.fieldSeparatorContent}
-          data-slot="field-separator-content"
-        >
+        <span {...s.fieldSeparatorContent} data-slot="field-separator-content">
           {children}
         </span>
       )}
@@ -270,7 +275,7 @@ function FieldError({
   children,
   errors,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
   const s = useStyles(fieldStyles)
@@ -288,7 +293,7 @@ function FieldError({
       ...new Map(errors.map((error) => [error?.message, error])).values(),
     ]
 
-    if (uniqueErrors?.length == 1) {
+    if (uniqueErrors?.length === 1) {
       return uniqueErrors[0]?.message
     }
 
@@ -296,7 +301,7 @@ function FieldError({
       <ul {...s.errorList}>
         {uniqueErrors.map(
           (error, index) =>
-            error?.message && <li key={index}>{error.message}</li>
+            error?.message && <li key={index}>{error.message}</li>,
         )}
       </ul>
     )

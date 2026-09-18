@@ -1,12 +1,11 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { toggleStyles } from "@/components/ui/toggle"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
+import * as React from 'react'
+import { toggleStyles } from '@/components/ui/toggle.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const toggleGroupStyles = stylesheet({
   root: {
@@ -18,25 +17,25 @@ const toggleGroupStyles = stylesheet({
 })
 
 const ToggleGroupContext = React.createContext<{
-  size?: "default" | "sm" | "lg"
-  variant?: "default" | "outline"
+  size?: 'default' | 'sm' | 'lg'
+  variant?: 'default' | 'outline'
   spacing?: number
 }>({
-  size: "default",
-  variant: "default",
+  size: 'default',
+  variant: 'default',
   spacing: 0,
 })
 
 function ToggleGroup({
   className,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   spacing = 0,
   children,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Root> & {
-  variant?: "default" | "outline"
-  size?: "default" | "sm" | "lg"
+  variant?: 'default' | 'outline'
+  size?: 'default' | 'sm' | 'lg'
   spacing?: number
 }) {
   const s = useStyles(toggleGroupStyles)
@@ -48,7 +47,7 @@ function ToggleGroup({
       data-size={size}
       data-spacing={spacing}
       {...s.root.with({
-        className: cn("group/toggle-group", className),
+        className: cn('group/toggle-group', className),
         style: {
           gap: spacing ? `calc(${spacing} * 0.25rem)` : undefined,
         },
@@ -70,13 +69,17 @@ function ToggleGroupItem({
   size,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> & {
-  variant?: "default" | "outline"
-  size?: "default" | "sm" | "lg"
+  variant?: 'default' | 'outline'
+  size?: 'default' | 'sm' | 'lg'
 }) {
   const context = React.useContext(ToggleGroupContext)
-  const resolvedVariant = context.variant || variant || "default"
-  const resolvedSize = context.size || size || "default"
-  const s = useStyles(toggleStyles, { variant: resolvedVariant, size: resolvedSize, pressed: false })
+  const resolvedVariant = context.variant || variant || 'default'
+  const resolvedSize = context.size || size || 'default'
+  const s = useStyles(toggleStyles, {
+    variant: resolvedVariant,
+    size: resolvedSize,
+    pressed: false,
+  })
 
   return (
     <ToggleGroupPrimitive.Item

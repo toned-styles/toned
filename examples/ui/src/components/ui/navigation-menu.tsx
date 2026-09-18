@@ -1,10 +1,10 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
-import { NavigationMenu as NavigationMenuPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ChevronDownIcon } from 'lucide-react'
+import { NavigationMenu as NavigationMenuPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const navMenuStyles = stylesheet({
   root: {
@@ -162,7 +162,7 @@ function NavigationMenu({
     <NavigationMenuPrimitive.Root
       data-slot="navigation-menu"
       data-viewport={viewport}
-      {...s.root.with({ className: cn("group/navigation-menu", className) })}
+      {...s.root.with({ className: cn('group/navigation-menu', className) })}
       {...props}
     >
       {children}
@@ -213,14 +213,10 @@ function NavigationMenuTrigger({
   return (
     <NavigationMenuPrimitive.Trigger
       data-slot="navigation-menu-trigger"
-      {...s.trigger.with({ className: cn("group", className) })}
+      {...s.trigger.with({ className: cn('group', className) })}
       {...props}
     >
-      {children}{" "}
-      <ChevronDownIcon
-        {...s.triggerIcon}
-        aria-hidden="true"
-      />
+      {children} <ChevronDownIcon {...s.triggerIcon} aria-hidden="true" />
     </NavigationMenuPrimitive.Trigger>
   )
 }

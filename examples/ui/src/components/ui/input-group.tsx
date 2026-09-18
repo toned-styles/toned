@@ -1,11 +1,10 @@
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
+import { Button } from '@/components/ui/button.tsx'
+import { Input } from '@/components/ui/input.tsx'
+import { Textarea } from '@/components/ui/textarea.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const inputGroupStyles = stylesheet({
   root: {
@@ -79,7 +78,7 @@ const inputGroupStyles = stylesheet({
   },
 })
 
-function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
+function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(inputGroupStyles)
 
   return (
@@ -94,17 +93,21 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 
 function InputGroupAddon({
   className,
-  align = "inline-start",
+  align = 'inline-start',
   ...props
-}: React.ComponentProps<"div"> & {
-  align?: "inline-start" | "inline-end" | "block-start" | "block-end"
+}: React.ComponentProps<'div'> & {
+  align?: 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
 }) {
   const s = useStyles(inputGroupStyles)
 
-  const alignStyles = align === 'inline-end' ? s.addonInlineEnd
-    : align === 'block-start' ? s.addonBlockStart
-    : align === 'block-end' ? s.addonBlockEnd
-    : s.addonInlineStart
+  const alignStyles =
+    align === 'inline-end'
+      ? s.addonInlineEnd
+      : align === 'block-start'
+        ? s.addonBlockStart
+        : align === 'block-end'
+          ? s.addonBlockEnd
+          : s.addonInlineStart
 
   return (
     <div
@@ -113,11 +116,11 @@ function InputGroupAddon({
       data-align={align}
       className={cn(s.addon.className, alignStyles.className, className)}
       style={{ ...s.addon.style, ...alignStyles.style }}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button")) {
-          return
-        }
-        e.currentTarget.parentElement?.querySelector("input")?.focus()
+      onPointerDown={(event) => {
+        // This enlarges the pointer focus target. Keyboard users tab directly
+        // to the input; the decorative group is not an additional control.
+        if (!(event.target as HTMLElement).closest('button'))
+          event.currentTarget.parentElement?.querySelector('input')?.focus()
       }}
       {...props}
     />
@@ -126,9 +129,9 @@ function InputGroupAddon({
 
 function InputGroupButton({
   className,
-  type = "button",
-  variant = "ghost",
-  size = "xs",
+  type = 'button',
+  variant = 'ghost',
+  size = 'xs',
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
@@ -144,26 +147,27 @@ function InputGroupButton({
   )
 }
 
-function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
+function InputGroupText({ className, ...props }: React.ComponentProps<'span'>) {
   const s = useStyles(inputGroupStyles)
 
-  return (
-    <span
-      {...s.text.with({ className })}
-      {...props}
-    />
-  )
+  return <span {...s.text.with({ className })} {...props} />
 }
 
 function InputGroupInput({
   className,
   ...props
-}: React.ComponentProps<"input">) {
+}: React.ComponentProps<'input'>) {
   return (
     <Input
       data-slot="input-group-control"
       className={cn(className)}
-      style={{ flex: 1, borderRadius: 0, border: 0, background: 'transparent', boxShadow: 'none' }}
+      style={{
+        flex: 1,
+        borderRadius: 0,
+        border: 0,
+        background: 'transparent',
+        boxShadow: 'none',
+      }}
       {...props}
     />
   )
@@ -172,12 +176,20 @@ function InputGroupInput({
 function InputGroupTextarea({
   className,
   ...props
-}: React.ComponentProps<"textarea">) {
+}: React.ComponentProps<'textarea'>) {
   return (
     <Textarea
       data-slot="input-group-control"
       className={cn(className)}
-      style={{ flex: 1, resize: 'none', borderRadius: 0, border: 0, background: 'transparent', padding: '0.75rem', boxShadow: 'none' }}
+      style={{
+        flex: 1,
+        resize: 'none',
+        borderRadius: 0,
+        border: 0,
+        background: 'transparent',
+        padding: '0.75rem',
+        boxShadow: 'none',
+      }}
       {...props}
     />
   )

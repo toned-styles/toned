@@ -1,9 +1,9 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ChevronDownIcon } from 'lucide-react'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils.ts'
 
 const nativeSelectStyles = stylesheet({
   wrapper: {
@@ -58,17 +58,14 @@ const nativeSelectStyles = stylesheet({
 
 function NativeSelect({
   className,
-  size = "default",
+  size = 'default',
   disabled,
   ...props
-}: Omit<React.ComponentProps<"select">, "size"> & { size?: "sm" | "default" }) {
+}: Omit<React.ComponentProps<'select'>, 'size'> & { size?: 'sm' | 'default' }) {
   const s = useStyles(nativeSelectStyles)
 
   return (
-    <div
-      {...s.wrapper}
-      data-slot="native-select-wrapper"
-    >
+    <div {...s.wrapper} data-slot="native-select-wrapper">
       <select
         data-slot="native-select"
         data-size={size}
@@ -89,14 +86,14 @@ function NativeSelect({
   )
 }
 
-function NativeSelectOption({ ...props }: React.ComponentProps<"option">) {
+function NativeSelectOption({ ...props }: React.ComponentProps<'option'>) {
   return <option data-slot="native-select-option" {...props} />
 }
 
 function NativeSelectOptGroup({
   className,
   ...props
-}: React.ComponentProps<"optgroup">) {
+}: React.ComponentProps<'optgroup'>) {
   return (
     <optgroup
       data-slot="native-select-optgroup"

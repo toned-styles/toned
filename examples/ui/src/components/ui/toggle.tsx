@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { Toggle as TogglePrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Toggle as TogglePrimitive } from 'radix-ui'
+import * as React from 'react'
 
 const toggleStyles = stylesheet({
   root: {
@@ -62,14 +62,16 @@ const toggleStyles = stylesheet({
     root: {
       height: '2rem',
       minWidth: '2rem',
-      paddingY: 0, paddingX: 1.5,
+      paddingY: 0,
+      paddingX: 1.5,
     },
   },
   [$.size('lg')]: {
     root: {
       height: '2.5rem',
       minWidth: '2.5rem',
-      paddingY: 0, paddingX: 2.5,
+      paddingY: 0,
+      paddingX: 2.5,
     },
   },
   [$.pressed(true)]: {
@@ -80,17 +82,19 @@ const toggleStyles = stylesheet({
 function Toggle({
   className,
   disabled,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   pressed: pressedProp,
   defaultPressed,
   onPressedChange,
   ...props
 }: React.ComponentProps<typeof TogglePrimitive.Root> & {
-  variant?: "default" | "outline"
-  size?: "default" | "sm" | "lg"
+  variant?: 'default' | 'outline'
+  size?: 'default' | 'sm' | 'lg'
 }) {
-  const [internal, setInternal] = React.useState(pressedProp ?? defaultPressed ?? false)
+  const [internal, setInternal] = React.useState(
+    pressedProp ?? defaultPressed ?? false,
+  )
   const pressed = pressedProp ?? internal
 
   const s = useStyles(toggleStyles, { variant, size, pressed })

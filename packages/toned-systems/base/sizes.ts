@@ -50,7 +50,10 @@ const sizeValues = [
   96,
 ] as const
 
-const SizeUnit = (value: Number | String, tokens: Parameters<typeof SpaceUnit>[1]) =>
+const SizeUnit = (
+  value: Parameters<typeof SpaceUnit>[0],
+  tokens: Parameters<typeof SpaceUnit>[1],
+) =>
   value === 'auto' ||
   value === '100%' ||
   value === 'fit-content' ||

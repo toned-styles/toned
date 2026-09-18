@@ -1,12 +1,11 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
+import type * as React from 'react'
+import { Button } from '@/components/ui/button.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const alertDialogStyles = stylesheet({
   overlay: {
@@ -129,13 +128,13 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
-  size = "default",
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
-  size?: "default" | "sm"
+  size?: 'default' | 'sm'
 }) {
   const s = useStyles(alertDialogStyles)
-  const sizeStyle = size === "sm" ? s.contentSm.style : undefined
+  const sizeStyle = size === 'sm' ? s.contentSm.style : undefined
 
   return (
     <AlertDialogPortal>
@@ -144,10 +143,7 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         {...s.content.with({
-          className: cn(
-            size === "sm" && s.contentSm.className,
-            className
-          ),
+          className: cn(size === 'sm' && s.contentSm.className, className),
           style: sizeStyle,
         })}
         {...props}
@@ -159,7 +155,7 @@ function AlertDialogContent({
 function AlertDialogHeader({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertDialogStyles)
 
   return (
@@ -174,7 +170,7 @@ function AlertDialogHeader({
 function AlertDialogFooter({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertDialogStyles)
 
   return (
@@ -219,7 +215,7 @@ function AlertDialogDescription({
 function AlertDialogMedia({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertDialogStyles)
 
   return (
@@ -233,11 +229,11 @@ function AlertDialogMedia({
 
 function AlertDialogAction({
   className,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  Pick<React.ComponentProps<typeof Button>, 'variant' | 'size'>) {
   return (
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Action
@@ -251,11 +247,11 @@ function AlertDialogAction({
 
 function AlertDialogCancel({
   className,
-  variant = "outline",
-  size = "default",
+  variant = 'outline',
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Cancel> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  Pick<React.ComponentProps<typeof Button>, 'variant' | 'size'>) {
   return (
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Cancel

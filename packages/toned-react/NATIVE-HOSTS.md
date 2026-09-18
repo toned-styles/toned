@@ -34,11 +34,12 @@ writers must coordinate ownership through the same integration.
 ## Support boundary and required host acceptance
 
 No concrete RN/Fabric host is certified by this repository. `toned-react` has no
-React Native dependency, ships no View/Text implementation and does not own a
-native app or renderer build. Choosing an RN host package/version is an integration
-architecture decision; a simulated object or JS test renderer cannot certify the
-native mounting layer on its behalf. An application must choose its supported
-renderer and run the following gate there before advertising that host as supported:
+React Native dependency and ships no View/Text implementation. The repository does
+contain an older [Expo demo](../../examples/expo-app), but it is not an integrated
+acceptance target for the current host contract. Choosing the renderer/version,
+concrete primitives and ownership model is an integration decision; a simulated
+object or JS test renderer cannot certify the native mounting layer. The chosen
+application must run the following gate before advertising that host as supported:
 
 1. Mount real View, Text and TextInput targets with caller resting styles and
    bridge props; reject composite refs and hosts from another renderer.
@@ -61,6 +62,36 @@ The executable tests beside `native-host.ts`, `applyStyles.ts` and
 are explicitly named **fixtures**, not Fabric evidence. The acceptance gate above
 remains the responsibility of the chosen concrete host integration; bypassing it
 would create a support claim the library cannot substantiate.
+
+### Existing demo and a concrete acceptance path
+
+The Expo demo declares Expo 53 and enables `newArchEnabled`, but still uses
+obsolete package subpaths (`@toned/react/index` and theme config/CSS imports).
+Its configuration installs the native binding without the mandatory `nativeHost`
+adapter or a concrete primitive resolver. Its shared button also contains an
+unscoped web cursor style. These are migration tasks, not reasons native acceptance
+cannot be implemented.
+
+In the inspected HQ checkout on 2026-09-18, the demo was outside HQ's installed
+workspace and had no dependencies installed. HQ's active Android application uses
+Capacitor over its web app; the separate Expo application is under `_retired`,
+and HQ's native primitive surface supplies types only. The nested Toned and HQ
+catalogs select different RN versions, so an acceptance app must pin a compatible
+Expo/RN/React set explicitly rather than infer its renderer from those catalogs.
+
+The inspected machine has an Android ARM64 emulator/AVD, SDK platforms and Java
+21 available. It has no running device or installed demo; NDK/CMake were absent.
+Xcode and `simctl` were unavailable, so iOS cannot be validated on that installation
+without adding its toolchain. This is an environment snapshot, not an architectural
+claim that a native target is impossible.
+
+The concrete path is to modernize the demo into an Android Fabric acceptance app:
+pin its runtime, migrate its declarations/imports, supply real primitive and host
+identity/reset/viewport/topology adapters, and automate native measurements and
+appearance checks for the scenarios above. If Unistyles owns style execution,
+select and test that ownership model explicitly as described in
+[INTEGRATIONS.md](./INTEGRATIONS.md); its native code requires a custom development
+build. No actual device/renderer acceptance result is claimed until that app runs.
 
 ## Native grid
 

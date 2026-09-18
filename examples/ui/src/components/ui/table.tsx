@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
 const tableStyles = stylesheet({
   container: {
@@ -59,44 +59,25 @@ const tableStyles = stylesheet({
   },
 })
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({ className, ...props }: React.ComponentProps<'table'>) {
   const s = useStyles(tableStyles)
 
   return (
-    <div
-      data-slot="table-container"
-      {...s.container}
-    >
-      <table
-        data-slot="table"
-        {...s.table.with({ className })}
-        {...props}
-      />
+    <div data-slot="table-container" {...s.container}>
+      <table data-slot="table" {...s.table.with({ className })} {...props} />
     </div>
   )
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return (
-    <thead
-      data-slot="table-header"
-      className={className}
-      {...props}
-    />
-  )
+function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
+  return <thead data-slot="table-header" className={className} {...props} />
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return (
-    <tbody
-      data-slot="table-body"
-      className={className}
-      {...props}
-    />
-  )
+function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
+  return <tbody data-slot="table-body" className={className} {...props} />
 }
 
-function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
+function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   const s = useStyles(tableStyles)
 
   return (
@@ -108,46 +89,32 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+  const s = useStyles(tableStyles)
+
+  return <tr data-slot="table-row" {...s.row.with({ className })} {...props} />
+}
+
+function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   const s = useStyles(tableStyles)
 
   return (
-    <tr
-      data-slot="table-row"
-      {...s.row.with({ className })}
-      {...props}
-    />
+    <th data-slot="table-head" {...s.head.with({ className })} {...props} />
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   const s = useStyles(tableStyles)
 
   return (
-    <th
-      data-slot="table-head"
-      {...s.head.with({ className })}
-      {...props}
-    />
-  )
-}
-
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  const s = useStyles(tableStyles)
-
-  return (
-    <td
-      data-slot="table-cell"
-      {...s.cell.with({ className })}
-      {...props}
-    />
+    <td data-slot="table-cell" {...s.cell.with({ className })} {...props} />
   )
 }
 
 function TableCaption({
   className,
   ...props
-}: React.ComponentProps<"caption">) {
+}: React.ComponentProps<'caption'>) {
   const s = useStyles(tableStyles)
 
   return (

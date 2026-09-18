@@ -275,6 +275,10 @@ identities only and reads the current provider configuration when they render.
 
 ## Backends and native hosts
 
+See [Integration boundaries](INTEGRATIONS.md) for custom primitives, opaque style
+values, React Native Web and Unistyles. Passing a component through `as` or
+`resolveElement` does not install another styling engine's lifecycle or CSS delivery.
+
 `Config.backend` selects an output adapter from `@toned/core/backends`. The host
 platform and backend platform must agree. CSS variables use pre-generated CSS;
 a Tailwind profile maps exact resolved fields to utilities and optional parameter

@@ -21,9 +21,9 @@ function GuideTheming() {
 
       <h2 {...s.h2}>How Theming Works</h2>
       <p>
-        On the web, themes are implemented as CSS custom properties. The{' '}
-        <code {...s.code}>inject(system)</code> call generates CSS rules that
-        reference these properties. A theme CSS file sets the property values:
+        On the web, themes are implemented as CSS custom properties. The build
+        pipeline generates CSS rules that reference these properties. A theme
+        CSS file sets the property values:
       </p>
       <CodeBlock>{`/* @toned/themes/shadcn/config.css (simplified) */
 :root {

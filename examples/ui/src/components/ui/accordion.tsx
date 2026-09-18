@@ -1,9 +1,8 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
-import { Accordion as AccordionPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ChevronDownIcon } from 'lucide-react'
+import { Accordion as AccordionPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const accordionStyles = stylesheet({
   item: {
@@ -92,9 +91,7 @@ function AccordionTrigger({
         {...props}
       >
         {children}
-        <ChevronDownIcon
-          {...s.triggerIcon}
-        />
+        <ChevronDownIcon {...s.triggerIcon} />
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   )
@@ -113,11 +110,7 @@ function AccordionContent({
       {...s.content}
       {...props}
     >
-      <div
-        {...s.contentInner.with({ className })}
-      >
-        {children}
-      </div>
+      <div {...s.contentInner.with({ className })}>{children}</div>
     </AccordionPrimitive.Content>
   )
 }

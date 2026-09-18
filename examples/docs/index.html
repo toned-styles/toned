@@ -14,17 +14,17 @@
       button { background: none; border: none; cursor: pointer; }
       p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
       a { color: inherit; text-decoration: inherit; }
+      /* A visually hidden native checkbox remains keyboard operable. */
+      .menu-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      #menu-toggle:focus-visible + label { outline: 2px solid currentColor; outline-offset: 2px; }
       /* CSS-only mobile menu toggle (works without JS) */
       @media (max-width: 767px) {
-        #menu-toggle:checked ~ [role="button"] {
-          display: none !important;
-        }
         #menu-toggle:checked ~ nav {
-          display: block !important;
-          position: fixed !important;
+          display: block;
+          position: fixed;
         }
         #menu-toggle:checked ~ [role="presentation"] {
-          display: block !important;
+          display: block;
         }
       }
     </style>

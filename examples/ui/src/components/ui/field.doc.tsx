@@ -1,6 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Input } from './input'
-import { Field, FieldLabel, FieldDescription, FieldError } from './field'
+import { c, doc } from '@/lib/doc.tsx'
+import { Field, FieldDescription, FieldError, FieldLabel } from './field.tsx'
+import { Input } from './input.tsx'
 
 export default doc({
   components: [

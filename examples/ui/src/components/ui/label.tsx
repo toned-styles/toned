@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Label as LabelPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Label as LabelPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const labelStyles = stylesheet({
   root: {

@@ -1,10 +1,9 @@
-"use client"
+'use client'
 
-import { GripVerticalIcon } from "lucide-react"
-import * as ResizablePrimitive from "react-resizable-panels"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { GripVerticalIcon } from 'lucide-react'
+import * as ResizablePrimitive from 'react-resizable-panels'
 
 const resizableStyles = stylesheet({
   group: {

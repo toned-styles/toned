@@ -64,7 +64,7 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
     },
     resolveId(id) {
       if (id.startsWith(VIRTUAL_PREFIX)) {
-        return '\0' + id
+        return `\0${id}`
       }
     },
     async load(id) {
@@ -90,7 +90,7 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
       // Per-component metadata
       const filePath = path.join(options.componentsDir, `${name}.tsx`)
       if (!fs.existsSync(filePath)) {
-        return `export default [];`
+        return 'export default [];'
       }
 
       // Check cache
@@ -169,9 +169,10 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
 
       // Invalidate just the specific virtual module, not the whole page
       const virtualId = RESOLVED_PREFIX + name
-      const mod = server?.moduleGraph.getModuleById(virtualId)
-      if (mod) {
-        server!.moduleGraph.invalidateModule(mod)
+      const graph = server?.moduleGraph
+      const mod = graph?.getModuleById(virtualId)
+      if (graph && mod) {
+        graph.invalidateModule(mod)
         // Return empty array to prevent Vite's default full-reload behavior
         return []
       }

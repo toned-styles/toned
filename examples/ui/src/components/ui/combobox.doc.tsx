@@ -1,5 +1,13 @@
-import { doc, c } from '@/lib/doc'
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty, ComboboxTrigger } from './combobox'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from './combobox.tsx'
 
 export default doc({
   components: [

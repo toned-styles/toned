@@ -7,7 +7,7 @@ import {
   useContext,
   useMemo,
 } from 'react'
-import type { DocDescriptor } from '../../../../ui/src/lib/doc'
+import type { DocDescriptor } from '../../../../ui/src/lib/doc.tsx'
 import { playgroundStyles } from '../../styles/playground.ts'
 
 const DocPropsContext = createContext<Record<string, Record<string, unknown>>>(
@@ -25,12 +25,17 @@ export function DocPreview({ doc, propStates }: DocPreviewProps) {
   // Stable wrapper components — identity never changes, so React won't unmount/remount.
   // Each wrapper reads current prop values from context at render time.
   const C = useMemo(() => {
-    const components: Record<string, React.ComponentType<any>> = {}
+    const components: Record<
+      string,
+      React.ComponentType<Record<string, unknown>>
+    > = {}
     for (const entry of doc.entries) {
       const Original = entry.component
       const entryName = entry.name
       const entryDefaults = entry.defaultProps
-      components[entryName] = function DocWrapper(jsxProps: any) {
+      components[entryName] = function DocWrapper(
+        jsxProps: Record<string, unknown>,
+      ) {
         const states = useContext(DocPropsContext)
         const merged = { ...entryDefaults, ...states[entryName], ...jsxProps }
         return <Original {...merged} />
@@ -57,9 +62,10 @@ export function DocPreview({ doc, propStates }: DocPreviewProps) {
 function SimpleDocPreview({
   entry,
 }: {
-  entry: DocDescriptor['entries'][0]
+  entry: DocDescriptor['entries'][0] | undefined
 }) {
   const states = useContext(DocPropsContext)
+  if (!entry) return <p>No documented component.</p>
   const Comp = entry.component
   const merged = { ...entry.defaultProps, ...states[entry.name] }
 

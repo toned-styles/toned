@@ -1,14 +1,13 @@
-import * as React from "react"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-} from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { buttonStyles, type Button } from "@/components/ui/button"
+} from 'lucide-react'
+import type * as React from 'react'
+import { type Button, buttonStyles } from '@/components/ui/button.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const paginationStyles = stylesheet({
   root: {
@@ -50,12 +49,11 @@ const paginationStyles = stylesheet({
   },
 })
 
-function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
   const s = useStyles(paginationStyles)
 
   return (
     <nav
-      role="navigation"
       aria-label="pagination"
       data-slot="pagination"
       {...s.root.with({ className })}
@@ -67,7 +65,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
 function PaginationContent({
   className,
   ...props
-}: React.ComponentProps<"ul">) {
+}: React.ComponentProps<'ul'>) {
   const s = useStyles(paginationStyles)
 
   return (
@@ -79,30 +77,30 @@ function PaginationContent({
   )
 }
 
-function PaginationItem({ ...props }: React.ComponentProps<"li">) {
+function PaginationItem({ ...props }: React.ComponentProps<'li'>) {
   return <li data-slot="pagination-item" {...props} />
 }
 
 type PaginationLinkProps = {
   isActive?: boolean
-} & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">
+} & Pick<React.ComponentProps<typeof Button>, 'size'> &
+  React.ComponentProps<'a'>
 
 function PaginationLink({
   className,
   isActive,
-  size = "icon",
+  size = 'icon',
   ...props
 }: PaginationLinkProps) {
   const s = useStyles(buttonStyles, {
-    variant: isActive ? "outline" : "ghost",
+    variant: isActive ? 'outline' : 'ghost',
     size,
   })
   const ps = useStyles(paginationStyles)
 
   return (
     <a
-      aria-current={isActive ? "page" : undefined}
+      aria-current={isActive ? 'page' : undefined}
       data-slot="pagination-link"
       data-active={isActive}
       {...s.root.with(ps.link).with({ className })}
@@ -122,7 +120,11 @@ function PaginationPrevious({
       aria-label="Go to previous page"
       size="default"
       className={cn(className)}
-      style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
+      style={{
+        gap: '0.25rem',
+        paddingLeft: '0.625rem',
+        paddingRight: '0.625rem',
+      }}
       {...props}
     >
       <ChevronLeftIcon />
@@ -142,7 +144,11 @@ function PaginationNext({
       aria-label="Go to next page"
       size="default"
       className={cn(className)}
-      style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
+      style={{
+        gap: '0.25rem',
+        paddingLeft: '0.625rem',
+        paddingRight: '0.625rem',
+      }}
       {...props}
     >
       <span {...ps.prevNextText}>Next</span>
@@ -154,7 +160,7 @@ function PaginationNext({
 function PaginationEllipsis({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(paginationStyles)
 
   return (

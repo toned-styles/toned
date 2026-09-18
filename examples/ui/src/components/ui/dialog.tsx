@@ -1,10 +1,10 @@
-import * as React from "react"
-import { XIcon } from "lucide-react"
-import { Dialog as DialogPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { XIcon } from 'lucide-react'
+import { Dialog as DialogPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button.tsx'
 
 const dialogStyles = stylesheet({
   overlay: {
@@ -145,10 +145,7 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            {...s.close}
-          >
+          <DialogPrimitive.Close data-slot="dialog-close" {...s.close}>
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
@@ -158,7 +155,7 @@ function DialogContent({
   )
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(dialogStyles)
 
   return (
@@ -175,17 +172,13 @@ function DialogFooter({
   showCloseButton = false,
   children,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   showCloseButton?: boolean
 }) {
   const s = useStyles(dialogStyles)
 
   return (
-    <div
-      data-slot="dialog-footer"
-      {...s.footer.with({ className })}
-      {...props}
-    >
+    <div data-slot="dialog-footer" {...s.footer.with({ className })} {...props}>
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>

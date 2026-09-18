@@ -1,5 +1,13 @@
-import { doc, c } from '@/lib/doc'
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from './pagination'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './pagination.tsx'
 
 export default doc({
   components: [
@@ -18,7 +26,9 @@ export default doc({
           <C.PaginationPrevious />
         </C.PaginationItem>
         <C.PaginationItem>
-          <C.PaginationLink href="#" isActive>1</C.PaginationLink>
+          <C.PaginationLink href="#" isActive>
+            1
+          </C.PaginationLink>
         </C.PaginationItem>
         <C.PaginationItem>
           <C.PaginationLink href="#">2</C.PaginationLink>

@@ -1,7 +1,7 @@
-import * as React from "react"
-import { HoverCard as HoverCardPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { HoverCard as HoverCardPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const hoverCardStyles = stylesheet({
   content: {
@@ -38,7 +38,7 @@ function HoverCardTrigger({
 
 function HoverCardContent({
   className,
-  align = "center",
+  align = 'center',
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof HoverCardPrimitive.Content>) {

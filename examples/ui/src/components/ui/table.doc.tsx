@@ -1,5 +1,13 @@
-import { doc, c } from '@/lib/doc'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption } from './table'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './table.tsx'
 
 export default doc({
   components: [

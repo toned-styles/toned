@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon } from "lucide-react"
-import { Checkbox as CheckboxPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon } from 'lucide-react'
+import { Checkbox as CheckboxPrimitive } from 'radix-ui'
+import * as React from 'react'
 
 const checkboxStyles = stylesheet({
   root: {
@@ -47,7 +47,7 @@ function Checkbox({
   ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
   const [internal, setInternal] = React.useState<boolean | 'indeterminate'>(
-    checkedProp ?? defaultChecked ?? false
+    checkedProp ?? defaultChecked ?? false,
   )
   const current = checkedProp ?? internal
   const isActive = current === true || current === 'indeterminate'

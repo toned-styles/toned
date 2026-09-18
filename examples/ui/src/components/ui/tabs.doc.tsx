@@ -1,5 +1,5 @@
-import { doc, c } from '@/lib/doc'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
+import { c, doc } from '@/lib/doc.tsx'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs.tsx'
 
 export default doc({
   components: [

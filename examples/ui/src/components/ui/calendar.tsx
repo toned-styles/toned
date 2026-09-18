@@ -1,19 +1,18 @@
-import * as React from "react"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-} from "lucide-react"
+} from 'lucide-react'
+import * as React from 'react'
 import {
+  type DayButton,
   DayPicker,
   getDefaultClassNames,
-  type DayButton,
-} from "react-day-picker"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Button, buttonStyles } from "@/components/ui/button"
+} from 'react-day-picker'
+import { Button, buttonStyles } from '@/components/ui/button.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const calendarStyles = stylesheet({
   root: {
@@ -26,13 +25,13 @@ function Calendar({
   className,
   classNames,
   showOutsideDays = true,
-  captionLayout = "label",
-  buttonVariant = "ghost",
+  captionLayout = 'label',
+  buttonVariant = 'ghost',
   formatters,
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  buttonVariant?: React.ComponentProps<typeof Button>['variant']
 }) {
   const defaultClassNames = getDefaultClassNames()
   const s = useStyles(calendarStyles)
@@ -41,12 +40,12 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("group/calendar", s.root.className, className)}
+      className={cn('group/calendar', s.root.className, className)}
       style={s.root.style}
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString("default", { month: "short" }),
+          date.toLocaleString('default', { month: 'short' }),
         ...formatters,
       }}
       classNames={{
@@ -54,14 +53,17 @@ function Calendar({
         months: cn(defaultClassNames.months),
         month: cn(defaultClassNames.month),
         nav: cn(defaultClassNames.nav),
-        button_previous: cn(btnS.root.className, defaultClassNames.button_previous),
+        button_previous: cn(
+          btnS.root.className,
+          defaultClassNames.button_previous,
+        ),
         button_next: cn(btnS.root.className, defaultClassNames.button_next),
         month_caption: cn(defaultClassNames.month_caption),
         dropdowns: cn(defaultClassNames.dropdowns),
         dropdown_root: cn(defaultClassNames.dropdown_root),
         dropdown: cn(defaultClassNames.dropdown),
         caption_label: cn(defaultClassNames.caption_label),
-        table: "w-full",
+        table: 'w-full',
         weekdays: cn(defaultClassNames.weekdays),
         weekday: cn(defaultClassNames.weekday),
         week: cn(defaultClassNames.week),
@@ -91,34 +93,48 @@ function Calendar({
         },
         Chevron: ({ className, orientation, ...props }) => {
           const iconStyle = { width: '1rem', height: '1rem' }
-          if (orientation === "left") {
+          if (orientation === 'left') {
             return (
-              <ChevronLeftIcon className={cn(className)} style={iconStyle} {...props} />
+              <ChevronLeftIcon
+                className={cn(className)}
+                style={iconStyle}
+                {...props}
+              />
             )
           }
 
-          if (orientation === "right") {
+          if (orientation === 'right') {
             return (
-              <ChevronRightIcon className={cn(className)} style={iconStyle} {...props} />
+              <ChevronRightIcon
+                className={cn(className)}
+                style={iconStyle}
+                {...props}
+              />
             )
           }
 
           return (
-            <ChevronDownIcon className={cn(className)} style={iconStyle} {...props} />
+            <ChevronDownIcon
+              className={cn(className)}
+              style={iconStyle}
+              {...props}
+            />
           )
         },
         DayButton: CalendarDayButton,
         WeekNumber: ({ children, ...props }) => {
           return (
             <td {...props}>
-              <div style={{
-                display: 'flex',
-                width: 'var(--cell-size, 2rem)',
-                height: 'var(--cell-size, 2rem)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  width: 'var(--cell-size, 2rem)',
+                  height: 'var(--cell-size, 2rem)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                }}
+              >
                 {children}
               </div>
             </td>

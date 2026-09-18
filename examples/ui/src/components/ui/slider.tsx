@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Slider as SliderPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slider as SliderPrimitive } from 'radix-ui'
+import * as React from 'react'
 
 const sliderStyles = stylesheet({
   root: {
@@ -68,7 +68,7 @@ function Slider({
         : Array.isArray(defaultValue)
           ? defaultValue
           : [min, max],
-    [value, defaultValue, min, max]
+    [value, defaultValue, min, max],
   )
 
   return (
@@ -82,14 +82,8 @@ function Slider({
       {...s.root.with({ className })}
       {...props}
     >
-      <SliderPrimitive.Track
-        data-slot="slider-track"
-        {...s.track}
-      >
-        <SliderPrimitive.Range
-          data-slot="slider-range"
-          {...s.range}
-        />
+      <SliderPrimitive.Track data-slot="slider-track" {...s.track}>
+        <SliderPrimitive.Range data-slot="slider-range" {...s.range} />
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb

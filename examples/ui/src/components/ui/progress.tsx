@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { Progress as ProgressPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Progress as ProgressPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const progressStyles = stylesheet({
   root: {
@@ -42,7 +42,9 @@ function Progress({
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        {...s.indicator.with({ style: { transform: `translateX(-${100 - (value || 0)}%)` } })}
+        {...s.indicator.with({
+          style: { transform: `translateX(-${100 - (value || 0)}%)` },
+        })}
       />
     </ProgressPrimitive.Root>
   )

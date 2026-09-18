@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Avatar as AvatarPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Avatar as AvatarPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const avatarStyles = stylesheet({
   root: {
@@ -70,10 +70,10 @@ const avatarStyles = stylesheet({
 
 function Avatar({
   className,
-  size = "default",
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Root> & {
-  size?: "default" | "sm" | "lg"
+  size?: 'default' | 'sm' | 'lg'
 }) {
   const s = useStyles(avatarStyles)
 
@@ -117,7 +117,7 @@ function AvatarFallback({
   )
 }
 
-function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
+function AvatarBadge({ className, ...props }: React.ComponentProps<'span'>) {
   const s = useStyles(avatarStyles)
 
   return (
@@ -129,22 +129,18 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   )
 }
 
-function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
+function AvatarGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(avatarStyles)
 
   return (
-    <div
-      data-slot="avatar-group"
-      {...s.group.with({ className })}
-      {...props}
-    />
+    <div data-slot="avatar-group" {...s.group.with({ className })} {...props} />
   )
 }
 
 function AvatarGroupCount({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(avatarStyles)
 
   return (

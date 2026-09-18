@@ -1,5 +1,9 @@
-import { doc, c } from '@/lib/doc'
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './resizable'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from './resizable.tsx'
 
 export default doc({
   components: [
@@ -11,13 +15,29 @@ export default doc({
     <div style={{ width: '400px' }}>
       <C.ResizablePanelGroup>
         <C.ResizablePanel defaultSize={50}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', padding: '24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100px',
+              padding: '24px',
+            }}
+          >
             Panel 1
           </div>
         </C.ResizablePanel>
         <C.ResizableHandle withHandle />
         <C.ResizablePanel defaultSize={50}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100px', padding: '24px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100px',
+              padding: '24px',
+            }}
+          >
             Panel 2
           </div>
         </C.ResizablePanel>

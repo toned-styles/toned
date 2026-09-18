@@ -1,10 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { XIcon } from "lucide-react"
-import { Dialog as SheetPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { XIcon } from 'lucide-react'
+import { Dialog as SheetPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const sheetStyles = stylesheet({
   overlay: {
@@ -102,19 +102,39 @@ function SheetOverlay({
 function SheetContent({
   className,
   children,
-  side = "right",
+  side = 'right',
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
-  side?: "top" | "right" | "bottom" | "left"
+  side?: 'top' | 'right' | 'bottom' | 'left'
   showCloseButton?: boolean
 }) {
   const s = useStyles(sheetStyles)
   const sideStyles: React.CSSProperties = {
-    right: { inset: '0 0 0 auto', height: '100%', width: '75%', maxWidth: '24rem', borderLeft: '1px solid var(--border)' },
-    left: { inset: '0 auto 0 0', height: '100%', width: '75%', maxWidth: '24rem', borderRight: '1px solid var(--border)' },
-    top: { inset: '0 0 auto 0', height: 'auto', borderBottom: '1px solid var(--border)' },
-    bottom: { inset: 'auto 0 0 0', height: 'auto', borderTop: '1px solid var(--border)' },
+    right: {
+      inset: '0 0 0 auto',
+      height: '100%',
+      width: '75%',
+      maxWidth: '24rem',
+      borderLeft: '1px solid var(--border)',
+    },
+    left: {
+      inset: '0 auto 0 0',
+      height: '100%',
+      width: '75%',
+      maxWidth: '24rem',
+      borderRight: '1px solid var(--border)',
+    },
+    top: {
+      inset: '0 0 auto 0',
+      height: 'auto',
+      borderBottom: '1px solid var(--border)',
+    },
+    bottom: {
+      inset: 'auto 0 0 0',
+      height: 'auto',
+      borderTop: '1px solid var(--border)',
+    },
   }[side]
 
   return (
@@ -128,9 +148,7 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close
-            {...s.close}
-          >
+          <SheetPrimitive.Close {...s.close}>
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
@@ -140,7 +158,7 @@ function SheetContent({
   )
 }
 
-function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
+function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(sheetStyles)
 
   return (
@@ -152,7 +170,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
+function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(sheetStyles)
 
   return (

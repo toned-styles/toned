@@ -2,15 +2,15 @@ import '../toned.config.ts'
 import '../../ui/src/styles.css'
 import './docs-theme.css'
 
+import { PassThrough } from 'node:stream'
 import {
-  RouterProvider,
   createMemoryHistory,
   createRouter,
+  RouterProvider,
 } from '@tanstack/react-router'
-import { PassThrough } from 'node:stream'
 import { StrictMode } from 'react'
 import { renderToPipeableStream } from 'react-dom/server'
-import { routeTree } from './routeTree.gen'
+import { routeTree } from './routeTree.gen.ts'
 
 export async function render(url: string) {
   const memoryHistory = createMemoryHistory({ initialEntries: [url] })

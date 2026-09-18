@@ -1,5 +1,5 @@
-import { doc, c } from '@/lib/doc'
-import { ToggleGroup, ToggleGroupItem } from './toggle-group'
+import { c, doc } from '@/lib/doc.tsx'
+import { ToggleGroup, ToggleGroupItem } from './toggle-group.tsx'
 
 export default doc({
   components: [

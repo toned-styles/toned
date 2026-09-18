@@ -1,6 +1,6 @@
 import { useStyles } from '@toned/react'
-import { useEffect, useState } from 'react'
-import { type BundledLanguage, codeToHtml } from 'shiki'
+import { Fragment, useEffect, useState } from 'react'
+import { type BundledLanguage, codeToTokens } from 'shiki'
 import { proseStyles } from '../styles/prose.ts'
 
 function detectLanguage(code: string): BundledLanguage {
@@ -13,28 +13,74 @@ function detectLanguage(code: string): BundledLanguage {
 
 export function CodeBlock({ children }: { children: string }) {
   const s = useStyles(proseStyles)
-  const [html, setHtml] = useState<string | null>(null)
+  const [highlighted, setHighlighted] = useState<{
+    source: string
+    result: Awaited<ReturnType<typeof codeToTokens>>
+  } | null>(null)
 
   useEffect(() => {
-    codeToHtml(children.trim(), {
+    let active = true
+    codeToTokens(children.trim(), {
       lang: detectLanguage(children),
       theme: 'github-light',
-    }).then(setHtml)
+    }).then(
+      (result) => {
+        if (active) setHighlighted({ source: children, result })
+      },
+      () => {
+        // Plain code stays readable if a highlighter language cannot load.
+        if (active) setHighlighted(null)
+      },
+    )
+    return () => {
+      active = false
+    }
   }, [children])
 
-  if (html) {
-    return (
-      <div
-        {...s.codeBlock}
-        // biome-ignore lint/security/noDangerouslySetInnerHTML: shiki generates safe HTML
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-    )
-  }
+  const result = highlighted?.source === children ? highlighted.result : null
+  let offset = 0
+  const lines = result?.tokens.map((tokens) => {
+    const key = offset
+    const spans = tokens.map((token) => {
+      const key = offset
+      offset += token.content.length
+      return { key, token }
+    })
+    offset++ // Account for the newline between tokenized source lines.
+    return { key, spans }
+  })
 
   return (
-    <pre {...s.codeBlock}>
-      <code>{children}</code>
+    <pre
+      {...s.codeBlock.with({
+        style: { color: result?.fg, backgroundColor: result?.bg },
+      })}
+    >
+      <code>
+        {lines
+          ? lines.map(({ key, spans }) => (
+              <Fragment key={key}>
+                {key > 0 ? '\n' : null}
+                {spans.map(({ key, token }) => (
+                  <span
+                    key={key}
+                    style={{
+                      color: token.color,
+                      fontStyle:
+                        (token.fontStyle ?? 0) & 1 ? 'italic' : undefined,
+                      fontWeight:
+                        (token.fontStyle ?? 0) & 2 ? 'bold' : undefined,
+                      textDecoration:
+                        (token.fontStyle ?? 0) & 4 ? 'underline' : undefined,
+                    }}
+                  >
+                    {token.content}
+                  </span>
+                ))}
+              </Fragment>
+            ))
+          : children}
+      </code>
     </pre>
   )
 }

@@ -11,7 +11,10 @@ async function ssrHandler(req, res) {
   const url = req.originalUrl ?? req.url
 
   try {
-    let template = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf-8')
+    let template = fs.readFileSync(
+      new URL('./index.html', import.meta.url),
+      'utf-8',
+    )
     template = await vite.transformIndexHtml(url, template)
 
     const { render } = await vite.ssrLoadModule('/src/entry-server.tsx')

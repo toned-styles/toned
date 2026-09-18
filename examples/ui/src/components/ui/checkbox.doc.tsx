@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Checkbox } from './checkbox'
+import { c, doc } from '@/lib/doc.tsx'
+import { Checkbox } from './checkbox.tsx'
 
 export default doc({
-  components: [
-    c({ Checkbox }, {}),
-  ],
+  components: [c({ Checkbox }, {})],
 })

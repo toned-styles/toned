@@ -1,5 +1,10 @@
-import { doc, c } from '@/lib/doc'
-import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from './context-menu'
+import { c, doc } from '@/lib/doc.tsx'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from './context-menu.tsx'
 
 export default doc({
   components: [
@@ -11,7 +16,16 @@ export default doc({
   preview: (C) => (
     <C.ContextMenu>
       <C.ContextMenuTrigger>
-        <div style={{ border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '32px', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '14px' }}>
+        <div
+          style={{
+            border: '1px dashed var(--border)',
+            borderRadius: 'var(--radius)',
+            padding: '32px',
+            textAlign: 'center',
+            color: 'var(--muted-foreground)',
+            fontSize: '14px',
+          }}
+        >
           Right click here
         </div>
       </C.ContextMenuTrigger>

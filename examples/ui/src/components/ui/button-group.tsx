@@ -1,9 +1,8 @@
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slot } from 'radix-ui'
+import { Separator } from '@/components/ui/separator.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const buttonGroupStyles = stylesheet({
   root: {
@@ -30,10 +29,10 @@ const buttonGroupStyles = stylesheet({
 
 function ButtonGroup({
   className,
-  orientation = "horizontal",
+  orientation = 'horizontal',
   ...props
-}: React.ComponentProps<"div"> & {
-  orientation?: "horizontal" | "vertical"
+}: React.ComponentProps<'div'> & {
+  orientation?: 'horizontal' | 'vertical'
 }) {
   const s = useStyles(buttonGroupStyles)
 
@@ -44,7 +43,8 @@ function ButtonGroup({
       data-orientation={orientation}
       {...s.root.with({
         className,
-        style: orientation === 'vertical' ? { flexDirection: 'column' } : undefined,
+        style:
+          orientation === 'vertical' ? { flexDirection: 'column' } : undefined,
       })}
       {...props}
     />
@@ -55,23 +55,18 @@ function ButtonGroupText({
   className,
   asChild = false,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "div"
+  const Comp = asChild ? Slot.Root : 'div'
   const s = useStyles(buttonGroupStyles)
 
-  return (
-    <Comp
-      {...s.text.with({ className })}
-      {...props}
-    />
-  )
+  return <Comp {...s.text.with({ className })} {...props} />
 }
 
 function ButtonGroupSeparator({
   className,
-  orientation = "vertical",
+  orientation = 'vertical',
   ...props
 }: React.ComponentProps<typeof Separator>) {
   return (
@@ -79,14 +74,14 @@ function ButtonGroupSeparator({
       data-slot="button-group-separator"
       orientation={orientation}
       className={cn(className)}
-      style={{ margin: 0, alignSelf: 'stretch', ...(orientation === 'vertical' ? { height: 'auto' } : undefined) }}
+      style={{
+        margin: 0,
+        alignSelf: 'stretch',
+        ...(orientation === 'vertical' ? { height: 'auto' } : undefined),
+      }}
       {...props}
     />
   )
 }
 
-export {
-  ButtonGroup,
-  ButtonGroupSeparator,
-  ButtonGroupText,
-}
+export { ButtonGroup, ButtonGroupSeparator, ButtonGroupText }

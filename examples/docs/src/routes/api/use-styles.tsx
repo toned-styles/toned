@@ -27,7 +27,7 @@ function ApiUseStyles() {
 const s = useStyles(stylesheet)
 
 // With variants
-const s = useStyles(stylesheet, { variant: 'accent', size: 'm' })`}</CodeBlock>
+const s = useStyles(stylesheet, { variants: { variant: 'accent', size: 'm' } })`}</CodeBlock>
 
       <h3 {...s.h3}>Parameters</h3>
       <p>
@@ -60,13 +60,29 @@ return (
 
       <h2 {...s.h2}>How It Works</h2>
       <p>
-        Under the hood, <code {...s.code}>useStyles</code> reads the active
-        config (set by <code {...s.code}>setConfig</code> in your config file)
-        and calls the stylesheet's initialisation function. It caches the result
-        in a ref and only re-initialises when the stylesheet reference changes.
-        When the state object changes, it calls an internal{' '}
-        <code {...s.code}>applyState</code> method to update variant matching
-        without re-creating the full style map.
+        Each render creates a private candidate using the current configuration,
+        tokens, overrides and variants. The candidate becomes committed in a
+        layout effect after host mutations. Suspended renders cannot publish
+        pending inputs. Committed interaction and measurement updates can patch
+        hosts directly without rendering React; immutable matching plans are
+        reused.
+      </p>
+
+      <h2 {...s.h2}>Stable element families</h2>
+      <CodeBlock>{`import { createElements } from '@toned/react'
+const S = createElements(buttonStyles)
+
+function Button() {
+  return <S size="m" variant="accent">
+    <S.container as="button"><S.label as="span">Save</S.label></S.container>
+  </S>
+}`}</CodeBlock>
+      <p>
+        The provider is hostless and carries the current render snapshot to its
+        parts. Independent standalone parts use base/default styles;
+        relationships and grid parts require shared scope. Existing
+        useBind/$scope APIs remain compatible. Use prop bags when spreading onto
+        a host is the better fit.
       </p>
 
       <h2 {...s.h2}>Usage Patterns</h2>
@@ -92,7 +108,7 @@ function Card({ children }) {
       </p>
       <CodeBlock>{`function NavLink({ href, label, isActive }) {
   const s = useStyles(navStyles, {
-    active: isActive ? 'true' : undefined,
+    active: isActive,
   })
   return <a href={href} {...s.link}>{label}</a>
 }`}</CodeBlock>
@@ -103,8 +119,8 @@ function Card({ children }) {
         you can combine them with additional props:
       </p>
       <CodeBlock>{`function Input({ error, ...rest }) {
-  const s = useStyles(inputStyles, { error: error ? 'true' : undefined })
-  return <input {...s.input} {...rest} />
+  const s = useStyles(inputStyles, { error })
+  return <input {...s.input.withProps<'input'>(rest)} />
 }`}</CodeBlock>
     </article>
   )

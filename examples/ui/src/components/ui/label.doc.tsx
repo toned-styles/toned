@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Label } from './label'
+import { c, doc } from '@/lib/doc.tsx'
+import { Label } from './label.tsx'
 
 export default doc({
-  components: [
-    c({ Label }, { children: 'Email address' }),
-  ],
+  components: [c({ Label }, { children: 'Email address' })],
 })

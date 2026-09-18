@@ -1,6 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Label } from './label'
-import { RadioGroup, RadioGroupItem } from './radio-group'
+import { c, doc } from '@/lib/doc.tsx'
+import { Label } from './label.tsx'
+import { RadioGroup, RadioGroupItem } from './radio-group.tsx'
 
 export default doc({
   components: [

@@ -1,8 +1,11 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
 
 export default doc({
   components: [
-    c({ Button }, { children: 'Click me', variant: 'default', size: 'default' }),
+    c(
+      { Button },
+      { children: 'Click me', variant: 'default', size: 'default' },
+    ),
   ],
 })

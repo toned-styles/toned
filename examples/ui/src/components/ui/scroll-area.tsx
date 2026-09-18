@@ -1,7 +1,7 @@
-import * as React from "react"
-import { ScrollArea as ScrollAreaPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ScrollArea as ScrollAreaPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const scrollAreaStyles = stylesheet({
   root: {
@@ -68,7 +68,7 @@ function ScrollArea({
 
 function ScrollBar({
   className,
-  orientation = "vertical",
+  orientation = 'vertical',
   ...props
 }: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
   const s = useStyles(scrollAreaStyles)
@@ -79,9 +79,18 @@ function ScrollBar({
       orientation={orientation}
       {...s.scrollbar.with({
         className,
-        style: orientation === "vertical"
-          ? { height: '100%', width: '10px', borderLeft: '1px solid transparent' }
-          : { height: '10px', flexDirection: 'column' as const, borderTop: '1px solid transparent' },
+        style:
+          orientation === 'vertical'
+            ? {
+                height: '100%',
+                width: '10px',
+                borderLeft: '1px solid transparent',
+              }
+            : {
+                height: '10px',
+                flexDirection: 'column' as const,
+                borderTop: '1px solid transparent',
+              },
       })}
       {...props}
     >

@@ -1,10 +1,8 @@
-import { doc, c } from '@/lib/doc'
-import { NativeSelect } from './native-select'
+import { c, doc } from '@/lib/doc.tsx'
+import { NativeSelect } from './native-select.tsx'
 
 export default doc({
-  components: [
-    c({ NativeSelect }, {}),
-  ],
+  components: [c({ NativeSelect }, {})],
   preview: (C) => (
     <C.NativeSelect style={{ width: '200px' }}>
       <option value="">Select an option</option>

@@ -158,9 +158,9 @@ function ApiVariants() {
   },
 }))`}</CodeBlock>
       <p>
-        Both <code {...s.code}>accent</code> and{' '}
-        <code {...s.code}>danger</code> inherit the hover shadow from{' '}
-        <code {...s.code}>interactive</code>, without repeating it.
+        Both <code {...s.code}>accent</code> and <code {...s.code}>danger</code>{' '}
+        inherit the hover shadow from <code {...s.code}>interactive</code>,
+        without repeating it.
       </p>
 
       <h3 {...s.h3}>Element-Level $compose</h3>

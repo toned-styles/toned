@@ -10,9 +10,21 @@
   --ring: oklch(0.585 0.233 264);
 
   /* Gradient custom properties */
-  --gradient-brand: linear-gradient(135deg, oklch(0.55 0.25 264) 0%, oklch(0.55 0.25 300) 100%);
-  --gradient-brand-text: linear-gradient(135deg, oklch(0.488 0.243 264) 0%, oklch(0.53 0.27 300) 100%);
-  --gradient-brand-subtle: linear-gradient(135deg, oklch(0.943 0.05 264) 0%, oklch(0.943 0.05 300) 100%);
+  --gradient-brand: linear-gradient(
+    135deg,
+    oklch(0.55 0.25 264) 0%,
+    oklch(0.55 0.25 300) 100%
+  );
+  --gradient-brand-text: linear-gradient(
+    135deg,
+    oklch(0.488 0.243 264) 0%,
+    oklch(0.53 0.27 300) 100%
+  );
+  --gradient-brand-subtle: linear-gradient(
+    135deg,
+    oklch(0.943 0.05 264) 0%,
+    oklch(0.943 0.05 300) 100%
+  );
 }
 
 /* Let UI playground use full width — !important needed to override
@@ -26,7 +38,19 @@ main:has([data-ui-playground]) {
   --primary-foreground: oklch(0.145 0 0);
   --ring: oklch(0.585 0.233 264);
 
-  --gradient-brand: linear-gradient(135deg, oklch(0.65 0.25 264) 0%, oklch(0.65 0.25 300) 100%);
-  --gradient-brand-text: linear-gradient(135deg, oklch(0.7 0.2 264) 0%, oklch(0.7 0.22 300) 100%);
-  --gradient-brand-subtle: linear-gradient(135deg, oklch(0.3 0.06 264) 0%, oklch(0.3 0.06 300) 100%);
+  --gradient-brand: linear-gradient(
+    135deg,
+    oklch(0.65 0.25 264) 0%,
+    oklch(0.65 0.25 300) 100%
+  );
+  --gradient-brand-text: linear-gradient(
+    135deg,
+    oklch(0.7 0.2 264) 0%,
+    oklch(0.7 0.22 300) 100%
+  );
+  --gradient-brand-subtle: linear-gradient(
+    135deg,
+    oklch(0.3 0.06 264) 0%,
+    oklch(0.3 0.06 300) 100%
+  );
 }

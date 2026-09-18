@@ -27,8 +27,8 @@ const styles = stylesheet({
     // token properties
     bgColor: 'action',
     borderRadius: 'medium',
-    // raw CSS escape hatch
-    style: { cursor: 'pointer' },
+    $kind: 'pressable',
+    '@platform web': { $style: { cursor: 'pointer' } },
   },
 })`}</CodeBlock>
 
@@ -44,13 +44,14 @@ const styles = stylesheet({
         , etc.). Values are type-checked against the token's allowed values.
       </p>
       <p>
-        <strong>style</strong> -- An optional escape hatch for raw CSS
-        properties not covered by tokens.
+        <strong>$style</strong> -- Portable raw fields not covered by tokens. An
+        explicit platform block widens the allowed fields for that platform.
       </p>
       <p>
-        <strong>$$type</strong> -- An optional hint (
+        <strong>$kind</strong> -- Static semantic part metadata (
         <code {...s.code}>'view'</code> or <code {...s.code}>'text'</code>) that
-        can influence how tokens are resolved on different platforms.
+        selects the configured primitive and validates the fields appropriate to
+        that kind. Legacy style and $$type spellings remain supported.
       </p>
 
       <h2 {...s.h2}>Multiple Elements</h2>
@@ -91,7 +92,7 @@ const styles = stylesheet({
       </p>
       <CodeBlock>{`const styles = stylesheet({
   container: { bgColor: 'action' },
-}).variants<{ size: 'm' | 's' }>(($) => ({
+}).variants<{ size: 'm' | 's' }>()(($) => ({
   [$.size('m')]: { container: { paddingX: 3 } },
   [$.size('s')]: { container: { paddingX: 2 } },
 }))`}</CodeBlock>

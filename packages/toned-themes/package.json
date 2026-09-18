@@ -25,6 +25,7 @@
     "rollup-plugin-copy": "^3.5.0"
   },
   "exports": {
-    "./shadcn": "./shadcn/config.ts"
+    "./shadcn": "./shadcn/config.ts",
+    "./shadcn/config.css": "./shadcn/config.css"
   }
 }

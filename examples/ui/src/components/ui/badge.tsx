@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slot } from 'radix-ui'
+import type * as React from 'react'
 
 const badgeStyles = stylesheet({
   root: {
@@ -26,7 +26,13 @@ const badgeStyles = stylesheet({
     },
   },
 }).variants<{
-  variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'
+  variant:
+    | 'default'
+    | 'secondary'
+    | 'destructive'
+    | 'outline'
+    | 'ghost'
+    | 'link'
 }>(($) => ({
   [$.variant('default')]: {
     root: { bgColor: 'action', textColor: 'on_action' },
@@ -54,18 +60,24 @@ const badgeStyles = stylesheet({
   },
 }))
 
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link'
+type BadgeVariant =
+  | 'default'
+  | 'secondary'
+  | 'destructive'
+  | 'outline'
+  | 'ghost'
+  | 'link'
 
 function Badge({
   className,
-  variant = "default",
+  variant = 'default',
   asChild = false,
   ...props
-}: React.ComponentProps<"span"> & {
+}: React.ComponentProps<'span'> & {
   variant?: BadgeVariant
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "span"
+  const Comp = asChild ? Slot.Root : 'span'
   const s = useStyles(badgeStyles, { variant })
 
   return (

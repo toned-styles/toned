@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Separator } from './separator'
+import { c, doc } from '@/lib/doc.tsx'
+import { Separator } from './separator.tsx'
 
 export default doc({
-  components: [
-    c({ Separator }, {}),
-  ],
+  components: [c({ Separator }, {})],
 })

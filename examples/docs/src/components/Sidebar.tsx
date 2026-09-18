@@ -51,7 +51,9 @@ function NavLink({
 
 export function Sidebar() {
   const s = useStyles(navStyles, {})
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   return (
     <div>
       <div {...s.logo}>toned-styles</div>

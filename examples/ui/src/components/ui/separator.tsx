@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Separator as SeparatorPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Separator as SeparatorPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const separatorStyles = stylesheet({
   root: {
@@ -12,7 +12,7 @@ const separatorStyles = stylesheet({
 
 function Separator({
   className,
-  orientation = "horizontal",
+  orientation = 'horizontal',
   decorative = true,
   ...props
 }: React.ComponentProps<typeof SeparatorPrimitive.Root>) {

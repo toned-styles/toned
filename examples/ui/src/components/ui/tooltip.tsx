@@ -1,7 +1,7 @@
-import * as React from "react"
-import { Tooltip as TooltipPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Tooltip as TooltipPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
 const tooltipStyles = stylesheet({
   content: {
@@ -74,9 +74,7 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow
-          {...s.arrow}
-        />
+        <TooltipPrimitive.Arrow {...s.arrow} />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )

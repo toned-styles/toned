@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Spinner } from './spinner'
+import { c, doc } from '@/lib/doc.tsx'
+import { Spinner } from './spinner.tsx'
 
 export default doc({
-  components: [
-    c({ Spinner }, {}),
-  ],
+  components: [c({ Spinner }, {})],
 })

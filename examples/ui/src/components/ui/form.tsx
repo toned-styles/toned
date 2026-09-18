@@ -1,20 +1,19 @@
-import * as React from "react"
-import type { Label as LabelPrimitive } from "radix-ui"
-import { Slot } from "radix-ui"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type { Label as LabelPrimitive } from 'radix-ui'
+import { Slot } from 'radix-ui'
+import * as React from 'react'
 import {
   Controller,
-  FormProvider,
-  useFormContext,
-  useFormState,
   type ControllerProps,
   type FieldPath,
   type FieldValues,
-} from "react-hook-form"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Label } from "@/components/ui/label"
+  FormProvider,
+  useFormContext,
+  useFormState,
+} from 'react-hook-form'
+import { Label } from '@/components/ui/label.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const formStyles = stylesheet({
   item: {
@@ -44,7 +43,7 @@ type FormFieldContextValue<
 }
 
 const FormFieldContext = React.createContext<FormFieldContextValue>(
-  {} as FormFieldContextValue
+  {} as FormFieldContextValue,
 )
 
 const FormField = <
@@ -68,7 +67,7 @@ const useFormField = () => {
   const fieldState = getFieldState(fieldContext.name, formState)
 
   if (!fieldContext) {
-    throw new Error("useFormField should be used within <FormField>")
+    throw new Error('useFormField should be used within <FormField>')
   }
 
   const { id } = itemContext
@@ -88,20 +87,16 @@ type FormItemContextValue = {
 }
 
 const FormItemContext = React.createContext<FormItemContextValue>(
-  {} as FormItemContextValue
+  {} as FormItemContextValue,
 )
 
-function FormItem({ className, ...props }: React.ComponentProps<"div">) {
+function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
   const id = React.useId()
   const s = useStyles(formStyles)
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div
-        data-slot="form-item"
-        {...s.item.with({ className })}
-        {...props}
-      />
+      <div data-slot="form-item" {...s.item.with({ className })} {...props} />
     </FormItemContext.Provider>
   )
 }
@@ -143,7 +138,7 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
   )
 }
 
-function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
+function FormDescription({ className, ...props }: React.ComponentProps<'p'>) {
   const { formDescriptionId } = useFormField()
   const s = useStyles(formStyles)
 
@@ -157,10 +152,10 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
   )
 }
 
-function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
+function FormMessage({ className, ...props }: React.ComponentProps<'p'>) {
   const { error, formMessageId } = useFormField()
   const s = useStyles(formStyles)
-  const body = error ? String(error?.message ?? "") : props.children
+  const body = error ? String(error?.message ?? '') : props.children
 
   if (!body) {
     return null

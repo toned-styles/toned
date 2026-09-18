@@ -1,6 +1,13 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from './drawer'
+import { c, doc } from '@/lib/doc.tsx'
+import { Button } from './button.tsx'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from './drawer.tsx'
 
 export default doc({
   components: [

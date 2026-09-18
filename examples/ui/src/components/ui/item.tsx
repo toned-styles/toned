@@ -1,10 +1,9 @@
-import * as React from "react"
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
-
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slot } from 'radix-ui'
+import type * as React from 'react'
+import { Separator } from '@/components/ui/separator.tsx'
+import { cn } from '@/lib/utils.ts'
 
 const itemStyles = stylesheet({
   group: {
@@ -123,14 +122,14 @@ const itemStyles = stylesheet({
   },
 })
 
-function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
+function ItemGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
 
   return (
     <div
       role="list"
       data-slot="item-group"
-      {...s.group.with({ className: cn("group/item-group", className) })}
+      {...s.group.with({ className: cn('group/item-group', className) })}
       {...props}
     />
   )
@@ -153,21 +152,24 @@ function ItemSeparator({
 
 function Item({
   className,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   asChild = false,
   ...props
-}: React.ComponentProps<"div"> & {
-  variant?: "default" | "outline" | "muted"
-  size?: "default" | "sm"
+}: React.ComponentProps<'div'> & {
+  variant?: 'default' | 'outline' | 'muted'
+  size?: 'default' | 'sm'
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "div"
+  const Comp = asChild ? Slot.Root : 'div'
   const s = useStyles(itemStyles)
 
-  const variantStyles = variant === 'outline' ? s.rootOutline
-    : variant === 'muted' ? s.rootMuted
-    : s.rootDefault
+  const variantStyles =
+    variant === 'outline'
+      ? s.rootOutline
+      : variant === 'muted'
+        ? s.rootMuted
+        : s.rootDefault
 
   const sizeStyles = size === 'sm' ? s.sizeSm : s.sizeDefault
 
@@ -176,7 +178,13 @@ function Item({
       data-slot="item"
       data-variant={variant}
       data-size={size}
-      className={cn("group/item", s.root.className, variantStyles.className, sizeStyles.className, className)}
+      className={cn(
+        'group/item',
+        s.root.className,
+        variantStyles.className,
+        sizeStyles.className,
+        className,
+      )}
       style={{ ...s.root.style, ...variantStyles.style, ...sizeStyles.style }}
       {...props}
     />
@@ -185,16 +193,19 @@ function Item({
 
 function ItemMedia({
   className,
-  variant = "default",
+  variant = 'default',
   ...props
-}: React.ComponentProps<"div"> & {
-  variant?: "default" | "icon" | "image"
+}: React.ComponentProps<'div'> & {
+  variant?: 'default' | 'icon' | 'image'
 }) {
   const s = useStyles(itemStyles)
 
-  const variantStyle = variant === 'icon' ? s.mediaIcon
-    : variant === 'image' ? s.mediaImage
-    : s.media
+  const variantStyle =
+    variant === 'icon'
+      ? s.mediaIcon
+      : variant === 'image'
+        ? s.mediaImage
+        : s.media
 
   return (
     <div
@@ -207,7 +218,7 @@ function ItemMedia({
   )
 }
 
-function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
+function ItemContent({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
 
   return (
@@ -219,19 +230,15 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
+function ItemTitle({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
 
   return (
-    <div
-      data-slot="item-title"
-      {...s.title.with({ className })}
-      {...props}
-    />
+    <div data-slot="item-title" {...s.title.with({ className })} {...props} />
   )
 }
 
-function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
+function ItemDescription({ className, ...props }: React.ComponentProps<'p'>) {
   const s = useStyles(itemStyles)
 
   return (
@@ -243,7 +250,7 @@ function ItemDescription({ className, ...props }: React.ComponentProps<"p">) {
   )
 }
 
-function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
+function ItemActions({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
 
   return (
@@ -255,7 +262,7 @@ function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
+function ItemHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
 
   return (
@@ -267,7 +274,7 @@ function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function ItemFooter({ className, ...props }: React.ComponentProps<"div">) {
+function ItemFooter({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
 
   return (

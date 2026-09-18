@@ -1,8 +1,6 @@
-import { doc, c } from '@/lib/doc'
-import { Toggle } from './toggle'
+import { c, doc } from '@/lib/doc.tsx'
+import { Toggle } from './toggle.tsx'
 
 export default doc({
-  components: [
-    c({ Toggle }, { children: 'Bold', variant: 'outline' }),
-  ],
+  components: [c({ Toggle }, { children: 'Bold', variant: 'outline' })],
 })

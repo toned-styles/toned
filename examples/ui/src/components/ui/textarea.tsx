@@ -1,6 +1,6 @@
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
 const textareaStyles = stylesheet({
   root: {
@@ -30,17 +30,27 @@ const textareaStyles = stylesheet({
   },
   invalid: {
     borderColor: 'destructive',
-    style: { boxShadow: '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)' },
+    style: {
+      boxShadow:
+        '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)',
+    },
   },
 })
 
-function Textarea({ className, disabled, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({
+  className,
+  disabled,
+  ...props
+}: React.ComponentProps<'textarea'>) {
   const s = useStyles(textareaStyles)
 
   return (
     <textarea
       data-slot="textarea"
-      {...s.root.with(disabled && s.disabled).with(props['aria-invalid'] === 'true' && s.invalid).with({ className })}
+      {...s.root
+        .with(disabled && s.disabled)
+        .with(props['aria-invalid'] === 'true' && s.invalid)
+        .with({ className })}
       disabled={disabled}
       {...props}
     />
