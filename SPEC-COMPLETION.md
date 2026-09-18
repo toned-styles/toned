@@ -114,16 +114,17 @@ or blanket rule suppressions hide that distinction. The optional docs applicatio
 React Doctor check passes, but its production build is not part of HQ's installed
 workspace and is not claimed as validated.
 
-React Doctor reports no errors. Four existing warnings remain, plus one
-React-18 cleanup warning in the new binding conformance fixture. The `useBind` memo intentionally
-seeds a stable component family once per stylesheet/config; later candidates
-publish in a layout effect. Adding the candidate to that memo's dependencies
-would recreate component types on every render and violate the identity contract.
-The other three warnings concern exporting library helpers beside the override
-provider, which limits Fast Refresh granularity for library development. The new fixture passes a cleanup-returning ref to a Toned part, whose composed
-ref implements cleanup on React 18 and 19; it is not passed straight to a
-React-18 host. Both actual-version matrix legs verify balanced cleanup. No
-warning is suppressed by a new configuration change.
+The expanded React Doctor scan (library plus changed examples) reports zero
+errors and six warnings, scoring 70/100. The example carousel now releases both
+of its subscriptions. Remaining warnings concern the intentional stable `useBind`
+family memo, the React-18-compatible ref cleanup fixture, and four gallery concerns:
+constructed carousel context values, eagerly imported chart code, a chart memo
+before an early return, and error-list index keys. The docs application alone
+scores 100/100. These results are distinct from the earlier library-only scan.
+Adding a render candidate to `useBind`'s memo dependencies would recreate component
+types and violate its identity contract. The cleanup fixture goes through Toned's
+ref composer, and both actual React versions verify balanced cleanup. No new
+configuration suppression conceals these diagnostics.
 
 
 ### Follow-up consolidation and external styles
