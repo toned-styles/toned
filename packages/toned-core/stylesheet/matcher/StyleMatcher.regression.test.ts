@@ -507,3 +507,26 @@ describe('indexed candidate precedence', () => {
     )
   })
 })
+
+test('many compound rules retain source precedence with a numeric six-fact state', () => {
+  const rules: Record<string, object> = { Root: { selected: 0 } }
+  for (let combination = 1; combination < 64; combination++) {
+    const selector = Array.from({ length: 6 }, (_, bit) => bit)
+      .filter((bit) => combination & (1 << bit))
+      .map((bit) => `[axis${bit}]`)
+      .join('')
+    rules[selector] = { Root: { selected: combination } }
+  }
+  const matcher = new StyleMatcher(rules, { cacheMax: 1 })
+  expect(typeof matcher.getPropsBits({})).toBe('number')
+  for (let combination = 0; combination < 64; combination++) {
+    const state = Object.fromEntries(
+      Array.from({ length: 6 }, (_, bit) => [
+        `axis${bit}`,
+        Boolean(combination & (1 << bit)),
+      ]),
+    )
+    // The most specific matching conjunction is also the final matching rule.
+    expect(matcher.match(state).Root.selected).toBe(combination)
+  }
+})
