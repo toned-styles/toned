@@ -444,3 +444,66 @@ describe('legacy runtime condition precedence', () => {
     }
   }
 })
+
+describe('indexed candidate precedence', () => {
+  const manyRules = Object.fromEntries(
+    Array.from({ length: 65 }, (_, index) => [
+      `[axis${index}]`,
+      { Root: { selected: index } },
+    ]),
+  )
+
+  test('fact lookup order cannot reorder compound, OR, wildcard or override rules', () => {
+    const matcher = new StyleMatcher(
+      {
+        Root: { selected: -1 },
+        ...manyRules,
+        '[axis64][axis0]': { Root: { selected: 'compound' } },
+        '[choice=a][choice=b]': { Root: { selected: 'either' } },
+        '[choice=*]': { Root: { wildcard: true } },
+        [RULE_LAYERS]: [
+          {
+            Root: { final: 'layer' },
+            '[active]': { Root: { final: 'active' } },
+          },
+        ],
+      },
+      { cacheMax: 1 },
+    )
+    const a = matcher.match({ axis0: true, axis31: true, axis64: true })
+    expect(a.Root).toEqual({
+      selected: 'compound',
+      wildcard: true,
+      final: 'layer',
+    })
+    const b = matcher.match({ axis64: true, choice: 'b', active: true })
+    expect(b.Root).toEqual({
+      selected: 'either',
+      wildcard: true,
+      final: 'active',
+    })
+    expect(matcher.match({ axis31: true }).Root.selected).toBe(31)
+    const again = matcher.match({ axis0: true, axis31: true, axis64: true })
+    expect(again).not.toBe(a)
+    expect(matcher.isEqual('Root', a, again)).toBe(true)
+    expect(matcher.isEqual('Root', a, b)).toBe(false)
+  })
+
+  test('negated expressions with no positive requirement still run on an empty state', () => {
+    const matcher = new StyleMatcher({
+      Root: { selected: -1 },
+      ...manyRules,
+      [WHEN_RULES]: [
+        {
+          predicate: { op: 'not', operand: { op: 'atom', key: '[disabled]' } },
+          rules: { Root: { selected: 'enabled' } },
+        },
+      ],
+    })
+    expect(matcher.match({}).Root.selected).toBe('enabled')
+    expect(matcher.match({ axis64: true }).Root.selected).toBe('enabled')
+    expect(matcher.match({ axis64: true, disabled: true }).Root.selected).toBe(
+      64,
+    )
+  })
+})

@@ -1,6 +1,6 @@
 # Matcher benchmark
 
-Run `node benchmarks/compare-matcher.mjs` from the Toned checkout. The runner extracts the reviewed checkpoint into an OS temporary directory, then runs both implementations against identical deterministic fixtures in the same Bun process. Inside HQ it uses the repository test preloads and refuses any recorded network access. No repository checkout is changed.
+Run `node benchmarks/compare-matcher.mjs [checkpoint]` from the Toned checkout. The runner extracts the reviewed checkpoint into an OS temporary directory, then runs both implementations against identical deterministic fixtures in the same Bun process. Inside HQ it uses the repository test preloads and refuses any recorded network or filesystem guard violation. No repository checkout is changed.
 
 This is a microbenchmark, not a performance gate. It measures seven rounds after warmup and reports median/minimum/maximum microseconds per operation. The small fixture has 16 facts and 17 rules; the large fixture has 80 facts and 81 rules. Each implementation is also checked against a plain ordered evaluator for 512 states. Property order is ignored when checking equality.
 
@@ -15,7 +15,51 @@ Measured on macOS arm64 with Bun 1.3.14. Other implementation work was running o
 
 Rule parts and operation arrays are pre-indexed during compilation, and exact result metadata is held in a WeakMap. Updates do not enumerate rule objects or create metadata properties on every result. The current small-plan cache-hit path remains comparable in this run. Construction and uncached matching are slower: ordered operation provenance and exact membership add work that the checkpoint omitted. Keep compilation shared by stylesheet and use the bounded state cache; do not move declaration construction into update paths. The large checkpoint produced the wrong result for every sampled state because its fact bits wrap after 32, so its lower match time is not a valid performance target. The current implementation matched the reference for every state in both fixtures.
 
-Future optimization should preserve the same differential checks and measure normalization, cache misses and host writes separately. Output operations are already pre-indexed; remaining costs include scanning every compiled rule on a cache miss, allocating exact membership vectors for affected parts, and replaying token operations to resolve overlapping CSS fields. Dependency-based rule scans, shared immutable membership data, and compiled token-to-field metadata are candidates to measure. Do not replace exact identity with a folded hash to recover the old timing.
+Large plans now select candidate rules using one necessary positive fact before
+checking the complete predicate. OR-only and negated expressions remain in a
+fallback bucket; original rule order and exact membership are preserved. Small
+plans still scan directly, and fallback-only/dense selections avoid pointless
+sorting. Further optimization must preserve differential checks and measure cold
+compilation, cache misses and host writes separately. Never replace exact identity
+with a folded hash to recover the old timing.
+
+## September 18 follow-up against the previously delivered version
+
+The following run compares `1733fea` with the subsequent controller/index cleanup,
+not with the original checkpoint. Both versions produce correct results in all
+512 matcher states. The runner now extracts the complete historical core package
+and detects its available host/build APIs, so a recent comparison cannot borrow
+current helper modules or accidentally use the original checkpoint's host protocol.
+
+| Measurement | `1733fea` | Follow-up |
+| --- | ---: | ---: |
+| Small matcher compilation, µs | 43.874 | 47.686 |
+| Small uncached match, µs | 0.447 | 0.423 |
+| Large matcher compilation, µs | 221.951 | 230.587 |
+| Large uncached match, µs | 5.022 | 2.319 |
+| Large cache hit, µs | 0.455 | 0.330 |
+| Shared controller construction, µs | 0.618 | 0.406 |
+| Cold 43-part compilation, µs | 276.168 | 295.213 |
+| Warm React mount, ms | 1.848 | 2.004 |
+| Distinct override mount / update, ms | 6.440 / 2.315 | 7.294 / 2.934 |
+
+Candidate indexing approximately halves this large fixture's uncached matching;
+shared construction improves by about a third. Two earlier paired runs also
+showed shared construction improving from 0.637–0.639 to 0.400 µs. These are
+specific gains, not a general performance claim: the final run's cold compilation
+and React timings are slower, and override mounting was slower in each paired
+run. Ordinary mount and override-update timings varied in direction between runs.
+Measurements use a shared development machine, not an isolated benchmark host.
+
+The structural improvement is independently tested: immutable relation/state/
+condition metadata is shared by matcher, and pure render candidates allocate no
+mounted-family maps or listeners. Prepared candidates reuse committed family
+identity without changing its owner. The measured 42/0/42 host writes, 84 resolver
+calls, two changed override derivations, zero interaction renders, unchanged
+SSR/CSS sizes and zero retained disposed-controller samples remain intact.
+Consumer declaration output stays below its 64 KiB budget. Do not interpret
+byte differences between a temporary extracted package and the workspace as an
+API-size reduction: TypeScript's inferred imports depend on that resolution layout.
 
 ## Controller, host, React and typechecking acceptance
 

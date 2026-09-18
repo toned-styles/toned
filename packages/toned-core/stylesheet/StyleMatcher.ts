@@ -10,6 +10,7 @@ import {
   position,
   type WordRequirement,
 } from './matcher/bitset.ts'
+import { CandidateIndex } from './matcher/candidates.ts'
 import {
   applyOperations,
   type Conditions,
@@ -73,6 +74,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous element token values
   readonly cache = new Map<number | string, any>()
   private bitCount = 0
+  private readonly candidates?: CandidateIndex<CompiledRule>
   private readonly baseParts: readonly CompiledPart[]
   private readonly results = new WeakMap<
     object,
@@ -115,6 +117,9 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
     this.baseParts = compileParts(this.list['']?.rule ?? {})
     this.compile(normalized.ordered)
     this.bits = Object.entries(this.propertyBits)
+    // Indexing pays off only for larger plans; keep the small scan allocation-free.
+    if (this.compiledRules.length > 32)
+      this.candidates = new CandidateIndex(this.compiledRules)
   }
 
   private compile(rules: readonly NormalizedRule[]) {
@@ -223,7 +228,8 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
     const membership: Record<string, BitSet> = Object.create(null)
     const predicates: Record<string, string> = Object.create(null)
 
-    for (const rule of this.compiledRules) {
+    for (const rule of this.candidates?.select(propsBits) ??
+      this.compiledRules) {
       if (!matchesBits(propsBits, rule)) continue
       const predicate = rule.expression
         ? evaluatePredicate(rule.expression, propsBits)
