@@ -50,7 +50,8 @@ point-in-time design document and has not been rewritten to match the code.
   capability boundaries. Unit fixtures are not substituted for device results.
 - **Other styling engines:** typed custom primitives and host resolvers are
   available composition boundaries. Opaque foreign styles must travel through
-  separate props and retain their engine's binding lifecycle. Unistyles is explicitly out of scope for this follow-up. Its engine
+  separate props and retain their engine's binding lifecycle. Unistyles is
+  explicitly out of scope for this follow-up. Its engine
   backend and overlapping imperative ownership are not implemented or certified;
   they need explicit compilation, writer and CSS-delivery contracts. See
   [INTEGRATIONS.md](packages/toned-react/INTEGRATIONS.md) for public integration
@@ -90,12 +91,16 @@ Run from the HQ workspace root (one dependency installation):
 bun scripts/build/test-toned.ts
 bun scripts/build/test-toned-react-versions.ts
 bun scripts/build/test-toned-docs.ts
-bun scripts/build/test-toned-docs.ts
 bun scripts/build/toned-browser.ts
 bun scripts/build/toned-css-plan-browser.ts
 bun scripts/build/toned-tailwind-browser.ts
 node vendor/toned/benchmarks/completion.mjs --current-only
 ```
+
+The separate Android gate is `bun scripts/build/test-toned-fabric.ts`;
+[the acceptance README](examples/fabric-acceptance/README.md) lists its pinned
+SDK/JDK requirements and reproducible phase commands. It is not part of the
+ordinary JS test job.
 
 See [benchmarks/README.md](benchmarks/README.md) for comparative measurements and
 limits, [core/README.md](packages/toned-core/core/README.md) for plan/explanation
