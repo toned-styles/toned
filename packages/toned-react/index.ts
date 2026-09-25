@@ -15,7 +15,6 @@ import {
   type ElementType,
   type ModType,
   type NullableOverride as OverrideDeclaration,
-  overrideSheet,
   SYMBOL_INIT,
   type TokenStyle,
   type TokenStyleDeclaration,
@@ -37,7 +36,6 @@ import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
 import { createElements as _createElements } from './create-elements.tsx'
 import {
   overrideStyles as _overrideStyles,
-  isStyleOverrideEntry,
   type StyleOverrideEntry,
   useOverriddenSheet,
 } from './overrides.tsx'
@@ -168,14 +166,6 @@ type VariantArgs<S> = [InferMods<S>] extends [never]
   : {} extends InputMods<S>
     ? [state?: InputMods<S>]
     : [state: InputMods<S>]
-export type UseStylesOptions<T extends StylesheetLike> = {
-  overrides?: StyleOverrideRules<T> | OverrideEntry<T>
-} & ([InferMods<T>] extends [never]
-  ? { variants?: never }
-  : {} extends InputMods<T>
-    ? { variants?: InputMods<T> }
-    : { variants: InputMods<T> })
-
 /**
  * Hook to use a stylesheet in a React component.
  *
@@ -196,40 +186,12 @@ export function useStyles<T extends StylesheetLike>(
 
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
-  options: UseStylesOptions<T>,
-): InferElements<T>
-
-export function useStyles<T extends StylesheetLike>(
-  stylesheet: T,
-  state?: object,
+  mods?: object,
 ) {
   const sourceSheet = stylesheet
-  // A real axis named "variants" remains legal: its value is scalar, while
-  // the options wrapper carries a variants object (or only an overrides map).
-  const options =
-    state &&
-    ((typeof (state as any).variants === 'object' &&
-      (state as any).variants !== null) ||
-      (typeof (state as any).overrides === 'object' &&
-        (state as any).overrides !== null))
-      ? (state as { variants?: object; overrides?: any })
-      : undefined
-  const mods = options ? options.variants : state
-  const inherited = useOverriddenSheet(stylesheet)
-  const overrides = options?.overrides
-  stylesheet = useMemo(() => {
-    if (!overrides) return inherited
-    const isEntry = isStyleOverrideEntry(overrides)
-    if (isEntry && overrides.sheet !== sourceSheet)
-      throw new Error('Toned instance override targets a different stylesheet')
-    return (
-      overrideSheet as (sheet: T, rules: unknown, variants?: unknown) => T
-    )(
-      inherited,
-      isEntry ? overrides.rules : overrides,
-      isEntry ? overrides.variantRules : undefined,
-    )
-  }, [inherited, sourceSheet, overrides])
+  // Declared local composition belongs in overrideSheet(); ambient entries
+  // target this exact sheet identity and apply after its authored layers.
+  stylesheet = useOverriddenSheet(stylesheet)
   const legacySizes = useContext(ContainerSizesContext)
   const containerScope = useContext(ContainerStoreContext)
   const readSizes = useCallback(

@@ -1,6 +1,11 @@
 // @vitest-environment happy-dom
 import { cleanup, render } from '@testing-library/react'
-import { defineConfig, defineSystem, defineToken } from '@toned/core'
+import {
+  defineConfig,
+  defineSystem,
+  defineToken,
+  overrideSheet,
+} from '@toned/core'
 import { cssVariablesBackend } from '@toned/core/backends'
 import { createRenderer } from '@toned/core/server'
 import * as React from 'react'
@@ -45,40 +50,68 @@ const config = defineConfig({
   pseudoMode: false,
 })
 
-test('defaulted variants and explicit undefined agree; instance overrides win subtree variants', () => {
+test('flat variant inputs preserve defaults through declared override composition', () => {
   const derived = sheet.extend({ Root: { ink: true } })
-  const inherited = overrideStyles(derived, { Root: { opacity: 0 } })
-  const local = { Root: { opacity: 1 as const } }
+  const overridden = overrideSheet(derived, { Root: { opacity: 1 } })
   function View({ size, override }: { size?: 's' | 'm'; override?: boolean }) {
-    const s = useStyles(derived, {
-      variants: { size },
-      overrides: override ? local : undefined,
-    })
+    const s = useStyles(override ? overridden : derived, { size })
     return <div {...s.Root} data-testid="target" />
   }
   const wrap = (override = false, size?: 's' | 'm') => (
     <ConfigProvider config={config}>
-      <StyleOverrides value={[inherited]}>
-        <View override={override} size={size} />
-      </StyleOverrides>
+      <View override={override} size={size} />
     </ConfigProvider>
   )
   const view = render(wrap())
-  expect(view.getByTestId('target').style.opacity).toBe('0')
+  expect(view.getByTestId('target').style.opacity).toBe('0.5')
+  view.rerender(wrap(false, 's'))
+  expect(view.getByTestId('target').style.opacity).toBe('1')
   view.rerender(wrap(true))
   expect(view.getByTestId('target').style.opacity).toBe('1')
-  view.rerender(
-    <ConfigProvider config={config}>
-      <View />
-    </ConfigProvider>,
-  )
+  view.rerender(wrap())
   expect(view.getByTestId('target').style.opacity).toBe('0.5')
-  view.rerender(
+})
+
+test('ambient overrides target the exact composed sheet and apply after declared layers', () => {
+  const derived = overrideSheet(sheet, { Root: { opacity: 1 } })
+  const forBase = overrideStyles(sheet, { Root: { opacity: 0 } })
+  const forDerived = overrideStyles(derived, { Root: { opacity: 0.5 } })
+  function View() {
+    const s = useStyles(derived)
+    return <div {...s.Root} data-testid="target" />
+  }
+  const wrap = (entry: typeof forBase) => (
     <ConfigProvider config={config}>
-      <View size="s" />
-    </ConfigProvider>,
+      <StyleOverrides value={[entry]}>
+        <View />
+      </StyleOverrides>
+    </ConfigProvider>
   )
+  const view = render(wrap(forBase))
   expect(view.getByTestId('target').style.opacity).toBe('1')
+  view.rerender(wrap(forDerived))
+  expect(view.getByTestId('target').style.opacity).toBe('0.5')
+})
+
+test('variants and overrides are ordinary scalar axis names', () => {
+  const named = system
+    .stylesheet({ Root: { opacity: 0 } })
+    .variants<{ variants: 'on' | 'off'; overrides: boolean }>()(($) => ({
+    [$.variants('on').overrides(true)]: { Root: { opacity: 1 } },
+  }))
+  function View({ active }: { active: boolean }) {
+    const s = useStyles(named, { variants: 'on', overrides: active })
+    return <div {...s.Root} data-testid="target" />
+  }
+  const wrap = (active: boolean) => (
+    <ConfigProvider config={config}>
+      <View active={active} />
+    </ConfigProvider>
+  )
+  const view = render(wrap(true))
+  expect(view.getByTestId('target').style.opacity).toBe('1')
+  view.rerender(wrap(false))
+  expect(view.getByTestId('target').style.opacity).toBe('0')
 })
 
 for (const [name, adapter] of [
@@ -172,10 +205,11 @@ test('defaulted axes agree with pure resolution for omitted and explicit undefin
   ).toBe(1)
 })
 
-test('instance null removes the same base path while variants remain authored', () => {
+test('declared null removes the inherited base field', () => {
   const base = system.stylesheet({ Root: { opacity: 0.5 } })
+  const derived = overrideSheet(base, { Root: { opacity: null } })
   function View() {
-    const s = useStyles(base, { overrides: { Root: { opacity: null } } })
+    const s = useStyles(derived)
     return <div {...s.Root} data-testid="removed" />
   }
   const view = render(
@@ -272,15 +306,17 @@ test('TonedProvider theme updates preserve bound component identities and child 
   expect(mounts).toBe(1)
 })
 
-test('instance override entries do not collide with parts named sheet and rules', () => {
+test('declared overrides support parts named sheet and rules', () => {
   const named = system.stylesheet({
     sheet: { opacity: 0 },
     rules: { opacity: 0 },
   })
+  const derived = overrideSheet(named, {
+    sheet: { opacity: 0.5 },
+    rules: { opacity: 1 },
+  })
   function View() {
-    const s = useStyles(named, {
-      overrides: { sheet: { opacity: 0.5 }, rules: { opacity: 1 } },
-    })
+    const s = useStyles(derived)
     return (
       <>
         <div {...s.sheet} data-testid="sheet-part" />

@@ -158,10 +158,30 @@ An unbuilt profile is a low-level mapping/formatting helper. Pure renderers and
 mounted hosts reject it until `buildTailwind`/`createTailwindRuntime` binds its
 validated asset; supplying an unrelated CSS manifest cannot bypass this gate.
 
-`ui.style(declaration)` is a pure immutable declaration helper. Human-authored
-`t(...)` convenience remains compatible; agents should introduce named sheets and
-bindings instead. The legacy `t` resolution getters depend on the installed
-configuration; use the explicit renderer for server/request-isolated output.
+`ui.style(declaration)` is a pure immutable declaration helper. `ui.t(...)` is the
+supported shorthand for lightweight token-to-style resolution and composition:
+
+```ts
+const base = ui.t({ padding: 's', $style: { opacity: 0.8 } })
+const compact = ui.t(base, { $style: { minHeight: 24 } })
+// compact.style and compact.className resolve when read.
+```
+
+Later arguments override earlier token values; raw `$style` fields merge across
+arguments. The main-compatible `style` spelling and composed `t` results remain
+accepted. Getters read the installed configuration's current tokens, platform and
+class mode. They call no hooks, create no subscriptions and do not read a React
+provider: merely retaining a bag does not update a mounted host when tokens change.
+Web CSS-variable values can follow CSS theme changes; native literal values must
+be resolved again and applied when the theme changes. Use `useStyles` or
+`createElements` for mounted lifecycle ownership, states and related parts.
+
+No global installation is needed for explicit resolution. The existing
+`ui.exec({ tokens, platform: 'native', useClassName: false }, declaration)` accepts
+per-call tokens for a single declaration. For sheet defaults, variants, host facts,
+manifest validation and alternative backends, use the pure renderer above with
+`ui.stylesheet({ Root: declaration })`. These paths do not consult the installed
+configuration; avoid changing global configuration for each server request.
 
 ## Typed web grid
 
@@ -300,8 +320,9 @@ const props = web.resolve(compact, { variants: { size: 's' } })
 ```
 
 Collect derived sheets before building when they introduce conditions or other
-CSS structure. Pure/native renderers resolve these layers directly; React scopes
-and instance overrides use the same composition operation. `null` removes an
+CSS structure. Pure/native renderers resolve these layers directly; React hooks
+and element families consume the derived sheet, while ambient React scopes use
+the same composition operation. `null` removes an
 inherited leaf at that exact path before matching; it does not erase a separate
 variant declaration. `extend` remains ordinary derivation instead of an
 authoritative override layer.

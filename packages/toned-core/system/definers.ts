@@ -260,13 +260,13 @@ export function defineSystem<
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
-        const src = (SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v) as Record<
-          string,
-          unknown
-        > & {
+        const src = normalizeDeclarations(
+          SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v,
+        ) as Record<string, unknown> & {
           style?: unknown
         }
-        // Deep-merge the `style` object so later arguments extend earlier
+        // Normalize aliases before merging so `$style` and `style` compose
+        // identically. Deep-merge so later arguments extend earlier
         // entries instead of replacing them. A shallow copy would drop style
         // props set by earlier arguments.
         const prevStyle = value.style

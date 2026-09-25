@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
+import { getConfig, setConfig } from './config.ts'
 import { defineSystem, defineToken, defineUnit } from './definers.ts'
 
 function expectConditions(
@@ -435,6 +436,70 @@ describe('defineSystem', () => {
   })
 
   describe('t() deep-merges style across arguments', () => {
+    test('canonical, legacy and composed raw styles retain fields in argument order', () => {
+      const { t } = defineSystem({ bgColor })
+      const base = t({ bgColor: 'primary', $style: { opacity: 0.5 } })
+      const composed = t(
+        base,
+        { $style: { minHeight: 24, opacity: 0.7 } },
+        { style: { minHeight: 32 } },
+      )
+
+      expect(composed.style).toEqual({
+        backgroundColor: '#007bff',
+        opacity: 0.7,
+        minHeight: 32,
+      })
+      expect(base.style).toEqual({
+        backgroundColor: '#007bff',
+        opacity: 0.5,
+      })
+      expect(
+        t({ style: { opacity: 0.5 } }, { $style: { opacity: 1 } }).style,
+      ).toEqual({ opacity: 1 })
+    })
+
+    test('getters resolve current installed tokens while exec uses only explicit tokens', () => {
+      const previous = { ...getConfig() }
+      let theme = { ink: 'red' }
+      let reads = 0
+      const ui = defineSystem({
+        ink: defineToken({
+          values: ['text'],
+          resolve: (_value, tokens) => ({ color: tokens['ink'] }),
+        }),
+      })
+      try {
+        setConfig({
+          platform: 'native',
+          useClassName: false,
+          getTokens: () => {
+            reads++
+            return theme
+          },
+        })
+        const bag = ui.t({ ink: 'text' })
+        const composed = ui.t(bag, { $style: { opacity: 0.5 } })
+        expect(reads).toBe(0)
+        expect(composed.style).toEqual({ color: 'red', opacity: 0.5 })
+        theme = { ink: 'blue' }
+        expect(composed.style).toEqual({ color: 'blue', opacity: 0.5 })
+        void composed.className
+        expect(reads).toBe(3)
+        const beforeExplicit = reads
+        expect(
+          ui.exec(
+            { tokens: { ink: 'green' }, platform: 'native' },
+            { ink: 'text' },
+          ).style,
+        ).toEqual({ color: 'green' })
+        expect(reads).toBe(beforeExplicit)
+        expect(composed.style).toEqual({ color: 'blue', opacity: 0.5 })
+      } finally {
+        setConfig(previous)
+      }
+    })
+
     test('combines style objects from multiple arguments', () => {
       const { t } = defineSystem({ bgColor })
 

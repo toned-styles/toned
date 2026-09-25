@@ -27,7 +27,7 @@ function ApiUseStyles() {
 const s = useStyles(stylesheet)
 
 // With variants
-const s = useStyles(stylesheet, { variants: { variant: 'accent', size: 'm' } })`}</CodeBlock>
+const s = useStyles(stylesheet, { variant: 'accent', size: 'm' })`}</CodeBlock>
 
       <h3 {...s.h3}>Parameters</h3>
       <p>
