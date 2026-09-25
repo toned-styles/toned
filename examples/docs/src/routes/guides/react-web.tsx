@@ -83,9 +83,8 @@ createRoot(document.getElementById('root')!).render(
         function from the base system. Keep style definitions separate from
         components for better reusability:
       </p>
-      <CodeBlock>{`import type { Variants } from '@toned/core'
-
-// styles/button.ts
+      <CodeBlock>{`// styles/button.ts
+import type { Variants } from '@toned/core'
 import { stylesheet } from '@toned/systems/base'
 
 export const buttonStyles = stylesheet({
