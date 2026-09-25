@@ -129,9 +129,11 @@ export const breakpoints = defineBreakpoints({
         conditional and responsive styling. Breakpoints can be set on individual
         elements within a variant:
       </p>
-      <CodeBlock>{`const styles = stylesheet({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const styles = stylesheet({
   container: { paddingX: 2 },
-}).variants<{ layout: 'grid' | 'list' }>(($) => ({
+}).variants(($: Variants<{ layout: 'grid' | 'list' }>) => ({
   [$.layout('grid')]: {
     container: {
       style: { display: 'grid', gridTemplateColumns: '1fr' },

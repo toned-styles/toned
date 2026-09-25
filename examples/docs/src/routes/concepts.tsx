@@ -94,13 +94,15 @@ export const { system, stylesheet, t } = defineSystem(
         stylesheet and use the dollar-sign builder to declare variant
         conditions:
       </p>
-      <CodeBlock>{`const buttonStyles = stylesheet({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const buttonStyles = stylesheet({
   container: { bgColor: 'action', borderRadius: 'medium' },
   label: { textColor: 'on_action' },
-}).variants<{
+}).variants(($: Variants<{
   size: 'm' | 's'
   variant: 'accent' | 'danger'
-}>(($) => ({
+}>) => ({
   [$.variant('accent')]: {
     container: { bgColor: 'action' },
     label: { textColor: 'on_action' },

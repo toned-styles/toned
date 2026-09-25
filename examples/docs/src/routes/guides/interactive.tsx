@@ -79,12 +79,14 @@ function GuideInteractive() {
         Pseudo-classes work inside variant blocks, so different variants can
         define different interactive behaviour:
       </p>
-      <CodeBlock>{`const buttonStyles = stylesheet({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const buttonStyles = stylesheet({
   container: { bgColor: 'action', borderRadius: 'medium' },
   label: { textColor: 'on_action' },
-}).variants<{
+}).variants(($: Variants<{
   variant: 'accent' | 'danger'
-}>(($) => ({
+}>) => ({
   [$.variant('accent')]: {
     container: {
       bgColor: 'action',

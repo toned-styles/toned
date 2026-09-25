@@ -23,7 +23,9 @@ function GettingStarted() {
         Keep declarations in a pure module that both the build and application
         import.
       </p>
-      <CodeBlock>{`// styles.ts
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+// styles.ts
 import { defineSystem, defineToken } from '@toned/core'
 
 export const ui = defineSystem({
@@ -38,7 +40,7 @@ export const ui = defineSystem({
 export const buttonStyles = ui.stylesheet({
   Root: { $kind: 'pressable', background: 'accent' },
   Label: { $kind: 'text', $style: { fontSize: 14 } },
-}).variants<{ size: 's' | 'm' }>()($ => ({
+}).variants(($: Variants<{ size: 's' | 'm' }>) => ({
   [$.size('s')]: { Root: { $style: { padding: 4 } } },
   [$.size('m')]: { Root: { $style: { padding: 8 } } },
 }), { defaults: { size: 'm' } })`}</CodeBlock>

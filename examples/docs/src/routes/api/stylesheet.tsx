@@ -90,9 +90,11 @@ const styles = stylesheet({
         conditional styles. See the <a href="/api/variants">Variants</a> page
         for details.
       </p>
-      <CodeBlock>{`const styles = stylesheet({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const styles = stylesheet({
   container: { bgColor: 'action' },
-}).variants<{ size: 'm' | 's' }>()(($) => ({
+}).variants(($: Variants<{ size: 'm' | 's' }>) => ({
   [$.size('m')]: { container: { paddingX: 3 } },
   [$.size('s')]: { container: { paddingX: 2 } },
 }))`}</CodeBlock>

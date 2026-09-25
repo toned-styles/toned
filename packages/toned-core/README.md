@@ -7,7 +7,7 @@ hosts own direct updates. React is a separate integration.
 ## Declare a system
 
 ```ts
-import { defineSystem, defineToken } from '@toned/core'
+import { defineSystem, defineToken, type Variants } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'example',
@@ -24,6 +24,8 @@ export const ui = defineSystem({
   },
 })
 
+type ButtonVariants = { size: 's' | 'm'; variant: 'accent' | 'quiet' }
+
 export const button = ui.stylesheet(q => ({
   Root: {
     $kind: 'pressable',
@@ -31,7 +33,7 @@ export const button = ui.stylesheet(q => ({
     [q.state('hover')]: { bgColor: 'primary-hover' },
     '@platform web': { $style: { cursor: 'pointer' } },
   },
-})).variants<{ size: 's' | 'm'; variant: 'accent' | 'quiet' }>()(($, q) => ({
+})).variants(($: Variants<ButtonVariants>, q) => ({
   [$.size('s').variant('quiet')]: {
     Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
   },
@@ -76,9 +78,14 @@ const emphasis = ui.stylesheet({ Root: { opacity: 1 } }).when(
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
 order within a layer; a higher override layer still wins over the whole lower layer.
-A compound variant has no implicit specificity bonus. The curried `.variants<Mods>()(factory)` form also checks the complete
-factory result; the old direct callback overload retains structural TypeScript
-compatibility and cannot catch every excess property. Variant keys are canonical
+A compound variant has no implicit specificity bonus. Use `.variants(($: Variants<Mods>, q) => ({ … }))` to infer the schema and
+check the complete returned declaration, including excess keys in nested rules.
+The callback offers part, token, variant-value and system-query completions.
+Re-export the type from your design-system module to write `ui.Variants<Mods>`
+with a namespace import (`import * as ui from "./ui"`). Reusable type aliases and interfaces both work, including optional axes.
+The annotation has no runtime cost.
+The curried, explicit-generic direct callback and object signatures remain
+compatible; the explicit-generic direct callback cannot catch every excess property. Variant keys are canonical
 literal strings at runtime and in TypeScript, including multi-value selections.
 The matcher keeps a fast unsigned single-word path and uses multiple words beyond
 32 allocated values. Equality uses exact rule membership and output operations,
@@ -263,7 +270,7 @@ A fixture is not certification of a React Native/Fabric device integration.
 ## Variant defaults and alpha
 
 The fully checked factory takes defaults without widening axis values:
-`.variants<Mods>()(factory, { defaults: { size: 'm' } })`. Defaulted axes are
+`.variants(($: Variants<Mods>) => ({ … }), { defaults: { size: 'm' } })`. Defaulted axes are
 optional at consumption; explicit `undefined` selects the default. Other axes
 stay required. Defaults survive derived sheets and override layers and resolve
 identically through the pure renderer and mounted hooks.

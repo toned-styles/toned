@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
@@ -40,9 +41,7 @@ const uiSidebarStyles = stylesheet({
       bgColor: 'subtle',
     },
   },
-}).variants<{
-  active?: 'true'
-}>(($) => ({
+}).variants(($: Variants<{ active?: 'true' }>) => ({
   [$.active('true')]: {
     link: {
       textColor: 'on_action',
