@@ -176,7 +176,11 @@ const compact = ui.t(base, { $style: { minHeight: 24 } })
 
 Later arguments override earlier token values; raw `$style` fields merge across
 arguments. The main-compatible `style` spelling and composed `t` results remain
-accepted. Getters read the installed configuration's current tokens, platform and
+accepted. `t()` normalizes its inputs immediately and snapshots raw style fields;
+mutating a caller style object later does not change a retained result. Invalid
+metadata (such as a conditional `$kind` or conflicting kind aliases) throws
+when `t()` is called, including during module initialization. Direct `exec` still
+observes its input values on each call. Getters read the installed configuration's current tokens, platform and
 class mode. They call no hooks, create no subscriptions and do not read a React
 provider: merely retaining a bag does not update a mounted host when tokens change.
 Web CSS-variable values can follow CSS theme changes; native literal values must
