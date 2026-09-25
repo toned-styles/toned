@@ -151,3 +151,23 @@ base.variants(($: Variants<ComponentVariants>) => ({
   // @ts-expect-error interfaces retain their exact variant values
   [$.size('xl')]: { Root: { padding: 2 } },
 }))
+
+// Named fragments keep colocated state rules under their declared parts.
+export const composed = base.variants(($: Variants<Mods>, q) => ({
+  [$('interactive')]: {
+    Root: { [q.state('hover')]: { padding: 4 } },
+  },
+  [$.variant('accent')]: {
+    $compose: 'interactive',
+    Root: { padding: 2 },
+  },
+}))
+
+const sharedFactory = ($: Variants<Mods>) =>
+  ({ [$.size('s')]: { Root: { padding: 2 } } }) as const
+base.variants(sharedFactory)
+const widenedFactory = ($: Variants<Mods>) => ({
+  [$.size('s')]: { Root: { padding: 2 } },
+})
+// @ts-expect-error extracted factories must preserve finite token literal types
+base.variants(widenedFactory)

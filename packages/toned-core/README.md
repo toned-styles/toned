@@ -85,7 +85,16 @@ Re-export the type from your design-system module to write `ui.Variants<Mods>`
 with a namespace import (`import * as ui from "./ui"`). Reusable type aliases and interfaces both work, including optional axes.
 The annotation has no runtime cost.
 The curried, explicit-generic direct callback and object signatures remain
-compatible; the explicit-generic direct callback cannot catch every excess property. Variant keys are canonical
+compatible; the explicit-generic direct callback cannot catch every excess property.
+**Migration note:** callbacks without explicit method type arguments now use the
+checked overload, including callbacks annotated with the existing `VariantSelector`.
+Previously accepted excess keys are rejected. Keep an extracted factory's result
+literal (for example `return { ... } as const`) so finite token values do not widen
+to `number` or `string`; inline callbacks receive that context automatically.
+Overload errors can mention `VariantsInput`, the final compatibility signature;
+check the callback's declarations and literal values first. This stricter inferred
+callback behavior is an intentional type-checking change.
+Variant keys are canonical
 literal strings at runtime and in TypeScript, including multi-value selections.
 The matcher keeps a fast unsigned single-word path and uses multiple words beyond
 32 allocated values. Equality uses exact rule membership and output operations,

@@ -23,10 +23,8 @@ function GettingStarted() {
         Keep declarations in a pure module that both the build and application
         import.
       </p>
-      <CodeBlock>{`import type { Variants } from '@toned/core'
-
-// styles.ts
-import { defineSystem, defineToken } from '@toned/core'
+      <CodeBlock>{`// styles.ts
+import { defineSystem, defineToken, type Variants } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'example',

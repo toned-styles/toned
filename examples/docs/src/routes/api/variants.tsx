@@ -110,18 +110,16 @@ const buttonStyles = stylesheet({
 
       <h2 {...s.h2}>Pseudo-state Variants</h2>
       <p>
-        You can target pseudo-states like hover by using the{' '}
-        <code {...s.code}>'element:pseudo'</code> key syntax inside a variant
-        block:
+        Colocate a state rule under the part it styles. Use{' '}
+        <code {...s.code}>':hover'</code> or the inferred{' '}
+        <code {...s.code}>[q.state('hover')]</code> key inside that part:
       </p>
       <CodeBlock>{`[$.variant('accent')]: {
-  container: { bgColor: 'action' },
-  label: { textColor: 'on_action' },
-
-  'container:hover': {
-    container: { bgColor: 'action_secondary' },
-    label: { textColor: 'on_action_secondary' },
+  container: {
+    bgColor: 'action',
+    ':hover': { bgColor: 'action_secondary' },
   },
+  label: { textColor: 'on_action' },
 }`}</CodeBlock>
 
       <h2 {...s.h2}>Responsive Variants</h2>
@@ -164,9 +162,7 @@ const buttonStyles = stylesheet({
 }).variants(($: Variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>) => ({
   // Named style — shared across variants
   [$('interactive')]: {
-    'container:hover': {
-      container: { shadow: 'medium' },
-    },
+    container: { ':hover': { shadow: 'medium' } },
   },
 
   [$.variant('accent')]: {
