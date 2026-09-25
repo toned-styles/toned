@@ -9,7 +9,7 @@ point-in-time design document and has not been rewritten to match the code.
 | Area | Result and implementation |
 | --- | --- |
 | Typed authoring | Descriptor systems, immutable token/config data, typed theme resolver inputs/outputs with schema-bound references, structured lengths/colors/theme references, explicit logical-layout mapping, `$kind`, portable `$style`, platform widening, recursive query validation, human aliases, chained and curried variants. Explicit/default descriptor kinds retain restrictions; legacy untyped web parts retain their compatibility escape. |
-| Defaults and explicit inputs | Defaulted axes may be omitted; explicit undefined chooses the default. `useStyles(sheet, { variants, overrides })` separates styling overrides from host props. Pure authoritative composition is available for server/build inputs. |
+| Defaults and explicit inputs | Defaulted axes may be omitted; explicit undefined chooses the default. `useStyles(sheet, variants)` preserves the flat input API. `overrideSheet` composes local declarations for hooks, element families and server/build inputs; `StyleOverrides` handles ambient customization. The proposed hook options wrapper was removed after the API follow-up. |
 | Conditions | Boolean queries, colocated media/container/state rules, cross-part state facts, and `q.part(source).has(target, state, { scope })`. Relations use registered-part child/descendant semantics within one mounted stylesheet family. Portals require explicit logical topology. |
 | Portable evaluation | Immutable semantic plans, ordered field operations, shared token evaluation, explicit backend capabilities, declaration provenance, explanations including emitted props, finite subset-shadow diagnostics, and checked resolver footprints. CSS lowering is separated from system definitions. |
 | Precedence and overrides | Descriptor source order, exact multiword bitsets, exact matched-rule membership, authoritative layers, structural null deletion, and a bounded cache of sibling override sequences. Legacy specialization order remains a deliberate compatibility mode. |
@@ -72,7 +72,7 @@ point-in-time design document and has not been rewritten to match the code.
   must obtain them from source maps/ASTs, rather than a runtime stack heuristic.
   The compiler stub is not advertised as a working extractor.
 - **Compatibility surfaces:** global configuration, old declaration aliases,
-  flat hook arguments, and legacy cascade order remain for existing consumers.
+  and legacy cascade order remain for existing consumers. Flat hook arguments and `t` remain intentional supported APIs.
   New renderer/provider APIs avoid those switches. HQ keeps its existing
   Daylight namespace and cascade while migrating authoring; changing the
   namespace/default primitive or cascade is a separate visible product change.

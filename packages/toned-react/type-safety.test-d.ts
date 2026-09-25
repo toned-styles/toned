@@ -200,17 +200,16 @@ export function CompletionContracts() {
     ($) => ({ [$.size('s')]: { Root: {} } }),
     { defaults: { size: 'm' } },
   )
-  useStyles(defaultedSheet, { variants: { tone: 'quiet' } })
+  useStyles(defaultedSheet, { tone: 'quiet' })
   useStyles(defaultedSheet, { tone: 'quiet', size: undefined })
   // @ts-expect-error tone has no default
-  useStyles(defaultedSheet, { variants: {} })
+  useStyles(defaultedSheet, {})
   // @ts-expect-error a default does not widen the declared values
-  useStyles(defaultedSheet, { variants: { tone: 'quiet', size: 'xl' } })
-  useStyles(defaultedSheet, {
-    variants: { tone: 'quiet' },
-    // @ts-expect-error unknown instance override part
-    overrides: { Missing: {} },
-  })
+  useStyles(defaultedSheet, { tone: 'quiet', size: 'xl' })
+  // @ts-expect-error declarations are composed before calling the hook
+  useStyles(defaultedSheet, { variants: { tone: 'quiet' }, overrides: {} })
+  // @ts-expect-error unknown declared override part
+  overrideSheet(defaultedSheet, { Missing: {} })
 
   // Platform vocabulary widens, but the declared element kind still applies.
   const portableSystem = defineSystem({
@@ -230,10 +229,12 @@ export function CompletionContracts() {
     Root: { $kind: 'text', '@platform.web': { $style: { fontSize: '1rem' } } },
   })
 
-  useStyles(defaultedSheet, {
-    variants: { tone: 'quiet' },
-    overrides: { Root: { bgColor: null } },
-  })
+  const derived = overrideSheet(defaultedSheet, { Root: { bgColor: null } })
+  useStyles(derived, { tone: 'quiet' })
+  // @ts-expect-error composition preserves required axes
+  useStyles(derived)
+  // @ts-expect-error composition preserves variant value checking
+  useStyles(derived, { tone: 'missing' })
   system.stylesheet({ Root: {} }).variants<{ size: 's' | 'm' }>()(
     ($) => ({ [$.size('s')]: { Root: {} } }),
     // @ts-expect-error undefined is not a declared default value

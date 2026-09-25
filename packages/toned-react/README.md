@@ -124,16 +124,40 @@ axis declared only in a TypeScript type has no runtime representation to inspect
 
 ## Prop bags and overrides
 
-`useStyles(sheet, { variants, overrides })` returns element prop bags for spreading.
-The legacy `useStyles(sheet, mods)` call remains accepted. `overrides` accepts a
-partial declaration or an `overrideStyles(sheet, rules).variants(...)` entry;
-this instance layer applies after all provider layers. The hook, providers and
-pure `overrideSheet` composition share the same core override implementation. An entry targeting another
-sheet throws. Keep reusable override objects outside rendering for plan reuse.
-`null` removes the inherited declaration at the same rule path; `undefined` leaves it unchanged.
-Removing a base token does not erase a separate variant declaration: target that
-variant with an override entry when it should also be removed. This is structural
-removal before matching, not a CSS `initial` value or a native host reset.
+`useStyles(sheet, variants)` returns element prop bags for spreading. Omit the
+second argument when no variant input is required. The second argument is always
+the flat variant map; `variants` and `overrides` remain legal scalar axis names.
+
+Compose local changes as a declaration, then consume the resulting sheet through
+any rendering API:
+
+```tsx
+import { overrideSheet } from '@toned/core'
+
+// Module scope: a reusable declaration, also available to CSS build collection.
+const compactStyles = overrideSheet(buttonStyles, { Root: { padding: 2 } })
+
+const s = useStyles(compactStyles, { size, variant })
+// Or createElements(compactStyles), or renderer.resolve(compactStyles, ...).
+```
+
+`overrideSheet` preserves parts, variant types and defaults. It adds an authoritative
+layer: its base values beat earlier matching variants, and its own conditional
+rules specialize that layer. Use `sheet.extend` instead when changing defaults
+that the original variants should still override. `null` removes the inherited
+declaration at the same rule path; `undefined` leaves it unchanged. Removing a
+base token does not erase a separate variant declaration: target that variant
+with the third `overrideSheet` argument when it should also be removed.
+
+Use `StyleOverrides` and `overrideStyles(sheet, rules).variants(...)` when an
+ancestor needs to customize a child's existing stylesheet without changing that
+child. These entries match the **exact sheet object**, not its derivation ancestry,
+and apply after its declared layers. An entry targeting `buttonStyles` does not
+also target `compactStyles`; target the derived sheet explicitly where needed.
+Keep reusable declarations outside rendering and include them in build collection
+when they introduce CSS structure. For dynamic choices, prefer variants or select
+among declared sheets. There is no hook-level override argument or extra local
+precedence tier.
 
 The checked factory accepts defaults as its second argument:
 
@@ -143,7 +167,7 @@ const sheet = system.stylesheet({ Root: { $kind: 'pressable' } })
     $ => ({ [$.size('s')]: { Root: { $style: { padding: 4 } } } }),
     { defaults: { size: 'm' } },
   )
-const s = useStyles(sheet, { variants: { active: false } })
+const s = useStyles(sheet, { active: false })
 ```
 
 Axes with defaults become optional; other required axes remain required. Omitted

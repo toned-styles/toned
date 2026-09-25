@@ -50,9 +50,10 @@ function ValidationObserver({ instance }: { instance: Base }) {
 
 function useController(sheet: StylesheetLike, variants?: object): Base {
   return controllerOf(
-    (useStyles as (sheet: StylesheetLike, options: object) => object)(sheet, {
-      variants: variants ?? {},
-    }),
+    (useStyles as (sheet: StylesheetLike, variants?: object) => object)(
+      sheet,
+      variants,
+    ),
   ) as Base
 }
 

@@ -34,13 +34,6 @@ import { useRuntimeConfig } from './runtime-config.ts'
 // biome-ignore lint/suspicious/noExplicitAny: the runtime is stylesheet-agnostic; index.ts provides the typed surface.
 type AnyRules = Record<string, any>
 
-const OVERRIDE_ENTRY = Symbol.for('@toned/react/override-entry')
-export function isStyleOverrideEntry(
-  value: object,
-): value is StyleOverrideEntry {
-  return (value as Record<symbol, unknown>)[OVERRIDE_ENTRY] === true
-}
-
 export interface StyleOverrideEntry {
   readonly sheet: object
   readonly rules: Readonly<AnyRules>
@@ -83,7 +76,6 @@ export function overrideStyles(
 
 /** Attach the chained `.variants()` without making it an enumerable field. */
 function withVariants(entry: StyleOverrideEntry): StyleOverrideEntry {
-  Object.defineProperty(entry, OVERRIDE_ENTRY, { value: true })
   Object.defineProperty(entry, 'variants', {
     // biome-ignore lint/suspicious/noExplicitAny: the selector is the sheet's own; index.ts types it
     value: (fn: ($: any) => AnyRules) =>
