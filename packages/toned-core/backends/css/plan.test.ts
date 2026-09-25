@@ -323,7 +323,19 @@ it('direct exec observes mutations to token and nested raw-style inputs', () => 
   )
   expect(before.style).toEqual({ color: 'red', opacity: 0.5 })
   const caller = { style: { opacity: 0.25 } }
-  expect(system.t(caller).style).toMatchObject({ opacity: 0.25 })
+  const retained = system.t(caller)
+  expect(retained.style).toMatchObject({ opacity: 0.25 })
   caller.style.opacity = 0.75
+  expect(retained.style).toMatchObject({ opacity: 0.25 })
   expect(system.t(caller).style).toMatchObject({ opacity: 0.75 })
+})
+
+it('t validates metadata immediately without reading a result getter', () => {
+  const system = defineSystem(tokens)
+  expect(() => system.t({ ':hover': { $kind: 'text' } } as never)).toThrow(
+    'part kind is static',
+  )
+  expect(() => system.t({ $kind: 'view', $$type: 'text' } as never)).toThrow(
+    '$kind and $$type must agree',
+  )
 })

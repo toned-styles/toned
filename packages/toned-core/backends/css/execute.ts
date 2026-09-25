@@ -72,8 +72,9 @@ export function createCssExecutor<
   S extends TokenStyleDeclaration,
   C extends SystemOptions,
 >(system: S, config?: C, id?: string) {
-  // The public facade accepts mutable inputs, including nested caller style
-  // objects passed through t(). Recompile each call to observe their current values.
+  // Direct exec accepts mutable inputs, including nested caller styles.
+  // Recompile each call to observe current values. t() instead supplies a
+  // declaration snapshot; its getters re-resolve the current configuration.
   const reference = {
     id,
     system: { ...system, ...config },
