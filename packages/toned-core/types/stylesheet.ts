@@ -448,6 +448,11 @@ import type {
 
 export type { VariantSelector, VariantKey, NamedStyleKey, ExtractNamedStyles }
 
+/** Annotate the variant callback parameter to infer both its schema and rules. */
+export type Variants<
+  Mods extends { [K in keyof Mods]: string | number | boolean },
+> = VariantSelector<{ [K in keyof Mods]: Mods[K] }>
+
 /**
  * A single selector segment for a key-value pair.
  * For booleans: generates [key], [key=true], [key=false]
@@ -581,6 +586,18 @@ export type VariantsCallbackResult<
     : VariantStyleDef<S, Elements, ExtractNamedStyles<R>>
 }
 
+/** Editor vocabulary omits forbidden optional-never fields; validation keeps
+ * the original shape so aliases and nonliteral objects remain checked. */
+type VariantEditorShape<T> = T extends readonly unknown[]
+  ? T
+  : T extends object
+    ? {
+        [K in keyof T as [NonNullable<T[K]>] extends [never]
+          ? never
+          : K]: VariantEditorShape<T[K]>
+      }
+    : T
+
 /** Explicit constructor for excess-key checking inside callback return values. */
 export type CheckedVariantRules<
   S extends TokenStyleDeclaration,
@@ -661,25 +678,42 @@ export interface StylesheetWithVariants<
     StylesheetWithVariants<S, Elements, Mods, Kinds, Defaults>
 
   /**
-   * Define variants using a callback with type-safe selector proxy
+   * Define variants with a reusable selector annotation. The declared parts
+   * supply query and style completions; inferred rules receive exact-key checks.
    *
    * @example
    * ```ts
-   * stylesheet.variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>(($) => ({
-   *   [$("base_style")]: {
-   *     container: { padding: 2 },
-   *   },
-   *   [$.size("m")]: {
-   *     $compose: "base_style",
-   *     container: { paddingX: 4 },
-   *   },
-   *   [$.size("m").variant("accent")]: {
-   *     container: { bgColor: "action" },
+   * type Mods = { size?: 's' | 'm'; variant: 'accent' | 'quiet' }
+   * stylesheet.variants(($: Variants<Mods>, q) => ({
+   *   [$.size('s').variant('accent')]: {
+   *     Root: { padding: 2, [q.media('md')]: { padding: 4 } },
    *   },
    * }))
    * ```
    */
-  /** Fully checked factory; the second call infers the actual return keys. */
+  variants<
+    M extends ModType,
+    const Rules extends Record<string, unknown>,
+    const D extends Partial<M> = {},
+  >(
+    callback: (
+      $: VariantSelector<M>,
+      q: QueryBuilder<S, Elements>,
+    ) => Rules &
+      Record<
+        string,
+        VariantEditorShape<VariantStyleDef<S, Elements, string, Kinds>>
+      > &
+      CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds>,
+    options?: {
+      defaults: D & {
+        [K in keyof D]: K extends keyof M ? Exclude<M[K], undefined> : never
+      }
+    },
+  ): Stylesheet<S, Kinds, M, D> &
+    StylesheetWithVariants<S, Elements, M, Kinds, D>
+
+  /** Compatibility factory for explicit generics split across two calls. */
   variants<M extends ModType>(): <
     const Rules extends Record<string, unknown>,
     const D extends Partial<M> = {},
@@ -687,7 +721,12 @@ export interface StylesheetWithVariants<
     callback: (
       $: VariantSelector<M>,
       q: QueryBuilder<S, Elements>,
-    ) => Rules & CheckedVariantRules<S, Elements, Rules, Kinds>,
+    ) => Rules &
+      Record<
+        string,
+        VariantEditorShape<VariantStyleDef<S, Elements, string, Kinds>>
+      > &
+      CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds>,
     options?: {
       defaults: D & {
         [K in keyof D]: K extends keyof M ? Exclude<M[K], undefined> : never
@@ -696,8 +735,12 @@ export interface StylesheetWithVariants<
   ) => Stylesheet<S, Kinds, M, D> &
     StylesheetWithVariants<S, Elements, M, Kinds, D>
 
-  variants<M extends ModType>(
-    callback: VariantsCallback<S, Elements, M, Kinds>,
+  // Explicit legacy type arguments opt into this compatibility signature.
+  // Inferred callbacks must not fall through after a checked-overload error.
+  variants<M extends ModType = never>(
+    callback: [M] extends [never]
+      ? never
+      : VariantsCallback<S, Elements, NoInfer<M>, Kinds>,
   ): Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
 
   /**

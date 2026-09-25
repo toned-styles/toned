@@ -14,13 +14,25 @@ function ApiVariants() {
       <h1 {...s.h1}>variants</h1>
       <p>
         The <code {...s.code}>.variants()</code> method chains onto a stylesheet
-        to add conditional styling based on component state. Variant types are
-        declared via a generic parameter, giving you full type safety from
-        definition through to consumption.
+        to add conditional styling based on component state. Annotate the
+        selector parameter with <code {...s.code}>Variants&lt;Mods&gt;</code>.
+        Toned infers the returned rules and checks their parts, token values,
+        and nested declarations.
+      </p>
+      <p>
+        A design-system module can re-export the{' '}
+        <code {...s.code}>Variants</code> type. With a namespace import such as{' '}
+        <code {...s.code}>import * as ui from './ui'</code>, write{' '}
+        <code {...s.code}>$: ui.Variants&lt;Mods&gt;</code>. The optional second
+        callback parameter, <code {...s.code}>q</code>, infers the declared
+        parts and system conditions. No currying or validation wrapper is
+        needed. Older signatures remain available for compatibility.
       </p>
 
       <h2 {...s.h2}>Signature</h2>
-      <CodeBlock>{`const styles = stylesheet({ ... }).variants<VariantMap>(($) => ({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const styles = stylesheet({ ... }).variants(($: Variants<VariantMap>) => ({
   [$.variantName('value')]: {
     elementName: { /* token overrides */ },
   },
@@ -28,23 +40,28 @@ function ApiVariants() {
 
       <h2 {...s.h2}>Defining Variants</h2>
       <p>
-        Pass a type parameter describing the variant keys and their allowed
-        values. Required variants must be provided by the consumer; optional
-        variants (marked with <code {...s.code}>?</code>) are applied only when
-        present:
+        Reuse ordinary TypeScript types for variant keys and their allowed
+        values. A required axis without a default must be provided by the
+        consumer; an optional axis (marked with <code {...s.code}>?</code>) can
+        be omitted. A rule matches when its selector values are selected:
       </p>
-      <CodeBlock>{`const buttonStyles = stylesheet({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+type Size = 'm' | 's'
+type ButtonVariants = {
+  size: Size                 // reusable axis type
+  variant: 'accent' | 'danger' // required
+  alignment?: 'icon-only' | 'icon-left' | 'icon-right' // optional
+}
+
+const buttonStyles = stylesheet({
   container: {
     borderRadius: 'medium',
     borderWidth: 'none',
     cursor: 'pointer',
   },
   label: {},
-}).variants<{
-  size: 'm' | 's'            // required
-  variant: 'accent' | 'danger' // required
-  alignment?: 'icon-only' | 'icon-left' | 'icon-right' // optional
-}>(($) => ({
+}).variants(($: Variants<ButtonVariants>) => ({
   [$.variant('accent')]: {
     container: { bgColor: 'action' },
     label: { textColor: 'on_action' },
@@ -75,17 +92,20 @@ function ApiVariants() {
         Chain multiple variant calls to create compound conditions that only
         match when all specified variants are active simultaneously:
       </p>
-      <CodeBlock>{`($ => ({
+      <CodeBlock>{`// Inside the .variants callback:
+{
   [$.size('m').alignment('icon-only')]: {
     container: { paddingX: 2, paddingY: 2 },
   },
   [$.size('s').alignment('icon-only')]: {
     container: { paddingX: 1, paddingY: 2 },
   },
-}))`}</CodeBlock>
+}`}</CodeBlock>
       <p>
-        Compound variants are evaluated after individual variant rules, so they
-        naturally override conflicting properties.
+        Matching variant rules apply in declaration order: later rules win
+        conflicting properties. Chaining selectors adds conditions, not an
+        automatic specificity bonus. Put a compound rule after the individual
+        rules it should override.
       </p>
 
       <h2 {...s.h2}>Pseudo-state Variants</h2>
@@ -111,17 +131,19 @@ function ApiVariants() {
       </p>
       <CodeBlock>{`[$.layout('grid')]: {
   container: {
-    style: { display: 'grid', gridTemplateColumns: '1fr' },
-    '@md': {
-      style: { gridTemplateColumns: '1fr 1fr' },
-    },
-    '@lg': {
-      style: { gridTemplateColumns: '1fr 1fr 1fr' },
+    '@platform web': {
+      $style: { display: 'grid', gridTemplateColumns: '1fr' },
+      '@md': {
+        $style: { gridTemplateColumns: '1fr 1fr' },
+      },
+      '@lg': {
+        $style: { gridTemplateColumns: '1fr 1fr 1fr' },
+      },
     },
   },
 }`}</CodeBlock>
 
-      <h2 {...s.h2}>Named Styles ($composes)</h2>
+      <h2 {...s.h2}>Named Styles ($compose)</h2>
       <p>
         When multiple variants share common element overrides, you can extract
         them into a <strong>named style</strong> and compose them into variants.
@@ -134,12 +156,14 @@ function ApiVariants() {
         Named styles are not variant rules — they are reusable fragments that
         can be composed into actual variants:
       </p>
-      <CodeBlock>{`const buttonStyles = stylesheet({
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const buttonStyles = stylesheet({
   container: { borderRadius: 'medium' },
   label: {},
-}).variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>(($) => ({
+}).variants(($: Variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>) => ({
   // Named style — shared across variants
-  $('interactive'): {
+  [$('interactive')]: {
     'container:hover': {
       container: { shadow: 'medium' },
     },
@@ -195,10 +219,10 @@ function ApiVariants() {
         multiple named styles. They are applied in order, and the variant's own
         properties always take priority:
       </p>
-      <CodeBlock>{`$('borders'): {
+      <CodeBlock>{`[$('borders')]: {
   container: { borderWidth: 'thin', borderColor: 'subtle' },
 },
-$('spacing'): {
+[$('spacing')]: {
   container: { paddingX: 3, paddingY: 2 },
 },
 

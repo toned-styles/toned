@@ -8,7 +8,7 @@ resolution imports `@toned/core/server`.
 ## Declare and render
 
 ```tsx
-import { defineConfig, defineSystem, defineToken } from '@toned/core'
+import { defineConfig, defineSystem, defineToken, type Variants } from '@toned/core'
 import { ConfigProvider, createElements } from '@toned/react'
 import web from '@toned/react/react-web'
 
@@ -26,7 +26,7 @@ export const buttonStyles = system
   .stylesheet(q => ({
     Root: { $kind: 'pressable', tone: 'neutral', [q.state('hover')]: { tone: 'accent' } },
   }))
-  .variants<{ size: 's' | 'm' }>()($ => ({
+  .variants(($: Variants<{ size: 's' | 'm' }>) => ({
   [$.size('s')]: { Root: { $style: { padding: 4 } } },
   [$.size('m')]: { Root: { $style: { padding: 8 } } },
 }))
@@ -162,9 +162,10 @@ precedence tier.
 The checked factory accepts defaults as its second argument:
 
 ```tsx
+type ButtonVariants = { size: 's' | 'm'; active: boolean }
 const sheet = system.stylesheet({ Root: { $kind: 'pressable' } })
-  .variants<{ size: 's' | 'm'; active: boolean }>()(
-    $ => ({ [$.size('s')]: { Root: { $style: { padding: 4 } } } }),
+  .variants(
+    ($: Variants<ButtonVariants>) => ({ [$.size('s')]: { Root: { $style: { padding: 4 } } } }),
     { defaults: { size: 'm' } },
   )
 const s = useStyles(sheet, { active: false })

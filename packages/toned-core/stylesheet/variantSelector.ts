@@ -10,6 +10,10 @@ export type ExtractNamedStyles<R> = {
 export type VariantKey = string
 
 type Scalar = string | number | boolean
+type AxisValues<Value> = readonly [
+  Exclude<Value, undefined> & Scalar,
+  ...(Exclude<Value, undefined> & Scalar)[],
+]
 type Selection = readonly [string, readonly string[]]
 type Replace<
   S extends string,
@@ -124,17 +128,41 @@ type Next<
   Selections extends readonly Selection[],
   K extends string,
   Values extends readonly Scalar[],
-> = InsertSelection<
-  Selections,
-  readonly [K, SortValues<Values>]
-> extends infer Sorted extends readonly Selection[]
+> = number extends Values['length'] | Selections['length']
   ? VariantBuilder<
       Mods,
       Acc & Record<K, Values[number]>,
-      SelectionKey<Sorted>,
-      Sorted
+      string,
+      readonly Selection[]
     >
-  : never
+  : InsertSelection<
+        Selections,
+        readonly [K, SortValues<Values>]
+      > extends infer Sorted extends readonly Selection[]
+    ? VariantBuilder<
+        Mods,
+        Acc & Record<K, Values[number]>,
+        SelectionKey<Sorted>,
+        Sorted
+      >
+    : never
+
+// The literal overload determines identity. The vocabulary overload keeps all
+// valid alternatives visible when editing an already valid argument. Unlike a
+// union parameter, it cannot bypass an explicitly supplied literal tuple type.
+type AxisSelector<
+  Mods extends ModType,
+  Acc,
+  Selections extends readonly Selection[],
+  K extends keyof Mods & string,
+> = {
+  <const Values extends AxisValues<Mods[K]>>(
+    ...values: Values
+  ): Next<Mods, Acc, Selections, K, Values>
+  (
+    ...values: AxisValues<Mods[K]>
+  ): Next<Mods, Acc, Selections, K, AxisValues<Mods[K]>>
+}
 
 export type VariantBuilder<
   Mods extends ModType,
@@ -145,14 +173,7 @@ export type VariantBuilder<
   [K in Exclude<keyof Mods, keyof Acc> as K extends string
     ? K
     : never]-?: K extends string
-    ? <
-        const Values extends readonly [
-          Exclude<Mods[K], undefined> & Scalar,
-          ...(Exclude<Mods[K], undefined> & Scalar)[],
-        ],
-      >(
-        ...values: Values
-      ) => Next<Mods, Acc, Selections, K, Values>
+    ? AxisSelector<Mods, Acc, Selections, K>
     : never
 }
 
@@ -160,14 +181,7 @@ export type VariantSelector<Mods extends ModType> = (<Name extends string>(
   name: Name,
 ) => NamedStyleKey<Name>) & {
   [K in keyof Mods as K extends string ? K : never]-?: K extends string
-    ? <
-        const Values extends readonly [
-          Exclude<Mods[K], undefined> & Scalar,
-          ...(Exclude<Mods[K], undefined> & Scalar)[],
-        ],
-      >(
-        ...values: Values
-      ) => Next<Mods, {}, [], K, Values>
+    ? AxisSelector<Mods, {}, [], K>
     : never
 }
 

@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { stylesheet } from '@toned/systems/base'
 
 /** Card-like surface with subtle background and rounded corners. */
@@ -12,6 +13,8 @@ export const cardStyles = stylesheet({
   },
 })
 
+type BadgeVariants = { variant?: 'default' | 'success' | 'warning' | 'error' }
+
 /** Inline badge / chip for labelling items. */
 export const badgeStyles = stylesheet({
   badge: {
@@ -25,9 +28,7 @@ export const badgeStyles = stylesheet({
     fontWeight: 500,
     lineHeight: 1.6,
   },
-}).variants<{
-  variant?: 'default' | 'success' | 'warning' | 'error'
-}>(($) => ({
+}).variants(($: Variants<BadgeVariants>) => ({
   [$.variant('success')]: {
     badge: {
       bgColor: 'status_success',

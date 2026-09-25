@@ -43,6 +43,7 @@ export type {
   VariantKey,
   VariantSelector,
   VariantStyleDef,
+  Variants,
   VariantsCallback,
   VariantsInput,
 } from './stylesheet.ts'

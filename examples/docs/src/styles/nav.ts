@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { stylesheet } from '@toned/systems/base'
 
 export const navStyles = stylesheet({
@@ -48,9 +49,7 @@ export const navStyles = stylesheet({
       backgroundClip: 'text',
     },
   },
-}).variants<{
-  active?: 'true'
-}>(($) => ({
+}).variants(($: Variants<{ active?: 'true' }>) => ({
   [$.active('true')]: {
     link: {
       textColor: 'on_action',

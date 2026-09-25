@@ -303,7 +303,10 @@ export function createStylesheet<
       })
     },
     // Add variants method for chaining
-    variants: <M extends ModType>(variantsArg?: AnyValue): AnyValue => {
+    variants: <M extends ModType>(
+      variantsArg?: AnyValue,
+      variantOptions?: { defaults?: Record<string, unknown> },
+    ): AnyValue => {
       const build = (
         input: AnyValue,
         options?: { defaults?: Record<string, unknown> },
@@ -330,7 +333,9 @@ export function createStylesheet<
           { ...defaults, ...options?.defaults },
         )
       }
-      return variantsArg === undefined ? build : build(variantsArg)
+      return variantsArg === undefined
+        ? build
+        : build(variantsArg, variantOptions)
     },
     when: (predicate: AnyValue, elementRules: AnyValue) =>
       createStylesheet<S, _Mods, T>(

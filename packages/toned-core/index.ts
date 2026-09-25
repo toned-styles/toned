@@ -98,6 +98,7 @@ export type {
   Tokens,
   TokenTypeConfig,
   VariantSelector,
+  Variants,
 } from './types/index.ts'
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'

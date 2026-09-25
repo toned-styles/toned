@@ -4,6 +4,8 @@
  * @module stylesheet
  */
 
+export type { Variants } from '../types/stylesheet.ts'
+
 export { initMedia } from './media.ts'
 export {
   defineReactNativeHost,
