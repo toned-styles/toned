@@ -114,3 +114,38 @@ claim. The scripts assert correct vocabularies after edits; timing thresholds ar
 not CI gates. HQ's `scripts/build/test-toned-lsp.ts` runs the real protocol
 scenarios, and accepts `--serverBundle <isolated baseline bundle>` for paired
 measurements. See `scripts/build/__tests__/fixtures/toned-lsp-performance.ts` for the bounded edits.
+
+## Post-review LSP checks at `2ef2d02`
+
+A further three alternating fresh-server pairs compare baseline `7e3944c` with
+`2ef2d02`, including dependency-revision validation and serialized disk publication.
+The updated HQ workspace contains 1,007 files and 5,440,076 source characters.
+All six protocol acceptance runs passed, including current-value completion after
+shared-token edits, source integrity and stale-edit rejection. The complete new
+receipt is `design-tools-lsp-review.results.json`; the earlier receipt above is
+retained as historical evidence. Both receipts redact the developer workspace URI.
+
+| Real HQ protocol scenario | Baseline median ms | Reviewed median ms |
+| --- | ---: | ---: |
+| First usable Daylight completion during indexing | 290.62 | 219.13 |
+| Full workspace indexing | 1136.35 | 1185.01 |
+| Warm completion round trip | 0.223 | 0.181 |
+| Unrelated component edit followed by completion | 1.286 | 0.908 |
+| Shared Daylight token edit followed by current-value completion | 8.063 | 7.539 |
+| 64 queued changes, then completion | 42.274 | 26.224 |
+
+First usable completion and burst handling improved in these samples. Full
+indexing was about 4.3% slower by median; the three reviewed runs ranged from
+1172.21 to 1455.63ms, so this is not an isolated measurement of the disk queue's
+cost. Warm submillisecond requests and the small shared-token difference do not
+establish reliable gains. No machine-dependent timing threshold is a test gate.
+
+Median RSS after the scenarios was 256.22 MiB baseline versus 254.19 MiB reviewed;
+heap used was 66.75 versus 77.36 MiB. GC was not forced, so the higher heap reading
+is an observation, not a retained-memory conclusion. The dependency-revision map
+has one entry per indexed document; the disk queue allows 128 distinct files and
+one coalesced follow-up each. Guarded regressions separately establish large
+cyclic-graph responsiveness, negative-import invalidation, request cancellation,
+ordered disk reads, deletion/recreation and unsaved-buffer precedence. The
+256-file/1024-candidate initial-demand bounds and cooperative request limits
+remain; this work does not turn finite indexing into unlimited project analysis.

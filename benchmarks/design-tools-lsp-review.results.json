@@ -1,0 +1,1030 @@
+{
+  "baseline": "7e3944c",
+  "baselineInstrumentation": "Only process.memoryUsage() added to toned/statistics in isolated baseline archive; no behavior/cache/scheduling patches.",
+  "stage": "Post-review dependency revision and serialized disk publication fixes; prior historical receipt retained separately.",
+  "candidateSourceSha256": {
+    "project.ts": "441f0c4fb5c1f9ad53feb54b28408e06e82ae1e3996fb2add80316f908a4b7c2",
+    "static-resolution.ts": "b83c2534509ccf6e0e4e96edd5a1bb124ba20e69c19138e74f864b9c17c81446",
+    "workspace.ts": "407d0f25abd6e5123cab09baa4535180f0a4c6c06e5a33ee56971be8621ecb7d",
+    "lsp/service.ts": "25cacce5ce25fc695cce011dea18d2ec61b281d29e2ca1fcc533e983e7883f62",
+    "lsp/server.ts": "618eebe0be3dc0e685f0361ced7635d10f748cb496a200bf24063c81361b0ad3",
+    "lsp/disk-queue.ts": "21d97c0eb4a71c063207065d649c123b238a049ea10fda1d84930ce753507e71"
+  },
+  "node": "v26.8.1",
+  "machine": {
+    "platform": "Darwin",
+    "release": "27.0.0",
+    "arch": "arm64",
+    "cpu": "Apple M4"
+  },
+  "pathRedaction": "Developer workspace URI replaced by file:///<hq-workspace>; original receipts retained outside tracked files.",
+  "hqConfiguration": {
+    "include": [
+      "lib/ui",
+      "lib/haelo-app-ds-v2/src",
+      "app/hq/components",
+      "app/haelo-app-v2/components",
+      "app/haelo-app-v2/app",
+      "vendor/toned/packages/toned-systems"
+    ],
+    "modules": {
+      "@lib/*": ["lib/*"],
+      "@toned/systems/base": [
+        "vendor/toned/packages/toned-systems/base/index.ts"
+      ],
+      "@lib/haelo-app-ds-v2/toned": ["lib/haelo-app-ds-v2/src/toned/system.ts"]
+    }
+  },
+  "summaryMedians": {
+    "baseline": {
+      "firstCompletionMs": 290.6235,
+      "completeIndexMs": 1136.354333,
+      "warmMs": 0.22308399999997164,
+      "unrelatedEditMs": 1.2862089999998716,
+      "sharedTokenEditMs": 8.06295799999998,
+      "burstMs": 42.27412500000014,
+      "rssAfterMiB": 256.21875,
+      "heapUsedAfterMiB": 66.74624633789062
+    },
+    "optimized": {
+      "firstCompletionMs": 219.134542,
+      "completeIndexMs": 1185.0124170000001,
+      "warmMs": 0.18145800000002055,
+      "unrelatedEditMs": 0.9082080000000587,
+      "sharedTokenEditMs": 7.539208000000144,
+      "burstMs": 26.224290999999994,
+      "rssAfterMiB": 254.1875,
+      "heapUsedAfterMiB": 77.35799407958984
+    }
+  },
+  "hqRuns": {
+    "baseline": [
+      {
+        "status": "passed",
+        "source": "lib/ui/shadcn/badge.tsx",
+        "checks": [
+          "configured-workspace-index",
+          "bgColor-key-completion",
+          "primary-value-completion",
+          "daylight-definition",
+          "finite-radius-diagnostic",
+          "valid-buffer-recovery",
+          "scoped-workspace-edit",
+          "stale-version-refusal",
+          "source-unchanged"
+        ],
+        "configuration": {
+          "include": [
+            "lib/ui",
+            "lib/haelo-app-ds-v2/src",
+            "app/hq/components",
+            "app/haelo-app-v2/components",
+            "app/haelo-app-v2/app",
+            "vendor/toned/packages/toned-systems"
+          ],
+          "modules": {
+            "@lib/*": ["lib/*"],
+            "@toned/systems/base": [
+              "vendor/toned/packages/toned-systems/base/index.ts"
+            ],
+            "@lib/haelo-app-ds-v2/toned": [
+              "lib/haelo-app-ds-v2/src/toned/system.ts"
+            ]
+          }
+        },
+        "statistics": {
+          "parses": 1007,
+          "unchanged": 0,
+          "files": 1007,
+          "characters": 5440076,
+          "revision": 1008,
+          "memory": {
+            "rss": 255901696,
+            "heapTotal": 112885760,
+            "heapUsed": 53772360,
+            "external": 11751943,
+            "arrayBuffers": 229445
+          },
+          "workspaces": {
+            "file:///<hq-workspace>": {
+              "state": "complete",
+              "loaded": 1006,
+              "errors": []
+            }
+          }
+        },
+        "performance": {
+          "firstCompletionMs": 364.87412499999994,
+          "completeIndexMs": 1331.419833
+        },
+        "completion": {
+          "token": "bgColor",
+          "value": "primary",
+          "definition": {
+            "file": "lib/ui/toned/tokens-daylight.ts",
+            "range": {
+              "start": {
+                "line": 38,
+                "character": 13
+              },
+              "end": {
+                "line": 38,
+                "character": 20
+              }
+            }
+          }
+        },
+        "editing": {
+          "diagnostic": "token-value",
+          "scope": {
+            "owner": "styles",
+            "path": ["Root", "radius"]
+          },
+          "version": 3,
+          "replacement": "'md'",
+          "staleVersionRejected": true
+        },
+        "editingPerformance": {
+          "samplesMs": {
+            "warm": [
+              0.8113330000001042, 0.5274580000000242, 0.4400829999999587,
+              0.3380409999999756, 0.3727080000001024
+            ],
+            "unrelatedEdit": [
+              2.708958000000166, 2.03770899999995, 1.7383330000000115
+            ],
+            "sharedTokenEdit": [
+              8.858291000000008, 8.63779099999988, 8.204666999999972
+            ],
+            "burst": [44.74362499999984]
+          },
+          "before": {
+            "parses": 1010,
+            "unchanged": 0,
+            "files": 1006,
+            "characters": 5434777,
+            "revision": 1012,
+            "memory": {
+              "rss": 256065536,
+              "heapTotal": 112885760,
+              "heapUsed": 58606568,
+              "external": 11837731,
+              "arrayBuffers": 315233
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            }
+          },
+          "after": {
+            "parses": 1086,
+            "unchanged": 0,
+            "files": 1007,
+            "characters": 5440088,
+            "revision": 1090,
+            "memory": {
+              "rss": 268713984,
+              "heapTotal": 123633664,
+              "heapUsed": 62209200,
+              "external": 11877118,
+              "arrayBuffers": 354620
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            }
+          },
+          "limits": "Protocol round trips on real HQ source; no source files written. Memory is process.memoryUsage without forced GC, not retained heap or a leak proof. Burst has 64 coalescible updates to one unrelated open document."
+        }
+      },
+      {
+        "status": "passed",
+        "source": "lib/ui/shadcn/badge.tsx",
+        "checks": [
+          "configured-workspace-index",
+          "bgColor-key-completion",
+          "primary-value-completion",
+          "daylight-definition",
+          "finite-radius-diagnostic",
+          "valid-buffer-recovery",
+          "scoped-workspace-edit",
+          "stale-version-refusal",
+          "source-unchanged"
+        ],
+        "configuration": {
+          "include": [
+            "lib/ui",
+            "lib/haelo-app-ds-v2/src",
+            "app/hq/components",
+            "app/haelo-app-v2/components",
+            "app/haelo-app-v2/app",
+            "vendor/toned/packages/toned-systems"
+          ],
+          "modules": {
+            "@lib/*": ["lib/*"],
+            "@toned/systems/base": [
+              "vendor/toned/packages/toned-systems/base/index.ts"
+            ],
+            "@lib/haelo-app-ds-v2/toned": [
+              "lib/haelo-app-ds-v2/src/toned/system.ts"
+            ]
+          }
+        },
+        "statistics": {
+          "parses": 1007,
+          "unchanged": 0,
+          "files": 1007,
+          "characters": 5440076,
+          "revision": 1008,
+          "memory": {
+            "rss": 254132224,
+            "heapTotal": 111607808,
+            "heapUsed": 65272120,
+            "external": 11838617,
+            "arrayBuffers": 316119
+          },
+          "workspaces": {
+            "file:///<hq-workspace>": {
+              "state": "complete",
+              "loaded": 1006,
+              "errors": []
+            }
+          }
+        },
+        "performance": {
+          "firstCompletionMs": 290.6235,
+          "completeIndexMs": 1136.354333
+        },
+        "completion": {
+          "token": "bgColor",
+          "value": "primary",
+          "definition": {
+            "file": "lib/ui/toned/tokens-daylight.ts",
+            "range": {
+              "start": {
+                "line": 38,
+                "character": 13
+              },
+              "end": {
+                "line": 38,
+                "character": 20
+              }
+            }
+          }
+        },
+        "editing": {
+          "diagnostic": "token-value",
+          "scope": {
+            "owner": "styles",
+            "path": ["Root", "radius"]
+          },
+          "version": 3,
+          "replacement": "'md'",
+          "staleVersionRejected": true
+        },
+        "editingPerformance": {
+          "samplesMs": {
+            "warm": [
+              0.22987499999999272, 0.22700000000008913, 0.22308399999997164,
+              0.16041699999982484, 0.14695899999992434
+            ],
+            "unrelatedEdit": [
+              1.1617079999998623, 0.967792000000145, 1.1597920000001523
+            ],
+            "sharedTokenEdit": [
+              7.144999999999982, 6.916125000000193, 7.283999999999878
+            ],
+            "burst": [40.55233300000009]
+          },
+          "before": {
+            "parses": 1010,
+            "unchanged": 0,
+            "files": 1006,
+            "characters": 5434777,
+            "revision": 1012,
+            "memory": {
+              "rss": 254312448,
+              "heapTotal": 111607808,
+              "heapUsed": 70112592,
+              "external": 11924405,
+              "arrayBuffers": 401907
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            }
+          },
+          "after": {
+            "parses": 1086,
+            "unchanged": 0,
+            "files": 1007,
+            "characters": 5440088,
+            "revision": 1090,
+            "memory": {
+              "rss": 264912896,
+              "heapTotal": 121044992,
+              "heapUsed": 78147888,
+              "external": 11814551,
+              "arrayBuffers": 292053
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            }
+          },
+          "limits": "Protocol round trips on real HQ source; no source files written. Memory is process.memoryUsage without forced GC, not retained heap or a leak proof. Burst has 64 coalescible updates to one unrelated open document."
+        }
+      },
+      {
+        "status": "passed",
+        "source": "lib/ui/shadcn/badge.tsx",
+        "checks": [
+          "configured-workspace-index",
+          "bgColor-key-completion",
+          "primary-value-completion",
+          "daylight-definition",
+          "finite-radius-diagnostic",
+          "valid-buffer-recovery",
+          "scoped-workspace-edit",
+          "stale-version-refusal",
+          "source-unchanged"
+        ],
+        "configuration": {
+          "include": [
+            "lib/ui",
+            "lib/haelo-app-ds-v2/src",
+            "app/hq/components",
+            "app/haelo-app-v2/components",
+            "app/haelo-app-v2/app",
+            "vendor/toned/packages/toned-systems"
+          ],
+          "modules": {
+            "@lib/*": ["lib/*"],
+            "@toned/systems/base": [
+              "vendor/toned/packages/toned-systems/base/index.ts"
+            ],
+            "@lib/haelo-app-ds-v2/toned": [
+              "lib/haelo-app-ds-v2/src/toned/system.ts"
+            ]
+          }
+        },
+        "statistics": {
+          "parses": 1007,
+          "unchanged": 0,
+          "files": 1007,
+          "characters": 5440076,
+          "revision": 1008,
+          "memory": {
+            "rss": 253100032,
+            "heapTotal": 111083520,
+            "heapUsed": 62701112,
+            "external": 11822106,
+            "arrayBuffers": 299608
+          },
+          "workspaces": {
+            "file:///<hq-workspace>": {
+              "state": "complete",
+              "loaded": 1006,
+              "errors": []
+            }
+          }
+        },
+        "performance": {
+          "firstCompletionMs": 274.005375,
+          "completeIndexMs": 1126.482291
+        },
+        "completion": {
+          "token": "bgColor",
+          "value": "primary",
+          "definition": {
+            "file": "lib/ui/toned/tokens-daylight.ts",
+            "range": {
+              "start": {
+                "line": 38,
+                "character": 13
+              },
+              "end": {
+                "line": 38,
+                "character": 20
+              }
+            }
+          }
+        },
+        "editing": {
+          "diagnostic": "token-value",
+          "scope": {
+            "owner": "styles",
+            "path": ["Root", "radius"]
+          },
+          "version": 3,
+          "replacement": "'md'",
+          "staleVersionRejected": true
+        },
+        "editingPerformance": {
+          "samplesMs": {
+            "warm": [
+              0.2139999999999418, 0.2350829999998041, 0.2194170000000213,
+              0.1664579999999205, 0.13249999999993634
+            ],
+            "unrelatedEdit": [
+              1.4246669999999995, 1.2862089999998716, 1.1810410000000502
+            ],
+            "sharedTokenEdit": [
+              8.553875000000062, 7.492707999999993, 8.06295799999998
+            ],
+            "burst": [42.27412500000014]
+          },
+          "before": {
+            "parses": 1010,
+            "unchanged": 0,
+            "files": 1006,
+            "characters": 5434777,
+            "revision": 1012,
+            "memory": {
+              "rss": 253263872,
+              "heapTotal": 111083520,
+              "heapUsed": 67524392,
+              "external": 11907894,
+              "arrayBuffers": 385396
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            }
+          },
+          "after": {
+            "parses": 1086,
+            "unchanged": 0,
+            "files": 1007,
+            "characters": 5440088,
+            "revision": 1090,
+            "memory": {
+              "rss": 268664832,
+              "heapTotal": 125763584,
+              "heapUsed": 69988512,
+              "external": 11812978,
+              "arrayBuffers": 290480
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            }
+          },
+          "limits": "Protocol round trips on real HQ source; no source files written. Memory is process.memoryUsage without forced GC, not retained heap or a leak proof. Burst has 64 coalescible updates to one unrelated open document."
+        }
+      }
+    ],
+    "optimized": [
+      {
+        "status": "passed",
+        "source": "lib/ui/shadcn/badge.tsx",
+        "checks": [
+          "configured-workspace-index",
+          "bgColor-key-completion",
+          "primary-value-completion",
+          "daylight-definition",
+          "finite-radius-diagnostic",
+          "valid-buffer-recovery",
+          "scoped-workspace-edit",
+          "stale-version-refusal",
+          "source-unchanged"
+        ],
+        "configuration": {
+          "include": [
+            "lib/ui",
+            "lib/haelo-app-ds-v2/src",
+            "app/hq/components",
+            "app/haelo-app-v2/components",
+            "app/haelo-app-v2/app",
+            "vendor/toned/packages/toned-systems"
+          ],
+          "modules": {
+            "@lib/*": ["lib/*"],
+            "@toned/systems/base": [
+              "vendor/toned/packages/toned-systems/base/index.ts"
+            ],
+            "@lib/haelo-app-ds-v2/toned": [
+              "lib/haelo-app-ds-v2/src/toned/system.ts"
+            ]
+          }
+        },
+        "statistics": {
+          "parses": 1007,
+          "unchanged": 15,
+          "files": 1007,
+          "characters": 5440076,
+          "revision": 1008,
+          "resolution": {
+            "entries": 430,
+            "weight": 3647,
+            "hits": 16,
+            "evaluations": 430
+          },
+          "workspaces": {
+            "file:///<hq-workspace>": {
+              "state": "complete",
+              "loaded": 1006,
+              "errors": []
+            }
+          },
+          "scheduling": {
+            "pending": 0,
+            "diagnosticComputations": 16,
+            "diagnosticPublications": 1
+          },
+          "memory": {
+            "rss": 258162688,
+            "heapTotal": 113410048,
+            "heapUsed": 55751336,
+            "external": 11778175,
+            "arrayBuffers": 242975
+          }
+        },
+        "performance": {
+          "firstCompletionMs": 219.134542,
+          "completeIndexMs": 1455.634125
+        },
+        "completion": {
+          "token": "bgColor",
+          "value": "primary",
+          "definition": {
+            "file": "lib/ui/toned/tokens-daylight.ts",
+            "range": {
+              "start": {
+                "line": 38,
+                "character": 13
+              },
+              "end": {
+                "line": 38,
+                "character": 20
+              }
+            }
+          }
+        },
+        "editing": {
+          "diagnostic": "token-value",
+          "scope": {
+            "owner": "styles",
+            "path": ["Root", "radius"]
+          },
+          "version": 3,
+          "replacement": "'md'",
+          "staleVersionRejected": true
+        },
+        "editingPerformance": {
+          "samplesMs": {
+            "warm": [
+              0.2106659999999465, 0.14025000000015098, 0.26166699999998855,
+              0.18145800000002055, 0.13416700000016135
+            ],
+            "unrelatedEdit": [
+              0.9082080000000587, 0.8939589999999953, 0.9192909999999301
+            ],
+            "sharedTokenEdit": [
+              7.855624999999918, 7.34679200000005, 7.539208000000144
+            ],
+            "burst": [32.26308300000005]
+          },
+          "before": {
+            "parses": 1010,
+            "unchanged": 15,
+            "files": 1006,
+            "characters": 5434777,
+            "revision": 1012,
+            "resolution": {
+              "entries": 428,
+              "weight": 3267,
+              "hits": 22,
+              "evaluations": 436
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            },
+            "scheduling": {
+              "pending": 0,
+              "diagnosticComputations": 19,
+              "diagnosticPublications": 4
+            },
+            "memory": {
+              "rss": 258326528,
+              "heapTotal": 113410048,
+              "heapUsed": 59163696,
+              "external": 11863963,
+              "arrayBuffers": 328763
+            }
+          },
+          "after": {
+            "parses": 1086,
+            "unchanged": 15,
+            "files": 1007,
+            "characters": 5440088,
+            "revision": 1090,
+            "resolution": {
+              "entries": 432,
+              "weight": 4027,
+              "hits": 57,
+              "evaluations": 2385
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            },
+            "scheduling": {
+              "pending": 0,
+              "diagnosticComputations": 45,
+              "diagnosticPublications": 23
+            },
+            "memory": {
+              "rss": 266682368,
+              "heapTotal": 120487936,
+              "heapUsed": 81115736,
+              "external": 12086415,
+              "arrayBuffers": 551215
+            }
+          },
+          "limits": "Protocol round trips on real HQ source; no source files written. Memory is process.memoryUsage without forced GC, not retained heap or a leak proof. Burst has 64 coalescible updates to one unrelated open document."
+        }
+      },
+      {
+        "status": "passed",
+        "source": "lib/ui/shadcn/badge.tsx",
+        "checks": [
+          "configured-workspace-index",
+          "bgColor-key-completion",
+          "primary-value-completion",
+          "daylight-definition",
+          "finite-radius-diagnostic",
+          "valid-buffer-recovery",
+          "scoped-workspace-edit",
+          "stale-version-refusal",
+          "source-unchanged"
+        ],
+        "configuration": {
+          "include": [
+            "lib/ui",
+            "lib/haelo-app-ds-v2/src",
+            "app/hq/components",
+            "app/haelo-app-v2/components",
+            "app/haelo-app-v2/app",
+            "vendor/toned/packages/toned-systems"
+          ],
+          "modules": {
+            "@lib/*": ["lib/*"],
+            "@toned/systems/base": [
+              "vendor/toned/packages/toned-systems/base/index.ts"
+            ],
+            "@lib/haelo-app-ds-v2/toned": [
+              "lib/haelo-app-ds-v2/src/toned/system.ts"
+            ]
+          }
+        },
+        "statistics": {
+          "parses": 1007,
+          "unchanged": 15,
+          "files": 1007,
+          "characters": 5440076,
+          "revision": 1008,
+          "resolution": {
+            "entries": 430,
+            "weight": 3647,
+            "hits": 16,
+            "evaluations": 430
+          },
+          "workspaces": {
+            "file:///<hq-workspace>": {
+              "state": "complete",
+              "loaded": 1006,
+              "errors": []
+            }
+          },
+          "scheduling": {
+            "pending": 0,
+            "diagnosticComputations": 16,
+            "diagnosticPublications": 1
+          },
+          "memory": {
+            "rss": 256868352,
+            "heapTotal": 112623616,
+            "heapUsed": 77800840,
+            "external": 11918829,
+            "arrayBuffers": 383629
+          }
+        },
+        "performance": {
+          "firstCompletionMs": 221.30170800000002,
+          "completeIndexMs": 1185.0124170000001
+        },
+        "completion": {
+          "token": "bgColor",
+          "value": "primary",
+          "definition": {
+            "file": "lib/ui/toned/tokens-daylight.ts",
+            "range": {
+              "start": {
+                "line": 38,
+                "character": 13
+              },
+              "end": {
+                "line": 38,
+                "character": 20
+              }
+            }
+          }
+        },
+        "editing": {
+          "diagnostic": "token-value",
+          "scope": {
+            "owner": "styles",
+            "path": ["Root", "radius"]
+          },
+          "version": 3,
+          "replacement": "'md'",
+          "staleVersionRejected": true
+        },
+        "editingPerformance": {
+          "samplesMs": {
+            "warm": [
+              0.265250000000151, 0.20991700000013225, 0.16095799999993687,
+              0.1626659999999447, 0.20070799999984956
+            ],
+            "unrelatedEdit": [
+              0.9437080000000151, 1.1556249999998727, 0.8079999999999927
+            ],
+            "sharedTokenEdit": [
+              8.107167000000118, 7.865625000000136, 7.088625000000093
+            ],
+            "burst": [26.224290999999994]
+          },
+          "before": {
+            "parses": 1010,
+            "unchanged": 15,
+            "files": 1006,
+            "characters": 5434777,
+            "revision": 1012,
+            "resolution": {
+              "entries": 428,
+              "weight": 3267,
+              "hits": 22,
+              "evaluations": 436
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            },
+            "scheduling": {
+              "pending": 0,
+              "diagnosticComputations": 19,
+              "diagnosticPublications": 4
+            },
+            "memory": {
+              "rss": 258211840,
+              "heapTotal": 113934336,
+              "heapUsed": 56543512,
+              "external": 11832907,
+              "arrayBuffers": 297707
+            }
+          },
+          "after": {
+            "parses": 1087,
+            "unchanged": 15,
+            "files": 1007,
+            "characters": 5440088,
+            "revision": 1092,
+            "resolution": {
+              "entries": 432,
+              "weight": 4027,
+              "hits": 56,
+              "evaluations": 2383
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            },
+            "scheduling": {
+              "pending": 0,
+              "diagnosticComputations": 44,
+              "diagnosticPublications": 23
+            },
+            "memory": {
+              "rss": 265240576,
+              "heapTotal": 119177216,
+              "heapUsed": 82159440,
+              "external": 12085224,
+              "arrayBuffers": 550024
+            }
+          },
+          "limits": "Protocol round trips on real HQ source; no source files written. Memory is process.memoryUsage without forced GC, not retained heap or a leak proof. Burst has 64 coalescible updates to one unrelated open document."
+        }
+      },
+      {
+        "status": "passed",
+        "source": "lib/ui/shadcn/badge.tsx",
+        "checks": [
+          "configured-workspace-index",
+          "bgColor-key-completion",
+          "primary-value-completion",
+          "daylight-definition",
+          "finite-radius-diagnostic",
+          "valid-buffer-recovery",
+          "scoped-workspace-edit",
+          "stale-version-refusal",
+          "source-unchanged"
+        ],
+        "configuration": {
+          "include": [
+            "lib/ui",
+            "lib/haelo-app-ds-v2/src",
+            "app/hq/components",
+            "app/haelo-app-v2/components",
+            "app/haelo-app-v2/app",
+            "vendor/toned/packages/toned-systems"
+          ],
+          "modules": {
+            "@lib/*": ["lib/*"],
+            "@toned/systems/base": [
+              "vendor/toned/packages/toned-systems/base/index.ts"
+            ],
+            "@lib/haelo-app-ds-v2/toned": [
+              "lib/haelo-app-ds-v2/src/toned/system.ts"
+            ]
+          }
+        },
+        "statistics": {
+          "parses": 1007,
+          "unchanged": 15,
+          "files": 1007,
+          "characters": 5440076,
+          "revision": 1008,
+          "resolution": {
+            "entries": 430,
+            "weight": 3647,
+            "hits": 16,
+            "evaluations": 430
+          },
+          "workspaces": {
+            "file:///<hq-workspace>": {
+              "state": "complete",
+              "loaded": 1006,
+              "errors": []
+            }
+          },
+          "scheduling": {
+            "pending": 0,
+            "diagnosticComputations": 16,
+            "diagnosticPublications": 1
+          },
+          "memory": {
+            "rss": 255574016,
+            "heapTotal": 110690304,
+            "heapUsed": 62399224,
+            "external": 11830506,
+            "arrayBuffers": 295306
+          }
+        },
+        "performance": {
+          "firstCompletionMs": 214.991625,
+          "completeIndexMs": 1172.20525
+        },
+        "completion": {
+          "token": "bgColor",
+          "value": "primary",
+          "definition": {
+            "file": "lib/ui/toned/tokens-daylight.ts",
+            "range": {
+              "start": {
+                "line": 38,
+                "character": 13
+              },
+              "end": {
+                "line": 38,
+                "character": 20
+              }
+            }
+          }
+        },
+        "editing": {
+          "diagnostic": "token-value",
+          "scope": {
+            "owner": "styles",
+            "path": ["Root", "radius"]
+          },
+          "version": 3,
+          "replacement": "'md'",
+          "staleVersionRejected": true
+        },
+        "editingPerformance": {
+          "samplesMs": {
+            "warm": [
+              0.29758300000003146, 0.17991699999993216, 0.14574999999990723,
+              0.17350000000010368, 0.18816599999991013
+            ],
+            "unrelatedEdit": [
+              0.8797079999999369, 0.9088329999999587, 0.6206670000001395
+            ],
+            "sharedTokenEdit": [
+              9.092291999999816, 6.658334000000195, 6.994250000000193
+            ],
+            "burst": [24.971083000000135]
+          },
+          "before": {
+            "parses": 1010,
+            "unchanged": 15,
+            "files": 1006,
+            "characters": 5434777,
+            "revision": 1012,
+            "resolution": {
+              "entries": 428,
+              "weight": 3267,
+              "hits": 22,
+              "evaluations": 436
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            },
+            "scheduling": {
+              "pending": 0,
+              "diagnosticComputations": 19,
+              "diagnosticPublications": 4
+            },
+            "memory": {
+              "rss": 255721472,
+              "heapTotal": 110690304,
+              "heapUsed": 65830672,
+              "external": 11916294,
+              "arrayBuffers": 381094
+            }
+          },
+          "after": {
+            "parses": 1086,
+            "unchanged": 15,
+            "files": 1007,
+            "characters": 5440088,
+            "revision": 1090,
+            "resolution": {
+              "entries": 432,
+              "weight": 4027,
+              "hits": 57,
+              "evaluations": 2385
+            },
+            "workspaces": {
+              "file:///<hq-workspace>": {
+                "state": "complete",
+                "loaded": 1006,
+                "errors": []
+              }
+            },
+            "scheduling": {
+              "pending": 0,
+              "diagnosticComputations": 45,
+              "diagnosticPublications": 23
+            },
+            "memory": {
+              "rss": 266534912,
+              "heapTotal": 120651776,
+              "heapUsed": 62374720,
+              "external": 11821378,
+              "arrayBuffers": 286178
+            }
+          },
+          "limits": "Protocol round trips on real HQ source; no source files written. Memory is process.memoryUsage without forced GC, not retained heap or a leak proof. Burst has 64 coalescible updates to one unrelated open document."
+        }
+      }
+    ]
+  },
+  "candidateCommit": "2ef2d02"
+}
