@@ -131,6 +131,86 @@ describe('computed query keys', () => {
     expect(native(base, { size: 's' })).toEqual({ gap: 1 })
   })
 
+  it('uses JavaScript last-key-wins for repeated complete variant-bearing query keys', () => {
+    const sheet = ui
+      .stylesheet({ Root: { gap: 0 } })
+      .variants(($: Variants<{ size: 's' | 'l' }>, q) => ({
+        [q.all($.size('s'), q.platform('native'))]: {
+          Root: { gap: 1, $style: { opacity: 0.25 } },
+        },
+        // @ts-expect-error TS detects this literal duplicate; JavaScript retains only its later value.
+        [q.all($.size('s'), q.platform('native'))]: { Root: { gap: 2 } },
+      }))
+    // Dynamically assigned keys receive no static duplicate diagnostic. They
+    // must keep the same replacement behavior without construction-time counts.
+    const dynamicSheet = ui
+      .stylesheet({ Root: { gap: 0 } })
+      .variants(($: Variants<{ size: 's' | 'l' }>, q) => {
+        const rules: Record<
+          string,
+          { Root: { gap: 1 | 2; $style?: { opacity: number } } }
+        > = {}
+        rules[q.all($.size('s'), q.platform('native'))] = {
+          Root: { gap: 1, $style: { opacity: 0.25 } },
+        }
+        rules[q.all($.size('s'), q.platform('native'))] = { Root: { gap: 2 } }
+        return rules
+      })
+    // The earlier complete property is gone before Toned receives either object;
+    // it must not survive as a merged opacity declaration or trigger an error.
+    for (const declaration of [sheet, dynamicSheet]) {
+      expect(native(declaration, { size: 's' })).toEqual({ gap: 2 })
+      expect(native(declaration, { size: 'l' })).toEqual({ gap: 0 })
+    }
+  })
+
+  it('uses the same last-key-wins behavior for complete query keys in overrides', () => {
+    const base = ui
+      .stylesheet({ Root: { gap: 0 } })
+      .variants(($: Variants<{ size: 's' | 'l' }>) => ({
+        [$.size('s')]: { Root: { gap: 1 } },
+      }))
+    const sheet = overrideSheet(base, {}, ($, q) => ({
+      [q.all($.size('s'), q.platform('native'))]: {
+        Root: { gap: 3, $style: { opacity: 0.25 } },
+      },
+      // @ts-expect-error Pin the runtime behavior for callers without this static duplicate diagnostic.
+      [q.all($.size('s'), q.platform('native'))]: { Root: { gap: 4 } },
+    }))
+    expect(native(sheet, { size: 's' })).toEqual({ gap: 4 })
+    expect(native(sheet, { size: 'l' })).toEqual({ gap: 0 })
+    expect(native(base, { size: 's' })).toEqual({ gap: 1 })
+  })
+
+  it('uses last-key-wins for repeated pure condition query keys too', () => {
+    const sheet = ui.stylesheet((q) => ({
+      Root: { gap: 0 },
+      [q.all(q.media('wide'), q.platform('native'))]: {
+        Root: { gap: 1, $style: { opacity: 0.25 } },
+      },
+      // @ts-expect-error The duplicate is diagnosed statically but follows ordinary JS replacement at runtime.
+      [q.all(q.media('wide'), q.platform('native'))]: { Root: { gap: 2 } },
+    }))
+    expect(native(sheet, { '@wide': true })).toEqual({ gap: 2 })
+    expect(native(sheet, {})).toEqual({ gap: 0 })
+  })
+
+  it('reuses one local query in separate parts and binds each state independently', () => {
+    const sheet = ui.stylesheet((q) => {
+      const hoveredWide = q.all(q.state('hover'), q.media('wide'))
+      return {
+        Root: { gap: 0, [hoveredWide]: { gap: 1 } },
+        Label: { gap: 0, [hoveredWide]: { gap: 2 } },
+      }
+    })
+    const rootHovered = { '@wide': true, 'Root:hover': true }
+    const labelHovered = { '@wide': true, 'Label:hover': true }
+    expect(native(sheet, rootHovered, 'Root')).toEqual({ gap: 1 })
+    expect(native(sheet, rootHovered, 'Label')).toEqual({ gap: 0 })
+    expect(native(sheet, labelHovered, 'Root')).toEqual({ gap: 0 })
+    expect(native(sheet, labelHovered, 'Label')).toEqual({ gap: 2 })
+  })
+
   it('still rejects duplicate authored selector keys after query reuse', () => {
     expect(() =>
       ui.stylesheet({ Root: {} }).variants(($: Variants<{ size: 's' }>, q) => {

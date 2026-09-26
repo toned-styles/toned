@@ -98,15 +98,25 @@ bounded to 512 nodes and 64 KiB and fails explicitly if it exceeds either limit.
 A bare `q.state(...)` binds to its enclosing part; sheet-level groups use
 `q.part('Root').state(...)`. The direct cross-part shorthand selects one source;
 use `q.all` or `q.any` for compound cross-part conditions.
+An axis builder can be reused as a direct variant key and as an operand in
+`q.all`, `q.any` and `q.not`; reading an operand does not declare another rule.
+Compound query keys are primitive strings. Repeating the same complete key in
+one object follows JavaScript's last-key-wins behavior, including in variants and
+overrides; merge its body instead. TypeScript rejects duplicates when their keys
+are statically known, but cannot catch every dynamically computed key. The direct
+axis-builder duplicate guard cannot detect this after object construction.
+Counting query construction would also
+reject valid reuse of one condition in separate parts or larger expressions.
 
 The experimental curried `.variants<Mods>()(factory)`, `q.rules(...)`, and
 `.when(...)` forms are removed. Annotate the single `.variants` callback and put
 compound conditions directly in its returned objects. Existing main-branch
 explicit-generic callback and object variant declarations remain compatible.
-The object-predicate types `QueryAtom` and `QueryPredicate` and the `WHEN_RULES`
-metadata symbol are no longer public exports. Query builders now return typed
-`QueryKey` strings; consumers use those keys in declarations instead of assembling
-predicate objects or attaching conditional-rule metadata.
+The experimental branch's public object-predicate types `QueryAtom` and
+`QueryPredicate` are removed; they were never part of main's public API. The
+internal `WHEN_RULES` metadata protocol is also removed. Query builders now
+return typed `QueryKey` strings; consumers use those keys in declarations instead
+of assembling predicate objects or attaching conditional-rule metadata.
 
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
