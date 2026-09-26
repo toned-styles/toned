@@ -48,9 +48,12 @@ before launching it. No Metro server, application backend or external service is
 part of device acceptance. JavaScript guards cannot fence a native Android process;
 that boundary is enforced by the app's Android permission instead.
 
-The September 18 API-36 run passed all six scenarios and the physical gesture
-(49 assertions). Its [machine-readable record](verification/android-api36.json)
-and [final screenshot](verification/android-api36.png) are retained here.
+The September 26 API-36 run passed all six scenarios and the physical gesture
+(49 assertions). Its [machine-readable record](verification/android-api36-2026-09-26.json)
+includes hashes of the exact packaged inputs and executed APK; its
+[final screenshot](verification/android-api36-2026-09-26.png) is retained here.
+The earlier September 18 [record](verification/android-api36.json) and
+[screenshot](verification/android-api36.png) remain available for comparison.
 
 The runner saves `evidence/results.json`, `build.json`, `screen.png` and `logcat.txt` in its
 temporary workspace. Success requires the pinned Fabric/Hermes runtime, every
