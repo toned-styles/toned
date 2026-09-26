@@ -23,7 +23,46 @@ const excluded = new Set([
   '.worktrees',
 ])
 /** The same lexical inclusion policy is used for initial scans and watcher updates. */
-export function includesWorkspaceFile(rootUri: string, uri: string): boolean {
+function selectedPath(
+  local: string,
+  include: readonly string[] | undefined,
+  directory: boolean,
+): boolean {
+  const path = local.split(sep).join('/')
+  return (
+    !include ||
+    include.some(
+      (scope) =>
+        scope === '.' ||
+        path === scope ||
+        path.startsWith(scope + '/') ||
+        (directory && (path === '' || scope.startsWith(path + '/'))),
+    )
+  )
+}
+export function includesWorkspaceDirectory(
+  rootUri: string,
+  uri: string,
+  include?: readonly string[],
+): boolean {
+  try {
+    const local = relative(fileURLToPath(rootUri), fileURLToPath(uri))
+    return (
+      local !== '..' &&
+      !local.startsWith(`..${sep}`) &&
+      !isAbsolute(local) &&
+      !local.split(sep).some((part) => excluded.has(part)) &&
+      selectedPath(local, include, true)
+    )
+  } catch {
+    return false
+  }
+}
+export function includesWorkspaceFile(
+  rootUri: string,
+  uri: string,
+  include?: readonly string[],
+): boolean {
   try {
     const path = fileURLToPath(uri)
     const local = relative(fileURLToPath(rootUri), path)
@@ -32,6 +71,7 @@ export function includesWorkspaceFile(rootUri: string, uri: string): boolean {
       local !== '..' &&
       !local.startsWith(`..${sep}`) &&
       !isAbsolute(local) &&
+      selectedPath(local, include, false) &&
       !local.split(sep).some((part) => excluded.has(part)) &&
       ['.ts', '.tsx', '.js', '.jsx'].includes(extname(path)) &&
       !/\.(test|test-d|spec|d)\.[cm]?[jt]sx?$/.test(path)
@@ -48,6 +88,7 @@ export async function loadWorkspace(
   options: {
     signal?: AbortSignal
     maxEntries?: number
+    include?: readonly string[]
     isOpen?: (uri: string) => boolean
   } = {},
 ): Promise<WorkspaceLoad> {
@@ -80,7 +121,15 @@ export async function loadWorkspace(
       }
       const path = join(queue[cursor]!, entry.name)
       if (entry.isDirectory()) {
-        queue.push(path)
+        if (
+          includesWorkspaceDirectory(
+            pathToFileURL(root).href,
+            pathToFileURL(path).href,
+            options.include,
+          )
+        )
+          queue.push(path)
+        else skipped++
         continue
       }
       if (
@@ -88,6 +137,7 @@ export async function loadWorkspace(
         !includesWorkspaceFile(
           pathToFileURL(root).href,
           pathToFileURL(path).href,
+          options.include,
         )
       ) {
         skipped++

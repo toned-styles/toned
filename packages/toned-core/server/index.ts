@@ -9,12 +9,14 @@ import {
 } from '../build/manifest.ts'
 import {
   compilePlan,
+  compileRules,
   explain as explainPlan,
   foldOperations,
   resolvePlan,
 } from '../core/plan.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { SystemTheme } from '../system/theme-types.ts'
+import { createTokenComposer } from '../system/token-composer.ts'
 import type {
   TokenStyleDeclaration,
   TokenSystem,
@@ -53,6 +55,33 @@ type Arguments<T, Theme> = [SheetVariants<T>] extends [never]
   : {} extends SheetVariants<T>
     ? [input?: Partial<Input<T, Theme>>]
     : [input: Input<T, Theme>]
+
+/** CSS custom-property references without mutable process-global token state. */
+export function cssVariableTokens(): Tokens {
+  return new Proxy(Object.freeze(Object.create(null)) as Tokens, {
+    get: (_target, key) =>
+      typeof key === 'string' ? `var(--${key})` : undefined,
+  })
+}
+
+/** Explicit lightweight token composition, usable before a CSS manifest exists. */
+export function createTokenStyles<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: {
+    tokens: SystemTheme<NoInfer<S>>
+    platform: 'web' | 'native'
+    useClassName?: boolean
+  },
+): TokenSystem<S>['t'] {
+  const context = Object.freeze({
+    ...options,
+    tokens: immutableSnapshot(options.tokens),
+  })
+  return createTokenComposer(
+    () => system,
+    () => context,
+  )
+}
 
 export function createRenderer<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,
@@ -120,6 +149,37 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     tokens,
     manifest,
     validate,
+    t: createTokenComposer(
+      () => system,
+      () => ({
+        tokens,
+        platform: backend.platform,
+        useClassName: backend.id === 'css-vars',
+      }),
+      (value) => {
+        const rules = resolvePlatformKeys({ Root: value }, backend.platform)
+        if (backend.browserConditions && !manifest)
+          throw new Error(
+            'Toned web renderer: a pre-generated CSS manifest is required',
+          )
+        if (backend.id === 'css-vars' && manifest)
+          assertManifestConditions(manifest, rules)
+        const plan = compileRules(system, rules, backend.platform)
+        if (backend.id === 'css-vars')
+          return resolveCssPlan(plan, system, tokens, {})['Root']!
+        const selected =
+          resolvePlan(
+            plan,
+            system,
+            tokens,
+            {},
+            { preserveConditions: backend.browserConditions },
+          )['Root'] ?? []
+        return backend.resolvePlan
+          ? backend.resolvePlan(selected, { system, part: 'Root' })
+          : backend.resolve(foldOperations(selected))
+      },
+    ),
     explain<T extends object>(
       sheet: T,
       ...args: Arguments<T, SystemTheme<S>>
@@ -173,9 +233,13 @@ export function createRenderer<S extends TokenStyleDeclaration>(
 
 export function createWebRenderer<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,
-  options: { manifest: BuildManifest; tokens: SystemTheme<NoInfer<S>> },
+  options: { manifest: BuildManifest; tokens?: SystemTheme<NoInfer<S>> },
 ) {
-  return createRenderer(system, { ...options, backend: cssVariablesBackend })
+  return createRenderer(system, {
+    ...options,
+    tokens: options.tokens ?? (cssVariableTokens() as SystemTheme<NoInfer<S>>),
+    backend: cssVariablesBackend,
+  })
 }
 export function createNativeRenderer<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,

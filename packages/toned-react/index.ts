@@ -207,7 +207,7 @@ export function useStyles<T extends StylesheetLike>(
   )
   const containerSizes = readSizes()
   const committed = useRef<any>(null)
-  const config = useTokenConfig(useRuntimeConfig())
+  const config = useTokenConfig(useRuntimeConfig(stylesheet))
   useMemo(
     () => (config as any)[VALIDATE_SHEET]?.(stylesheet),
     [config, stylesheet],

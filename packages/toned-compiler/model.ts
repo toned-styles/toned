@@ -31,6 +31,8 @@ export interface DesignNode {
   readonly expression?: string
   readonly opaque?: string
   readonly description?: string
+  /** False when enumerable suggestions are only part of an open/modifier domain. */
+  readonly valuesComplete?: boolean
   readonly values?: readonly DesignValue[]
   readonly variants?: Readonly<Record<string, readonly DesignValue[] | null>>
   readonly variantType?: string
@@ -38,6 +40,7 @@ export interface DesignNode {
   readonly target?: string
 }
 export interface DesignImport {
+  readonly typeOnly?: boolean
   readonly local: string
   readonly imported: string
   readonly from: string
@@ -55,6 +58,7 @@ export interface DesignDiagnostic {
   readonly span: SourceSpan
 }
 export interface DesignDocument {
+  readonly module?: import('./static-source.ts').StaticModule
   readonly uri: string
   readonly version: number
   readonly revision: string

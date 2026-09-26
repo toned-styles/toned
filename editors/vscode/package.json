@@ -1,0 +1,98 @@
+{
+  "name": "toned-vscode",
+  "displayName": "Toned",
+  "description": "Source-aware Toned token completion, navigation, diagnostics and scoped edits.",
+  "version": "0.1.0",
+  "publisher": "toned",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toned-styles/toned.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact"
+  ],
+  "main": "./dist/extension.cjs",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Toned starts a local language-server process and provides source edits."
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "toned.restart",
+        "title": "Toned: Restart Language Server"
+      },
+      {
+        "command": "toned.inspectSelection",
+        "title": "Toned: Inspect Current Declaration"
+      },
+      {
+        "command": "toned.indexStatus",
+        "title": "Toned: Show Index Status"
+      }
+    ],
+    "configuration": {
+      "title": "Toned",
+      "properties": {
+        "toned.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Enable Toned source intelligence alongside TypeScript."
+        },
+        "toned.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "."
+          ],
+          "scope": "resource",
+          "description": "Relative source directories to index. Dependency and generated directories are always excluded."
+        },
+        "toned.modules": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {},
+          "scope": "resource",
+          "description": "Static module mappings to workspace-relative source paths. A single wildcard is supported; config code is never executed."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "bun build.ts",
+    "package": "pnpm build && vsce package --no-dependencies --allow-missing-repository --out dist/toned-vscode.vsix"
+  },
+  "dependencies": {
+    "@toned/compiler": "workspace:*",
+    "vscode-languageclient": "9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.100.0",
+    "@types/node": "catalog:",
+    "@types/bun": "1.2.20",
+    "@vscode/vsce": "3.9.2",
+    "typescript": "5.9.3"
+  }
+}

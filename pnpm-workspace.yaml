@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - config/*
+  - editors/*
   - examples/*
   # Exact React/RN consumer installed only in an OS-temporary acceptance tree.
   - '!examples/fabric-acceptance'

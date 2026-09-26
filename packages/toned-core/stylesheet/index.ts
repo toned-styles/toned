@@ -20,7 +20,11 @@ export {
   type OverrideSheetVariantRules,
   overrideSheet,
 } from './overrideSheet.ts'
-export { stylesheetParts, stylesheetVariantAxes } from './plans.ts'
+export {
+  getStylesheetPlan,
+  stylesheetParts,
+  stylesheetVariantAxes,
+} from './plans.ts'
 export { StyleMatcher } from './StyleMatcher.ts'
 export { Base, createStylesheet } from './StyleSheet.ts'
 export { unitlessNumbers } from './unitlessNumbers.ts'

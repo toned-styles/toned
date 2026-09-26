@@ -161,7 +161,7 @@ export function useBind(
     ),
   ) as Instance
 
-  const config = useRuntimeConfig()
+  const config = useRuntimeConfig(styles)
   // The candidate is the initial snapshot only; later candidates publish below.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   // biome-ignore lint/correctness/useExhaustiveDependencies: stylesheet/config own the component family; instance only seeds it, subsequent candidates publish at commit.

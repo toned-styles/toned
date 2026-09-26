@@ -50,6 +50,8 @@
     "./style-types.web": "./style-types.web.ts",
     "./style-types.universal": "./style-types.universal.ts",
     "./motion": "./motion.tsx",
-    "./adaptive": "./adaptive.tsx"
+    "./adaptive": "./adaptive.tsx",
+    "./hosts/web": "./hosts/web.ts",
+    "./hosts/native": "./hosts/native.ts"
   }
 }
