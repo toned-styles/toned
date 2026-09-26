@@ -19,22 +19,40 @@ export function createDomIntegration(
         (match) => match[1]!,
       ),
   )
+  // Simple compound aliases depend only on a host and its ancestry/descendants.
+  // Arbitrary relational CSS selectors deliberately retain document-wide updates.
+  const localAliases = Object.values(system.system.states ?? {}).every(
+    (selector) => /^(?:[.#][\w-]+|\[[^\]]+\])+$/.test(String(selector)),
+  )
   return {
     connected: (target) => (target as Node).isConnected !== false,
     validateRelations: () => {},
     parentOf: (target) => (target as Element).parentElement ?? undefined,
     readState: (target, state) =>
       (target as Element).matches(system.system.states?.[state] ?? `:${state}`),
-    subscribeRelations(targets, notify) {
+    subscribeRelations(targets, notify, currentTargets) {
+      const initialTargets = [...targets]
       const documents = new Set<Document>()
-      for (const target of targets) {
+      for (const target of initialTargets) {
         const document = (target as Node).ownerDocument
         if (document) documents.add(document)
       }
       const stops: (() => void)[] = []
       try {
         for (const document of documents)
-          stops.push(subscribeWebRelations(document, notify, stateAttributes))
+          stops.push(
+            subscribeWebRelations(
+              document,
+              notify,
+              stateAttributes,
+              localAliases
+                ? () =>
+                    [...(currentTargets?.() ?? initialTargets)].filter(
+                      (target) => (target as Node).ownerDocument === document,
+                    ) as Node[]
+                : undefined,
+            ),
+          )
       } catch (error) {
         for (const stop of stops) stop()
         throw error

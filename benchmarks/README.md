@@ -303,3 +303,61 @@ transitions per host, if an imperative styling interaction causes a React render
 if a 42-child selection move derives more than the two changed override entries,
 or if the exported consumer fails declaration emission or exceeds 64 KiB. No
 absolute wall-clock or heap threshold is enforced.
+
+
+## Explicit-provider runtime follow-up against `7e3944c`
+
+Run from the HQ checkout with its installed dependencies:
+
+```sh
+bun vendor/toned/benchmarks/provider.mjs 7e3944c --pairs=5
+bun vendor/toned/benchmarks/provider.mjs --current-only
+```
+
+This supplements the compatibility `useStyles`/installed-config workload above.
+It mounts the real `TonedProvider` and `createElements` implementation with one
+physical React installation for both source trees. It measures 42- and 250-cell
+lists with fresh equivalent renderer arrays, forced child rerenders, changed
+variants and themes, SSR, off-render interactions, explicit token-prop spreads,
+and a declared native JS host adapter. It proves all four HQ guards inside each
+worker, rejects unexpected guard logs, bounds worker time/output, and removes its
+temporary extraction. A JSON receipt remains under `out/toned-validation`.
+`--pairs` is bounded to 1–20 and alternates baseline/current order. Source digests
+reject mixed-source measurements. CI uses current-only semantic assertions;
+wall-clock timings have no pass/fail threshold.
+
+The [five-pair receipt](results/2026-09-26-provider.json) records the September 26
+macOS arm64/Bun 1.3.14 run. The receipt's `current` Git HEAD is still the
+precommit `7e3944c`; `sourceDigest` identifies the optimized working-tree sources.
+The checkpoint was extracted from Git, so this is not a same-source comparison.
+Each row below is the median of the five worker medians.
+
+| Measurement | `7e3944c` | Follow-up |
+| --- | ---: | ---: |
+| 42-cell mount / same-children provider update, ms | 3.640 / 3.213 | 2.869 / 0.071 |
+| 42-cell forced rerender / variant move / theme, ms | 2.961 / 2.792 / 3.143 | 2.114 / 2.289 / 3.131 |
+| 42-cell SSR, ms | 1.598 | 1.332 |
+| 250-cell mount / same-children provider update, ms | 10.739 / 14.774 | 11.506 / 0.099 |
+| 250-cell forced rerender / variant move / theme, ms | 13.084 / 14.073 / 18.306 | 11.169 / 11.739 / 15.320 |
+| 250-cell SSR, ms | 5.281 | 5.273 |
+| Explicit token-prop spread, µs | 25.103 | 15.642 |
+| Native JS-host mount/change/repeat/reset/dispose cycle, µs | 29.763 | 31.627 |
+
+Work counts are the stronger evidence. An unchanged provider update drops from
+42/250 host-prop reads and 43/251 token resolver calls to zero. Forced child
+rerenders still reconcile their own hosts, but perform zero resolver calls.
+Moving selection resolves three token operations instead of 43/251. A theme
+change still resolves 43/251 operations. Two thousand immutable token-prop
+spreads resolve 2,000 rather than 4,000 times. Interactions do not rerender React;
+host identities persist across all updates, repeated native state does not write,
+and every run retained zero of 2,000 sampled disposed controllers after a new job
+and forced GC.
+
+This is not a blanket speedup: the 250-cell mount is about 7% slower and the
+small native JS-host cycle about 6% slower in this run. The substantial unchanged
+update win comes from avoiding context broadcast; candidate-output reuse reduces
+resolver work on forced renders. Mounts/theme changes still require private
+controllers and fresh resolution. Happy-dom is not a browser-layout benchmark,
+the native adapter is not a Fabric/device measurement, and the WeakRef sample is
+not proof of application-wide leak freedom. Existing browser/native acceptance
+profiles remain separate validation.

@@ -1,6 +1,7 @@
 /** Differential host patches with per-controller requests and committed declarations. */
 import { camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
+import { immutableSnapshot, isImmutableSnapshot } from '../utils/immutable.ts'
 import { nativeHostAdapter } from './native-host.ts'
 
 type Host = any
@@ -16,6 +17,7 @@ type OwnerRequest = {
   output: Style
   caller: Style
   declarative: Style
+  aggregate?: { output: Style; caller: Style; value: Style }
 }
 export type HostOutput = Record<string, any>
 export type HostOutputDriver = {
@@ -68,6 +70,7 @@ function writeAggregate(host: Host, entry: HostOwnership): void {
   if (entry.driver) entry.driver.update(output)
   else writeStyles(host, output, entry.state)
 }
+const EMPTY_OUTPUT: Style = immutableSnapshot({})
 const DEFAULT_OWNER = {}
 const ownership = new WeakMap<object, HostOwnership>()
 const stateFor = (host: object): HostOwnership => {
@@ -90,7 +93,11 @@ const stateFor = (host: object): HostOwnership => {
 const requestFor = (entry: HostOwnership, owner: object): OwnerRequest => {
   let request = entry.owners.get(owner)
   if (!request) {
-    request = { output: {}, caller: {}, declarative: {} }
+    request = {
+      output: EMPTY_OUTPUT,
+      caller: EMPTY_OUTPUT,
+      declarative: EMPTY_OUTPUT,
+    }
     entry.owners.set(owner, request)
   }
   return request
@@ -106,21 +113,97 @@ const hostProps = (output: Style): Style =>
     ),
   )
 
+// Identity caches hold only certified immutable outputs. Caller-owned mutable
+// objects are re-read on every request; class vocabulary is bounded independently.
+const contributions = new WeakMap<
+  object,
+  { props: Style; classes: readonly string[]; value: Style }
+>()
+const classCache = new Map<string, readonly string[]>()
+function classNames(source?: string | null): readonly string[] {
+  const value = source ?? ''
+  // Public className strings need a byte/character bound as well as an entry cap.
+  if (value.length > 4096) return value.split(/\s+/).filter(Boolean)
+  let names = classCache.get(value)
+  if (!names) {
+    names = Object.freeze([...new Set(value.split(/\s+/).filter(Boolean))])
+    if (classCache.size === 64)
+      classCache.delete(classCache.keys().next().value!)
+    classCache.set(value, names)
+  }
+  return names
+}
+function contribution(output: Style) {
+  const cached = contributions.get(output)
+  if (cached) return cached
+  const props = hostProps(output),
+    classes = classNames(output['className'])
+  const result = {
+    props,
+    classes,
+    value: {
+      ...props,
+      style: output['style'] ?? EMPTY_OUTPUT,
+      className: classes.join(' '),
+    },
+  }
+  if (isImmutableSnapshot(output)) {
+    result.value = immutableSnapshot(result.value)
+    contributions.set(output, result)
+  }
+  return result
+}
+function ownerOutput(request: OwnerRequest, output: Style): Style {
+  const caller = request.caller
+  if (
+    request.aggregate?.output === output &&
+    request.aggregate.caller === caller
+  )
+    return request.aggregate.value
+  const toned = contribution(output)
+  if (caller === EMPTY_OUTPUT) return toned.value
+  const authored = contribution(caller)
+  if (
+    !Object.keys(authored.props).length &&
+    !authored.classes.length &&
+    !Object.keys(caller['style'] ?? EMPTY_OUTPUT).length
+  )
+    return toned.value
+  const classes = new Set([...toned.classes, ...authored.classes])
+  const value = {
+    ...toned.props,
+    ...authored.props,
+    style: { ...output['style'], ...caller['style'] },
+    className: [...classes].join(' '),
+  }
+  // A single retained slot per mounted owner, never an unbounded history.
+  if (isImmutableSnapshot(output) && isImmutableSnapshot(caller))
+    request.aggregate = { output, caller, value: immutableSnapshot(value) }
+  else delete request.aggregate
+  return request.aggregate?.value ?? value
+}
+
 // Attachment order defines precedence. An event does not promote its owner
 // over another controller; removing a request reveals the surviving owner.
 function aggregate(entry: HostOwnership, releasing?: object): Style {
-  const style: Style = {}
-  const props: Style = {}
+  if (entry.owners.size === 1) {
+    const [owner, request] = entry.owners.entries().next().value!
+    return ownerOutput(
+      request,
+      owner === releasing ? request.declarative : request.output,
+    )
+  }
+  const style: Style = {},
+    props: Style = {}
   const classes = new Set<string>()
   for (const [owner, request] of entry.owners) {
-    const output = owner === releasing ? request.declarative : request.output
-    Object.assign(style, output['style'], request.caller['style'])
-    Object.assign(props, hostProps(output), hostProps(request.caller))
-    for (const source of [output, request.caller])
-      for (const name of (source['className'] ?? '')
-        .split(/\s+/)
-        .filter(Boolean))
-        classes.add(name)
+    const output = ownerOutput(
+      request,
+      owner === releasing ? request.declarative : request.output,
+    )
+    Object.assign(style, output['style'])
+    Object.assign(props, output)
+    for (const name of classNames(output['className'])) classes.add(name)
   }
   return { ...props, style, className: [...classes].join(' ') }
 }
@@ -131,7 +214,7 @@ const read = (host: Host, key: string) =>
 export function recordHostCommit(
   host: Host,
   toned: Style,
-  caller: Style = {},
+  caller: Style = EMPTY_OUTPUT,
   owner: object = DEFAULT_OWNER,
 ) {
   if (!host) return
@@ -183,10 +266,7 @@ export function recordHostCommit(
     )
       state.nativeProps[key] = value
   }
-  state.classes = new Set([
-    ...state.classes,
-    ...(toned['className'] ?? '').split(/\s+/).filter(Boolean),
-  ])
+  state.classes = new Set([...state.classes, ...classNames(toned['className'])])
 }
 
 /**
@@ -223,7 +303,7 @@ export function releaseHost(host: Host, owner: object): void {
 
 export const setStyles = (
   host: Host | undefined,
-  output: Style = {},
+  output: Style = EMPTY_OUTPUT,
   owner: object = DEFAULT_OWNER,
 ) => {
   if (!host) return
@@ -296,9 +376,7 @@ function writeStyles(host: Host, output: Style, state: Ownership): void {
   }
   if (!native) {
     for (const key in previous) previous[key] = read(host, key)
-    const classes = new Set<string>(
-      (output['className'] ?? '').split(/\s+/).filter(Boolean),
-    )
+    const classes = new Set<string>(classNames(output['className']))
     for (const cls of state.classes) {
       if (!classes.has(cls)) host.classList.remove(cls)
     }

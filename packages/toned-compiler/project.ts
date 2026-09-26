@@ -20,6 +20,12 @@ export interface IndexStatistics {
   readonly files: number
   readonly characters: number
   readonly revision: number
+  readonly resolution: {
+    readonly entries: number
+    readonly weight: number
+    readonly hits: number
+    readonly evaluations: number
+  }
 }
 
 /** Own one per workspace. Documents and indexes are explicitly removable/disposable. */
@@ -35,8 +41,12 @@ export class DesignProject {
     string,
     Readonly<Record<string, readonly string[]>>
   >()
-  private resolutionRevision = -1
-  private readonly tokenCache = new Map<string, readonly DesignNode[]>()
+  private readonly resolution = new StaticResolution(this)
+  private readonly tokenCache = new Map<
+    string,
+    { uri: string; tokens: readonly DesignNode[] }
+  >()
+  private readonly tokenCacheByUri = new Map<string, Set<string>>()
   private characters = 0
   private parses = 0
   private unchanged = 0
@@ -65,6 +75,7 @@ export class DesignProject {
       files: this.documents.size,
       characters: this.characters,
       revision: this.generation,
+      resolution: this.resolution.statistics,
     }
   }
   get(uri: string) {
@@ -108,6 +119,7 @@ export class DesignProject {
       maxCharacters: this.options.maxDocumentCharacters,
       maxNodes: this.options.maxNodesPerDocument,
     })
+    this.invalidateResolution(uri)
     this.removeEdges(uri)
     if (previous) this.removeNodes(previous)
     this.documents.set(uri, document)
@@ -150,6 +162,7 @@ export class DesignProject {
   remove(uri: string): boolean {
     const document = this.documents.get(uri)
     if (!document) return false
+    this.invalidateResolution(uri)
     this.removeEdges(uri)
     this.removeNodes(document)
     this.documents.delete(uri)
@@ -170,6 +183,8 @@ export class DesignProject {
     this.characters = 0
     this.moduleMaps.clear()
     this.tokenCache.clear()
+    this.tokenCacheByUri.clear()
+    this.resolution.invalidate()
     this.generation++
   }
   private removeNodes(document: DesignDocument) {
@@ -255,6 +270,9 @@ export class DesignProject {
           bucket.add(uri)
           this.importers.set(target, bucket)
         }
+    this.tokenCache.clear()
+    this.tokenCacheByUri.clear()
+    this.resolution.invalidate()
     this.generation++
   }
   private importCandidates(uri: string, from: string): readonly string[] {
@@ -336,18 +354,45 @@ export class DesignProject {
       ),
     ]
   }
-  tokensForSystem(name: string, uri: string): readonly DesignNode[] {
-    if (this.resolutionRevision !== this.generation) {
-      this.tokenCache.clear()
-      this.resolutionRevision = this.generation
+  private invalidateResolution(uri: string) {
+    const affected = new Set(this.dependents(uri))
+    this.resolution.invalidate(affected)
+    for (const target of affected) {
+      for (const key of this.tokenCacheByUri.get(target) ?? [])
+        this.tokenCache.delete(key)
+      this.tokenCacheByUri.delete(target)
     }
-    const key = `${uri}#${name}`,
+  }
+
+  /** Lexical candidates include missing targets, allowing editor queues to resolve new imports. */
+  dependencyCandidates(uri: string): readonly (readonly string[])[] {
+    const document = this.documents.get(uri)
+    return document
+      ? this.moduleSources(document).map((from) =>
+          this.importCandidates(uri, from),
+        )
+      : []
+  }
+  dependencies(uri: string): readonly string[] {
+    return [...new Set(this.dependencyCandidates(uri).flat())]
+  }
+  tokensForSystem(name: string, uri: string): readonly DesignNode[] {
+    const key = JSON.stringify([uri, name]),
       cached = this.tokenCache.get(key)
-    if (cached) return cached
-    const tokens = Object.freeze(new StaticResolution(this).tokens(uri, name))
-    if (this.tokenCache.size >= 256)
-      this.tokenCache.delete(this.tokenCache.keys().next().value!)
-    this.tokenCache.set(key, tokens)
+    if (cached) return cached.tokens
+    const tokens = this.resolution.tokens(uri, name)
+    if (this.tokenCache.size >= 256) {
+      const oldest = this.tokenCache.keys().next().value!
+      const owner = this.tokenCache.get(oldest)!.uri,
+        keys = this.tokenCacheByUri.get(owner)
+      this.tokenCache.delete(oldest)
+      keys?.delete(oldest)
+      if (!keys?.size) this.tokenCacheByUri.delete(owner)
+    }
+    const keys = this.tokenCacheByUri.get(uri) ?? new Set<string>()
+    keys.add(key)
+    this.tokenCacheByUri.set(uri, keys)
+    this.tokenCache.set(key, { uri, tokens })
     return tokens
   }
   resolveImport(uri: string, from: string): string | undefined {
@@ -361,7 +406,7 @@ export class DesignProject {
     seen = new Set<string>(),
   ): readonly DesignNode[] {
     if (uri) {
-      const resolved = new StaticResolution(this).definition(uri, name)
+      const resolved = this.resolution.definition(uri, name)
       if (resolved) return [resolved]
       let currentUri: string = uri
       let currentName: string = name

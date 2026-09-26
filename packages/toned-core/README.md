@@ -259,6 +259,11 @@ an ergonomic shortcut using the renderer's selected backend; it validates requir
 build conditions. Both helpers retain the same typed composition and symbol protocol
 as legacy `system.t`, which remains available for consumers using installed config.
 Helpers are explicit snapshots and do not subscribe to provider theme changes.
+For recursively immutable declaration/token data, `style` and `className` share
+one lazy resolved output, including when spread into props. Opaque class instances
+and function values retain their identity and disable this caching, so valid
+mutable payloads remain observable. Legacy `system.t` continues reading its live
+installed context on each getter access.
 
 `createNativeRenderer` evaluates the same declarations with explicit host facts
 and rejects fields outside its documented finite native profile. Unsupported CSS

@@ -70,3 +70,28 @@ test('snapshot reads do not consume notifications owed to live descendants', () 
   stopRead()
   stopChild()
 })
+
+test('named interests ignore unrelated widths and still see parent changes after speculative reads', () => {
+  const parent = new ContainerSizesStore(undefined, { card: 100, sidebar: 200 })
+  const child = new ContainerSizesStore(parent)
+  let card = 0,
+    sidebar = 0,
+    none = 0
+  const stopRead = parent.subscribe(() => child.snapshot())
+  const stops = [
+    child.subscribe(() => card++, ['card']),
+    child.subscribe(() => sidebar++, ['sidebar']),
+    child.subscribe(() => none++, []),
+  ]
+  parent.set('sidebar', 240)
+  expect([card, sidebar, none]).toEqual([0, 1, 0])
+  parent.set('card', 160)
+  expect([card, sidebar, none]).toEqual([1, 1, 0])
+  child.set('card', 180)
+  parent.set('card', 200)
+  expect([card, sidebar, none]).toEqual([2, 1, 0])
+  for (const stop of stops) stop()
+  stopRead()
+  parent.set('sidebar', 260)
+  expect([card, sidebar, none]).toEqual([2, 1, 0])
+})

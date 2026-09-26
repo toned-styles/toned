@@ -56,3 +56,61 @@ and runtime warmup differ between runs. The no-reparse assertions also passed.
 | Local symbol + range (10,000) | 0.00088 | 0.00279 |
 | Sheet page + exact total (1,000) | 0.04417 | 0.09738 |
 | Actual token completion (10,000) | 0.00658 | 0.00917 |
+
+## Shared systems and real HQ editing (2026-09-26)
+
+The earlier local-system fixture does not represent a shared design-system edit.
+The new [raw receipt](./design-tools-lsp.results.json) records three alternating
+fresh Node server runs for baseline `7e3944c` and the optimized source hashes in
+that receipt. Both used the same HQ configuration: 1,005 files and 5,429,016 source
+characters. The baseline archive was instrumented only to expose process memory
+in `toned/statistics`. No application modules or resolvers ran; all edits were
+unsaved editor buffers, and source-file integrity assertions passed.
+
+| Real HQ protocol scenario | Baseline median ms | Optimized median ms |
+| --- | ---: | ---: |
+| First usable Daylight value completion during indexing | 280.40 | 219.92 |
+| Full workspace indexing | 1121.39 | 1115.92 |
+| Warm completion round trip | 0.186 | 0.193 |
+| Unrelated component edit followed by completion | 1.255 | 0.885 |
+| Shared Daylight token edit followed by current-value completion | 7.423 | 7.560 |
+| 64 queued changes to one unrelated component, then completion | 41.518 | 25.460 |
+
+First completion polls every 50ms until the expected value exists, so its result
+includes polling granularity. Warm round trips are below a millisecond; these
+samples do not establish a warm-request improvement. Shared-token editing and
+full indexing are effectively similar here. First completion and burst latency
+improved in these runs, without claiming every workload gets faster. Background
+loads may still progress while requests run; scheduling tests separately prove
+that a requested document and its current dependencies precede 100 unrelated
+queued documents, including import changes and formerly missing targets during
+a yield. Cancelled requests release their admission slot.
+
+After the editing scenarios, median observational RSS was 254.38 MiB baseline
+and 255.03 MiB optimized; heap used was 62.31 versus 66.58 MiB. GC was not forced,
+so these are process observations, not retained-heap measurements, memory savings
+or a leak proof. Cache retention has independent structural bounds and eviction
+regressions. OS filesystem caches were not flushed, and the machine/runtime are
+recorded in the receipt.
+
+`node --experimental-strip-types benchmarks/design-tools-shared.ts 1000` measures
+an additional synthetic system with 70 finite tokens shared by 1,000 consumers.
+An optional second argument selects an isolated compiler source directory for a
+baseline. One paired run observed these service-only medians:
+
+| Shared-system synthetic scenario | Baseline ms | Optimized ms |
+| --- | ---: | ---: |
+| Cold source indexing | 50.827 | 51.918 |
+| First vocabulary lookup per consumer | 0.01104 | 0.00554 |
+| Warm value completion | 0.00304 | 0.00154 |
+| Tiny unrelated edit and vocabulary lookup | 0.02646 | 0.01271 |
+| Shared token edit and one consumer completion | 0.76354 | 1.03463 |
+
+Shared-token invalidation touches the dependency graph and bounded caches; this
+single-consumer-after-shared-edit case paid about 0.27ms more in the observed run.
+The same shared caches reduce repeated resolution across consumers. These results
+justify retaining the bounded dependency-aware design, not a universal speedup
+claim. The scripts assert correct vocabularies after edits; timing thresholds are
+not CI gates. HQ's `scripts/build/test-toned-lsp.ts` runs the real protocol
+scenarios, and accepts `--serverBundle <isolated baseline bundle>` for paired
+measurements. See `scripts/build/__tests__/fixtures/toned-lsp-performance.ts` for the bounded edits.

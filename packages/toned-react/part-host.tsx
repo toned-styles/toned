@@ -24,16 +24,23 @@ export function PartHost(input: PartHostProps) {
   const legacy = useContext(ContainerSizesContext)
   const scope = useContext(ContainerStoreContext)
   const runtime = input.instance.config.mediaMode === 'runtime'
+  const containers = input.instance.containerDependencies(input.part)
   const conditions = useMemo<HostConditions | undefined>(() => {
-    if (!runtime || (!scope && !Object.keys(legacy).length)) return undefined
+    if (
+      !runtime ||
+      !containers.length ||
+      (!scope && !Object.keys(legacy).length)
+    )
+      return undefined
     return {
-      readSizes: () => ({
-        ...scope?.store.snapshot(),
-        ...(scope?.legacy === legacy ? {} : legacy),
-      }),
-      subscribe: (listener) => scope?.store.subscribe(listener) ?? (() => {}),
+      readSizes: () =>
+        scope?.legacy === legacy
+          ? scope.store.snapshot()
+          : { ...scope?.store.snapshot(), ...legacy },
+      subscribe: (listener) =>
+        scope?.store.subscribe(listener, containers) ?? (() => {}),
     }
-  }, [runtime, scope, legacy])
+  }, [runtime, scope, legacy, containers])
   const { resolveElement, platform } = input.instance.config
   const kind = input.instance.elementKind(input.part)
   const as = input.props['as']

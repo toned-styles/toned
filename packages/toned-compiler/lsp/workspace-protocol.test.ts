@@ -263,4 +263,44 @@ describe('workspace initialization protocol', () => {
       await h.dispose()
     }
   })
+  it('loads only a requested imported vocabulary before the full disk scan begins', async () => {
+    const h = await harness(),
+      uri = h.uri('src/component.ts')
+    try {
+      await h.write('tokens/system.ts', system)
+      await h.write('tokens/vocabulary.ts', vocabulary('accent'))
+      await h.write('src/unrelated.ts', 'const unrelated=123')
+      await h.client.sendRequest('initialize', {
+        processId: null,
+        rootUri: h.uri(),
+        capabilities: {},
+        initializationOptions: {
+          toned: {
+            include: ['src', 'tokens'],
+            modules: { '@lib/ui': ['tokens/system.ts'] },
+          },
+        },
+      })
+      await h.client.sendNotification('textDocument/didOpen', {
+        textDocument: {
+          uri,
+          languageId: 'typescript',
+          version: 1,
+          text: sheet,
+        },
+      })
+      expect(
+        await h.client.sendRequest('textDocument/completion', {
+          textDocument: { uri },
+          position: { line: 0, character: sheet.indexOf("'accent'") + 2 },
+        }),
+      ).toMatchObject({ isIncomplete: true, items: [{ label: 'accent' }] })
+      expect(h.registration.service.project.statistics.files).toBe(3)
+      expect(
+        h.registration.service.project.get(h.uri('src/unrelated.ts')),
+      ).toBeUndefined()
+    } finally {
+      await h.dispose()
+    }
+  })
 })

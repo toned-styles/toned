@@ -47,10 +47,21 @@ export class ContainerSizesStore {
     if (this.snapshot() !== previous) this.notify()
   }
 
-  subscribe(notify: () => void): () => void {
+  subscribe(notify: () => void, names?: readonly string[]): () => void {
+    if (names?.length === 0) return () => {}
     const current = this.snapshot()
     if (!this.listeners.size) this.published = current
-    const listener = () => notify()
+    let previous = current
+    // Each subscriber owns its comparison snapshot. Render reads and other
+    // subscribers cannot consume its notification or alter committed interest.
+    const interest = names && [...new Set(names)]
+    const listener = () => {
+      const next = this.snapshot()
+      const changed =
+        !interest || interest.some((name) => next[name] !== previous[name])
+      previous = next
+      if (changed) notify()
+    }
     this.listeners.add(listener)
     if (this.parent && !this.stopParent) {
       this.stopParent = this.parent.subscribe(() => {

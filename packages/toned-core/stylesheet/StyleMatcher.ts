@@ -1,3 +1,4 @@
+import { parseConditionKey, serializeExpr } from '../utils/conditions.ts'
 import {
   addBit,
   type BitPosition,
@@ -73,6 +74,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
   readonly bits: Array<[string, PropertyMap[string]]>
   // biome-ignore lint/suspicious/noExplicitAny: heterogeneous element token values
   readonly cache = new Map<number | string, any>()
+  private readonly factParts = new Map<string, Set<string>>()
   private bitCount = 0
   private readonly candidates?: CandidateIndex<CompiledRule>
   private readonly baseParts: readonly CompiledPart[]
@@ -141,8 +143,30 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
         : [normalized.rule]
       for (const rule of entries) {
         const part = Object.keys(rule)[0]!
+        const compileMask = (conditions: Conditions) => {
+          for (const fact of conditions.keys()) {
+            const dependencies = [fact]
+            // A host-local composite can change even if the controller's own
+            // container width is absent or still below its threshold.
+            if (fact.startsWith('@'))
+              for (const clause of parseConditionKey(fact.slice(1)) ?? [])
+                for (const atom of clause)
+                  dependencies.push(
+                    `@${serializeExpr([[{ ...atom, negated: false }]])}`,
+                  )
+            for (const dependency of dependencies) {
+              let parts = this.factParts.get(dependency)
+              if (!parts) {
+                parts = new Set()
+                this.factParts.set(dependency, parts)
+              }
+              for (const name of Object.keys(rule)) parts.add(name)
+            }
+          }
+          return this.compileMask(conditions)
+        }
         this.compiledRules.push({
-          ...this.compileMask(normalized.conditions),
+          ...compileMask(normalized.conditions),
           original: normalized.original,
           rule,
           parts: compileParts(rule),
@@ -152,13 +176,21 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
                 expression: compilePredicate(
                   normalized.predicate,
                   { ...this, part },
-                  (conditions) => this.compileMask(conditions),
+                  compileMask,
                 ),
               }
             : {}),
         })
       }
     }
+  }
+
+  /** Static dependency index: no scanning or resolving unrelated parts on events. */
+  partsForFacts(facts: Iterable<string>): Set<string> {
+    const parts = new Set<string>()
+    for (const fact of facts)
+      for (const part of this.factParts.get(fact) ?? []) parts.add(part)
+    return parts
   }
 
   private compileMask(conditions: Conditions): CompiledPredicate {

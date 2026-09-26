@@ -1,0 +1,26 @@
+{
+  "name": "@toned/eslint-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Optional import-aware Toned and readt rules for ESLint and Oxlint.",
+  "exports": {
+    ".": "./index.js",
+    "./readt": "./readt.js"
+  },
+  "files": [
+    "analysis.js",
+    "rules.js",
+    "index.js",
+    "readt.js",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4",
+    "oxlint": "1.69.0"
+  }
+}

@@ -82,7 +82,7 @@
   },
   "scripts": {
     "build": "bun build.ts",
-    "package": "pnpm build && vsce package --no-dependencies --allow-missing-repository --out dist/toned-vscode.vsix",
+    "package": "bun build.ts && ./node_modules/.bin/vsce package --no-dependencies --allow-missing-repository --out dist/toned-vscode.vsix",
     "test:editor": "bun build.ts && bun test-editor.ts"
   },
   "dependencies": {
