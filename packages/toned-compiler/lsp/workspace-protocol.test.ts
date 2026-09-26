@@ -155,7 +155,8 @@ describe('workspace initialization protocol', () => {
           h.uri('tokens/node_modules/hidden.ts'),
         ),
       ).toBeUndefined()
-      const indexed = h.registration.service.project.statistics
+      const { resolution: _resolution, ...indexed } =
+        h.registration.service.project.statistics
       for (const path of [
         'excluded/hidden.ts',
         'tokens/node_modules/hidden.ts',
@@ -181,15 +182,9 @@ describe('workspace initialization protocol', () => {
         expect(h.registration.documents.has(ignored)).toBe(false)
         expect(h.registration.service.project.get(ignored)).toBeUndefined()
       }
-      // Background diagnostics may legitimately hit the resolution cache while
+      // Background diagnostics may populate or hit the resolution cache while
       // these requests run. Ignored notifications must leave the index unchanged.
-      expect(h.registration.service.project.statistics).toMatchObject({
-        parses: indexed.parses,
-        unchanged: indexed.unchanged,
-        files: indexed.files,
-        characters: indexed.characters,
-        revision: indexed.revision,
-      })
+      expect(h.registration.service.project.statistics).toMatchObject(indexed)
       const position = { line: 0, character: sheet.indexOf("'accent'") + 2 }
       expect(
         await h.client.sendRequest('textDocument/completion', {
