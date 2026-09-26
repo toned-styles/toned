@@ -68,14 +68,15 @@ test(
   async () => {
     await fixture(async (server, child) => {
       await withControlledDeadlines(async () => {
-        const failure = expect(
-          server.initialize(
-            () => new Promise(() => {}),
-            async () => {},
-          ),
-        ).rejects.toThrow('timed out')
-        await vi.advanceTimersByTimeAsync(40 + 250)
-        await failure
+        await Promise.all([
+          expect(
+            server.initialize(
+              () => new Promise(() => {}),
+              async () => {},
+            ),
+          ).rejects.toThrow('timed out'),
+          vi.advanceTimersByTimeAsync(40 + 250),
+        ])
         reaped(child)
       })
     }, 40)
@@ -94,9 +95,10 @@ test(
         )
         const stopping = server.stop()
         expect(server.stop()).toBe(stopping)
-        const cancelled = expect(ready).rejects.toThrow('cancelled')
-        await vi.advanceTimersByTimeAsync(250)
-        await cancelled
+        await Promise.all([
+          expect(ready).rejects.toThrow('cancelled'),
+          vi.advanceTimersByTimeAsync(250),
+        ])
         await stopping
         reaped(child)
         await expect(server.spawn()).rejects.toThrow('stopped')
@@ -126,16 +128,17 @@ test(
   async () => {
     await fixture(async (server, child) => {
       await withControlledDeadlines(async () => {
-        const failure = expect(
-          server.initialize(
-            async () => {
-              throw new Error('handshake failed')
-            },
-            async () => {},
-          ),
-        ).rejects.toThrow('handshake failed')
-        await vi.advanceTimersByTimeAsync(250)
-        await failure
+        await Promise.all([
+          expect(
+            server.initialize(
+              async () => {
+                throw new Error('handshake failed')
+              },
+              async () => {},
+            ),
+          ).rejects.toThrow('handshake failed'),
+          vi.advanceTimersByTimeAsync(250),
+        ])
         reaped(child)
       })
     })
@@ -234,9 +237,10 @@ test(
         // The first OS termination request stalls: keep the real child alive until retry.
         child.kill = () => true
         try {
-          const failure = expect(server.stop()).rejects.toThrow('timed out')
-          await vi.advanceTimersByTimeAsync(250 + 2_000)
-          await failure
+          await Promise.all([
+            expect(server.stop()).rejects.toThrow('timed out'),
+            vi.advanceTimersByTimeAsync(250 + 2_000),
+          ])
           expect(() => process.kill(child.pid!, 0)).not.toThrow()
         } finally {
           child.kill = kill
