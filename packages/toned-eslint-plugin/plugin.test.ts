@@ -33,7 +33,7 @@ async function lint(
     await writeFile(
       config,
       JSON.stringify({
-        jsPlugins: [join(here, 'index.js'), join(here, 'readt.js')],
+        jsPlugins: [join(here, 'index.js'), join(here, 'react.js')],
         categories: { correctness: 'off' },
         rules,
       }),
@@ -76,7 +76,7 @@ const names = (diagnostics: Diagnostic[]) =>
   diagnostics.map((d) => d.filename.split('/').at(-1)).sort()
 
 test(
-  'readt family identity rule resolves aliases and ignores shadowing and non-render factories',
+  'react family identity rule resolves aliases and ignores shadowing and non-render factories',
   async () => {
     const result = await lint(
       {
@@ -93,7 +93,7 @@ test(
         'default-component.tsx': `import {createElements} from '@toned/react'; export default function(){const S=createElements(styles);return <S.Root/>}`,
         'handler.tsx': `import {createElements} from '@toned/react'; export function Card(){function onClick(){createElements(styles)}return <button onClick={onClick}/>}`,
       },
-      { 'readt/no-create-elements-in-render': 'error' },
+      { 'react-toned/no-create-elements-in-render': 'error' },
     )
     expect(names(result.diagnostics)).toEqual([
       'default-component.tsx',
@@ -115,7 +115,7 @@ test(
         'shadow.tsx': `import {elements} from './toned'; export function Card(elements){return elements(styles)}`,
       },
       {
-        'readt/no-create-elements-in-render': [
+        'react-toned/no-create-elements-in-render': [
           'error',
           { modules: { './toned': { elements: 'createElements' } } },
         ],
@@ -147,7 +147,7 @@ test(
           'export function Card(){const s=other(sheet);return <div style={s.Root.style}/>}',
         'shadow.tsx': `${prefix} export function Card(stylesFor){const s=stylesFor(sheet);return <div style={s.Root.style}/>}`,
       },
-      { 'readt/no-partial-host-bag': 'error' },
+      { 'react-toned/no-partial-host-bag': 'error' },
     )
     expect(names(result.diagnostics)).toEqual([
       'alias.tsx',
