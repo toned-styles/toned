@@ -89,7 +89,11 @@ async function lintBatch(fix: boolean) {
       if (error.code !== 1 || !error.stdout) throw cause
       stdout = error.stdout
     }
-    const result = JSON.parse(stdout) as { diagnostics: Diagnostic[] }
+    const result = JSON.parse(stdout) as {
+      diagnostics: Diagnostic[]
+      number_of_files: number
+    }
+    expect(result.number_of_files).toBe(inputs.size)
     for (const entry of cases) entry.result = { diagnostics: [], files: {} }
     for (const diagnostic of result.diagnostics) {
       const filename = relative(
@@ -99,7 +103,7 @@ async function lintBatch(fix: boolean) {
       const input = inputs.get(filename)
       if (!input)
         throw new Error(
-          `Oxlint reported an unexpected input: ${diagnostic.filename}`,
+          `Oxlint reported an unexpected input: ${diagnostic.filename}\n${diagnostic.message}`,
         )
       input.entry.result.diagnostics.push(diagnostic)
     }
