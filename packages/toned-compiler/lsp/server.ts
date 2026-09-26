@@ -14,6 +14,7 @@ import {
   loadWorkspace,
   readWorkspaceFile,
 } from '../workspace.ts'
+import { WorkspaceDiskQueue } from './disk-queue.ts'
 import { parseWorkspaceOptions, type WorkspaceOptions } from './options.ts'
 import { DesignLanguageService } from './service.ts'
 
@@ -31,6 +32,7 @@ export function registerLanguageServer(
   let workspaceOptions: WorkspaceOptions = {}
   const indexing = new AbortController()
   const pending = new Map<string, TextDocument>()
+  const diskQueue = new WorkspaceDiskQueue()
   let scheduled = false,
     roots: string[] = [],
     disposed = false,
@@ -141,10 +143,43 @@ export function registerLanguageServer(
     })
   }
   const yieldWork = () => new Promise<void>((resolve) => setImmediate(resolve))
+  const refreshFile = (root: string, uri: string) =>
+    diskQueue.run(uri, async () => {
+      if (disposed || documents.has(uri)) return false
+      const previous = service.project.get(uri)
+      const owns = () =>
+        !disposed &&
+        !documents.has(uri) &&
+        !diskChanges.has(uri) &&
+        service.project.get(uri) === previous
+      try {
+        const text = await readWorkspaceFile(root, uri)
+        if (
+          !owns() ||
+          rootFor(uri) !== root ||
+          !includesWorkspaceFile(root, uri, workspaceOptions.include)
+        )
+          return false
+        service.project.update(uri, text, (previous?.version ?? -1) + 1)
+        refreshDiagnostics(uri)
+        return true
+      } catch (error) {
+        if (!owns()) return false
+        refreshDiagnostics(uri)
+        service.forget(uri)
+        throw error
+      }
+    })
   const loadRequestedDependencies = async (uri: string, check: () => void) => {
     const queue = [uri],
       enqueued = new Set(queue)
-    const snapshots = new Map<string, ReturnType<typeof service.project.get>>()
+    let dependencyVersion = service.project.dependencyVersion(uri),
+      changedDependencies = false
+    const observe = () => {
+      const current = service.project.dependencyVersion(uri)
+      if (current !== dependencyVersion) changedDependencies = true
+      dependencyVersion = current
+    }
     let reads = 0
     // This supplements the normal scan, never executes configuration/modules, and
     // retains the same inclusion, source-size, project-size and open-buffer guards.
@@ -152,13 +187,9 @@ export function registerLanguageServer(
       check()
       const target = queue[cursor]!
       processDocument(target)
-      snapshots.set(target, service.project.get(target))
+      dependencyVersion = service.project.dependencyVersion(uri)
       for (const candidates of service.project.dependencyCandidates(target)) {
         for (const candidate of candidates) {
-          if (!snapshots.has(candidate)) {
-            if (snapshots.size >= 32_768) return snapshots
-            snapshots.set(candidate, service.project.get(candidate))
-          }
           const root = rootFor(candidate)
           if (
             !root ||
@@ -166,37 +197,20 @@ export function registerLanguageServer(
           )
             continue
           processDocument(candidate)
+          dependencyVersion = service.project.dependencyVersion(uri)
           if (
             !service.project.get(candidate) &&
             indexingStatus.get(root)?.state === 'loading' &&
             !documents.has(candidate)
           ) {
-            if (++reads > 1024 || disposed) return snapshots
-            const previous = service.project.get(candidate)
+            if (++reads > 1024 || disposed) return changedDependencies
             try {
-              const text = await readWorkspaceFile(root, candidate)
+              await refreshFile(root, candidate)
+              observe()
               check()
-              if (
-                !disposed &&
-                rootFor(candidate) === root &&
-                includesWorkspaceFile(
-                  root,
-                  candidate,
-                  workspaceOptions.include,
-                ) &&
-                !documents.has(candidate) &&
-                service.project.get(candidate) === previous
-              ) {
-                service.project.update(
-                  candidate,
-                  text,
-                  (previous?.version ?? -1) + 1,
-                )
-                snapshots.set(candidate, service.project.get(candidate))
-                refreshDiagnostics(candidate)
-              }
             } catch {
               // Missing candidates are normal; the background scan owns filesystem diagnostics.
+              observe()
               check()
               continue
             }
@@ -210,10 +224,13 @@ export function registerLanguageServer(
           }
         }
       }
-      if (disposed) return snapshots
-      if (cursor % 8 === 7) await yieldWork()
+      if (disposed) return changedDependencies
+      if (cursor % 8 === 7) {
+        await yieldWork()
+        observe()
+      }
     }
-    return snapshots
+    return changedDependencies
   }
   // Parse the current request and its transitive imports before unrelated buffers.
   // Revisit after yielding: notifications may have replaced the requested snapshot
@@ -235,31 +252,23 @@ export function registerLanguageServer(
             LSPErrorCodes.ContentModified,
             'Toned imports kept changing during initial indexing; retry',
           )
-        const snapshots = await loadRequestedDependencies(uri, check)
-        if (
-          ![...snapshots].some(
-            ([target, document]) =>
-              pending.has(target) || service.project.get(target) !== document,
-          )
-        )
-          break
+        if (!(await loadRequestedDependencies(uri, check))) break
       }
     }
     check()
+    if (uri) processDocument(uri)
     if (!pending.size) return query()
     const deadline = performance.now() + 15_000
     for (let pass = 0; ; pass++) {
       if (pass >= 64 || performance.now() >= deadline)
         throw new ResponseError(
-          ErrorCodes.InvalidRequest,
+          LSPErrorCodes.ContentModified,
           'Toned documents kept changing during the request; retry the current snapshot',
         )
       check()
       const queue = uri ? [uri] : [...pending.keys()]
-      const snapshots = new Map<
-        string,
-        ReturnType<typeof service.project.get>
-      >()
+      let dependencyVersion = uri ? service.project.dependencyVersion(uri) : 0
+      let changedDependencies = false
       const seen = new Set<string>(),
         enqueued = new Set(queue)
       let count = 0,
@@ -272,34 +281,32 @@ export function registerLanguageServer(
           processDocument(target)
           changed = true
         }
-        snapshots.set(target, service.project.get(target))
+        if (uri) dependencyVersion = service.project.dependencyVersion(uri)
         if (uri)
-          for (const dependency of service.project.dependencies(target)) {
-            if (!snapshots.has(dependency)) {
-              if (snapshots.size >= 32_768)
-                throw new ResponseError(
-                  ErrorCodes.InvalidRequest,
-                  'Toned request dependency budget exceeded; narrow the workspace',
-                )
-              snapshots.set(dependency, service.project.get(dependency))
-            }
-            if (
-              !enqueued.has(dependency) &&
-              (pending.has(dependency) || service.project.get(dependency))
-            ) {
+          for (const dependency of service.project.dependencies(
+            target,
+            pending,
+          )) {
+            if (!enqueued.has(dependency)) {
               enqueued.add(dependency)
               queue.push(dependency)
             }
           }
-        if (++count % 8 === 0) await yieldWork()
+        if (++count % 8 === 0) {
+          await yieldWork()
+          if (
+            uri &&
+            dependencyVersion !== service.project.dependencyVersion(uri)
+          )
+            changedDependencies = true
+        }
         check()
       }
-      // No await between this validation and query execution.
+      // The reverse index includes absent candidates, so its dependency stamp
+      // detects newly indexed imports without storing every lexical candidate.
       if (
-        ![...snapshots].some(
-          ([target, document]) =>
-            pending.has(target) || service.project.get(target) !== document,
-        ) &&
+        !changedDependencies &&
+        ![...seen].some((target) => pending.has(target)) &&
         (uri || !pending.size)
       )
         break
@@ -315,7 +322,7 @@ export function registerLanguageServer(
   ): Promise<T> => {
     if (activeRequests >= 32)
       throw new ResponseError(
-        ErrorCodes.InvalidRequest,
+        LSPErrorCodes.ServerCancelled,
         'Toned interactive request budget exceeded; retry after pending requests finish',
       )
     activeRequests++
@@ -411,6 +418,7 @@ export function registerLanguageServer(
           signal: indexing.signal,
           include: workspaceOptions.include,
           isOpen: (uri) => Boolean(documents.get(uri)),
+          loadFile: (uri) => refreshFile(root, uri),
         })
         if (disposed) break
         indexingStatus.set(root, {
@@ -709,35 +717,23 @@ export function registerLanguageServer(
         diskChanges.delete(uri)
         const root = rootFor(uri)
         if (!root || documents.has(uri) || disposed) continue
-        if (type === 3) {
-          refreshDiagnostics(uri)
-          service.forget(uri)
-          continue
-        }
-        const previous = service.project.get(uri)
         try {
-          const text = await readWorkspaceFile(root, uri)
-          // Newer notifications and editor snapshots invalidate older I/O.
-          if (
-            !disposed &&
-            !documents.has(uri) &&
-            !diskChanges.has(uri) &&
-            service.project.get(uri) === previous
-          ) {
-            service.project.update(uri, text, (previous?.version ?? -1) + 1)
-            refreshDiagnostics(uri)
-          }
+          await refreshFile(root, uri)
         } catch (error) {
+          // Delete events still read through the queue: a recreated file must win
+          // over an earlier deletion notification. Missing deleted files are normal.
+          const missing =
+            typeof error === 'object' &&
+            error !== null &&
+            'code' in error &&
+            error.code === 'ENOENT'
           if (
             !disposed &&
             !documents.has(uri) &&
             !diskChanges.has(uri) &&
-            service.project.get(uri) === previous
-          ) {
-            refreshDiagnostics(uri)
-            service.forget(uri)
+            !(type === 3 && missing)
+          )
             incompleteWatch(`Toned could not refresh ${uri}: ${String(error)}`)
-          }
         }
       }
     } finally {
@@ -777,6 +773,7 @@ export function registerLanguageServer(
   connection.onShutdown(() => {
     disposed = true
     indexing.abort()
+    diskQueue.dispose()
     pending.clear()
     diskChanges.clear()
     diagnosticQueue.clear()
@@ -791,6 +788,7 @@ export function registerLanguageServer(
     dispose: () => {
       disposed = true
       indexing.abort()
+      diskQueue.dispose()
       pending.clear()
       diskChanges.clear()
       diagnosticQueue.clear()

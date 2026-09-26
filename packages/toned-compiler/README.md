@@ -88,17 +88,25 @@ No whole-project typecheck runs on a completion request.
 Interactive requests prioritize the requested document and its current transitive
 imports. During the initial scan they can read an included dependency closure
 (up to 256 files / 1024 candidate reads), while completion remains marked
-incomplete until the workspace scan finishes successfully. Unsaved buffers and
-newer disk/index versions win over an older asynchronous read. Background editor
-updates yield after eight files or six milliseconds; diagnostics coalesce per
+incomplete until the workspace scan finishes successfully. Initial, eager and
+watched disk reads share a per-URI queue: at most 128 active files, each with one
+coalesced follow-up read after the active writer settles. Publication rechecks
+editor ownership; unsaved buffers always win. Delete notifications read current
+disk state too, so a recreated file wins over an earlier deletion notification.
+Background editor updates yield after eight files or six milliseconds; diagnostics coalesce per
 open document and do not republish identical content for the same version.
 Workspace-wide inspection and reference requests flush pending snapshots before
 querying. Requests recheck versions after yielding, accept protocol cancellation,
 and are limited to 32 concurrent operations, 64 revalidation passes and a
-15-second cooperative deadline. Dependency snapshot tracking is capped at
-32,768 lexical candidates per request. An individual bounded file parse is synchronous
-and cannot be interrupted midway. Excess/expired requests return an explicit
-retryable protocol error.
+15-second cooperative deadline. Traversal retains only indexed or pending module
+targets, bounded by the project/open-document budgets; it does not accumulate
+negative lexical candidates or reject large closures at an arbitrary candidate
+count. Per-document dependency revisions include transitive reexports and missing
+import candidates, so a newly indexed dependency invalidates a yielded traversal.
+When only the requested buffer is pending, it is processed without a closure walk.
+An individual bounded file parse is synchronous and cannot be interrupted midway.
+Admission limits and expired requests return `ServerCancelled`; unresolved
+document churn returns `ContentModified`, allowing the client to retry current work.
 
 Symbolic binding caches retain at most 512 entries and 100,000 conservatively
 counted graph nodes/member edges; a single graph above 20,000 is not retained.

@@ -87,11 +87,16 @@ test(
         'shadow.tsx': `import {createElements} from '@toned/react'; export function Card(createElements){return createElements(styles)}`,
         'other.tsx': `import {createElements} from 'other'; export function Card(){return createElements(styles)}`,
         'factory.tsx': `import {createElements} from '@toned/react'; export function makeFamily(sheet){return createElements(sheet)}`,
+        'default-factory.tsx': `import {createElements} from '@toned/react'; export default function makeFamily(sheet){return createElements(sheet)}`,
+        'anonymous-factory.tsx': `import {createElements} from '@toned/react'; export default sheet=>createElements(sheet)`,
+        'anonymous-function-factory.tsx': `import {createElements} from '@toned/react'; export default function(sheet){return createElements(sheet)}`,
+        'default-component.tsx': `import {createElements} from '@toned/react'; export default function(){const S=createElements(styles);return <S.Root/>}`,
         'handler.tsx': `import {createElements} from '@toned/react'; export function Card(){function onClick(){createElements(styles)}return <button onClick={onClick}/>}`,
       },
       { 'readt/no-create-elements-in-render': 'error' },
     )
     expect(names(result.diagnostics)).toEqual([
+      'default-component.tsx',
       'memo.tsx',
       'named.tsx',
       'namespace.tsx',
