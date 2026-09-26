@@ -83,6 +83,67 @@ describe('computed query keys', () => {
     expect(native(sheet, { size: 'l', '@wide': true })['gap']).toBe(3)
   })
 
+  it('reuses a selector as an authored key and across compound queries', () => {
+    const sheet = ui
+      .stylesheet({ Root: { gap: 0 } })
+      .variants(($: Variants<{ size: 's' | 'l' }>, q) => {
+        const small = $.size('s')
+        return {
+          [small]: { Root: { gap: 1 } },
+          [q.all(small, q.platform('native'))]: { Root: { gap: 2 } },
+          [q.any(small, q.media('wide'))]: {
+            Root: { $style: { opacity: 0.5 } },
+          },
+          [q.not(small)]: { Root: { gap: 3 } },
+        }
+      })
+    expect(native(sheet, { size: 's' })).toEqual({ gap: 2, opacity: 0.5 })
+    expect(native(sheet, { size: 'l' })).toEqual({ gap: 3 })
+    expect(native(sheet, { size: 'l', '@wide': true })).toEqual({
+      gap: 3,
+      opacity: 0.5,
+    })
+  })
+
+  it('does not consume an override selector when its queries precede the authored key', () => {
+    const base = ui
+      .stylesheet({ Root: { gap: 0 } })
+      .variants(($: Variants<{ size: 's' | 'l' }>) => ({
+        [$.size('s')]: { Root: { gap: 1 } },
+      }))
+    const sheet = overrideSheet(base, {}, ($, q) => {
+      const small = $.size('s')
+      return {
+        [q.all(small, q.platform('native'))]: { Root: { gap: 2 } },
+        [small]: { Root: { gap: 3 } },
+        [q.any(small, q.media('wide'))]: {
+          Root: { $style: { opacity: 0.75 } },
+        },
+        [q.not(small)]: { Root: { gap: 4 } },
+      }
+    })
+    expect(native(sheet, { size: 's' })).toEqual({ gap: 3, opacity: 0.75 })
+    expect(native(sheet, { size: 'l' })).toEqual({ gap: 4 })
+    expect(native(sheet, { size: 'l', '@wide': true })).toEqual({
+      gap: 4,
+      opacity: 0.75,
+    })
+    expect(native(base, { size: 's' })).toEqual({ gap: 1 })
+  })
+
+  it('still rejects duplicate authored selector keys after query reuse', () => {
+    expect(() =>
+      ui.stylesheet({ Root: {} }).variants(($: Variants<{ size: 's' }>, q) => {
+        const small = $.size('s')
+        return {
+          [q.all(small, q.platform('native'))]: { Root: { gap: 1 } },
+          [small]: { Root: { gap: 2 } },
+          [$.size('s')]: { Root: { gap: 3 } },
+        }
+      }),
+    ).toThrow('Duplicate Toned variant selector: [size=s]')
+  })
+
   it('registers relations under computed keys and keeps overrides authoritative', () => {
     const sheet = ui.stylesheet((q) => ({
       Root: { gap: 0 },

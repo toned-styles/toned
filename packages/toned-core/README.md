@@ -103,6 +103,10 @@ The experimental curried `.variants<Mods>()(factory)`, `q.rules(...)`, and
 `.when(...)` forms are removed. Annotate the single `.variants` callback and put
 compound conditions directly in its returned objects. Existing main-branch
 explicit-generic callback and object variant declarations remain compatible.
+The object-predicate types `QueryAtom` and `QueryPredicate` and the `WHEN_RULES`
+metadata symbol are no longer public exports. Query builders now return typed
+`QueryKey` strings; consumers use those keys in declarations instead of assembling
+predicate objects or attaching conditional-rule metadata.
 
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint

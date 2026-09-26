@@ -2,7 +2,7 @@
   "verifiedOn": "2026-09-26",
   "java": "OpenJDK 21.0.2",
   "scope": "Six automatic scenarios and native touch; excludes iOS, topology/recycling and per-frame paint guarantees",
-  "provenance": "Built from the final source working tree before delivery commit. The build.inputs SHA-256 identifies the exact staged packages (including published declarations), acceptance sources and Android build inputs; build.apk identifies the executed APK.",
+  "provenance": "Built from Toned source commit 515303d67b698b91e3bf79ef5c31e5b0a79ac1aa; evidence was retained in d6e0e2a. The build.inputs SHA-256 identifies the exact staged packages (including published declarations), acceptance sources and Android build inputs; build.apk identifies the executed APK. Later query-authoring fixes are covered by package regressions rather than a repeated device run.",
   "build": {
     "inputs": "5c8b4ca9fb0f558a0c6ce604dd37d5922a927023bdc3855a2f47459090ae491c",
     "apk": "ce0a0169e7bfe95ccbe2d6b65f5691da9e65e028d514e4c12994991fc605e93c",

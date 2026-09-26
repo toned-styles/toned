@@ -7,7 +7,7 @@ export type NamedStyleKey<Name extends string> = `$named$_${Name}`
 export type { ExtractNamedStyles } from '../types/composition.ts'
 export type VariantKey = string
 
-declare const SELECTOR_TEXT: unique symbol
+const SELECTOR_TEXT = Symbol.for('@toned/selector-text')
 /** @internal A selector produced by an axis builder, not an unchecked raw string. */
 export type BuiltVariantKey = string & { readonly [SELECTOR_TEXT]: string }
 /** @internal Strip selector methods while retaining the canonical literal key. */
@@ -232,14 +232,26 @@ export function canonicalSelectorKey(
     .join('')
 }
 
+/** Query operands read identity without claiming an authored object key. */
+export function selectorText(value: string): string {
+  if (typeof value === 'string') return value
+  const key = (value as unknown as { readonly [SELECTOR_TEXT]?: unknown })?.[
+    SELECTOR_TEXT
+  ]
+  return typeof key === 'string' ? key : String(value)
+}
+
 function createBuilder(
   selections: ReadonlyMap<string, readonly Scalar[]>,
   emit: (key: string) => string,
 ): VariantBuilder<ModType> {
+  let cached: string | undefined
+  const key = () => (cached ??= canonicalSelectorKey(selections))
   return new Proxy({} as VariantBuilder<ModType>, {
     get(_, prop) {
+      if (prop === SELECTOR_TEXT) return key()
       if (prop === Symbol.toPrimitive || prop === 'toString')
-        return () => emit(canonicalSelectorKey(selections))
+        return () => emit(key())
       if (typeof prop !== 'string') return undefined
       return (...values: Scalar[]) => {
         if (!values.length)
