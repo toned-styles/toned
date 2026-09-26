@@ -7,6 +7,40 @@ import { OwnedServer } from './owned-server.ts'
 import { evictClosedSession } from './session-lifecycle.ts'
 
 const fixtureStartupTimeout = 5_000
+// These advance durations mirror OwnedServer.finish() in owned-server.ts:
+// SIGTERM's bounded(this.closed, 250), then SIGKILL's bounded(this.closed, 2_000).
+const gracefulExitDeadline = 250
+const forcedExitDeadline = 2_000
+
+async function emergencyReap(child: ChildProcess) {
+  // An assertion can abandon a stop whose fake deadline was discarded. Cleanup
+  // must own the real process directly instead of awaiting that cached promise.
+  vi.useRealTimers()
+  if (child.exitCode !== null || child.signalCode !== null) return
+  const pid = child.pid
+  if (pid === undefined) throw new Error('Fixture child has no PID')
+  await new Promise<void>((resolve, reject) => {
+    const closed = () => {
+      clearTimeout(timer)
+      resolve()
+    }
+    const timer = setTimeout(() => {
+      child.off('close', closed)
+      if (child.exitCode !== null || child.signalCode !== null) resolve()
+      else reject(new Error('Fixture emergency termination timed out'))
+    }, forcedExitDeadline)
+    child.once('close', closed)
+    // Some cases replace child.kill to simulate failed termination. Bypass that
+    // test double so a failed assertion cannot strand its owned OS process.
+    try {
+      process.kill(pid, 'SIGKILL')
+    } catch (error) {
+      clearTimeout(timer)
+      child.off('close', closed)
+      reject(error)
+    }
+  })
+}
 // OwnedServer bounds graceful cleanup (1s), SIGTERM (250ms), SIGKILL (2s),
 // and failed-start cleanup (500ms). Keep those production deadlines unchanged;
 // allow every intentional start/stop attempt plus fixture I/O in the outer test.
@@ -24,25 +58,40 @@ async function fixture(
     `process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); process.stdout.write('ready');`,
   )
   const server = new OwnedServer(entrypoint, timeout)
+  let child: ChildProcess | undefined
   try {
-    const child = await server.spawn()
+    child = await server.spawn()
+    const ownedChild = child
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error('Child fixture startup timed out')),
         fixtureStartupTimeout,
       )
-      child.stdout!.once('data', () => {
+      ownedChild.stdout!.once('data', () => {
         clearTimeout(timer)
         resolve()
       })
-      child.once('error', (error) => {
+      ownedChild.once('error', (error) => {
         clearTimeout(timer)
         reject(error)
       })
     })
     await run(server, child)
-  } finally {
     await server.stop()
+  } catch (error) {
+    if (child) {
+      try {
+        await emergencyReap(child)
+      } catch (cleanupError) {
+        throw new AggregateError(
+          [error, cleanupError],
+          'Fixture failed and emergency cleanup failed',
+          { cause: error },
+        )
+      }
+    }
+    throw error
+  } finally {
     await rm(directory, { recursive: true, force: true })
   }
 }
@@ -75,7 +124,7 @@ test(
               async () => {},
             ),
           ).rejects.toThrow('timed out'),
-          vi.advanceTimersByTimeAsync(40 + 250),
+          vi.advanceTimersByTimeAsync(40 + gracefulExitDeadline),
         ])
         reaped(child)
       })
@@ -97,7 +146,7 @@ test(
         expect(server.stop()).toBe(stopping)
         await Promise.all([
           expect(ready).rejects.toThrow('cancelled'),
-          vi.advanceTimersByTimeAsync(250),
+          vi.advanceTimersByTimeAsync(gracefulExitDeadline),
         ])
         await stopping
         reaped(child)
@@ -137,7 +186,7 @@ test(
               async () => {},
             ),
           ).rejects.toThrow('handshake failed'),
-          vi.advanceTimersByTimeAsync(250),
+          vi.advanceTimersByTimeAsync(gracefulExitDeadline),
         ])
         reaped(child)
       })
@@ -211,10 +260,10 @@ test(
           child.once('exit', () => resolve()),
         )
         const stopping = server.stop()
-        await vi.advanceTimersByTimeAsync(250)
+        await vi.advanceTimersByTimeAsync(gracefulExitDeadline)
         // Let the OS actually reap the child before expiring the transport wait.
         await exited
-        await vi.advanceTimersByTimeAsync(2_000)
+        await vi.advanceTimersByTimeAsync(forcedExitDeadline)
         await stopping
         await server.stop()
         reaped(child)
@@ -239,18 +288,60 @@ test(
         try {
           await Promise.all([
             expect(server.stop()).rejects.toThrow('timed out'),
-            vi.advanceTimersByTimeAsync(250 + 2_000),
+            vi.advanceTimersByTimeAsync(
+              gracefulExitDeadline + forcedExitDeadline,
+            ),
           ])
           expect(() => process.kill(child.pid!, 0)).not.toThrow()
         } finally {
           child.kill = kill
         }
         const stopping = server.stop()
-        await vi.advanceTimersByTimeAsync(250)
+        await vi.advanceTimersByTimeAsync(gracefulExitDeadline)
         await stopping
         reaped(child)
       })
     })
   },
   ownedCaseBudget(1, 2),
+)
+
+test(
+  'a failed assertion during virtual shutdown reaps the child and preserves the failure',
+  async () => {
+    let ownedChild: ChildProcess | undefined
+    let closed = false
+    let assertion: unknown
+    let observed: unknown
+    await fixture(async (server, child) => {
+      ownedChild = child
+      child.once('close', () => {
+        closed = true
+      })
+      await server.initialize(
+        async () => {},
+        () => new Promise(() => {}),
+      )
+      await withControlledDeadlines(async () => {
+        // Fail while graceful cleanup still waits on a fake deadline. The helper
+        // restores the real clock before fixture cleanup receives the failure.
+        void server.stop().catch(() => {})
+        try {
+          expect('actual').toBe('expected')
+        } catch (error) {
+          assertion = error
+          throw error
+        }
+      })
+    }).catch((error) => {
+      observed = error
+    })
+    expect(assertion).toBeInstanceOf(Error)
+    expect(observed).toBe(assertion)
+    expect(vi.isFakeTimers()).toBe(false)
+    expect(closed).toBe(true)
+    if (!ownedChild) throw new Error('Fixture never started')
+    reaped(ownedChild)
+  },
+  ownedCaseBudget(),
 )
