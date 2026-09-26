@@ -172,7 +172,9 @@ try {
     'filesystem',
   )
   const report = {
-    checkpoint: String(command(['git', 'rev-parse', checkpoint])).trim(),
+    checkpoint: currentOnly
+      ? null
+      : String(command(['git', 'rev-parse', checkpoint])).trim(),
     current: String(command(['git', 'rev-parse', 'HEAD'])).trim(),
     sourceDigest,
     environment: {
