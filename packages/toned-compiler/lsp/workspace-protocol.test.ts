@@ -179,8 +179,17 @@ describe('workspace initialization protocol', () => {
           await h.client.sendRequest('toned/inspect', { uri: ignored }),
         ).toMatchObject({ total: 0 })
         expect(h.registration.documents.has(ignored)).toBe(false)
+        expect(h.registration.service.project.get(ignored)).toBeUndefined()
       }
-      expect(h.registration.service.project.statistics).toEqual(indexed)
+      // Background diagnostics may legitimately hit the resolution cache while
+      // these requests run. Ignored notifications must leave the index unchanged.
+      expect(h.registration.service.project.statistics).toMatchObject({
+        parses: indexed.parses,
+        unchanged: indexed.unchanged,
+        files: indexed.files,
+        characters: indexed.characters,
+        revision: indexed.revision,
+      })
       const position = { line: 0, character: sheet.indexOf("'accent'") + 2 }
       expect(
         await h.client.sendRequest('textDocument/completion', {
