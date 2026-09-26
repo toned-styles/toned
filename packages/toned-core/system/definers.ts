@@ -23,19 +23,16 @@ import type {
   StylesheetType,
   TokenAlphaConfig,
   TokenConfig,
-  TokenStyle,
   TokenSystem,
   Tokens,
   TokenTypeConfig,
 } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
-import { mergeStyle } from '../utils/mergeStyle.ts'
-import { resolvePlatformKeys } from '../utils/platform.ts'
-import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { getConfig } from './config.ts'
 import { validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
 import { createQueries } from './queries.ts'
+import { createTokenComposer } from './token-composer.ts'
 
 export type { TokenSystem }
 
@@ -254,63 +251,17 @@ export function defineSystem<
     usedConditions: new Set<string>(),
     // The generic builders, retyped to this system's declared names.
     style: (value) => immutableSnapshot(normalizeDeclarations(value)),
-    t: (...values) => {
-      const value: Record<string, unknown> & { style?: unknown } = {}
-      for (const v of values) {
-        const src = normalizeDeclarations(
-          SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : v,
-        ) as Record<string, unknown> & {
-          style?: unknown
+    t: createTokenComposer(
+      () => ref,
+      () => {
+        const config = getConfig()
+        return {
+          tokens: config.getTokens(),
+          useClassName: config.useClassName,
+          platform: config.platform,
         }
-        // Normalize aliases before merging so `$style` and `style` compose
-        // identically. Deep-merge so later arguments extend earlier
-        // entries instead of replacing them. A shallow copy would drop style
-        // props set by earlier arguments.
-        const prevStyle = value.style
-        Object.assign(value, src)
-        const mergedStyle = mergeStyle(prevStyle, src.style)
-        if (mergedStyle !== undefined) value.style = mergedStyle
-      }
-
-      if (SYMBOL_REF in value) {
-        return value
-      }
-
-      const result = {
-        [SYMBOL_REF]: ref,
-        [SYMBOL_STYLE]: value,
-        [SYMBOL_ACCESS]: { ref, value },
-        get style() {
-          const config = getConfig()
-          const tokens = config.getTokens()
-
-          return ref.exec(
-            {
-              tokens,
-              useClassName: config.useClassName,
-              platform: config.platform,
-            },
-            resolvePlatformKeys(value, config.platform) as TokenStyle<S & C>,
-          ).style
-        },
-        get className() {
-          const config = getConfig()
-          const tokens = config.getTokens()
-
-          return ref.exec(
-            {
-              tokens,
-              useClassName: config.useClassName,
-              platform: config.platform,
-            },
-            resolvePlatformKeys(value, config.platform) as TokenStyle<S & C>,
-          ).className
-        },
-      }
-
-      // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on S & C intersection
-      return result as any
-    },
+      },
+    ),
     stylesheet: (<T extends StylesheetInput<S & C, T>>(
       rules: T | ((q: TokenSystem<S & C, C>['q']) => T),
     ) => {

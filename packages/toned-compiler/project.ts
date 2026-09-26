@@ -6,6 +6,7 @@ import type {
   DesignSnapshot,
 } from './model.ts'
 import { freezeDesignData, parseDesignDocument } from './source.ts'
+import { StaticResolution } from './static-resolution.ts'
 
 export interface ProjectOptions {
   readonly maxFiles?: number
@@ -30,6 +31,12 @@ export class DesignProject {
   private readonly kinds = new Map<DesignKind, Set<string>>()
   private readonly ranges = new Map<string, { size: number; ends: number[] }>()
   private readonly importers = new Map<string, Set<string>>()
+  private readonly moduleMaps = new Map<
+    string,
+    Readonly<Record<string, readonly string[]>>
+  >()
+  private resolutionRevision = -1
+  private readonly tokenCache = new Map<string, readonly DesignNode[]>()
   private characters = 0
   private parses = 0
   private unchanged = 0
@@ -129,8 +136,8 @@ export class DesignProject {
     this.ranges.set(uri, { size, ends })
     // Import keys are lexical module candidates, so adding/removing a target does
     // not force reparsing its importers or leave stale dependency edges.
-    for (const entry of document.imports)
-      for (const target of this.importCandidates(uri, entry.from)) {
+    for (const from of this.moduleSources(document))
+      for (const target of this.importCandidates(uri, from)) {
         const bucket = this.importers.get(target) ?? new Set<string>()
         bucket.add(uri)
         this.importers.set(target, bucket)
@@ -161,6 +168,8 @@ export class DesignProject {
     this.ranges.clear()
     this.importers.clear()
     this.characters = 0
+    this.moduleMaps.clear()
+    this.tokenCache.clear()
     this.generation++
   }
   private removeNodes(document: DesignDocument) {
@@ -177,32 +186,158 @@ export class DesignProject {
   private removeEdges(uri: string) {
     const document = this.documents.get(uri)
     if (!document) return
-    for (const entry of document.imports)
-      for (const target of this.importCandidates(uri, entry.from)) {
+    for (const from of this.moduleSources(document))
+      for (const target of this.importCandidates(uri, from)) {
         const bucket = this.importers.get(target)
         bucket?.delete(uri)
         if (bucket?.size === 0) this.importers.delete(target)
       }
   }
-  private importCandidates(uri: string, from: string): readonly string[] {
-    if (!from.startsWith('.')) return []
-    let base: string
-    try {
-      base = new URL(from, uri).href
-    } catch {
-      return []
+  private moduleSources(document: DesignDocument): readonly string[] {
+    return [
+      ...new Set([
+        ...document.imports.map((entry) => entry.from),
+        ...Object.values(document.module?.exports ?? {}).flatMap((entry) =>
+          entry.from ? [entry.from] : [],
+        ),
+        ...(document.module?.stars ?? []),
+      ]),
+    ]
+  }
+  configureModules(
+    rootUri: string,
+    modules: Readonly<Record<string, readonly string[]>>,
+  ): void {
+    const root = new URL(rootUri.endsWith('/') ? rootUri : rootUri + '/')
+    if (root.protocol !== 'file:' || Object.keys(modules).length > 128)
+      throw new Error('Invalid Toned module mappings')
+    const copy: Record<string, readonly string[]> = Object.create(null)
+    for (const [name, targets] of Object.entries(modules)) {
+      if (
+        !name ||
+        name.length > 512 ||
+        name.split('*').length > 2 ||
+        !Array.isArray(targets) ||
+        !targets.length ||
+        targets.length > 8
+      )
+        throw new Error('Invalid Toned module mapping')
+      copy[name] = Object.freeze(
+        targets.map((target) => {
+          if (
+            typeof target !== 'string' ||
+            !target ||
+            target.length > 2048 ||
+            target.startsWith('/') ||
+            target.includes('\\') ||
+            target.includes(':') ||
+            target.includes('%') ||
+            target.includes('?') ||
+            target.includes('#') ||
+            target.split('/').includes('..') ||
+            target.split('*').length > 2 ||
+            (target.includes('*') && !name.includes('*'))
+          )
+            throw new Error('Invalid Toned module target')
+          return target
+        }),
+      )
     }
-    const extension = /\.(?:[cm]?[jt]sx?)$/.exec(base)
-    if (extension) {
-      const stem = base.slice(0, -extension[0].length)
-      return [...new Set([base, `${stem}.ts`, `${stem}.tsx`])]
+    if (!this.moduleMaps.has(root.href) && this.moduleMaps.size >= 16)
+      throw new Error('Toned module root budget exceeded')
+    for (const uri of this.documents.keys()) this.removeEdges(uri)
+    this.moduleMaps.set(root.href, Object.freeze(copy))
+    this.importers.clear()
+    for (const [uri, document] of this.documents)
+      for (const from of this.moduleSources(document))
+        for (const target of this.importCandidates(uri, from)) {
+          const bucket = this.importers.get(target) ?? new Set<string>()
+          bucket.add(uri)
+          this.importers.set(target, bucket)
+        }
+    this.generation++
+  }
+  private importCandidates(uri: string, from: string): readonly string[] {
+    let bases: string[] = []
+    if (from.startsWith('.')) {
+      try {
+        bases = [new URL(from, uri).href]
+      } catch {
+        return []
+      }
+    } else {
+      const roots = [...this.moduleMaps.keys()]
+        .filter((root) => uri.startsWith(root))
+        .sort((a, b) => b.length - a.length)
+      for (const root of roots) {
+        const matches = Object.entries(this.moduleMaps.get(root)!)
+          .filter(([pattern]) => {
+            const [prefix, suffix] = pattern.split('*')
+            return suffix === undefined
+              ? from === prefix
+              : from.startsWith(prefix!) &&
+                  from.endsWith(suffix) &&
+                  from.length >= prefix!.length + suffix.length
+          })
+          .sort(
+            ([a], [b]) =>
+              Number(b === from) - Number(a === from) ||
+              b.indexOf('*') - a.indexOf('*'),
+          )
+        if (matches.length) {
+          const [pattern, targets] = matches[0]!,
+            [prefix, suffix] = pattern.split('*')
+          const middle =
+            suffix === undefined
+              ? ''
+              : from.slice(prefix!.length, from.length - suffix.length)
+          if (
+            middle.split('/').includes('..') ||
+            middle.includes('\\') ||
+            middle.includes(':') ||
+            middle.includes('%') ||
+            middle.includes('?') ||
+            middle.includes('#')
+          )
+            return []
+          bases = targets.map(
+            (target) => new URL(target.replace('*', middle), root).href,
+          )
+          break
+        }
+      }
     }
     return [
-      base,
-      ...['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx'].map(
-        (suffix) => base + suffix,
+      ...new Set(
+        bases.flatMap((base) => {
+          const extension = /\.(?:[cm]?[jt]sx?)$/.exec(base)
+          if (extension) {
+            const stem = base.slice(0, -extension[0].length)
+            return [base, `${stem}.ts`, `${stem}.tsx`]
+          }
+          return [
+            base,
+            ...['.ts', '.tsx', '.js', '.jsx', '/index.ts', '/index.tsx'].map(
+              (suffix) => base + suffix,
+            ),
+          ]
+        }),
       ),
     ]
+  }
+  tokensForSystem(name: string, uri: string): readonly DesignNode[] {
+    if (this.resolutionRevision !== this.generation) {
+      this.tokenCache.clear()
+      this.resolutionRevision = this.generation
+    }
+    const key = `${uri}#${name}`,
+      cached = this.tokenCache.get(key)
+    if (cached) return cached
+    const tokens = Object.freeze(new StaticResolution(this).tokens(uri, name))
+    if (this.tokenCache.size >= 256)
+      this.tokenCache.delete(this.tokenCache.keys().next().value!)
+    this.tokenCache.set(key, tokens)
+    return tokens
   }
   resolveImport(uri: string, from: string): string | undefined {
     return this.importCandidates(uri, from).find((candidate) =>
@@ -215,6 +350,8 @@ export class DesignProject {
     seen = new Set<string>(),
   ): readonly DesignNode[] {
     if (uri) {
+      const resolved = new StaticResolution(this).definition(uri, name)
+      if (resolved) return [resolved]
       let currentUri: string = uri
       let currentName: string = name
       for (;;) {

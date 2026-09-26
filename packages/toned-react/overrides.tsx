@@ -173,7 +173,7 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
   // Read at the leaf so nested host contexts keep their scope. ConfigProvider
   // enforces this hook identity for its mounted lifetime; changing it requires
   // an explicit provider remount, preserving React's hook-order contract.
-  const config = useRuntimeConfig()
+  const config = useRuntimeConfig(sheet)
   const useOverrideScope = config.useStyleOverrideScope ?? useNoOverrideScope
   const ambient = useOverrideScope()
   if (entries.length === 0) return sheet

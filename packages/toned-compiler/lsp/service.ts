@@ -74,18 +74,9 @@ export class DesignLanguageService {
       .lookup(node.owner, node.uri)
       .find((entry) => entry.kind === 'sheet')
     if (!sheet?.system) return []
-    const system = this.project
-      .lookup(sheet.system, sheet.uri)
-      .find((entry) => entry.kind === 'system')
-    return system
-      ? this.project.query({
-          kind: 'token',
-          owner: system.owner,
-          uri: system.uri,
-          limit: 500,
-        }).items
-      : []
+    return this.project.tokensForSystem(sheet.system, sheet.uri).slice(0, 501)
   }
+
   hover(uri: string, position: Position): Hover | null {
     const document = this.document(uri),
       node = document && this.project.at(uri, document.offsetAt(position))
@@ -142,7 +133,7 @@ export class DesignLanguageService {
     }
     return {
       isIncomplete: tokens.length >= 500,
-      items: tokens.map((token) => ({
+      items: tokens.slice(0, 500).map((token) => ({
         label: token.name,
         kind: CompletionItemKind.Property,
         detail: `Toned token · ${token.values?.length ?? 'dynamic'} values`,
@@ -245,6 +236,7 @@ export class DesignLanguageService {
         )
       if (
         token?.values &&
+        token.valuesComplete !== false &&
         !domains.get(token.id)!.has(JSON.stringify(node.value))
       )
         diagnostics.push({

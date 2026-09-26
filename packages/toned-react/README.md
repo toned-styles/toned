@@ -7,10 +7,9 @@ resolution imports `@toned/core/server`.
 
 ## Declare and render
 
-```tsx
-import { defineConfig, defineSystem, defineToken, type Variants } from '@toned/core'
-import { ConfigProvider, createElements } from '@toned/react'
-import web from '@toned/react/react-web'
+```ts
+// button-styles.ts — pure declarations, also imported by the CSS build.
+import { defineSystem, defineToken, type Variants } from '@toned/core'
 
 export const system = defineSystem({
   id: 'controls',
@@ -31,7 +30,17 @@ export const buttonStyles = system
   [$.size('m')]: { Root: { $style: { padding: 8 } } },
 }))
 
-const config = defineConfig({ ...web, mediaMode: 'css', pseudoMode: 'css' })
+```
+
+```tsx
+// button.tsx — runtime integration; this module is not imported by the CSS build.
+import { TonedProvider, createElements } from '@toned/react'
+import { createWebRenderer } from '@toned/core/server'
+import { webHost as web } from '@toned/react/hosts/web'
+import { system, buttonStyles } from './button-styles'
+import { manifest } from './button-styles.generated'
+
+const renderer = createWebRenderer(system, { manifest })
 const S = createElements(buttonStyles)
 
 function Button() {
@@ -44,9 +53,9 @@ function Button() {
 
 export function Application() {
   return (
-    <ConfigProvider config={config}>
+    <TonedProvider renderer={renderer} host={web}>
       <Button />
-    </ConfigProvider>
+    </TonedProvider>
   )
 }
 ```
@@ -63,7 +72,8 @@ const artifact = buildStyles(system, { sheets: [buttonStyles] })
 ```
 
 The example declarations should live in a pure module (`button-styles.ts`), with
-React components/configuration in another module. CSS generation never runs in
+React components and renderer configuration in another module. The generated
+manifest import is the persisted build artifact, paired with the deployed CSS. CSS generation never runs in
 render. The host chooses the React DOM root, framework, or native application
 entry; Toned does not mount the application.
 
@@ -256,9 +266,9 @@ Prefer `TonedProvider` for new integrations:
 ```tsx
 import { createWebRenderer } from '@toned/core/server'
 import { TonedProvider } from '@toned/react'
-import web from '@toned/react/react-web'
+import { webHost as web } from '@toned/react/hosts/web'
 
-const renderer = createWebRenderer(system, { manifest, tokens: {} })
+const renderer = createWebRenderer(system, { manifest })
 return <TonedProvider renderer={renderer} host={web} theme={currentTokens}>
   <Application />
 </TonedProvider>
@@ -382,3 +392,35 @@ Entry starts only on committed host attachment. Keep the host mounted until exit
 finishes; unmounting cancels it. Frames patch the existing web/native host without
 React renders. The [motion contract](../toned-core/motion/README.md) lists supported
 properties, reduced-motion sources and the native JS-thread capability boundary.
+
+### Multiple systems in one tree
+
+Use the same provider API for a mixed-system application:
+
+```tsx
+<TonedProvider renderer={[controlsRenderer, applicationRenderer]} host={web}>
+  <Application />
+</TonedProvider>
+```
+
+Each stylesheet selects its renderer by the exact owning system object. Duplicate
+system registrations, incompatible hosts, and unregistered systems fail explicitly;
+a provider never falls back to process-global configuration. A nested provider
+replaces matching registrations and inherits the remaining parent registrations.
+All renderers registered in one provider share its host. Keep renderer objects
+stable; changing array order or an explicit theme does not recreate bound parts.
+
+The `theme` prop applies to a single renderer. With an array, supply each renderer's
+own tokens; `theme` is rejected as ambiguous. A nested single-renderer provider can
+override that system's theme while inheriting the other systems. Theme reads remain
+in React context, with host changes committed by the ordinary stylesheet lifecycle.
+`ConfigProvider` and installed global configuration are compatibility APIs for
+existing consumers outside this canonical renderer-provider integration.
+
+Use `@toned/react/hosts/web` (`webHost`) or
+`@toned/react/hosts/native` (`nativeHost`) with
+`TonedProvider`. These host modules do not import legacy configuration or copy
+process-global defaults. The native host supplies event/measurement adapters;
+applications must additionally provide their actual native renderer adapter and
+primitive resolver. The historical `react-web` and `react-native` entry points
+compose these same hosts with legacy configuration for existing applications.

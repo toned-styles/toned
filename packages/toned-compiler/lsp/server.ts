@@ -6,12 +6,14 @@ import {
   TextDocumentSyncKind,
 } from 'vscode-languageserver/node.js'
 import { TextDocument } from 'vscode-languageserver-textdocument'
+import { DesignProject } from '../project.ts'
 import { parseEditRequest, parseQuery } from '../requests.ts'
 import {
   includesWorkspaceFile,
   loadWorkspace,
   readWorkspaceFile,
 } from '../workspace.ts'
+import { parseWorkspaceOptions, type WorkspaceOptions } from './options.ts'
 import { DesignLanguageService } from './service.ts'
 
 /** Register on an explicit connection, allowing real protocol tests without global stdio. */
@@ -25,6 +27,7 @@ export function registerLanguageServer(
     openCharacters -= documents.get(uri)?.getText().length ?? 0
     documents.delete(uri)
   }
+  let workspaceOptions: WorkspaceOptions = {}
   const indexing = new AbortController()
   const pending = new Map<string, TextDocument>()
   let scheduled = false,
@@ -41,12 +44,51 @@ export function registerLanguageServer(
   >()
   const rootFor = (uri: string) =>
     roots.find((root) => uri.startsWith(root.replace(/\/$/, '') + '/'))
+  // At most one entry per bounded open document. Yield between small batches so
+  // a large token vocabulary update does not monopolize the protocol loop.
+  const diagnosticQueue = new Set<string>()
+  let diagnosticsScheduled = false
+  const drainDiagnostics = () => {
+    diagnosticsScheduled = false
+    if (disposed) return
+    let remaining = 16
+    for (const uri of diagnosticQueue) {
+      diagnosticQueue.delete(uri)
+      const document = documents.get(uri),
+        indexed = service.project.get(uri)
+      if (
+        document &&
+        indexed?.version === document.version &&
+        !pending.has(uri)
+      )
+        connection.sendDiagnostics({
+          uri,
+          version: document.version,
+          diagnostics: [...service.diagnostics(uri)],
+        })
+      if (--remaining === 0) break
+    }
+    if (diagnosticQueue.size) scheduleDiagnostics()
+  }
+  function scheduleDiagnostics() {
+    if (disposed || diagnosticsScheduled || !diagnosticQueue.size) return
+    diagnosticsScheduled = true
+    setImmediate(drainDiagnostics)
+  }
+  function refreshDiagnostics(changedUri?: string) {
+    const affected = changedUri
+      ? service.project.dependents(changedUri)
+      : documents.keys()
+    for (const uri of affected) if (documents.has(uri)) diagnosticQueue.add(uri)
+    scheduleDiagnostics()
+  }
   const flush = () => {
     scheduled = false
     for (const [uri, document] of pending) {
       pending.delete(uri)
       try {
         service.project.update(uri, document.getText(), document.version)
+        refreshDiagnostics(uri)
         connection.sendDiagnostics({
           uri,
           version: document.version,
@@ -54,6 +96,7 @@ export function registerLanguageServer(
         })
       } catch (error) {
         // Keep the editor snapshot so the next change can repair a parse-budget failure.
+        refreshDiagnostics(uri)
         service.forget(uri)
         connection.sendDiagnostics({
           uri,
@@ -89,6 +132,19 @@ export function registerLanguageServer(
         ErrorCodes.InvalidParams,
         'Toned supports up to 16 file workspace roots',
       )
+    try {
+      workspaceOptions = parseWorkspaceOptions(params.initializationOptions)
+      if (!roots.length && workspaceOptions.modules) {
+        // Initialization without workspace folders still validates the protocol.
+        const validation = new DesignProject()
+        validation.configureModules('file:///', workspaceOptions.modules)
+        validation.dispose()
+      }
+      for (const root of roots)
+        service.project.configureModules(root, workspaceOptions.modules ?? {})
+    } catch (cause) {
+      throw new ResponseError(ErrorCodes.InvalidParams, String(cause))
+    }
     roots.sort((a, b) => b.length - a.length)
     for (const root of roots) indexingStatus.set(root, { state: 'loading' })
     dynamicWatch =
@@ -133,6 +189,7 @@ export function registerLanguageServer(
       try {
         const result = await loadWorkspace(service.project, root, {
           signal: indexing.signal,
+          include: workspaceOptions.include,
           isOpen: (uri) => Boolean(documents.get(uri)),
         })
         if (disposed) break
@@ -154,6 +211,7 @@ export function registerLanguageServer(
           connection.console.error(String(error))
         }
       }
+      if (!disposed) refreshDiagnostics()
     }
   })
   const rejectDocument = (uri: string, version: number, cause: unknown) => {
@@ -174,6 +232,7 @@ export function registerLanguageServer(
       )
     }
     pending.delete(uri)
+    refreshDiagnostics(uri)
     service.forget(uri)
     connection.sendDiagnostics({
       uri,
@@ -216,8 +275,19 @@ export function registerLanguageServer(
       })
     }
   }
+  const acceptsEditorDocument = (uri: string) => {
+    if (!roots.length) return true
+    const root = rootFor(uri)
+    return Boolean(
+      root && includesWorkspaceFile(root, uri, workspaceOptions.include),
+    )
+  }
   connection.onDidOpenTextDocument(({ textDocument }) => {
     if (disposed) return
+    if (!acceptsEditorDocument(textDocument.uri)) {
+      connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] })
+      return
+    }
     try {
       // LSP document versions restart when a file is reopened; disk versions are separate.
       service.forget(textDocument.uri)
@@ -235,6 +305,10 @@ export function registerLanguageServer(
   })
   connection.onDidChangeTextDocument(({ textDocument, contentChanges }) => {
     if (disposed) return
+    if (!acceptsEditorDocument(textDocument.uri)) {
+      connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] })
+      return
+    }
     const previous = documents.get(textDocument.uri)
     if (!previous) return
     if (textDocument.version <= previous.version) return
@@ -257,6 +331,8 @@ export function registerLanguageServer(
     if (disposed) return
     removeOpen(textDocument.uri)
     pending.delete(textDocument.uri)
+    diagnosticQueue.delete(textDocument.uri)
+    refreshDiagnostics(textDocument.uri)
     service.forget(textDocument.uri)
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] })
     enqueueDiskChange(textDocument.uri, 2)
@@ -383,6 +459,7 @@ export function registerLanguageServer(
         const root = rootFor(uri)
         if (!root || documents.has(uri) || disposed) continue
         if (type === 3) {
+          refreshDiagnostics(uri)
           service.forget(uri)
           continue
         }
@@ -395,8 +472,10 @@ export function registerLanguageServer(
             !documents.has(uri) &&
             !diskChanges.has(uri) &&
             service.project.get(uri) === previous
-          )
+          ) {
             service.project.update(uri, text, (previous?.version ?? -1) + 1)
+            refreshDiagnostics(uri)
+          }
         } catch (error) {
           if (
             !disposed &&
@@ -404,6 +483,7 @@ export function registerLanguageServer(
             !diskChanges.has(uri) &&
             service.project.get(uri) === previous
           ) {
+            refreshDiagnostics(uri)
             service.forget(uri)
             incompleteWatch(`Toned could not refresh ${uri}: ${String(error)}`)
           }
@@ -419,7 +499,7 @@ export function registerLanguageServer(
       disposed ||
       documents.has(uri) ||
       !root ||
-      !includesWorkspaceFile(root, uri)
+      !includesWorkspaceFile(root, uri, workspaceOptions.include)
     )
       return
     if (
@@ -448,6 +528,7 @@ export function registerLanguageServer(
     indexing.abort()
     pending.clear()
     diskChanges.clear()
+    diagnosticQueue.clear()
     documents.clear()
     openCharacters = 0
     service.dispose()
@@ -460,6 +541,7 @@ export function registerLanguageServer(
       indexing.abort()
       pending.clear()
       diskChanges.clear()
+      diagnosticQueue.clear()
       documents.clear()
       openCharacters = 0
       service.dispose()

@@ -10,6 +10,7 @@ import type {
   DesignValue,
   SourceSpan,
 } from './model.ts'
+import { staticModule } from './static-source.ts'
 
 export const sourceRevision = (text: string) =>
   createHash('sha256').update(text).digest('hex')
@@ -453,6 +454,7 @@ export function parseDesignDocument(
         imports.push({
           local: clause.name.text,
           imported: 'default',
+          ...(clause.isTypeOnly ? { typeOnly: true } : {}),
           from: node.moduleSpecifier.text,
           span: span(clause.name, source),
         })
@@ -462,6 +464,9 @@ export function parseDesignDocument(
           imports.push({
             local: entry.name.text,
             imported: entry.propertyName?.text ?? entry.name.text,
+            ...(clause?.isTypeOnly || entry.isTypeOnly
+              ? { typeOnly: true }
+              : {}),
             from: node.moduleSpecifier.text,
             span: span(entry.name, source),
           })
@@ -469,6 +474,7 @@ export function parseDesignDocument(
         imports.push({
           local: bindings.name.text,
           imported: '*',
+          ...(clause?.isTypeOnly ? { typeOnly: true } : {}),
           from: node.moduleSpecifier.text,
           span: span(bindings.name, source),
         })
@@ -484,6 +490,21 @@ export function parseDesignDocument(
         span: span(node, source),
         owner: node.text,
       })
+  // Namespace member uses have their own navigation span; the root identifier
+  // remains a lexical reference for TypeScript-style reference reporting.
+  for (const node of identifiers) {
+    const parent = node.parent
+    if (!ts.isPropertyAccessExpression(parent) || parent.name !== node) continue
+    let root: ts.Expression = parent
+    let depth = 0
+    while (ts.isPropertyAccessExpression(root) && ++depth <= 32)
+      root = root.expression
+    if (ts.isIdentifier(root) && bindingScope(root) === globalScope)
+      references.push({
+        name: parent.getText(source),
+        span: span(node, source),
+      })
+  }
   for (const diagnostic of (
     source as ts.SourceFile & {
       parseDiagnostics?: readonly ts.DiagnosticWithLocation[]
@@ -715,7 +736,7 @@ export function parseDesignDocument(
       ? expression.expression.expression.getText(source)
       : undefined
     add('sheet', owner, owner, [], declaration, declaration.name, {
-      system,
+      system: system ?? expression.expression.getText(source),
       variants: variants.length && completeShape ? mergedShape : undefined,
       // A display chain, not an invented TypeScript intersection: duplicate axes
       // use later vocabularies. A single annotation retains its original spelling.
@@ -737,6 +758,7 @@ export function parseDesignDocument(
         })
     }
   }
+  const module = staticModule(source, nodes, evaluate, maxNodes)
   nodes.sort((a, b) => a.span.start - b.span.start || b.span.end - a.span.end)
   if (evaluationBudget.remaining < 0)
     diagnostics.push({
@@ -763,6 +785,7 @@ export function parseDesignDocument(
     imports,
     references,
     diagnostics,
+    module,
   })
 }
 

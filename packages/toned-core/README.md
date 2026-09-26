@@ -228,10 +228,37 @@ presence, not function source or captured values.
 
 ```ts
 import { createWebRenderer } from '@toned/core/server'
-const web = createWebRenderer(ui, { manifest, tokens: {} })
+const web = createWebRenderer(ui, { manifest })
 const props = web.resolve(button, { variants: { size: 's', variant: 'accent' } })
 // <button {...props.Root} /> works in an RSC/server entry: no hooks or refs.
 ```
+
+Web renderers default to CSS custom-property references (`var(--name)`). Explicit
+`tokens` override those defaults. Each renderer exposes `t` for lightweight token
+composition using that renderer's backend and immutable tokens:
+
+```ts
+const props = web.t({ padding: 2 }, { $style: { opacity: 0.8 } })
+```
+
+When a token helper must exist before CSS generation (for example in a declaration
+module imported by the CSS inventory), use the standalone explicit constructor:
+
+```ts
+import { createTokenStyles, cssVariableTokens } from '@toned/core/server'
+export const t = createTokenStyles(ui, {
+  tokens: cssVariableTokens(), platform: 'web', useClassName: true,
+})
+```
+
+It requires no manifest and reads no installed global config. It does not generate
+or deliver CSS; the application's build still owns the classes it requests.
+`cssVariableTokens()` returns a frozen null-prototype token proxy preserved through
+immutable snapshots. Use concrete token values for native output. `renderer.t` is
+an ergonomic shortcut using the renderer's selected backend; it validates required
+build conditions. Both helpers retain the same typed composition and symbol protocol
+as legacy `system.t`, which remains available for consumers using installed config.
+Helpers are explicit snapshots and do not subscribe to provider theme changes.
 
 `createNativeRenderer` evaluates the same declarations with explicit host facts
 and rejects fields outside its documented finite native profile. Unsupported CSS
