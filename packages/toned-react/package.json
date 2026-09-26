@@ -48,6 +48,8 @@
     "./react-web": "./react-web.ts",
     "./react-native": "./react-native.ts",
     "./style-types.web": "./style-types.web.ts",
-    "./style-types.universal": "./style-types.universal.ts"
+    "./style-types.universal": "./style-types.universal.ts",
+    "./motion": "./motion.tsx",
+    "./adaptive": "./adaptive.tsx"
   }
 }

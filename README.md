@@ -21,7 +21,20 @@ part ownership without adding a host element.
 | [`@toned/systems`](packages/toned-systems/README.md) | Optional existing design vocabularies; the base vocabulary keeps legacy token names for compatibility. |
 | [`@toned/themes`](packages/toned-themes/README.md) | Optional CSS theme values. |
 | [`toned`](packages/toned/README.md) | Private workspace placeholder; no public umbrella API. Import the scoped packages above. |
-| [`@toned/compiler`](packages/toned-compiler/README.md) | Private placeholder; source extraction is not implemented or required for explicit build inventories. |
+| [`@toned/compiler`](packages/toned-compiler/README.md) | Optional source graph, scoped edits, language server, inspector, measured contracts and DTCG interchange. |
+
+## Design tooling and portable capabilities
+
+Use the [design tools](packages/toned-compiler/README.md) for source-aware
+completion/navigation, revision-bound edits and measured design contracts.
+The same source model serves an LSP client, an agent or the browser inspector;
+application modules are never executed to inspect declarations.
+
+[Adaptive layouts](packages/toned-core/adaptive/README.md) select typed flex
+alternatives through existing variants using explicit container/content/text-scale
+inputs. [Motion](packages/toned-core/motion/README.md) adds timing/spring
+transitions, interruption and reduced motion through the existing host writer.
+Both capabilities are opt-in subpath imports, preserving the ordinary runtime.
 
 ## Contracts and verification
 

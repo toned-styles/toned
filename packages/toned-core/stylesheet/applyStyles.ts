@@ -17,7 +17,57 @@ type OwnerRequest = {
   caller: Style
   declarative: Style
 }
-type HostOwnership = { state: Ownership; owners: Map<object, OwnerRequest> }
+export type HostOutput = Record<string, any>
+export type HostOutputDriver = {
+  update(output: HostOutput): void
+  cancel(): void
+  dispose(): void
+}
+type HostOwnership = {
+  state: Ownership
+  owners: Map<object, OwnerRequest>
+  driver?: HostOutputDriver
+}
+
+/** Install only after host attachment. Frames use the same differential writer. */
+export function interceptHostOutput(
+  host: object,
+  create: (
+    initial: HostOutput,
+    write: (output: HostOutput) => void,
+  ) => HostOutputDriver,
+): () => void {
+  const entry = ownership.get(host)
+  if (!entry?.owners.size)
+    throw new Error('[toned/motion] Attach the Toned host before motion')
+  if (entry.driver)
+    throw new Error('[toned/motion] A host supports one motion controller')
+  let active = true
+  const initial = aggregate(entry)
+  let driver: HostOutputDriver
+  try {
+    driver = create(initial, (output) => {
+      if (active && ownership.get(host) === entry)
+        writeStyles(host, output, entry.state)
+    })
+  } catch (cause) {
+    active = false
+    writeStyles(host, initial, entry.state)
+    throw cause
+  }
+  entry.driver = driver
+  return () => {
+    if (!active) return
+    active = false
+    driver.dispose()
+    if (entry.driver === driver) delete entry.driver
+  }
+}
+function writeAggregate(host: Host, entry: HostOwnership): void {
+  const output = aggregate(entry)
+  if (entry.driver) entry.driver.update(output)
+  else writeStyles(host, output, entry.state)
+}
 const DEFAULT_OWNER = {}
 const ownership = new WeakMap<object, HostOwnership>()
 const stateFor = (host: object): HostOwnership => {
@@ -149,6 +199,7 @@ export function prepareHostRelease(host: Host, owner: object): void {
   if (!host) return
   const entry = ownership.get(host)
   if (!entry?.owners.has(owner)) return
+  entry.driver?.cancel()
   writeStyles(host, aggregate(entry, owner), entry.state)
 }
 
@@ -162,10 +213,11 @@ export function releaseHost(host: Host, owner: object): void {
   // prepareHostRelease already removed imperative-only effects before takeover.
   // Native refs likewise provide no safe mounted-state inspection here.
   if (!entry.owners.size) {
+    entry.driver?.dispose()
     ownership.delete(host)
     return
   }
-  writeStyles(host, aggregate(entry), entry.state)
+  writeAggregate(host, entry)
 }
 
 export const setStyles = (
@@ -180,7 +232,7 @@ export const setStyles = (
     )
   const entry = stateFor(host)
   requestFor(entry, owner).output = output
-  writeStyles(host, aggregate(entry), entry.state)
+  writeAggregate(host, entry)
 }
 
 function writeStyles(host: Host, output: Style, state: Ownership): void {
