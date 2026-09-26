@@ -17,7 +17,10 @@ export class StaticResolution {
   private budget = 20_000
   private readonly active = new Set<string>()
   private readonly memo = new Map<string, Value>()
-  constructor(private readonly host: ResolutionHost) {}
+  private readonly host: ResolutionHost
+  constructor(host: ResolutionHost) {
+    this.host = host
+  }
   private member(value: Value, name: string): Value {
     if (value.kind === 'system') {
       if (name === 'stylesheet' || name === 'system')

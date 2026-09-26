@@ -1,4 +1,8 @@
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
+import * as manifestValidation from '../build/manifest.ts'
+import { buildStyles } from '../build/index.ts'
+import { dp } from '../core/values.ts'
+import { createWebRenderer } from './index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
 import { createNativeRenderer } from './index.ts'
 
@@ -117,4 +121,67 @@ test('web renderer defaults preserve CSS variable tokens through snapshots and l
     color: 'var(--brand)',
   })
   expect(renderer.resolve(sheet).Root.style['color']).toBe('var(--brand)')
+})
+
+test('successful manifest validation is weakly cached per renderer and sheet; failures are retried', () => {
+  const system = defineSystem({ id: 'validation-cache', tokens: {} })
+  const sheet = system.stylesheet({ Root: { $style: { opacity: 1 } } })
+  const manifest = buildStyles(system, { sheets: [sheet] }).manifest
+  const renderer = createWebRenderer(system, { manifest })
+  const assertConditions = vi.spyOn(
+    manifestValidation,
+    'assertManifestConditions',
+  )
+  try {
+    for (let i = 0; i < 100; i++) renderer.validate(sheet)
+    renderer.resolve(sheet)
+    renderer.explain(sheet)
+    expect(assertConditions).toHaveBeenCalledTimes(1)
+    const derived = sheet.extend({ Root: { $style: { opacity: 0 } } })
+    renderer.validate(derived)
+    expect(assertConditions).toHaveBeenCalledTimes(2)
+    createWebRenderer(system, { manifest }).validate(sheet)
+    expect(assertConditions).toHaveBeenCalledTimes(3)
+    const missing = sheet.extend({
+      [system.q.media(dp(777))]: { Root: { $style: { opacity: 0 } } },
+    })
+    for (let i = 0; i < 2; i++)
+      expect(() => renderer.validate(missing)).toThrow('undeclared condition')
+    expect(assertConditions).toHaveBeenCalledTimes(5)
+    const other = defineSystem({
+      id: 'validation-cache',
+      tokens: {},
+    }).stylesheet({ Root: {} })
+    for (let i = 0; i < 2; i++)
+      expect(() => renderer.validate(other)).toThrow('different system')
+  } finally {
+    assertConditions.mockRestore()
+  }
+})
+
+test('renderer owns an immutable manifest snapshot before any sheet validation', () => {
+  const system = defineSystem({ id: 'manifest-snapshot', tokens: {} })
+  const sheet = system.stylesheet((q) => ({
+    Root: {},
+    [q.media(dp(777))]: { Root: { $style: { opacity: 0 } } },
+  }))
+  const built = buildStyles(system, { sheets: [sheet] }).manifest
+  const manifest = {
+    ...built,
+    conditions: [...built.conditions],
+    extensions: [...(built.extensions ?? [])],
+  }
+  const renderer = createWebRenderer(system, { manifest })
+  manifest.conditions.length = 0
+  manifest.extensions.push('not-in-the-build')
+  manifest.definition = 'changed'
+  expect(() => renderer.validate(sheet)).not.toThrow()
+  expect(renderer.manifest).not.toBe(manifest)
+  expect(renderer.manifest?.conditions).toEqual(built.conditions)
+  expect(renderer.manifest?.extensions).toEqual(built.extensions ?? [])
+  expect(Object.isFrozen(renderer.manifest?.conditions)).toBe(true)
+  const missing = sheet.extend({
+    [system.q.media(dp(999))]: { Root: { $style: { opacity: 1 } } },
+  })
+  expect(() => renderer.validate(missing)).toThrow('undeclared condition')
 })
