@@ -1,4 +1,7 @@
-import type { SelectorText } from '../stylesheet/variantSelector.ts'
+import {
+  selectorText,
+  type SelectorText,
+} from '../stylesheet/variantSelector.ts'
 import type { QueryAtom, QueryPredicate } from './queries.ts'
 
 /** Deterministic, self-contained query keys. No registry or render-time lookup. */
@@ -107,11 +110,11 @@ export function booleanQuery(
   operands: readonly string[],
 ): QueryKey {
   return checked(
-    `${PREFIX}${operands.map((value) => encode(String(value))).join('')}${op}:${operands.length}|`,
+    `${PREFIX}${operands.map((value) => encode(selectorText(value))).join('')}${op}:${operands.length}|`,
   )
 }
 export function notQuery(operand: string): QueryKey {
-  return checked(`${PREFIX}${encode(String(operand))}not|`)
+  return checked(`${PREFIX}${encode(selectorText(operand))}not|`)
 }
 export function relationQuery(
   source: string,
