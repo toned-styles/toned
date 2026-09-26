@@ -1,11 +1,11 @@
 import { describe, expect, test, vi } from 'vitest'
 import { defineSystem, defineToken } from '../system/index.ts'
+import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import type { Config, TokenSystem } from '../types/index.ts'
 import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
-import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
 import { setStyles } from './applyStyles.ts'
-import { StyleMatcher } from './StyleMatcher.ts'
 import { overrideSheet } from './overrideSheet.ts'
+import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
 import {
   createVariantSelector,

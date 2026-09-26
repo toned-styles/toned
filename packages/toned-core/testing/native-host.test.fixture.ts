@@ -1,4 +1,7 @@
-import { type NativeHostAdapter, registerNativeHost } from '../native-host.ts'
+import {
+  type NativeHostAdapter,
+  registerNativeHost,
+} from '../stylesheet/native-host.ts'
 export const fixtureNativeHost: NativeHostAdapter = Object.freeze({
   id: 'toned-test/merge-patch',
   renderer: 'custom',

@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { registerFixtureHost } from '../stylesheet/__tests__/native-host-fixture.ts'
 import {
   prepareHostRelease,
   recordHostCommit,
   releaseHost,
   setStyles,
 } from '../stylesheet/applyStyles.ts'
+import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import { attachMotion, type MotionFrameDriver } from './index.ts'
 
 function setup(initial = 0) {
