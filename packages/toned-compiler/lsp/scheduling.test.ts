@@ -181,6 +181,7 @@ describe('interactive work scheduling', () => {
       h.service.project.update(prefix + 'old.ts', system('old'), 1)
       h.service.project.update(prefix + 'new.ts', system('stale'), 1)
       h.open(uri, source)
+      h.open(prefix + 'queued-before-request.ts', 'const queued=1')
       const result = h.call('onCompletion', {
         textDocument: { uri },
         position: { line: 0, character: source.indexOf("'accent'") + 2 },
@@ -216,6 +217,7 @@ describe('interactive work scheduling', () => {
           1,
         )
       h.open(uri, source)
+      h.open(prefix + 'queued-before-request.ts', 'const queued=1')
       const result = h.call('onCompletion', {
         textDocument: { uri },
         position: { line: 0, character: source.indexOf("'accent'") + 2 },
@@ -235,6 +237,89 @@ describe('interactive work scheduling', () => {
       expect(
         (await result).items.map((item: { label: string }) => item.label),
       ).toEqual(['fresh'])
+    } finally {
+      h.registration.dispose()
+    }
+  })
+  it('reports relevant dependency churn as ContentModified instead of a malformed request', async () => {
+    const h = harness()
+    try {
+      const imports = Array.from(
+        { length: 8 },
+        (_, i) => `import {n as n${i}} from './dep${i}';`,
+      ).join('')
+      for (let i = 0; i < 8; i++)
+        h.service.project.update(prefix + `dep${i}.ts`, 'const x=1', 1)
+      h.open(prefix + 'component.ts', imports + sheet)
+      h.open(prefix + 'unrelated.ts', 'const x=2')
+      let version = 0
+      vi.spyOn(h.service.project, 'dependencyVersion').mockImplementation(
+        () => ++version,
+      )
+      await expect(h.call('onCompletion', completion)).rejects.toMatchObject({
+        code: -32801,
+      })
+    } finally {
+      h.registration.dispose()
+    }
+  })
+  it('reports saturated interactive admission as ServerCancelled and releases slots', async () => {
+    const h = harness(),
+      requests: Promise<unknown>[] = []
+    try {
+      for (let i = 0; i < 1000; i++)
+        h.open(prefix + `queued${i}.ts`, `const value=${i}`)
+      for (let i = 0; i < 32; i++)
+        requests.push(h.call('onRequest:toned/inspect', {}))
+      await expect(h.call('onRequest:toned/inspect', {})).rejects.toMatchObject(
+        { code: -32802 },
+      )
+      await Promise.all(requests)
+      await expect(
+        h.call('onRequest:toned/inspect', {}),
+      ).resolves.toMatchObject({ total: 0 })
+    } finally {
+      await Promise.allSettled(requests)
+      h.registration.dispose()
+    }
+  })
+
+  it('answers a large cyclic barrel closure without retaining or capping its negative candidates', async () => {
+    const h = harness(),
+      uri = prefix + 'component.ts'
+    try {
+      // Over 42,000 lexical candidates, but only 3,003 concrete documents.
+      for (let i = 0; i < 3000; i++)
+        h.service.project.update(
+          prefix + `barrel${i}.ts`,
+          `export * from './barrel${(i + 2999) % 3000}';export * from './missing${i}';export const n=${i}`,
+          1,
+        )
+      h.service.project.update(
+        prefix + 'system.ts',
+        `const system=defineSystem({color:defineToken({values:['fresh']})});export const stylesheet=system.stylesheet`,
+        1,
+      )
+      const text = `import {n} from './barrel0';` + sheet
+      h.open(uri, text)
+      h.open(prefix + 'unrelated.ts', 'const x=1')
+      const request = {
+        textDocument: { uri },
+        position: { line: 0, character: text.indexOf("'accent'") + 2 },
+      }
+      expect(
+        (await h.call('onCompletion', request)).items.map(
+          (item: { label: string }) => item.label,
+        ),
+      ).toEqual(['fresh'])
+      await h.call('onRequest:toned/inspect', {})
+      const dependencies = vi.spyOn(h.service.project, 'dependencies')
+      h.call('onDidChangeTextDocument', {
+        textDocument: { uri, version: 2 },
+        contentChanges: [{ text: text + ' ' }],
+      })
+      await h.call('onCompletion', request)
+      expect(dependencies).not.toHaveBeenCalled()
     } finally {
       h.registration.dispose()
     }

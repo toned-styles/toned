@@ -5,6 +5,15 @@ import type { TokenSystem } from '../types/index.ts'
 /** Output adapters consume resolved fields, never selector strings or host refs. */
 export type StyleFields = Readonly<Record<string, unknown>>
 export type ResolvedProps = Readonly<{ style: StyleFields; className?: string }>
+/**
+ * Resolution is a pure, deterministic transformation of the supplied inputs.
+ * Both resolve and resolvePlan must leave inputs unchanged and must not collect
+ * request-local CSS, publish host updates, or perform other external effects.
+ * Calls may be skipped when immutable results are reused (including a renderer's
+ * module-scoped t() value across SSR requests). Object.freeze does not establish
+ * function purity: custom backend implementers must uphold this contract.
+ * Perform CSS collection during build and host effects at the commit boundary.
+ */
 export type OutputBackend = Readonly<{
   id: string
   platform: 'web' | 'native'

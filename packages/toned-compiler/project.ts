@@ -37,6 +37,7 @@ export class DesignProject {
   private readonly kinds = new Map<DesignKind, Set<string>>()
   private readonly ranges = new Map<string, { size: number; ends: number[] }>()
   private readonly importers = new Map<string, Set<string>>()
+  private readonly dependencyVersions = new Map<string, number>()
   private readonly moduleMaps = new Map<
     string,
     Readonly<Record<string, readonly string[]>>
@@ -64,6 +65,10 @@ export class DesignProject {
     for (const [name, value] of Object.entries(this.options))
       if (!Number.isSafeInteger(value) || value < 1)
         throw new Error(`Invalid Toned index budget ${name}`)
+  }
+  /** Changes for transitive imports, including formerly unresolved candidates. */
+  dependencyVersion(uri: string): number {
+    return this.dependencyVersions.get(uri) ?? 0
   }
   get revision() {
     return this.generation
@@ -123,6 +128,7 @@ export class DesignProject {
     this.removeEdges(uri)
     if (previous) this.removeNodes(previous)
     this.documents.set(uri, document)
+    this.dependencyVersions.set(uri, this.generation + 1)
     const local = new Map<string, string[]>()
     for (const node of document.nodes) {
       const names = local.get(node.name) ?? []
@@ -166,6 +172,7 @@ export class DesignProject {
     this.removeEdges(uri)
     this.removeNodes(document)
     this.documents.delete(uri)
+    this.dependencyVersions.delete(uri)
     this.localSymbols.delete(uri)
     this.ranges.delete(uri)
     this.characters -= document.text.length
@@ -174,6 +181,7 @@ export class DesignProject {
   }
   dispose() {
     this.documents.clear()
+    this.dependencyVersions.clear()
     this.localSymbols.clear()
     this.byId.clear()
     this.symbols.clear()
@@ -273,6 +281,8 @@ export class DesignProject {
     this.tokenCache.clear()
     this.tokenCacheByUri.clear()
     this.resolution.invalidate()
+    for (const uri of this.documents.keys())
+      this.dependencyVersions.set(uri, this.generation + 1)
     this.generation++
   }
   private importCandidates(uri: string, from: string): readonly string[] {
@@ -358,6 +368,8 @@ export class DesignProject {
     const affected = new Set(this.dependents(uri))
     this.resolution.invalidate(affected)
     for (const target of affected) {
+      if (this.documents.has(target))
+        this.dependencyVersions.set(target, this.generation + 1)
       for (const key of this.tokenCacheByUri.get(target) ?? [])
         this.tokenCache.delete(key)
       this.tokenCacheByUri.delete(target)
@@ -373,8 +385,22 @@ export class DesignProject {
         )
       : []
   }
-  dependencies(uri: string): readonly string[] {
-    return [...new Set(this.dependencyCandidates(uri).flat())]
+  /** Only concrete/pending targets are traversed; negative candidates remain in
+   * the reverse index and invalidate dependencyVersion if they become available. */
+  dependencies(
+    uri: string,
+    pending?: { has(uri: string): boolean },
+  ): readonly string[] {
+    const targets = new Set<string>()
+    for (const candidates of this.dependencyCandidates(uri))
+      for (const candidate of candidates) {
+        if (pending?.has(candidate)) targets.add(candidate)
+        if (this.documents.has(candidate)) {
+          targets.add(candidate)
+          break
+        }
+      }
+    return [...targets]
   }
   tokensForSystem(name: string, uri: string): readonly DesignNode[] {
     const key = JSON.stringify([uri, name]),

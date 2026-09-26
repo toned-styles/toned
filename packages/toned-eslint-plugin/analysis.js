@@ -232,7 +232,7 @@ export function createAnalysis(context, options = {}) {
   }
   return { source, resolve }
 }
-export const isFunction = (node) =>
+const isFunction = (node) =>
   node &&
   [
     'FunctionDeclaration',
@@ -252,7 +252,18 @@ export function inRender(node, analysis) {
     if (!isFunction(parent)) continue
     const name = functionName(parent)
     if (name && (/^[A-Z]/.test(name) || /^use[A-Z]/.test(name))) return true
-    if (parent.parent?.type === 'ExportDefaultDeclaration') return true
+    if (!name && parent.parent?.type === 'ExportDefaultDeclaration') {
+      // An anonymous default can be a component, but directly returning a
+      // proven family is a factory, not a React render result.
+      const body = parent.body
+      const result =
+        body.type === 'BlockStatement'
+          ? body.body.length === 1 && body.body[0].type === 'ReturnStatement'
+            ? body.body[0].argument
+            : null
+          : body
+      return analysis.resolve(result)?.kind !== 'family'
+    }
     if (parent.parent?.type === 'MethodDefinition')
       return propertyName(parent.parent) === 'render'
     const call =

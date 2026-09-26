@@ -90,6 +90,8 @@ export async function loadWorkspace(
     maxEntries?: number
     include?: readonly string[]
     isOpen?: (uri: string) => boolean
+    /** Optional owner serializes publication with eager and watched disk reads. */
+    loadFile?: (uri: string) => Promise<boolean>
   } = {},
 ): Promise<WorkspaceLoad> {
   const maxEntries = options.maxEntries ?? 30_000
@@ -147,12 +149,16 @@ export async function loadWorkspace(
       if (options.isOpen?.(uri)) continue
       const before = project.get(uri)
       try {
-        const text = await readBoundedSource(path, { signal: options.signal })
-        options.signal?.throwIfAborted()
-        // A watcher or editor owns any newer snapshot published during the read.
-        if (options.isOpen?.(uri) || project.get(uri) !== before) continue
-        project.update(uri, text, (project.get(uri)?.version ?? -1) + 1)
-        loaded++
+        if (options.loadFile) {
+          if (await options.loadFile(uri)) loaded++
+        } else {
+          const text = await readBoundedSource(path, { signal: options.signal })
+          options.signal?.throwIfAborted()
+          // A watcher or editor owns any newer snapshot published during the read.
+          if (options.isOpen?.(uri) || project.get(uri) !== before) continue
+          project.update(uri, text, (project.get(uri)?.version ?? -1) + 1)
+          loaded++
+        }
       } catch (error) {
         options.signal?.throwIfAborted()
         errors.push({ uri, message: String(error) })
