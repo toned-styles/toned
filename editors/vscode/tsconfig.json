@@ -9,5 +9,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node", "vscode", "bun"]
   },
-  "include": ["src/**/*.ts", "build.ts"]
+  "include": ["src/**/*.ts", "build.ts", "test-editor.ts"]
 }

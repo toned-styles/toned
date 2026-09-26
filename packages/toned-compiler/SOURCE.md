@@ -27,7 +27,7 @@ a referenced object. Renderer and TypeScript checks remain necessary.
 Definitions follow indexed named/namespace imports, named and star re-exports,
 stylesheet aliases, and module-level bindings. Hosts can call
 `configureModules(rootUri, mappings)` with explicit exact or single-wildcard module
-paths relative to a workspace root (for example `{"@lib/*":["lib/*"]}`). The server
+paths constrained to their configured workspace root after URL resolution (for example `{"@lib/*":["lib/*"]}`). The server
 accepts this JSON map through `initializationOptions.toned.modules`; it never executes
 configuration files or implicitly traverses node_modules. Include the token source
 directories in the host's indexed workspace. `tokensForSystem(name, uri)` returns
@@ -80,3 +80,7 @@ source inclusion policy as disk scanning and watchers. Files outside those roots
 outside `toned.include`, or in generated/dependency/test directories are ignored
 without consuming open-buffer or index budgets. Rootless embedded servers retain
 explicit-document operation for hosts that supply their own source boundary.
+
+Initialization normalizes `.` segments in `toned.include` (`./src` becomes `src`)
+and removes duplicate scopes before disk and editor matching. Traversal segments
+(`..`) remain invalid.

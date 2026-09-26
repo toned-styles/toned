@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from 'vitest'
 import { OwnedServer } from './owned-server.ts'
+import { evictClosedSession } from './session-lifecycle.ts'
 
 async function fixture(
   run: (server: OwnedServer, child: ChildProcess) => Promise<void>,
@@ -91,6 +92,86 @@ test('failed initialization disposes its owned child before exposing failure', a
         async () => {},
       ),
     ).rejects.toThrow('handshake failed')
+    reaped(child)
+  })
+})
+
+test('an unexpected process exit evicts its session and allows a fresh generation', async () => {
+  await fixture(async (server, child) => {
+    await server.initialize(
+      async () => {},
+      async () => {},
+    )
+    const sessions = new Map([['workspace', server]])
+    let notices = 0
+    const closed = new Promise<void>((resolve) =>
+      child.once('close', () => {
+        evictClosedSession(
+          sessions,
+          'workspace',
+          server,
+          server.isStopping,
+          () => {
+            notices++
+          },
+        )
+        resolve()
+      }),
+    )
+    child.kill('SIGKILL')
+    await closed
+    expect(sessions.size).toBe(0)
+    expect(notices).toBe(1)
+    await fixture(async (replacement, next) => {
+      sessions.set('workspace', replacement)
+      expect(
+        evictClosedSession(sessions, 'workspace', server, false, () => {
+          notices++
+        }),
+      ).toBe(false)
+      expect(sessions.get('workspace')).toBe(replacement)
+      expect(next.pid).not.toBe(child.pid)
+      expect(
+        evictClosedSession(sessions, 'workspace', replacement, true, () => {
+          notices++
+        }),
+      ).toBe(false)
+      expect(notices).toBe(1)
+    })
+  })
+})
+
+test('a reaped process with delayed close does not poison subsequent stops', async () => {
+  await fixture(async (server, child) => {
+    await server.initialize(
+      async () => {},
+      async () => {},
+    )
+    // Model an OS-exited process whose transport close is delayed independently.
+    // The actual child still receives signals and its OS exit is asserted below.
+    child.removeAllListeners('close')
+    await server.stop()
+    await server.stop()
+    reaped(child)
+  })
+})
+
+test('a failed termination remains owned and a later stop retries instead of caching rejection', async () => {
+  await fixture(async (server, child) => {
+    await server.initialize(
+      async () => {},
+      async () => {},
+    )
+    const kill = child.kill.bind(child)
+    // The first OS termination request stalls: keep the real child alive until retry.
+    child.kill = () => true
+    try {
+      await expect(server.stop()).rejects.toThrow('timed out')
+      expect(() => process.kill(child.pid!, 0)).not.toThrow()
+    } finally {
+      child.kill = kill
+    }
+    await server.stop()
     reaped(child)
   })
 })

@@ -117,7 +117,7 @@ describe('workspace initialization protocol', () => {
         capabilities: {},
         initializationOptions: {
           toned: {
-            include: ['src', 'tokens'],
+            include: ['./src/.', './tokens'],
             modules: { '@lib/ui': ['tokens/system.ts'] },
           },
         },

@@ -5,7 +5,7 @@ import * as vscode from 'vscode'
 export async function run() {
   const folder = vscode.workspace.workspaceFolders?.[0]
   assert.ok(folder)
-  const uri = vscode.Uri.joinPath(folder.uri, 'lib/ui/shadcn/badge.tsx')
+  const uri = vscode.Uri.joinPath(folder.uri, 'src/badge.tsx')
   const document = await vscode.workspace.openTextDocument(uri)
   const editor = await vscode.window.showTextDocument(document)
   await vscode.extensions.getExtension('toned.toned-vscode')!.activate()
@@ -20,13 +20,13 @@ export async function run() {
       Object.values(statistics.workspaces ?? {}).every(
         (value) => value.state === 'complete',
       ) &&
-      (statistics.files ?? 0) > 10
+      (statistics.files ?? 0) >= 3
     )
       break
     assert.ok(Date.now() < deadline, JSON.stringify(statistics))
     await new Promise((resolve) => setTimeout(resolve, 200))
   } while (Date.now() < deadline)
-  assert.ok((statistics.files ?? 0) > 10)
+  assert.ok((statistics.files ?? 0) >= 3)
   assert.ok(
     Object.values(statistics.workspaces ?? {}).every(
       (value) => value.state === 'complete',
@@ -44,7 +44,7 @@ export async function run() {
   )
   assert.ok(
     result?.items.some((item) => item.label === 'primary'),
-    'real editor completion should include Daylight primary',
+    'real editor completion should include the fixture primary token',
   )
   const hover = await vscode.commands.executeCommand('toned.inspectSelection')
   assert.ok(
@@ -60,11 +60,9 @@ export async function run() {
   )
   assert.ok(
     definitions?.some((item) =>
-      ('uri' in item ? item.uri : item.targetUri).path.endsWith(
-        '/tokens-daylight.ts',
-      ),
+      ('uri' in item ? item.uri : item.targetUri).path.endsWith('/tokens.ts'),
     ),
-    'definition should reach the shared Daylight vocabulary',
+    'definition should reach the fixture vocabulary',
   )
   const finite = /radius:\s*'([^']+)'/.exec(text)
   assert.ok(finite)
@@ -138,6 +136,6 @@ export async function run() {
     await vscode.commands.executeCommand('workbench.action.files.revert')
   }
   console.log(
-    'Toned real VS Code acceptance passed: HQ indexing, completion, hover, definition, unsaved diagnostics and completion edits',
+    'Toned real VS Code acceptance passed: standalone workspace indexing, completion, hover, definition, unsaved diagnostics and completion edits',
   )
 }
