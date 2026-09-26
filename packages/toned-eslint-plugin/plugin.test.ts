@@ -33,7 +33,7 @@ async function lint(
     await writeFile(
       config,
       JSON.stringify({
-        jsPlugins: [join(here, 'index.js'), join(here, 'react.js')],
+        jsPlugins: [join(here, 'index.js')],
         categories: { correctness: 'off' },
         rules,
       }),
@@ -93,7 +93,7 @@ test(
         'default-component.tsx': `import {createElements} from '@toned/react'; export default function(){const S=createElements(styles);return <S.Root/>}`,
         'handler.tsx': `import {createElements} from '@toned/react'; export function Card(){function onClick(){createElements(styles)}return <button onClick={onClick}/>}`,
       },
-      { 'react-toned/no-create-elements-in-render': 'error' },
+      { 'toned/react/no-create-elements-in-render': 'error' },
     )
     expect(names(result.diagnostics)).toEqual([
       'default-component.tsx',
@@ -115,7 +115,7 @@ test(
         'shadow.tsx': `import {elements} from './toned'; export function Card(elements){return elements(styles)}`,
       },
       {
-        'react-toned/no-create-elements-in-render': [
+        'toned/react/no-create-elements-in-render': [
           'error',
           { modules: { './toned': { elements: 'createElements' } } },
         ],
@@ -147,7 +147,7 @@ test(
           'export function Card(){const s=other(sheet);return <div style={s.Root.style}/>}',
         'shadow.tsx': `${prefix} export function Card(stylesFor){const s=stylesFor(sheet);return <div style={s.Root.style}/>}`,
       },
-      { 'react-toned/no-partial-host-bag': 'error' },
+      { 'toned/react/no-partial-host-bag': 'error' },
     )
     expect(names(result.diagnostics)).toEqual([
       'alias.tsx',

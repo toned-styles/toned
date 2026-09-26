@@ -5,14 +5,12 @@
   "license": "MIT",
   "description": "Optional import-aware Toned and React rules for ESLint and Oxlint.",
   "exports": {
-    ".": "./index.js",
-    "./react": "./react.js"
+    ".": "./index.js"
   },
   "files": [
     "analysis.js",
     "rules.js",
     "index.js",
-    "react.js",
     "README.md"
   ],
   "sideEffects": false,
