@@ -1032,9 +1032,9 @@
     "filesystemCache": "OS filesystem caches were not flushed.",
     "memory": "Process memory without forced GC; not retained heap, memory savings or a leak proof.",
     "scope": "Machine-specific observations; no timing thresholds used as correctness gates.",
-    "indexingOverlap": "Full-index ranges overlap: baseline1126.48\u20131331.42ms, reviewed1172.21\u20131455.63ms. No reliable indexing slowdown established.",
+    "indexingOverlap": "Full-index ranges overlap: baseline 1126.48\u20131331.42ms, reviewed 1172.21\u20131455.63ms. No reliable indexing slowdown established.",
     "warmup": "The first pair has the slowest full-index observations for both variants, and baseline first-run warm completions are higher. This is consistent with warm-up/cache effects but their cause was not isolated. All samples retained; no warm-up pair discarded.",
-    "unrelatedEditOverlap": "Unrelated-edit sample ranges overlap (baseline0.97\u20132.71ms, reviewed0.62\u20131.16ms); lower pooled median alone does not establish a reliable gain."
+    "unrelatedEditOverlap": "Unrelated-edit sample ranges overlap (baseline 0.97\u20132.71ms, reviewed 0.62\u20131.16ms); lower pooled median alone does not establish a reliable gain."
   },
   "observedRangesMs": {
     "baseline": {
@@ -1046,7 +1046,7 @@
       "unrelatedEdit": [0.6206670000001395, 1.1556249999998727]
     }
   },
-  "summaryMethod": "Latency medians pool all recorded samples per variant and scenario: 15 warm,9 unrelated-edit,9 shared-token-edit,3 burst; first-completion and full-index medians each use3 runs. Memory summaries are medians of3 end-of-scenario process observations. This matches the earlier receipt pooling method; no samples discarded.",
+  "summaryMethod": "Latency medians pool all recorded samples per variant and scenario: 15 warm, 9 unrelated-edit, 9 shared-token-edit, 3 burst; first-completion and full-index medians each use 3 runs. Memory summaries are medians of 3 end-of-scenario process observations. This matches the earlier receipt pooling method; no samples discarded.",
   "executionOrder": [
     {
       "sequence": 1,
@@ -1085,5 +1085,5 @@
       "receipt": "lsp-review-optimized-3.json"
     }
   ],
-  "executionOrderEvidence": "Recorded execution command ran for i in1 2 3: baseline --output lsp-review-baseline-$i.json, then optimized --output lsp-review-optimized-$i.json, with exit-on-failure for each; the shell command completed with exit0. Order reflects that sequential invocation, not inferred file timestamps. Individual start/end timestamps were not recorded."
+  "executionOrderEvidence": "Recorded execution command ran for i in 1 2 3: baseline --output lsp-review-baseline-$i.json, then optimized --output lsp-review-optimized-$i.json, with exit-on-failure for each; the shell command completed with exit 0. Order reflects that sequential invocation, not inferred file timestamps. Individual start/end timestamps were not recorded."
 }

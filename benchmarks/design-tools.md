@@ -131,8 +131,8 @@ receipt: 15 warm, nine unrelated-edit, nine shared-token-edit and three burst
 samples; first completion and full indexing each have three observations. Memory
 summaries use the three end-of-scenario observations.
 
-Execution order was baseline1, reviewed1, baseline2, reviewed2, baseline3,
-reviewed3, as recorded by the sequential shell loop; the receipt includes that
+Execution order was baseline 1, reviewed 1, baseline 2, reviewed 2, baseline 3,
+reviewed 3, as recorded by the sequential shell loop; the receipt includes that
 order. Individual run timestamps were not recorded. The first pair has the
 slowest full-index observations for both variants, and baseline first-run warm
 requests are higher, consistent with warm-up/cache effects whose cause was not
