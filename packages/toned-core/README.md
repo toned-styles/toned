@@ -508,3 +508,12 @@ const sticky = webToken({
 restrictions. An explicit output type describes the selected host vocabulary;
 backend capability validation still applies. Legacy `defineToken` retains its
 broad output contract for incremental migration.
+
+### Portable motion
+
+`@toned/core/motion` adds timing and spring transitions to committed Toned host
+outputs, sharing the existing differential writer and ownership rules. It supports
+numeric native targets, computed pixel/numeric web targets, interruption, reduced
+motion, entry and retained-host exit. See the [motion contract](motion/README.md)
+for the finite property vocabulary, lifecycle rules and native JS-thread boundary.
+React's committed ref adapter is `useMotion` from `@toned/react/motion`.

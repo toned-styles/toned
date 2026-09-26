@@ -20,7 +20,11 @@
     "./dev/inject": "./dom/inject.ts",
     "./server": "./server/index.ts",
     "./backends": "./backends/index.ts",
-    "./core": "./core/index.ts"
+    "./core": "./core/index.ts",
+    "./motion": "./motion/index.ts",
+    "./adaptive": "./adaptive/index.ts",
+    "./adaptive/web": "./adaptive/web.ts",
+    "./adaptive/native": "./adaptive/native.ts"
   },
   "publishConfig": {
     "access": "public",

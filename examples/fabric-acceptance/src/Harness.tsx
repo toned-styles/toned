@@ -1,4 +1,4 @@
-import type { Variants } from '@toned/core'
+import type { Variants as VariantSchema } from '@toned/core'
 import { defineSystem, defineToken } from '@toned/core'
 import { ConfigProvider, createElements, useStyles } from '@toned/react'
 import * as React from 'react'
@@ -11,7 +11,9 @@ import {
   View,
   type ViewProps,
 } from 'react-native'
+import { AdaptiveScenario } from './AdaptiveScenario.tsx'
 import { config } from './host.ts'
+import { MotionScenario } from './MotionScenario.tsx'
 
 type Measurement = { x: number; y: number; width: number; height: number }
 // Every caller supplies one of these actual RN primitive refs.
@@ -105,7 +107,7 @@ function matchesSnapshot(
   })
 }
 
-type Context = {
+export type Context = {
   assertions: AcceptanceAssertion[]
   check(
     name: string,
@@ -124,17 +126,20 @@ type Context = {
     expected: Partial<Measurement>,
   ): Promise<void>
 }
-type ScenarioProps = { finish(result: AcceptanceResult): void }
+export type ScenarioProps = { finish(result: AcceptanceResult): void }
 
 const delay = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
 
-function required<T>(value: T | null, label: string): T {
+export function required<T>(value: T | null, label: string): T {
   if (value === null) throw new Error(`${label} is not mounted`)
   return value
 }
 
-async function until(label: string, ready: () => boolean): Promise<void> {
+export async function until(
+  label: string,
+  ready: () => boolean,
+): Promise<void> {
   const deadline = Date.now() + 5000
   while (!ready()) {
     if (Date.now() >= deadline)
@@ -157,7 +162,7 @@ function measure(host: Measurable): Promise<Measurement> {
   })
 }
 
-function useScenario(
+export function useScenario(
   name: string,
   finish: ScenarioProps['finish'],
   run: (context: Context) => Promise<void>,
@@ -490,7 +495,7 @@ const Variants = createElements(
     .stylesheet({
       Root: { $kind: 'view', $style: { width: 80, height: 32 } },
     })
-    .variants(($: Variants<{ expanded: boolean }>) => ({
+    .variants(($: VariantSchema<{ expanded: boolean }>) => ({
       [$.expanded(true)]: { Root: { $style: { width: 176 } } },
     })),
 )
@@ -738,7 +743,7 @@ const Appearance = createElements(
         ':focus': { hint: 'active' },
       },
     })
-    .variants(($: Variants<{ loud: boolean }>) => ({
+    .variants(($: VariantSchema<{ loud: boolean }>) => ({
       [$.loud(true)]: { Label: { $style: { color: '#dd6600', opacity: 0.4 } } },
     })),
 )
@@ -960,6 +965,8 @@ const scenarios = [
   RefScenario,
   SuspenseScenario,
   OwnershipScenario,
+  MotionScenario,
+  AdaptiveScenario,
 ]
 
 /** Mount once in a release-like Fabric app. Every scenario produces JSON data;

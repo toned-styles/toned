@@ -8,7 +8,7 @@ point-in-time design document and has not been rewritten to match the code.
 
 | Area | Result and implementation |
 | --- | --- |
-| Typed authoring | Descriptor systems, immutable token/config data, typed theme resolver inputs/outputs with schema-bound references, structured lengths/colors/theme references, explicit logical-layout mapping, `$kind`, portable `$style`, platform widening, recursive query validation, human aliases, chained selectors with single-call annotated variant callbacks, contextual editor completions and exact recursive rule checks. Curried and explicit-generic signatures remain compatible. Explicit/default descriptor kinds retain restrictions; legacy untyped web parts retain their compatibility escape. |
+| Typed authoring | Descriptor systems, immutable token/config data, typed theme resolver inputs/outputs with schema-bound references, structured lengths/colors/theme references, explicit logical-layout mapping, `$kind`, portable `$style`, platform widening, recursive query validation, human aliases, chained selectors with single-call annotated variant callbacks, contextual editor completions and exact recursive rule checks. The annotated `($: Variants<Mods>) => …` callback is the recommended checked form. Experimental currying is removed; main-compatible explicit-generic callback and object signatures remain supported. Explicit/default descriptor kinds retain restrictions; legacy untyped web parts retain their compatibility escape. |
 | Defaults and explicit inputs | Defaulted axes may be omitted; explicit undefined chooses the default. `useStyles(sheet, variants)` preserves the flat input API. `overrideSheet` composes local declarations for hooks, element families and server/build inputs; `StyleOverrides` handles ambient customization. The proposed hook options wrapper was removed after the API follow-up. |
 | Conditions | Boolean queries, colocated media/container/state rules, cross-part state facts, and `q.part(source).has(target, state, { scope })`. Relations use registered-part child/descendant semantics within one mounted stylesheet family. Portals require explicit logical topology. |
 | Portable evaluation | Immutable semantic plans, ordered field operations, shared token evaluation, explicit backend capabilities, declaration provenance, explanations including emitted props, finite subset-shadow diagnostics, and checked resolver footprints. CSS lowering is separated from system definitions. |
@@ -70,7 +70,9 @@ point-in-time design document and has not been rewritten to match the code.
   Explicit sheet inventories and generators already establish build delivery.
   Runtime declaration objects have no trustworthy source locations; a compiler
   must obtain them from source maps/ASTs, rather than a runtime stack heuristic.
-  The compiler stub is not advertised as a working extractor.
+  The September 26 follow-up implements an optional static AST index and language
+  server. Explicit build inventories remain authoritative; opaque JavaScript is
+  diagnosed instead of executed. See [the compiler](packages/toned-compiler/README.md).
 - **Compatibility surfaces:** global configuration, old declaration aliases,
   and legacy cascade order remain for existing consumers. Flat hook arguments and `t` remain intentional supported APIs.
   New renderer/provider APIs avoid those switches. HQ keeps its existing
@@ -152,8 +154,9 @@ is immutable and shared; mounted-family resources are lazy and reused by render
 candidates. [Measurements](benchmarks/README.md#september-18-follow-up-against-the-previously-delivered-version)
 record both the targeted gains and the remaining cold/mount costs.
 
-The empty `toned` umbrella is explicitly private, and the optional compiler stub
-is documented as unimplemented; supported consumers import scoped packages.
+The empty `toned` umbrella remains explicitly private; supported consumers import
+scoped packages. The formerly empty compiler package now contains the optional
+source tools described below.
 Theme CSS has an explicit export and is copied into built packages, with the
 actual built CSS/module resolved by HQ's guarded consumer smoke test.
 
@@ -163,3 +166,39 @@ they do not certify Unistyles. The separate Android acceptance app verifies the
 pinned Fabric profile described above. A full external engine integration needs
 one authoritative writer and its own compilation/dependency and CSS-delivery
 contract. See [the integration guide](packages/toned-react/INTEGRATIONS.md).
+
+
+### September 26 design tools and portable capabilities
+
+The follow-up implements the separate HQ design-tools specification:
+
+- One source graph powers the CLI, LSP completion/navigation, source diagnostics,
+  revision-bound literal edits and the browser inspector. Index/query budgets and
+  opaque expressions are explicit. Async file persistence is limited to a supplied
+  allowlist; live editor buffers remain owned by the editor's versioned edit API.
+- Contracts enumerate bounded scenarios and combine renderer explanations with
+  measured geometry, colors, focus and motion observations. Missing evidence is
+  inconclusive; finite sampling is distinguished from exhaustive coverage.
+- Adaptive layout candidates compile through existing typed variants. Web
+  ResizeObserver and native measurement adapters publish explicit inputs;
+  hysteresis and a deterministic initial layout preserve stable host identity.
+- Timing and spring motion share the existing host writer, including interruption,
+  reduced motion, entry, retained exit and ownership cleanup. Native motion runs
+  on the JS frame driver; CSS-only state changes do not start imperative motion.
+- DTCG import/export preserves supported values, aliases and metadata and resolves
+  explicit finite contexts. Unsupported constructs produce diagnostics.
+
+The [compiler guide](packages/toned-compiler/README.md) links exact API and
+architecture boundaries. [Source benchmarks](benchmarks/design-tools.md) report
+absolute cold/dirty/cached measurements, not a comparison to a previously
+implemented language server. Run `bun scripts/build/toned-design-browser.ts`
+in HQ for real layout/motion, measured counterexamples and source-edit acceptance.
+The [September 26 capabilities device evidence](examples/fabric-acceptance/verification/android-api36-capabilities-2026-09-26.json)
+passes eight scenarios and real touch (69 assertions) on the pinned RN 0.86.0 /
+React 19.2.3 / Android API-36 Fabric/Hermes profile. The added cases establish
+native motion entry/interruption/reduced-motion/reset/exit through the shared
+JS-frame writer and adaptive row/stack selection from actual parent measurements,
+including hysteresis, explicit text-scale input and stable child refs. It does
+not establish UI-thread animation, general native container queries or per-frame
+paint guarantees. The record identifies the exact frozen-source inputs and APK
+used for this execution; earlier 49-assertion records remain historical evidence.

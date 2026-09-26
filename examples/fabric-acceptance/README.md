@@ -48,12 +48,22 @@ before launching it. No Metro server, application backend or external service is
 part of device acceptance. JavaScript guards cannot fence a native Android process;
 that boundary is enforced by the app's Android permission instead.
 
-The September 26 API-36 run passed all six scenarios and the physical gesture
-(49 assertions). Its [machine-readable record](verification/android-api36-2026-09-26.json)
-includes hashes of the exact packaged inputs and executed APK; its
-[final screenshot](verification/android-api36-2026-09-26.png) is retained here.
-The earlier September 18 [record](verification/android-api36.json) and
-[screenshot](verification/android-api36.png) remain available for comparison.
+The September 26 capabilities run passed **eight scenarios and real touch,
+69 assertions** on the profile above. Its [machine-readable record](verification/android-api36-capabilities-2026-09-26.json)
+retains the exact frozen-source input/APK hashes used for device execution.
+Its [screenshot](verification/android-api36-capabilities-2026-09-26.png)
+is retained alongside the earlier six-scenario [September 26 record](verification/android-api36-2026-09-26.json)
+and [September 18 record](verification/android-api36.json).
+
+The added motion scenario reads native width, height and alpha during entry,
+interruption, property removal, reduced-motion settlement and retained exit.
+Deterministic JS frame inputs drive the same native host writer, with no extra
+React commits; disposal removes scheduled work and preference subscriptions.
+This establishes JS-driven patches, not UI-thread animation or every-frame paint.
+The adaptive scenario measures an independently constrained native parent,
+switches finite row/stack variants, checks hysteresis and explicit text-scale
+inputs, and preserves child host identity. Readiness uses the same one-logical-unit
+tolerance as geometry assertions because Android rounds dimensions to device pixels.
 
 The runner saves `evidence/results.json`, `build.json`, `screen.png` and `logcat.txt` in its
 temporary workspace. Success requires the pinned Fabric/Hermes runtime, every

@@ -18,6 +18,7 @@ acceptance evidence.
 | Text appearance and bridge props | The Android reporter reads native TextView color/alpha and EditText hint color/focus; variants change and restore text appearance, focus applies a placeholder bridge, removal restores the platform hint color, and explicit caller hint colors survive active state. |
 | Variants and refs | Native width changes on the same mounted host, survives callback-ref replacement, and caller refs release on unmount. |
 | Suspense | After a variant render actually suspends, native width stays at the committed value; resolving the promise changes that same host's measured width. |
+| Portable motion | Actual native width, height and alpha prove entry, midpoint interpolation, interruption, removed-field reset, reduced-motion settlement and retained exit. Deterministic frame scheduling drives the real coordinated native writer; host identity and zero extra React commits are checked. Removal clears frames and preference subscriptions. This certifies JS-frame patches, not UI-thread animation. |
 | Multiple owners | Two controllers change independent dimensions on one actual native View; detaching one leaves the survivor's state and updates working, while the removed width returns to parent stretch. |
 
 Measurements retry until the actual native dimensions match (within one logical

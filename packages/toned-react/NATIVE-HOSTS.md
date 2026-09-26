@@ -39,12 +39,13 @@ Toned's built JavaScript against real Android hosts. The verified profile is
 This is a versioned application adapter, not a claim that every Fabric release,
 platform or object exposing `setNativeProps` is supported.
 
-The September 18 run passes six automatic scenarios and a real emulator-driven
-press/release gesture, with 49 assertions. Native measurements, Android drawing
-paint and hint colour readback establish the result; requested JavaScript patches
-are not substituted for those observations. The retained
-[acceptance evidence](../../examples/fabric-acceptance/verification/android-api36.json)
-records the exact runtime, emulator fingerprint, input/APK hashes and assertions.
+The September 26 capabilities run passes **eight automatic scenarios and a real
+emulator-driven press/release gesture, with 69 assertions**. Native measurements,
+Android drawing paint and hint-colour readback establish the result; requested
+JavaScript patches are not substituted for those observations. The retained
+[acceptance evidence](../../examples/fabric-acceptance/verification/android-api36-capabilities-2026-09-26.json)
+records the exact runtime, emulator fingerprint, frozen-source input/APK hashes
+and assertions from the final device execution.
 
 | Contract | Device evidence |
 | --- | --- |
@@ -53,6 +54,8 @@ records the exact runtime, emulator fingerprint, input/APK hashes and assertions
 | Caller ownership and removal | Removing imperative minHeight reveals the caller's changed height; placeholder removal restores the platform default; explicit caller hint colours survive active state and later caller commits. |
 | Appearance | Native text drawing paint changes/restores colour and alpha. RN Text uses spans, so the probe resolves the first glyph's paint rather than reading the unused TextView default. |
 | Concurrent rendering | An actually suspended variant render leaves the committed native width unchanged; resolving it updates the same host. |
+| Portable motion | Native width/alpha during entry, interruption, reduced-motion settlement and retained exit; removed minHeight resets; frames do not require React commits, and disposal clears scheduled work/subscriptions. The test drives the JS frame clock deterministically and does not certify UI-thread animation. |
+| Adaptive layouts | Actual parent onLayout measurements select finite row/stack variants, retain the current layout through hysteresis, respond to an explicit text-scale input and preserve both native child refs. |
 | Host lifetime | Variant updates and callback-ref handoffs preserve the mounted host; cleanup balances; detaching one of two controllers preserves the survivor's active style and future updates. |
 
 The APK bundles JavaScript with dev support disabled and has no Internet
@@ -76,7 +79,9 @@ The verified profile covers the contracts listed above. It does not establish:
   NDK/CMake and a verified JDK 21 build, but only Apple's Command Line Tools,
   without the full Xcode/iOS simulator toolchain.
 - Native relationship topology, virtualized-list recycling, arbitrary semantic
-  state readers, rotation/viewport/container acceptance or native grid. Library
+  state readers, rotation/viewport acceptance, general container-query semantics or
+  native grid. The adaptive test covers its own measured-parent input adapter;
+  it does not establish those other protocols. Library
   fixture tests cover the declared protocols; each concrete integration needs its
   own native scenarios before advertising those capabilities.
 - A frame-by-frame absence of transient paint between all possible native commits.

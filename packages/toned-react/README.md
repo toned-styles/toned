@@ -351,3 +351,34 @@ Callback refs return cleanup functions on React 19. React 18 retains the cleanup
 internally and invokes it through `ref(null)`. Bound parts forward caller refs on
 both versions. Foreign components must forward refs too (`forwardRef` on React 18);
 a component accepting a prop named `ref` only works as such on React 19.
+
+### Portable motion
+
+`useMotion` from `@toned/react/motion` attaches transitions through Toned's host
+writer. Keep options stable and pass the returned ref to a Toned part:
+
+```tsx
+const fade = {
+  properties: ['opacity'],
+  transition: { type: 'timing', duration: 180 },
+  enter: { opacity: 0 },
+  exit: { opacity: 0 },
+} as const
+function Panel() {
+  const [present, setPresent] = useState(true)
+  const motion = useMotion(fade)
+  return present ? (
+    <S.Root ref={motion.ref}>
+      <button onClick={async () => {
+        if (await motion.exit() === 'finished') setPresent(false)
+      }}>Close</button>
+    </S.Root>
+  ) : null
+}
+```
+
+The sheet must give Root a resting opacity, for example `$style: { opacity: 1 }`.
+Entry starts only on committed host attachment. Keep the host mounted until exit
+finishes; unmounting cancels it. Frames patch the existing web/native host without
+React renders. The [motion contract](../toned-core/motion/README.md) lists supported
+properties, reduced-motion sources and the native JS-thread capability boundary.

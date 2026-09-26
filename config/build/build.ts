@@ -1,4 +1,4 @@
-import { copyFile, mkdir, readdir, rm } from 'node:fs/promises'
+import { chmod, copyFile, mkdir, readdir, rm } from 'node:fs/promises'
 import * as path from 'node:path'
 import { $ } from 'bun'
 
@@ -11,11 +11,12 @@ const licenseLocation = path.join(monorepoRoot, 'LICENSE')
 /**
  * Source `exports` point at the TypeScript entry points, so the packages can be
  * consumed directly from a workspace with no build step. The published package
- * ships compiled output, so every `.ts` target is rewritten to `.js` here.
+ * ships compiled output, so every `.ts`/`.tsx` export and executable target is rewritten to `.js`.
+ * React packages select react-jsx emission, which produces .js (not .jsx).
  */
 const toDistTarget = (value: unknown): unknown => {
   if (typeof value === 'string') {
-    return value.endsWith('.ts') ? `${value.slice(0, -3)}.js` : value
+    return value.replace(/\.tsx?$/, '.js')
   }
   if (Array.isArray(value)) return value.map(toDistTarget)
   if (value && typeof value === 'object') {
@@ -58,6 +59,23 @@ const transformPkg = async () => {
   if (pkg.exports) {
     await copyExportedStyles(pkg.exports)
     pkg.exports = toDistTarget(pkg.exports)
+  }
+
+  if (pkg.bin) {
+    pkg.bin = toDistTarget(pkg.bin)
+    for (const target of typeof pkg.bin === 'string'
+      ? [pkg.bin]
+      : Object.values(pkg.bin)) {
+      if (
+        typeof target !== 'string' ||
+        !target.startsWith('./') ||
+        target.split('/').includes('..')
+      )
+        throw new Error(
+          `Expected an explicit package-relative executable: ${String(target)}`,
+        )
+      await chmod(path.join(dist, target), 0o755)
+    }
   }
 
   await Bun.write(
