@@ -115,30 +115,47 @@ not CI gates. HQ's `scripts/build/test-toned-lsp.ts` runs the real protocol
 scenarios, and accepts `--serverBundle <isolated baseline bundle>` for paired
 measurements. See `scripts/build/__tests__/fixtures/toned-lsp-performance.ts` for the bounded edits.
 
-## Post-review LSP checks at `2ef2d02`
+## Full LSP comparison: `7e3944c..2ef2d02`
 
 A further three alternating fresh-server pairs compare baseline `7e3944c` with
-`2ef2d02`, including dependency-revision validation and serialized disk publication.
+`2ef2d02`. This span includes the language-service optimizations in `a2468ec`,
+`f3b263b` and the subsequent dependency-revision and disk-publication fixes. It
+does not isolate the gains or costs of any one of those changes.
 The updated HQ workspace contains 1,007 files and 5,440,076 source characters.
 All six protocol acceptance runs passed, including current-value completion after
 shared-token edits, source integrity and stale-edit rejection. The complete new
 receipt is `design-tools-lsp-review.results.json`; the earlier receipt above is
 retained as historical evidence. Both receipts redact the developer workspace URI.
+Latency medians pool all samples per scenario and variant, matching the earlier
+receipt: 15 warm, nine unrelated-edit, nine shared-token-edit and three burst
+samples; first completion and full indexing each have three observations. Memory
+summaries use the three end-of-scenario observations.
+
+Execution order was baseline1, reviewed1, baseline2, reviewed2, baseline3,
+reviewed3, as recorded by the sequential shell loop; the receipt includes that
+order. Individual run timestamps were not recorded. The first pair has the
+slowest full-index observations for both variants, and baseline first-run warm
+requests are higher, consistent with warm-up/cache effects whose cause was not
+isolated. All samples are retained; no warm-up pair was discarded.
 
 | Real HQ protocol scenario | Baseline median ms | Reviewed median ms |
 | --- | ---: | ---: |
 | First usable Daylight completion during indexing | 290.62 | 219.13 |
 | Full workspace indexing | 1136.35 | 1185.01 |
-| Warm completion round trip | 0.223 | 0.181 |
+| Warm completion round trip | 0.227 | 0.181 |
 | Unrelated component edit followed by completion | 1.286 | 0.908 |
 | Shared Daylight token edit followed by current-value completion | 8.063 | 7.539 |
 | 64 queued changes, then completion | 42.274 | 26.224 |
 
-First usable completion and burst handling improved in these samples. Full
-indexing was about 4.3% slower by median; the three reviewed runs ranged from
-1172.21 to 1455.63ms, so this is not an isolated measurement of the disk queue's
-cost. Warm submillisecond requests and the small shared-token difference do not
-establish reliable gains. No machine-dependent timing threshold is a test gate.
+First usable completion and burst handling improved in these samples. First
+completion and full-index completion are observed by polling every 50ms; the
+48.66ms indexing median difference is smaller than one polling interval and does
+not establish a reliable slowdown. Full-index ranges also overlap: baseline
+1126.48–1331.42ms and reviewed 1172.21–1455.63ms. OS filesystem caches were not
+flushed. Warm submillisecond requests and the small shared-token difference do not
+establish reliable gains. Unrelated-edit ranges also overlap (baseline
+0.97–2.71ms, reviewed 0.62–1.16ms); the lower pooled median alone does not
+establish a reliable gain. No machine-dependent timing threshold is a test gate.
 
 Median RSS after the scenarios was 256.22 MiB baseline versus 254.19 MiB reviewed;
 heap used was 66.75 versus 77.36 MiB. GC was not forced, so the higher heap reading
