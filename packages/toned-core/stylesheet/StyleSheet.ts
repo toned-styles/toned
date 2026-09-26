@@ -25,7 +25,7 @@ import type {
   Tokens,
 } from '../types/index.ts'
 import { collectAdHocConditions } from '../utils/conditions.ts'
-import { immutableSnapshot } from '../utils/immutable.ts'
+import { immutableSnapshot, isImmutableSnapshot } from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import {
@@ -46,14 +46,14 @@ import {
   controllerPlan,
   evaluateControllerConditions,
 } from './controller-plan.ts'
+import { sharedMatcher } from './matcher/sharedMatcher.ts'
 import { type ContainerSizes, MountedFamily } from './mounted-family.ts'
+import { assertOverrideMetadata } from './overrideValidation.ts'
 import { registerStylesheetPlan } from './plans.ts'
 import { type Relation, relationFactKey } from './relations.ts'
 import { declarationLayers } from './removals.ts'
 import { APPLY_OVERRIDE, RULE_LAYERS } from './rule-protocol.ts'
-import { assertOverrideMetadata } from './overrideValidation.ts'
 import type { StyleMatcher } from './StyleMatcher.ts'
-import { sharedMatcher } from './matcher/sharedMatcher.ts'
 import {
   deepMerge,
   extractOrderedKeys,
@@ -64,6 +64,21 @@ import { createVariantSelector } from './variantSelector.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
 type AnyValue = any
+
+function sameBridgeProps(
+  first?: Record<string, string>,
+  second?: Record<string, string>,
+): boolean {
+  if (first === second) return true
+  if (!first || !second) return false
+  const keys = Object.keys(first)
+  return (
+    keys.length === Object.keys(second).length &&
+    keys.every((key) => first[key] === second[key])
+  )
+}
+
+const EMPTY_CONTAINER_NAMES: readonly string[] = Object.freeze([])
 
 type ElementKey = string
 
@@ -424,6 +439,8 @@ export class Base {
     modsState?: ModState
   }) {
     const resolvedConfig = { ...(config ?? getConfig()) }
+    if (resolvedConfig.bridgeProps)
+      resolvedConfig.bridgeProps = immutableSnapshot(resolvedConfig.bridgeProps)
     this.config = resolvedConfig
     const backend = this.config.backend
     if (backend) {
@@ -631,8 +648,10 @@ export class Base {
       this.family.stopRelations.push(stop)
     }
     this.family.stopRelations.push(
-      this.host.subscribeRelations(this.family.relationHosts.keys(), () =>
-        this.family.current.refreshRelations(),
+      this.host.subscribeRelations(
+        this.family.relationHosts.keys(),
+        () => this.family.current.refreshRelations(),
+        () => this.family.relationHosts.keys(),
       ),
     )
   }
@@ -641,6 +660,22 @@ export class Base {
   prepare(previous?: Base) {
     this.predecessor = previous
     if (previous) {
+      // These entries are frozen outputs keyed by immutable matcher declarations;
+      // sharing the weak cache does not publish candidate facts or host ownership.
+      if (
+        this.rules === previous.rules &&
+        this.ref === previous.ref &&
+        this.tokens === previous.tokens &&
+        isImmutableSnapshot(this.tokens) &&
+        this.config.backend === previous.config.backend &&
+        (!this.config.backend || Object.isFrozen(this.config.backend)) &&
+        this.config.platform === previous.config.platform &&
+        this.config.useClassName === previous.config.useClassName &&
+        this.config.mediaMode === previous.config.mediaMode &&
+        this.config.pseudoMode === previous.config.pseudoMode &&
+        sameBridgeProps(this.config.bridgeProps, previous.config.bridgeProps)
+      )
+        this.tokenOutputs = previous.tokenOutputs
       this._family = previous.family
       for (const key in previous._activeEls)
         this._activeEls[key] = new Set(previous._activeEls[key])
@@ -960,6 +995,12 @@ export class Base {
     return out
   }
 
+  containerDependencies(part?: string): readonly string[] {
+    return part === undefined
+      ? this.controllerPlan.containerNames
+      : (this.controllerPlan.partContainers[part] ?? EMPTY_CONTAINER_NAMES)
+  }
+
   matchStyles() {
     this.modsStylePrev = this.modsStyle
     this.modsStyle = this.matcher.match(this.modsState)
@@ -986,6 +1027,10 @@ export class Base {
 
   applyTokens(value: ElementStyle, part?: string, facts = this.modsState): any {
     const declaration = value ?? EMPTY_DECLARATION
+    // Public imperative callers may ask for arbitrary names. Keep the strong
+    // part index bounded to this plan; declaration keys below remain weak.
+    if (part !== undefined && !this.matcher.elementSet.has(part))
+      return immutableSnapshot(this.resolveTokens(declaration, part, facts))
     this.tokenOutputs ??= new Map()
     const outputs = this.tokenOutputs
     let cache = outputs.get(part)
@@ -1258,9 +1303,9 @@ export class Base {
     )
   }
 
-  applyElementStyles(context?: ApplyContext) {
+  applyElementStyles(context?: ApplyContext, parts = this.matcher.elementSet) {
     const hasHostConditions = (this._family?.hostConditions.size ?? 0) > 0
-    for (const elementKey of this.matcher.elementSet) {
+    for (const elementKey of parts) {
       const ref = this.refs[elementKey]
       // Web stores every mounted element for a key in a Set (O(1) add/has/delete);
       // native assigns a single element. `size > 1` is the multi-instance case.
@@ -1384,7 +1429,14 @@ export class Base {
       })
     }
 
-    Object.assign(this.modsState, modsState)
+    const changed = new Set<string>()
+    const assign = (values: ModState) => {
+      for (const key in values) {
+        if (!Object.is(this.modsState[key], values[key])) changed.add(key)
+        this.modsState[key] = values[key]
+      }
+    }
+    assign(modsState)
 
     // A media change (the sharedMedia sub calls straight in here) must also
     // refresh any ALGEBRAIC condition mods that reference breakpoint atoms —
@@ -1392,12 +1444,16 @@ export class Base {
     // last measured sizes; conditionState never calls back into applyState.
     if (this.lastContainerSizes) {
       const conditions = this.conditionState(this.lastContainerSizes)
-      if (conditions) Object.assign(this.modsState, conditions)
+      if (conditions) assign(conditions)
     }
 
-    this.matchStyles()
-
-    this.applyElementStyles(context)
+    if (changed.size) this.matchStyles()
+    else this.modsStylePrev = this.modsStyle
+    const parts = this.matcher.partsForFacts(changed)
+    // Two repeated hosts can exchange local interaction while the aggregate
+    // boolean remains true. The originating part still requires reconciliation.
+    if (context?.triggerKey) parts.add(context.triggerKey)
+    this.applyElementStyles(context, parts)
   }
 
   setOn = (

@@ -12,11 +12,79 @@ export interface ResolutionHost {
   node(id: string): DesignNode | undefined
   resolveImport(uri: string, from: string): string | undefined
 }
-/** Per-query bounded graph evaluation; caller caches results by project revision. */
+/** Bounded graph evaluation with dependency-invalidated, shared binding results. */
 export class StaticResolution {
   private budget = 20_000
   private readonly active = new Set<string>()
-  private readonly memo = new Map<string, Value>()
+  private readonly memo = new Map<
+    string,
+    { uri: string; value: Value; weight: number }
+  >()
+  private readonly byUri = new Map<string, Set<string>>()
+  private readonly vocabularies = new WeakMap<object, readonly DesignNode[]>()
+  private weight = 0
+  private incomplete = 0
+  private hits = 0
+  private evaluations = 0
+  get statistics() {
+    return {
+      entries: this.memo.size,
+      weight: this.weight,
+      hits: this.hits,
+      evaluations: this.evaluations,
+    }
+  }
+  invalidate(uris?: ReadonlySet<string>) {
+    if (!uris) {
+      this.memo.clear()
+      this.byUri.clear()
+      this.weight = 0
+      return
+    }
+    for (const uri of uris)
+      for (const key of this.byUri.get(uri) ?? []) this.forget(key)
+  }
+  private forget(key: string) {
+    const entry = this.memo.get(key)
+    if (!entry) return
+    this.weight -= entry.weight
+    this.memo.delete(key)
+    const keys = this.byUri.get(entry.uri)
+    keys?.delete(key)
+    if (!keys?.size) this.byUri.delete(entry.uri)
+  }
+  private remember(key: string, uri: string, value: Value) {
+    // Account for retained graphs, including shared subgraphs, conservatively.
+    const seen = new Set<Value>(),
+      queue = [value]
+    let weight = 0
+    while (queue.length) {
+      const current = queue.pop()!
+      if (seen.has(current)) continue
+      seen.add(current)
+      if (++weight > 20_000) return
+      if (current.kind === 'system') queue.push(current.tokens)
+      else if (current.kind === 'object') {
+        weight += current.members.size
+        if (weight > 20_000) return
+        queue.push(...current.members.values())
+      }
+    }
+    while (this.memo.size >= 512 || this.weight + weight > 100_000) {
+      const oldest = this.memo.keys().next().value!
+      this.forget(oldest)
+    }
+    const keys = this.byUri.get(uri) ?? new Set<string>()
+    keys.add(key)
+    this.byUri.set(uri, keys)
+    this.memo.set(key, { uri, value, weight })
+    this.weight += weight
+  }
+  private exhausted(depth: number) {
+    if (--this.budget >= 0 && depth <= 64) return false
+    this.incomplete++
+    return true
+  }
   private readonly host: ResolutionHost
   constructor(host: ResolutionHost) {
     this.host = host
@@ -36,7 +104,7 @@ export class StaticResolution {
     expression: StaticExpression,
     depth: number,
   ): Value {
-    if (--this.budget < 0 || depth > 64) return opaque
+    if (this.exhausted(depth)) return opaque
     switch (expression.kind) {
       case 'opaque':
         return opaque
@@ -93,7 +161,7 @@ export class StaticResolution {
   }
   private namespace(uri: string, depth: number): Value {
     const module = this.host.get(uri)?.module
-    if (!module || --this.budget < 0 || depth > 64) return opaque
+    if (!module || this.exhausted(depth)) return opaque
     const members = new Map<string, Value>()
     let complete = true
     for (const from of module.stars) {
@@ -122,11 +190,19 @@ export class StaticResolution {
     exported: boolean,
     depth = 0,
   ): Value {
-    if (--this.budget < 0 || depth > 64) return opaque
+    if (this.exhausted(depth)) return opaque
     const key = `${uri}#${exported ? 'export' : 'local'}:${name}`
-    if (this.active.has(key)) return opaque
+    if (this.active.has(key)) {
+      this.incomplete++
+      return opaque
+    }
     const cached = this.memo.get(key)
-    if (cached) return cached
+    if (cached) {
+      this.hits++
+      return cached.value
+    }
+    this.evaluations++
+    const incomplete = this.incomplete
     this.active.add(key)
     let value: Value = opaque
     const document = this.host.get(uri),
@@ -162,10 +238,13 @@ export class StaticResolution {
       }
     }
     this.active.delete(key)
-    this.memo.set(key, value)
+    // Results reached through a cycle or exhausted budget are query-context dependent.
+    if (this.budget >= 0 && this.incomplete === incomplete)
+      this.remember(key, uri, value)
     return value
   }
   resolve(uri: string, name: string): Value {
+    this.budget = 20_000
     const [first, ...members] = name.split('.')
     if (!first || members.length > 32) return opaque
     let value = this.binding(uri, first, false)
@@ -178,9 +257,15 @@ export class StaticResolution {
     if (value.kind === 'object')
       value = value.members.get('stylesheet') ?? opaque
     if (value.kind !== 'system' || value.tokens.kind !== 'object') return []
-    return [...value.tokens.members].flatMap(([name, entry]) =>
-      entry.kind === 'token' ? [Object.freeze({ ...entry.node, name })] : [],
+    const cached = this.vocabularies.get(value.tokens)
+    if (cached) return cached
+    const tokens = Object.freeze(
+      [...value.tokens.members].flatMap(([name, entry]) =>
+        entry.kind === 'token' ? [Object.freeze({ ...entry.node, name })] : [],
+      ),
     )
+    this.vocabularies.set(value.tokens, tokens)
+    return tokens
   }
   definition(uri: string, name: string): DesignNode | undefined {
     const value = this.resolve(uri, name)

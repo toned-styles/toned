@@ -10,7 +10,11 @@ export interface HostIntegration {
   validateRelations(states: readonly string[]): void
   parentOf(target: object): object | undefined
   readState(target: object, state: string): boolean
-  subscribeRelations(targets: Iterable<object>, notify: () => void): () => void
+  subscribeRelations(
+    targets: Iterable<object>,
+    notify: () => void,
+    currentTargets?: () => Iterable<object>,
+  ): () => void
   connectMedia(
     keys: readonly string[],
     notify: (facts: Partial<Record<string, boolean>>) => void,

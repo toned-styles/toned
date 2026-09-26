@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { cleanup, render } from '@testing-library/react'
+import { act, cleanup, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig } from '@toned/core'
 import { cssVariablesBackend } from '@toned/core/backends'
 import { createRenderer } from '@toned/core/server'
@@ -143,4 +143,75 @@ test('explicit providers do not even copy process-global configuration defaults'
   } finally {
     Reflect.deleteProperty(legacy, '__tonedProviderPoison')
   }
+})
+
+test('equivalent renderer maps do not broadcast but changed tokens and registrations do', async () => {
+  const { memo } = await import('react')
+  let renders = 0
+  const Consumer = memo(() => {
+    renders++
+    const s = useStyles(firstSheet)
+    return <div {...s.Root} data-testid="target" />
+  })
+  const wrap = (renderers: (typeof red)[], theme?: { ink: string }) => (
+    <TonedProvider renderer={renderers} host={{ ...web }}>
+      <TonedProvider renderer={red} host={web} theme={theme}>
+        <Consumer />
+      </TonedProvider>
+    </TonedProvider>
+  )
+  const view = render(wrap([red, blue]))
+  expect(renders).toBe(1)
+  view.rerender(wrap([blue, red]))
+  expect(renders).toBe(1)
+  const theme = { ink: 'green' }
+  view.rerender(wrap([red, blue], theme))
+  expect(renders).toBe(2)
+  expect(view.getByTestId('target').style.color).toBe('green')
+  view.rerender(wrap([blue, red], theme))
+  expect(renders).toBe(2)
+  view.rerender(wrap([red]))
+  expect(renders).toBe(3)
+  expect(view.getByTestId('target').style.color).toBe('red')
+})
+
+test('suspended provider themes never publish into committed component-family updates', async () => {
+  const { Suspense, startTransition, useState } = await import('react')
+  const pending = new Promise<void>(() => {})
+  const themedSheet = first.stylesheet({
+    Root: { ink: true, ':hover': { $style: { opacity: 0.5 } } },
+  })
+  let set: (value: { ink: string; blocked: boolean }) => void = () => {}
+  function Consumer({ blocked }: { blocked: boolean }) {
+    const s = useStyles(themedSheet)
+    const props = s.Root
+    if (blocked) throw pending
+    return <div {...props} data-testid="concurrent" />
+  }
+  function App() {
+    const [state, update] = useState({ ink: 'red', blocked: false })
+    set = update
+    return (
+      <Suspense fallback={<span>pending</span>}>
+        <TonedProvider renderer={[red, blue]} host={web}>
+          <TonedProvider renderer={red} host={web} theme={{ ink: state.ink }}>
+            <Consumer blocked={state.blocked} />
+          </TonedProvider>
+        </TonedProvider>
+      </Suspense>
+    )
+  }
+  const view = render(<App />),
+    node = view.getByTestId('concurrent')
+  await act(async () => {
+    startTransition(() => set({ ink: 'green', blocked: true }))
+  })
+  expect(node.style.color).toBe('red')
+  node.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+  expect(node.style.opacity).toBe('0.5')
+  expect(node.style.color).toBe('red')
+  await act(async () => set({ ink: 'blue', blocked: false }))
+  expect(view.getByTestId('concurrent')).toBe(node)
+  expect(node.style.color).toBe('blue')
+  expect(node.style.opacity).toBe('0.5')
 })

@@ -21,7 +21,12 @@ The graph includes systems, finite token vocabularies, sheets, parts, literal
 values, variant axes, component families and declared module dependencies. Each
 node has UTF-16 source ranges, an owning declaration and a condition path. Source
 revisions invalidate changed documents; warm navigation and completion reuse the
-index. `statistics` reports actual parse/reuse counts. `dispose()` releases it.
+index. Shared symbolic bindings and token vocabularies invalidate through recorded
+import dependencies, including unresolved import candidates and reexports. An
+unrelated source edit does not discard a system vocabulary. Token names and
+finite diagnostic domains reuse the same vocabulary objects across consumers.
+`statistics` reports parse/reuse counts and symbolic-resolution cache work.
+`dispose()` releases the retained indexes and caches.
 
 Source analysis never executes application modules, token resolvers or factories.
 It reads supported static object/factory declarations and local type definitions.
@@ -79,6 +84,31 @@ source revision. The editor controls applying closed-file edits. For embedding, 
 The server accepts up to 16 file workspace roots. Initial indexing yields between
 files, skips generated/dependency directories and reports budget failures.
 No whole-project typecheck runs on a completion request.
+
+Interactive requests prioritize the requested document and its current transitive
+imports. During the initial scan they can read an included dependency closure
+(up to 256 files / 1024 candidate reads), while completion remains marked
+incomplete until the workspace scan finishes successfully. Unsaved buffers and
+newer disk/index versions win over an older asynchronous read. Background editor
+updates yield after eight files or six milliseconds; diagnostics coalesce per
+open document and do not republish identical content for the same version.
+Workspace-wide inspection and reference requests flush pending snapshots before
+querying. Requests recheck versions after yielding, accept protocol cancellation,
+and are limited to 32 concurrent operations, 64 revalidation passes and a
+15-second cooperative deadline. Dependency snapshot tracking is capped at
+32,768 lexical candidates per request. An individual bounded file parse is synchronous
+and cannot be interrupted midway. Excess/expired requests return an explicit
+retryable protocol error.
+
+Symbolic binding caches retain at most 512 entries and 100,000 conservatively
+counted graph nodes/member edges; a single graph above 20,000 is not retained.
+The consumer vocabulary cache and LSP text-document cache each retain at most
+256 entries. URI indexes remove cache entries directly on invalidation/eviction.
+Diagnostic publication state is owned by the bounded open-document set and is
+released on close/dispose. `toned/statistics` also reports diagnostic work,
+pending editor work and observational process memory. These process snapshots
+are not a retained-heap measurement or a leak guarantee. See
+[authoring benchmarks](../../benchmarks/design-tools.md) for measured limits.
 
 An edit request supplies `nodeId`, `value`, `expectedVersion` and
 `scope: { uri, owner, path? }`. `proposeValueEdit` returns an exact before/after

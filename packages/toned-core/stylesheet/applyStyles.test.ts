@@ -133,6 +133,23 @@ describe('setStyles (web) className ownership', () => {
     return el
   }
 
+  test('null className clears owned classes and mutable requests are re-read', () => {
+    const el = makeClassEl('foreign')
+    const request = {
+      style: { opacity: 0.5 },
+      className: 'owned' as string | null,
+    }
+    setStyles(el, request)
+    request.className = null
+    request.style.opacity = 0.75
+    setStyles(el, request)
+    expect(el.className).toBe('foreign')
+    expect(cssValue(el, 'opacity')).toBe('0.75')
+    recordHostCommit(el, request, { className: null })
+    setStyles(el, { className: null })
+    expect(el.className).toBe('foreign')
+  })
+
   test('swaps only toned-written classes, preserving foreign ones', () => {
     // The host framework rendered marker + caller classes merged with toned's.
     const el = makeClassEl('tnd-marker caller-utility _ width_8')

@@ -18,6 +18,8 @@ export interface ControllerPlan {
   readonly semanticStates: readonly string[]
   readonly trackedPseudos: Readonly<Record<string, readonly string[]>>
   readonly conditions: readonly (Condition & { atoms: readonly Condition[] })[]
+  readonly containerNames: readonly string[]
+  readonly partContainers: Readonly<Record<string, readonly string[]>>
   readonly directionKeys: readonly string[]
 }
 const plans = new WeakMap<StyleMatcher, ControllerPlan>()
@@ -79,6 +81,24 @@ export function controllerPlan(matcher: StyleMatcher): ControllerPlan {
       }
     conditions.push({ key, expression, atoms })
   }
+  const containerNames = new Set<string>()
+  const partContainers: Record<string, string[]> = Object.create(null)
+  for (const condition of conditions) {
+    const names = new Set(
+      condition.expression
+        .flat()
+        .flatMap((atom) => (atom.container === null ? [] : [atom.container])),
+    )
+    for (const name of names) containerNames.add(name)
+    for (const part of matcher.partsForFacts([
+      condition.key,
+      ...condition.atoms.map((atom) => atom.key),
+    ])) {
+      const entries = partContainers[part] ?? []
+      partContainers[part] = entries
+      for (const name of names) if (!entries.includes(name)) entries.push(name)
+    }
+  }
   const result: ControllerPlan = freezeMetadata({
     keys,
     relations,
@@ -86,6 +106,8 @@ export function controllerPlan(matcher: StyleMatcher): ControllerPlan {
     semanticStates: [...semanticStates],
     trackedPseudos: Object.freeze(trackedPseudos),
     conditions,
+    containerNames: [...containerNames],
+    partContainers,
     directionKeys: keys.filter((key) => key.endsWith(':rtl')),
   })
   plans.set(matcher, result)

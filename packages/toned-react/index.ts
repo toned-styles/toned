@@ -198,10 +198,9 @@ export function useStyles<T extends StylesheetLike>(
   const readSizes = useCallback(
     () =>
       containerScope
-        ? {
-            ...containerScope.store.snapshot(),
-            ...(containerScope.legacy === legacySizes ? {} : legacySizes),
-          }
+        ? containerScope.legacy === legacySizes
+          ? containerScope.store.snapshot()
+          : { ...containerScope.store.snapshot(), ...legacySizes }
         : legacySizes,
     [containerScope, legacySizes],
   )
@@ -232,7 +231,10 @@ export function useStyles<T extends StylesheetLike>(
       const conditions = candidate.conditionState?.(readSizes())
       if (conditions) candidate.applyState(conditions)
     }
-    const unsubscribe = containerScope?.store.subscribe(syncMeasurements)
+    const unsubscribe = containerScope?.store.subscribe(
+      syncMeasurements,
+      candidate.containerDependencies(),
+    )
     // A measurement can change after render or during child attachment. Read
     // it again in the commit phase before the browser/native host paints.
     if (containerScope) syncMeasurements()

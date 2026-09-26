@@ -1,0 +1,504 @@
+{
+  "checkpoint": "7e3944ce798102463788f154abe5ec468e75e069",
+  "current": "7e3944ce798102463788f154abe5ec468e75e069",
+  "sourceDigest": "3526ec63a2f0e9db78e2f58cfcb84b56c8e98590869db2a0a067de5228377701",
+  "environment": {
+    "bun": "1.3.14",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "guardProofs": 10,
+  "fixture": "Actual TonedProvider/createElements 42/250-cell lists; equivalent fresh arrays, rerenders, variants, theme, interaction, SSR, explicit t spread, declared native JS host patches and disposed-controller WeakRefs. Happy-dom timings are not browser layout or device timings.",
+  "results": [
+    {
+      "pair": 0,
+      "version": "checkpoint",
+      "list_42": {
+        "mount_ms": 3.334,
+        "stable_ms": 3.213,
+        "rerender_ms": 3.663,
+        "variant_ms": 3.228,
+        "theme_ms": 3.371,
+        "ssr_ms": 1.643,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 43,
+        "stable_host_props": 42,
+        "rerender_resolvers": 43,
+        "rerender_host_props": 42,
+        "variant_resolvers": 43,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 14.681,
+        "stable_ms": 13.489,
+        "rerender_ms": 13.021,
+        "variant_ms": 14.073,
+        "theme_ms": 19.838,
+        "ssr_ms": 6.657,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 251,
+        "stable_host_props": 250,
+        "rerender_resolvers": 251,
+        "rerender_host_props": 250,
+        "variant_resolvers": 251,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 23.384,
+        "resolver_calls_per_2000": 4000
+      },
+      "native_js_host_cycle_us": 27.74,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 0,
+      "version": "current",
+      "list_42": {
+        "mount_ms": 2.722,
+        "stable_ms": 0.064,
+        "rerender_ms": 2.046,
+        "variant_ms": 2.149,
+        "theme_ms": 2.932,
+        "ssr_ms": 1.332,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 42,
+        "variant_resolvers": 3,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 10.783,
+        "stable_ms": 0.085,
+        "rerender_ms": 10.395,
+        "variant_ms": 11.481,
+        "theme_ms": 15.735,
+        "ssr_ms": 5.542,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 250,
+        "variant_resolvers": 3,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 14.136,
+        "resolver_calls_per_2000": 2000
+      },
+      "native_js_host_cycle_us": 32.502,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 1,
+      "version": "current",
+      "list_42": {
+        "mount_ms": 2.987,
+        "stable_ms": 0.101,
+        "rerender_ms": 2.81,
+        "variant_ms": 2.384,
+        "theme_ms": 3.141,
+        "ssr_ms": 1.333,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 42,
+        "variant_resolvers": 3,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 11.6,
+        "stable_ms": 0.099,
+        "rerender_ms": 11.176,
+        "variant_ms": 12.09,
+        "theme_ms": 15.32,
+        "ssr_ms": 5.184,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 250,
+        "variant_resolvers": 3,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 15.256,
+        "resolver_calls_per_2000": 2000
+      },
+      "native_js_host_cycle_us": 30.03,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 1,
+      "version": "checkpoint",
+      "list_42": {
+        "mount_ms": 2.727,
+        "stable_ms": 2.464,
+        "rerender_ms": 2.551,
+        "variant_ms": 2.484,
+        "theme_ms": 2.945,
+        "ssr_ms": 1.361,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 43,
+        "stable_host_props": 42,
+        "rerender_resolvers": 43,
+        "rerender_host_props": 42,
+        "variant_resolvers": 43,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 11.724,
+        "stable_ms": 14.774,
+        "rerender_ms": 17.166,
+        "variant_ms": 13.615,
+        "theme_ms": 16.109,
+        "ssr_ms": 5.385,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 251,
+        "stable_host_props": 250,
+        "rerender_resolvers": 251,
+        "rerender_host_props": 250,
+        "variant_resolvers": 251,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 25.103,
+        "resolver_calls_per_2000": 4000
+      },
+      "native_js_host_cycle_us": 29.763,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 2,
+      "version": "checkpoint",
+      "list_42": {
+        "mount_ms": 4.12,
+        "stable_ms": 4.251,
+        "rerender_ms": 2.961,
+        "variant_ms": 2.792,
+        "theme_ms": 3.143,
+        "ssr_ms": 1.598,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 43,
+        "stable_host_props": 42,
+        "rerender_resolvers": 43,
+        "rerender_host_props": 42,
+        "variant_resolvers": 43,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 10.473,
+        "stable_ms": 17.886,
+        "rerender_ms": 15.083,
+        "variant_ms": 16.036,
+        "theme_ms": 21.33,
+        "ssr_ms": 5.281,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 251,
+        "stable_host_props": 250,
+        "rerender_resolvers": 251,
+        "rerender_host_props": 250,
+        "variant_resolvers": 251,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 26.264,
+        "resolver_calls_per_2000": 4000
+      },
+      "native_js_host_cycle_us": 30.302,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 2,
+      "version": "current",
+      "list_42": {
+        "mount_ms": 3.056,
+        "stable_ms": 0.071,
+        "rerender_ms": 2.114,
+        "variant_ms": 2.364,
+        "theme_ms": 3.131,
+        "ssr_ms": 1.304,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 42,
+        "variant_resolvers": 3,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 10.215,
+        "stable_ms": 0.1,
+        "rerender_ms": 12.576,
+        "variant_ms": 11.164,
+        "theme_ms": 16.516,
+        "ssr_ms": 5.004,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 250,
+        "variant_resolvers": 3,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 15.849,
+        "resolver_calls_per_2000": 2000
+      },
+      "native_js_host_cycle_us": 28.714,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 3,
+      "version": "current",
+      "list_42": {
+        "mount_ms": 2.732,
+        "stable_ms": 0.063,
+        "rerender_ms": 2.084,
+        "variant_ms": 2.126,
+        "theme_ms": 2.904,
+        "ssr_ms": 1.339,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 42,
+        "variant_resolvers": 3,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 11.506,
+        "stable_ms": 0.095,
+        "rerender_ms": 10.765,
+        "variant_ms": 11.739,
+        "theme_ms": 14.979,
+        "ssr_ms": 5.273,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 250,
+        "variant_resolvers": 3,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 16.283,
+        "resolver_calls_per_2000": 2000
+      },
+      "native_js_host_cycle_us": 31.627,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 3,
+      "version": "checkpoint",
+      "list_42": {
+        "mount_ms": 3.64,
+        "stable_ms": 2.821,
+        "rerender_ms": 2.765,
+        "variant_ms": 2.635,
+        "theme_ms": 2.894,
+        "ssr_ms": 1.382,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 43,
+        "stable_host_props": 42,
+        "rerender_resolvers": 43,
+        "rerender_host_props": 42,
+        "variant_resolvers": 43,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 10.223,
+        "stable_ms": 15.544,
+        "rerender_ms": 13.084,
+        "variant_ms": 12.988,
+        "theme_ms": 18.306,
+        "ssr_ms": 4.716,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 251,
+        "stable_host_props": 250,
+        "rerender_resolvers": 251,
+        "rerender_host_props": 250,
+        "variant_resolvers": 251,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 24.608,
+        "resolver_calls_per_2000": 4000
+      },
+      "native_js_host_cycle_us": 28.684,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 4,
+      "version": "checkpoint",
+      "list_42": {
+        "mount_ms": 4.575,
+        "stable_ms": 6.312,
+        "rerender_ms": 4.023,
+        "variant_ms": 5.575,
+        "theme_ms": 5.767,
+        "ssr_ms": 2.272,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 43,
+        "stable_host_props": 42,
+        "rerender_resolvers": 43,
+        "rerender_host_props": 42,
+        "variant_resolvers": 43,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 10.739,
+        "stable_ms": 12.74,
+        "rerender_ms": 12.908,
+        "variant_ms": 15.989,
+        "theme_ms": 18.215,
+        "ssr_ms": 5.088,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 251,
+        "stable_host_props": 250,
+        "rerender_resolvers": 251,
+        "rerender_host_props": 250,
+        "variant_resolvers": 251,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 26.362,
+        "resolver_calls_per_2000": 4000
+      },
+      "native_js_host_cycle_us": 33.491,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    },
+    {
+      "pair": 4,
+      "version": "current",
+      "list_42": {
+        "mount_ms": 2.869,
+        "stable_ms": 0.128,
+        "rerender_ms": 2.368,
+        "variant_ms": 2.289,
+        "theme_ms": 3.263,
+        "ssr_ms": 1.324,
+        "mount_resolvers": 43,
+        "mount_host_props": 42,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 42,
+        "variant_resolvers": 3,
+        "variant_host_props": 42,
+        "theme_resolvers": 43,
+        "theme_host_props": 42
+      },
+      "list_250": {
+        "mount_ms": 11.625,
+        "stable_ms": 0.106,
+        "rerender_ms": 11.169,
+        "variant_ms": 11.899,
+        "theme_ms": 15.156,
+        "ssr_ms": 6.949,
+        "mount_resolvers": 251,
+        "mount_host_props": 250,
+        "stable_resolvers": 0,
+        "stable_host_props": 0,
+        "rerender_resolvers": 0,
+        "rerender_host_props": 250,
+        "variant_resolvers": 3,
+        "variant_host_props": 250,
+        "theme_resolvers": 251,
+        "theme_host_props": 250
+      },
+      "token_spread": {
+        "us": 15.642,
+        "resolver_calls_per_2000": 2000
+      },
+      "native_js_host_cycle_us": 41.517,
+      "disposed_controllers": {
+        "samples": 2000,
+        "retained": 0
+      }
+    }
+  ]
+}

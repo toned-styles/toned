@@ -1,10 +1,9 @@
 import { expect, test, vi } from 'vitest'
-import * as manifestValidation from '../build/manifest.ts'
 import { buildStyles } from '../build/index.ts'
+import * as manifestValidation from '../build/manifest.ts'
 import { dp } from '../core/values.ts'
-import { createWebRenderer } from './index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
-import { createNativeRenderer } from './index.ts'
+import { createNativeRenderer, createWebRenderer } from './index.ts'
 
 test('pure native rendering evaluates platform predicates against native', () => {
   const system = defineSystem({
@@ -184,4 +183,88 @@ test('renderer owns an immutable manifest snapshot before any sheet validation',
     [system.q.media(dp(999))]: { Root: { $style: { opacity: 1 } } },
   })
   expect(() => renderer.validate(missing)).toThrow('undeclared condition')
+})
+
+test('explicit composition resolves once across getters and spread; legacy context remains live', async () => {
+  const { createRenderer, createTokenStyles } = await import('./index.ts')
+  const { createTokenComposer } = await import('../system/token-composer.ts')
+  const resolve = vi.fn((value: number) => ({ opacity: value }))
+  const system = defineSystem({
+    opacity: defineToken({ values: [1], resolve }),
+  })
+  const backend = {
+    id: 'counted',
+    platform: 'web' as const,
+    browserConditions: false,
+    resolve: vi.fn((value: { style: Record<string, unknown> }) => ({
+      style: value.style,
+      className: 'resolved',
+    })),
+  }
+  const renderer = createRenderer(system, { tokens: {}, backend })
+  const value = renderer.t({ opacity: 1 })
+  expect(value.className).toBe('resolved')
+  expect(value.style).toEqual({ opacity: 1 })
+  expect({ ...value }.style).toBe(value.style)
+  expect(backend.resolve).toHaveBeenCalledOnce()
+  expect(resolve).toHaveBeenCalledOnce()
+  const source = { opacity: 1, $style: { margin: 2 } } as const
+  const explicit = createTokenStyles(system, { platform: 'web', tokens: {} })(
+    source,
+  )
+  ;(source.$style as { margin: number }).margin = 30
+  expect(explicit.style).toMatchObject({ margin: 2 })
+  const count = resolve.mock.calls.length
+  expect(explicit.style).toBe(explicit.style)
+  expect(resolve).toHaveBeenCalledTimes(count)
+  let context = 1
+  const legacy = createTokenComposer(
+    () => system,
+    () => ({ platform: 'web', tokens: {} }),
+    () => ({ style: { opacity: context } }),
+  )({ opacity: 1 })
+  expect(legacy.style['opacity']).toBe(1)
+  context = 0.5
+  expect(legacy.style['opacity']).toBe(0.5)
+})
+
+test('explicit composition keeps opaque mutable theme and token payloads live', async () => {
+  const { createTokenStyles, createRenderer } = await import('./index.ts')
+  class Mutable {
+    value = 0.25
+  }
+  const theme = new Mutable(),
+    payload = new Mutable()
+  const system = defineSystem({
+    fromTheme: defineToken({
+      values: [true],
+      resolve: (_, tokens) => ({ opacity: tokens['opaque'].value }),
+    }),
+    fromPayload: defineToken({
+      values: [payload],
+      resolve: (value) => ({ opacity: value.value }),
+    }),
+  })
+  const t = createTokenStyles(system, {
+    tokens: { opaque: theme },
+    platform: 'web',
+    useClassName: false,
+  })
+  const themed = t({ fromTheme: true })
+  expect(themed.style['opacity']).toBe(0.25)
+  theme.value = 0.75
+  expect(themed.style['opacity']).toBe(0.75)
+  const renderer = createRenderer(system, {
+    tokens: {},
+    backend: {
+      id: 'opaque-test',
+      platform: 'web',
+      browserConditions: false,
+      resolve: (value) => value,
+    },
+  })
+  const sourced = renderer.t({ fromPayload: payload })
+  expect(sourced.style['opacity']).toBe(0.25)
+  payload.value = 0.5
+  expect(sourced.style['opacity']).toBe(0.5)
 })

@@ -22,7 +22,10 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
-import { immutableSnapshot } from '../utils/immutable.ts'
+import {
+  certifyImmutableReference,
+  immutableSnapshot,
+} from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_DEFAULTS } from '../utils/symbols.ts'
 
@@ -58,10 +61,12 @@ type Arguments<T, Theme> = [SheetVariants<T>] extends [never]
 
 /** CSS custom-property references without mutable process-global token state. */
 export function cssVariableTokens(): Tokens {
-  return new Proxy(Object.freeze(Object.create(null)) as Tokens, {
-    get: (_target, key) =>
-      typeof key === 'string' ? `var(--${key})` : undefined,
-  })
+  return certifyImmutableReference(
+    new Proxy(Object.freeze(Object.create(null)) as Tokens, {
+      get: (_target, key) =>
+        typeof key === 'string' ? `var(--${key})` : undefined,
+    }),
+  )
 }
 
 /** Explicit lightweight token composition, usable before a CSS manifest exists. */
@@ -80,6 +85,8 @@ export function createTokenStyles<S extends TokenStyleDeclaration>(
   return createTokenComposer(
     () => system,
     () => context,
+    undefined,
+    true,
   )
 }
 
@@ -197,6 +204,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
           ? backend.resolvePlan(selected, { system, part: 'Root' })
           : backend.resolve(foldOperations(selected))
       },
+      true,
     ),
     explain<T extends object>(
       sheet: T,

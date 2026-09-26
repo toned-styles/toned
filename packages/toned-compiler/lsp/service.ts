@@ -22,10 +22,17 @@ import type {
 } from '../model.ts'
 import { DesignProject } from '../project.ts'
 
+interface Vocabulary {
+  readonly tokens: readonly DesignNode[]
+  readonly names: ReadonlyMap<string, DesignNode>
+  readonly domains: ReadonlyMap<string, ReadonlySet<string>>
+}
+const emptyTokens: readonly DesignNode[] = Object.freeze([])
 /** Transport-independent language features share the agent/inspector's index. */
 export class DesignLanguageService {
   readonly project: DesignProject
   private readonly documents = new Map<string, TextDocument>()
+  private vocabularies = new WeakMap<readonly DesignNode[], Vocabulary>()
   constructor(project = new DesignProject()) {
     this.project = project
   }
@@ -59,6 +66,7 @@ export class DesignLanguageService {
   }
   dispose() {
     this.documents.clear()
+    this.vocabularies = new WeakMap()
     this.project.dispose()
   }
   private range(uri: string, span: SourceSpan) {
@@ -69,12 +77,29 @@ export class DesignLanguageService {
       end: document.positionAt(span.end),
     }
   }
-  private tokens(node: DesignNode): readonly DesignNode[] {
+  private vocabulary(node: DesignNode): Vocabulary {
     const sheet = this.project
       .lookup(node.owner, node.uri)
       .find((entry) => entry.kind === 'sheet')
-    if (!sheet?.system) return []
-    return this.project.tokensForSystem(sheet.system, sheet.uri).slice(0, 501)
+    const tokens = sheet?.system
+      ? this.project.tokensForSystem(sheet.system, sheet.uri)
+      : emptyTokens
+    const cached = this.vocabularies.get(tokens)
+    if (cached) return cached
+    const vocabulary = {
+      tokens,
+      names: new Map(tokens.map((token) => [token.name, token])),
+      domains: new Map(
+        tokens
+          .filter((token) => token.values && token.valuesComplete !== false)
+          .map((token) => [
+            token.name,
+            new Set(token.values!.map((value) => JSON.stringify(value))),
+          ]),
+      ),
+    }
+    this.vocabularies.set(tokens, vocabulary)
+    return vocabulary
   }
 
   hover(uri: string, position: Position): Hover | null {
@@ -103,11 +128,8 @@ export class DesignLanguageService {
     if (!node) return { isIncomplete: false, items: [] }
     if (node.path.includes('$style') || node.path.includes('style'))
       return { isIncomplete: false, items: [] }
-    const tokens = this.tokens(node)
-    const token =
-      node.kind === 'declaration'
-        ? tokens.find((entry) => entry.name === node.name)
-        : undefined
+    const { tokens, names } = this.vocabulary(node)
+    const token = node.kind === 'declaration' ? names.get(node.name) : undefined
     if (token?.values && node.valueSpan && offset >= node.valueSpan.start) {
       const current = document.getText().slice(node.valueSpan.start, offset)
       const quote = current.startsWith("'")
@@ -115,6 +137,7 @@ export class DesignLanguageService {
         : current.startsWith('"')
           ? '"'
           : undefined
+      const range = this.range(uri, node.valueSpan)
       return {
         isIncomplete: token.values.length > 500,
         items: token.values.slice(0, 500).map((value) => ({
@@ -122,7 +145,7 @@ export class DesignLanguageService {
           kind: CompletionItemKind.EnumMember,
           detail: `${token.owner}.${token.name}`,
           textEdit: {
-            range: this.range(uri, node.valueSpan!),
+            range,
             newText:
               typeof value === 'string' && quote === "'"
                 ? `'${JSON.stringify(value).slice(1, -1).replace(/'/g, "\\'")}'`
@@ -155,7 +178,9 @@ export class DesignLanguageService {
     const candidates = reference
       ? this.project.lookup(reference.name, uri)
       : node?.kind === 'declaration'
-        ? this.tokens(node).filter((token) => token.name === node.name)
+        ? this.vocabulary(node).tokens.filter(
+            (token) => token.name === node.name,
+          )
         : []
     return candidates.map((target) => ({
       uri: target.uri,
@@ -214,8 +239,7 @@ export class DesignLanguageService {
             ? DiagnosticSeverity.Warning
             : DiagnosticSeverity.Information,
     }))
-    const tokens = new Map<string, readonly DesignNode[]>()
-    const domains = new Map<string, Set<string>>()
+    const vocabularies = new Map<string, Vocabulary>()
     for (const node of source.nodes) {
       if (
         node.kind !== 'declaration' ||
@@ -225,20 +249,10 @@ export class DesignLanguageService {
         node.opaque
       )
         continue
-      if (!tokens.has(node.owner)) tokens.set(node.owner, this.tokens(node))
-      const token = tokens
-        .get(node.owner)!
-        .find((entry) => entry.name === node.name)
-      if (token?.values && !domains.has(token.id))
-        domains.set(
-          token.id,
-          new Set(token.values.map((value) => JSON.stringify(value))),
-        )
-      if (
-        token?.values &&
-        token.valuesComplete !== false &&
-        !domains.get(token.id)!.has(JSON.stringify(node.value))
-      )
+      if (!vocabularies.has(node.owner))
+        vocabularies.set(node.owner, this.vocabulary(node))
+      const domain = vocabularies.get(node.owner)!.domains.get(node.name)
+      if (domain && !domain.has(JSON.stringify(node.value)))
         diagnostics.push({
           range: this.range(uri, node.valueSpan ?? node.selection),
           source: 'toned',

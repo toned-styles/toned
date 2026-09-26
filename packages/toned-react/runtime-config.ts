@@ -84,6 +84,27 @@ type RendererProps =
   | { renderer: ReactRenderer; theme?: Tokens }
   | { renderer: readonly ReactRenderer[]; theme?: never }
 
+/** Pure immutable result interning, local to one provider and bounded to four
+ * snapshots. Speculative renders may add cache entries, but never change any
+ * snapshot already observed by a committed tree. Map order has no semantics. */
+function equivalentMaps<T>() {
+  const recent: ReadonlyMap<object, T>[] = []
+  return (next: ReadonlyMap<object, T>): ReadonlyMap<object, T> => {
+    const existing = recent.find(
+      (value) =>
+        value.size === next.size &&
+        [...next].every(
+          ([key, member]) =>
+            value.has(key) && Object.is(value.get(key), member),
+        ),
+    )
+    if (existing) return existing
+    if (recent.length === 4) recent.shift()
+    recent.push(next)
+    return next
+  }
+}
+
 /** Register exact system identities once per tree; nested providers replace matching
  * registrations and inherit the remaining parent systems. No validation probing. */
 export function TonedProvider({
@@ -94,6 +115,8 @@ export function TonedProvider({
 }: RendererProps & { host: ReactHost; children?: ReactNode }) {
   const parent = useContext(RendererRegistryContext)
   const parentTokens = useContext(RendererTokensContext)
+  const registrySnapshot = useMemo(() => equivalentMaps<Config>(), [])
+  const tokensSnapshot = useMemo(() => equivalentMaps<Tokens>(), [])
   const {
     platform,
     getProps,
@@ -199,8 +222,9 @@ export function TonedProvider({
       throw new Error(
         'TonedProvider: inherited renderer registry exceeds 128 systems',
       )
-    return next
+    return registrySnapshot(next)
   }, [
+    registrySnapshot,
     parent,
     renderer,
     cache,
@@ -223,8 +247,8 @@ export function TonedProvider({
       : [renderer as ReactRenderer]
     for (const current of renderers)
       values.set(current.system, themeSnapshot ?? current.tokens)
-    return values
-  }, [parentTokens, renderer, themeSnapshot])
+    return tokensSnapshot(values)
+  }, [parentTokens, renderer, themeSnapshot, tokensSnapshot])
   return createElement(
     RendererTokensContext.Provider,
     { value: tokens },

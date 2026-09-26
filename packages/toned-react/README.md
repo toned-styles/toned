@@ -292,6 +292,12 @@ context binding.
 `TonedProvider` compares the host's fields rather than its wrapper object:
 `host={{ ...web, useStyleOverrideScope }}` preserves bound component identities
 when those fields are unchanged. Keep host callback implementations stable.
+Fresh or reordered arrays containing the same renderer identities also reuse
+registry/token maps, avoiding context broadcasts when the effective mappings are
+unchanged. Each provider interns at most four immutable snapshots; a speculative
+render can add a cache entry but cannot mutate an already published map. Token
+values are compared by snapshot identity, not by a deep equality guess. Changed
+themes and registrations still update their consumers.
 `useStyleOverrideScope` reads at the consuming component so nested host contexts
 retain their meaning. React cannot replace an arbitrary custom hook with a
 potentially different hook sequence inside that mounted consumer. Accordingly,
@@ -307,8 +313,9 @@ unmount their consumers before replacing or removing it. This guard is intention
 swapping arbitrary hooks in an existing component can change React's hook order.
 Updating values read by the same hook remains supported without a remount.
 
-Module-level `bind(sheet)` and legacy `t` getters are pure, static snapshots of the
-installed configuration. They cannot consume provider context outside React.
+Module-level `bind(sheet)` uses the installed configuration; legacy `t` getters
+read that configuration on each access. Neither consumes provider context outside
+React.
 Web's fallback supplies CSS variable references; literal/native theme consumers
 must use `createElements`, `useStyles`/`useBind`, or a pure renderer with explicit
 tokens. Module-level `createElements` differs from `bind`: it creates component

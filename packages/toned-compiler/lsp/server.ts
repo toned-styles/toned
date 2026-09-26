@@ -2,6 +2,7 @@ import type { Connection } from 'vscode-languageserver/node.js'
 import {
   DidChangeWatchedFilesNotification,
   ErrorCodes,
+  LSPErrorCodes,
   ResponseError,
   TextDocumentSyncKind,
 } from 'vscode-languageserver/node.js'
@@ -47,10 +48,24 @@ export function registerLanguageServer(
   // At most one entry per bounded open document. Yield between small batches so
   // a large token vocabulary update does not monopolize the protocol loop.
   const diagnosticQueue = new Set<string>()
+  const published = new Map<string, { version: number; content: string }>()
+  let diagnosticComputations = 0,
+    diagnosticPublications = 0
+  const publishDiagnostics = (uri: string, version: number) => {
+    diagnosticComputations++
+    const diagnostics = [...service.diagnostics(uri)]
+    const content = JSON.stringify(diagnostics),
+      previous = published.get(uri)
+    if (previous?.version === version && previous.content === content) return
+    // Only bounded open documents own retained publication state.
+    published.set(uri, { version, content })
+    diagnosticPublications++
+    connection.sendDiagnostics({ uri, version, diagnostics })
+  }
   let diagnosticsScheduled = false
   const drainDiagnostics = () => {
     diagnosticsScheduled = false
-    if (disposed) return
+    if (disposed || pending.size || activeRequests) return
     let remaining = 16
     for (const uri of diagnosticQueue) {
       diagnosticQueue.delete(uri)
@@ -61,11 +76,7 @@ export function registerLanguageServer(
         indexed?.version === document.version &&
         !pending.has(uri)
       )
-        connection.sendDiagnostics({
-          uri,
-          version: document.version,
-          diagnostics: [...service.diagnostics(uri)],
-        })
+        publishDiagnostics(uri, document.version)
       if (--remaining === 0) break
     }
     if (diagnosticQueue.size) scheduleDiagnostics()
@@ -82,43 +93,252 @@ export function registerLanguageServer(
     for (const uri of affected) if (documents.has(uri)) diagnosticQueue.add(uri)
     scheduleDiagnostics()
   }
-  const flush = () => {
-    scheduled = false
-    for (const [uri, document] of pending) {
-      pending.delete(uri)
-      try {
-        service.project.update(uri, document.getText(), document.version)
-        refreshDiagnostics(uri)
-        connection.sendDiagnostics({
-          uri,
-          version: document.version,
-          diagnostics: [...service.diagnostics(uri)],
-        })
-      } catch (error) {
-        // Keep the editor snapshot so the next change can repair a parse-budget failure.
-        refreshDiagnostics(uri)
-        service.forget(uri)
-        connection.sendDiagnostics({
-          uri,
-          version: document.version,
-          diagnostics: [
-            {
-              range: {
-                start: { line: 0, character: 0 },
-                end: { line: 0, character: 0 },
-              },
-              severity: 1,
-              source: 'toned',
-              message: String(error),
+  const processDocument = (uri: string) => {
+    const document = pending.get(uri)
+    if (!document) return
+    pending.delete(uri)
+    try {
+      service.project.update(uri, document.getText(), document.version)
+      refreshDiagnostics(uri)
+    } catch (error) {
+      // Retain the open snapshot so the next full change can repair a budget failure.
+      refreshDiagnostics(uri)
+      service.forget(uri)
+      published.delete(uri)
+      connection.sendDiagnostics({
+        uri,
+        version: document.version,
+        diagnostics: [
+          {
+            range: {
+              start: { line: 0, character: 0 },
+              end: { line: 0, character: 0 },
             },
-          ],
-        })
-      }
+            severity: 1,
+            source: 'toned',
+            message: String(error),
+          },
+        ],
+      })
     }
   }
-  const current = <T>(query: () => T): T => {
-    if (pending.size) flush()
+  const flush = () => {
+    scheduled = false
+    const deadline = performance.now() + 6
+    let count = 0
+    for (const uri of pending.keys()) {
+      processDocument(uri)
+      if (++count >= 8 || performance.now() >= deadline) break
+    }
+    if (pending.size) scheduleFlush()
+    else scheduleDiagnostics()
+  }
+  function scheduleFlush() {
+    if (disposed || scheduled || !pending.size) return
+    scheduled = true
+    setImmediate(() => {
+      if (!disposed) flush()
+    })
+  }
+  const yieldWork = () => new Promise<void>((resolve) => setImmediate(resolve))
+  const loadRequestedDependencies = async (uri: string, check: () => void) => {
+    const queue = [uri],
+      enqueued = new Set(queue)
+    const snapshots = new Map<string, ReturnType<typeof service.project.get>>()
+    let reads = 0
+    // This supplements the normal scan, never executes configuration/modules, and
+    // retains the same inclusion, source-size, project-size and open-buffer guards.
+    for (let cursor = 0; cursor < queue.length && cursor < 256; cursor++) {
+      check()
+      const target = queue[cursor]!
+      processDocument(target)
+      snapshots.set(target, service.project.get(target))
+      for (const candidates of service.project.dependencyCandidates(target)) {
+        for (const candidate of candidates) {
+          if (!snapshots.has(candidate)) {
+            if (snapshots.size >= 32_768) return snapshots
+            snapshots.set(candidate, service.project.get(candidate))
+          }
+          const root = rootFor(candidate)
+          if (
+            !root ||
+            !includesWorkspaceFile(root, candidate, workspaceOptions.include)
+          )
+            continue
+          processDocument(candidate)
+          if (
+            !service.project.get(candidate) &&
+            indexingStatus.get(root)?.state === 'loading' &&
+            !documents.has(candidate)
+          ) {
+            if (++reads > 1024 || disposed) return snapshots
+            const previous = service.project.get(candidate)
+            try {
+              const text = await readWorkspaceFile(root, candidate)
+              check()
+              if (
+                !disposed &&
+                rootFor(candidate) === root &&
+                includesWorkspaceFile(
+                  root,
+                  candidate,
+                  workspaceOptions.include,
+                ) &&
+                !documents.has(candidate) &&
+                service.project.get(candidate) === previous
+              ) {
+                service.project.update(
+                  candidate,
+                  text,
+                  (previous?.version ?? -1) + 1,
+                )
+                snapshots.set(candidate, service.project.get(candidate))
+                refreshDiagnostics(candidate)
+              }
+            } catch {
+              // Missing candidates are normal; the background scan owns filesystem diagnostics.
+              check()
+              continue
+            }
+          }
+          if (service.project.get(candidate)) {
+            if (!enqueued.has(candidate) && queue.length < 256) {
+              enqueued.add(candidate)
+              queue.push(candidate)
+            }
+            break
+          }
+        }
+      }
+      if (disposed) return snapshots
+      if (cursor % 8 === 7) await yieldWork()
+    }
+    return snapshots
+  }
+  // Parse the current request and its transitive imports before unrelated buffers.
+  // Revisit after yielding: notifications may have replaced the requested snapshot
+  // or introduced new imports while this request was suspended.
+  let activeRequests = 0
+  const queryCurrent = async <T>(
+    query: () => T,
+    uri: string | undefined,
+    check: () => void,
+  ): Promise<T> => {
+    if (
+      uri &&
+      [...indexingStatus.values()].some((status) => status.state === 'loading')
+    ) {
+      for (let pass = 0; ; pass++) {
+        check()
+        if (pass >= 64)
+          throw new ResponseError(
+            LSPErrorCodes.ContentModified,
+            'Toned imports kept changing during initial indexing; retry',
+          )
+        const snapshots = await loadRequestedDependencies(uri, check)
+        if (
+          ![...snapshots].some(
+            ([target, document]) =>
+              pending.has(target) || service.project.get(target) !== document,
+          )
+        )
+          break
+      }
+    }
+    check()
+    if (!pending.size) return query()
+    const deadline = performance.now() + 15_000
+    for (let pass = 0; ; pass++) {
+      if (pass >= 64 || performance.now() >= deadline)
+        throw new ResponseError(
+          ErrorCodes.InvalidRequest,
+          'Toned documents kept changing during the request; retry the current snapshot',
+        )
+      check()
+      const queue = uri ? [uri] : [...pending.keys()]
+      const snapshots = new Map<
+        string,
+        ReturnType<typeof service.project.get>
+      >()
+      const seen = new Set<string>(),
+        enqueued = new Set(queue)
+      let count = 0,
+        changed = false
+      for (let cursor = 0; cursor < queue.length; cursor++) {
+        const target = queue[cursor]!
+        if (seen.has(target)) continue
+        seen.add(target)
+        if (pending.has(target)) {
+          processDocument(target)
+          changed = true
+        }
+        snapshots.set(target, service.project.get(target))
+        if (uri)
+          for (const dependency of service.project.dependencies(target)) {
+            if (!snapshots.has(dependency)) {
+              if (snapshots.size >= 32_768)
+                throw new ResponseError(
+                  ErrorCodes.InvalidRequest,
+                  'Toned request dependency budget exceeded; narrow the workspace',
+                )
+              snapshots.set(dependency, service.project.get(dependency))
+            }
+            if (
+              !enqueued.has(dependency) &&
+              (pending.has(dependency) || service.project.get(dependency))
+            ) {
+              enqueued.add(dependency)
+              queue.push(dependency)
+            }
+          }
+        if (++count % 8 === 0) await yieldWork()
+        check()
+      }
+      // No await between this validation and query execution.
+      if (
+        ![...snapshots].some(
+          ([target, document]) =>
+            pending.has(target) || service.project.get(target) !== document,
+        ) &&
+        (uri || !pending.size)
+      )
+        break
+      if (!changed) await yieldWork()
+    }
+    scheduleDiagnostics()
     return query()
+  }
+  const current = async <T>(
+    query: () => T,
+    uri?: string,
+    cancellation?: { readonly isCancellationRequested: boolean },
+  ): Promise<T> => {
+    if (activeRequests >= 32)
+      throw new ResponseError(
+        ErrorCodes.InvalidRequest,
+        'Toned interactive request budget exceeded; retry after pending requests finish',
+      )
+    activeRequests++
+    const deadline = performance.now() + 15_000
+    const check = () => {
+      if (cancellation?.isCancellationRequested)
+        throw new ResponseError(
+          LSPErrorCodes.RequestCancelled,
+          'Toned request cancelled',
+        )
+      if (disposed || performance.now() >= deadline)
+        throw new ResponseError(
+          LSPErrorCodes.ServerCancelled,
+          'Toned request expired or server disposed; retry the current snapshot',
+        )
+    }
+    try {
+      check()
+      return await queryCurrent(query, uri, check)
+    } finally {
+      activeRequests--
+      scheduleDiagnostics()
+    }
   }
   connection.onInitialize((params) => {
     roots = [
@@ -232,6 +452,7 @@ export function registerLanguageServer(
       )
     }
     pending.delete(uri)
+    published.delete(uri)
     refreshDiagnostics(uri)
     service.forget(uri)
     connection.sendDiagnostics({
@@ -268,12 +489,7 @@ export function registerLanguageServer(
     documents.set(document.uri, document)
     openCharacters += size
     pending.set(document.uri, document)
-    if (!scheduled) {
-      scheduled = true
-      setImmediate(() => {
-        if (!disposed) flush()
-      })
-    }
+    scheduleFlush()
   }
   const acceptsEditorDocument = (uri: string) => {
     if (!roots.length) return true
@@ -332,111 +548,146 @@ export function registerLanguageServer(
     removeOpen(textDocument.uri)
     pending.delete(textDocument.uri)
     diagnosticQueue.delete(textDocument.uri)
+    published.delete(textDocument.uri)
     refreshDiagnostics(textDocument.uri)
     service.forget(textDocument.uri)
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics: [] })
     enqueueDiskChange(textDocument.uri, 2)
   })
-  connection.onCompletion((params) =>
-    current(() => {
-      const result = service.completions(
-        params.textDocument.uri,
-        params.position,
-      )
-      const root = rootFor(params.textDocument.uri)
-      return {
-        ...result,
-        isIncomplete:
-          result.isIncomplete ||
-          Boolean(root && indexingStatus.get(root)?.state !== 'complete'),
-      }
-    }),
+  connection.onCompletion((params, cancellation) =>
+    current(
+      () => {
+        const result = service.completions(
+          params.textDocument.uri,
+          params.position,
+        )
+        const root = rootFor(params.textDocument.uri)
+        return {
+          ...result,
+          isIncomplete:
+            result.isIncomplete ||
+            Boolean(root && indexingStatus.get(root)?.state !== 'complete'),
+        }
+      },
+      params.textDocument.uri,
+      cancellation,
+    ),
   )
-  connection.onHover((params) =>
-    current(() => service.hover(params.textDocument.uri, params.position)),
+  connection.onHover((params, cancellation) =>
+    current(
+      () => service.hover(params.textDocument.uri, params.position),
+      params.textDocument.uri,
+      cancellation,
+    ),
   )
-  connection.onDefinition((params) =>
-    current(() => [
-      ...service.definition(params.textDocument.uri, params.position),
-    ]),
+  connection.onDefinition((params, cancellation) =>
+    current(
+      () => [...service.definition(params.textDocument.uri, params.position)],
+      params.textDocument.uri,
+      cancellation,
+    ),
   )
-  connection.onReferences((params) =>
-    current(() => [
-      ...service.references(params.textDocument.uri, params.position),
-    ]),
+  connection.onReferences((params, cancellation) =>
+    current(
+      () => [...service.references(params.textDocument.uri, params.position)],
+      undefined,
+      cancellation,
+    ),
   )
-  connection.onDocumentSymbol((params) =>
-    current(() => [...service.symbols(params.textDocument.uri)]),
+  connection.onDocumentSymbol((params, cancellation) =>
+    current(
+      () => [...service.symbols(params.textDocument.uri)],
+      params.textDocument.uri,
+      cancellation,
+    ),
   )
-  connection.onCodeAction((params) =>
-    current(() => {
-      const document = service.document(params.textDocument.uri),
-        node =
-          document &&
-          service.project.at(
-            document.uri,
-            document.offsetAt(params.range.start),
-          )
-      if (!node || node.opaque || !node.valueSpan) return []
-      const completions = service.completions(
-        node.uri,
-        document!.positionAt(node.valueSpan.start),
-      )
-      return completions.items.flatMap((item) => {
-        if (!item.textEdit || !('range' in item.textEdit)) return []
-        return [
-          {
-            title: `Toned: set ${node.name} to ${item.label}`,
-            kind: 'quickfix',
-            edit: {
-              documentChanges: [
-                {
-                  textDocument: {
-                    uri: node.uri,
-                    version: documents.get(node.uri)?.version ?? null,
+  connection.onCodeAction((params, cancellation) =>
+    current(
+      () => {
+        const document = service.document(params.textDocument.uri),
+          node =
+            document &&
+            service.project.at(
+              document.uri,
+              document.offsetAt(params.range.start),
+            )
+        if (!node || node.opaque || !node.valueSpan) return []
+        const completions = service.completions(
+          node.uri,
+          document!.positionAt(node.valueSpan.start),
+        )
+        return completions.items.flatMap((item) => {
+          if (!item.textEdit || !('range' in item.textEdit)) return []
+          return [
+            {
+              title: `Toned: set ${node.name} to ${item.label}`,
+              kind: 'quickfix',
+              edit: {
+                documentChanges: [
+                  {
+                    textDocument: {
+                      uri: node.uri,
+                      version: documents.get(node.uri)?.version ?? null,
+                    },
+                    edits: [item.textEdit],
                   },
-                  edits: [item.textEdit],
-                },
-              ],
+                ],
+              },
             },
-          },
-        ]
-      })
-    }),
+          ]
+        })
+      },
+      params.textDocument.uri,
+      cancellation,
+    ),
   )
-  const validated = <T>(query: () => T): T => {
+  const validated = async <T>(
+    query: () => T,
+    cancellation?: { readonly isCancellationRequested: boolean },
+  ): Promise<T> => {
     try {
-      return current(query)
+      return await current(query, undefined, cancellation)
     } catch (error) {
+      if (error instanceof ResponseError) throw error
       throw new ResponseError(ErrorCodes.InvalidParams, String(error))
     }
   }
-  connection.onRequest('toned/inspect', (params) =>
-    validated(() => service.project.query(parseQuery(params))),
+  connection.onRequest('toned/inspect', (params, cancellation) =>
+    validated(() => service.project.query(parseQuery(params)), cancellation),
   )
   connection.onRequest('toned/statistics', () => ({
     ...service.project.statistics,
     workspaces: Object.fromEntries(indexingStatus),
+    scheduling: {
+      pending: pending.size,
+      diagnosticComputations,
+      diagnosticPublications,
+    },
+    memory: process.memoryUsage(),
   }))
-  connection.onRequest('toned/proposeEdit', (params) =>
-    validated(() =>
-      service.propose(
-        parseEditRequest(params),
-        (uri) => documents.get(uri)?.version ?? null,
-      ),
+  connection.onRequest('toned/proposeEdit', (params, cancellation) =>
+    validated(
+      () =>
+        service.propose(
+          parseEditRequest(params),
+          (uri) => documents.get(uri)?.version ?? null,
+        ),
+      cancellation,
     ),
   )
-  connection.onExecuteCommand(async (params) => {
+  connection.onExecuteCommand(async (params, cancellation) => {
     if (params.command !== 'toned.setValue' || params.arguments?.length !== 1)
       throw new ResponseError(
         ErrorCodes.InvalidParams,
         'Expected toned.setValue with one scoped edit request',
       )
-    const proposal = validated(() =>
-      service.propose(
-        parseEditRequest(params.arguments![0]),
-        (uri) => documents.get(uri)?.version ?? null,
-      ),
+    const proposal = await validated(
+      () =>
+        service.propose(
+          parseEditRequest(params.arguments![0]),
+          (uri) => documents.get(uri)?.version ?? null,
+        ),
+      cancellation,
     )
     return connection.workspace.applyEdit(proposal.workspaceEdit)
   })
@@ -529,6 +780,7 @@ export function registerLanguageServer(
     pending.clear()
     diskChanges.clear()
     diagnosticQueue.clear()
+    published.clear()
     documents.clear()
     openCharacters = 0
     service.dispose()
@@ -542,6 +794,7 @@ export function registerLanguageServer(
       pending.clear()
       diskChanges.clear()
       diagnosticQueue.clear()
+      published.clear()
       documents.clear()
       openCharacters = 0
       service.dispose()
