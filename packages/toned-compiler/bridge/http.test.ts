@@ -84,6 +84,13 @@ test('owned HTTP server provides real query/proposal/apply source roundtrip', as
   const page = await call('query', { kind: 'declaration', limit: 10 })
   expect(page.status).toBe(200)
   const node = (page.payload.result as DesignPage<DesignNode>).items[0]!
+  expect(
+    (await call('definition', { uri, name: 'styles' })).payload.result,
+  ).toMatchObject({ kind: 'sheet', name: 'styles' })
+  expect(
+    (await call('definition', { uri, name: 'missing' })).payload.result,
+  ).toBeNull()
+  expect((await call('definition', { uri })).status).toBe(400)
   const proposal = await call('propose', {
     nodeId: node.id,
     expectedVersion: 1,

@@ -46,11 +46,11 @@ test('committed part ref enters and retains its host until exit completes', asyn
       Root: { $kind: 'view', $style: { opacity: 1 } },
     }),
   )
-  function App() {
+  function App({ label }: { label: string }) {
     const [present, setPresent] = useState(true)
     const motion = useMotion(options)
     return present ? (
-      <S.Root ref={motion.ref} data-testid="panel">
+      <S.Root ref={motion.ref} data-testid="panel" aria-label={label}>
         <button
           type="button"
           onClick={async () => {
@@ -64,7 +64,7 @@ test('committed part ref enters and retains its host until exit completes', asyn
       <span>Gone</span>
     )
   }
-  const view = render(<App />)
+  const view = render(<App label="First" />)
   const step = (next: number) => {
     time = next
     const run = callback
@@ -77,6 +77,12 @@ test('committed part ref enters and retains its host until exit completes', asyn
   fireEvent.click(view.getByText('Close'))
   step(150)
   expect(view.getByTestId('panel').style.opacity).toBe('0.5')
+  const host = view.getByTestId('panel')
+  view.rerender(<App label="Closing" />)
+  expect(view.getByTestId('panel')).toBe(host)
+  expect(host.style.opacity).toBe('0.5')
+  step(175)
+  expect(host.style.opacity).toBe('0.25')
   await act(async () => {
     step(200)
     await Promise.resolve()
@@ -126,11 +132,19 @@ test('same-host React ref handoff retains motion and does not replay entry', () 
     )
   }
   const view = render(<App label="First" />)
-  time = 100
+  time = 50
   act(() => callback?.(time))
-  expect(view.getByTestId('panel').style.opacity).toBe('1')
+  expect(view.getByTestId('panel').style.opacity).toBe('0.5')
   const host = view.getByTestId('panel')
   view.rerender(<App label="Second" />)
   expect(view.getByTestId('panel')).toBe(host)
+  expect(host.style.opacity).toBe('0.5')
+  time = 75
+  act(() => callback?.(time))
+  expect(host.style.opacity).toBe('0.75')
+  time = 100
+  act(() => callback?.(time))
+  expect(host.style.opacity).toBe('1')
+  view.rerender(<App label="Third" />)
   expect(host.style.opacity).toBe('1')
 })

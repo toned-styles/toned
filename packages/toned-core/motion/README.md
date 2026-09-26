@@ -30,9 +30,13 @@ precedence has been resolved. Caller-owned values continue to win.
 The supported vocabulary is the exported `motionProperties` list (opacity,
 physical dimensions, insets, spacing and border radius).
 `supportsMotionProperty` provides a capability check. Configured targets must
-resolve to finite numbers on native, or finite numbers/pixel lengths on web. Colors, transforms, percentages on
-native, intrinsic sizes such as `auto`, and arbitrary CSS expressions on native
-are rejected for configured properties. Unconfigured fields still update normally.
+resolve to finite numbers on native; percentages and arbitrary CSS expressions on
+native are rejected. Web interpolates finite numbers/pixel lengths. Valid computed
+values such as `auto`, `normal`, percentages and multi-value shorthands jump to
+their committed declaration without interpolation. Returning from such a value
+to a numeric target also jumps, since no numeric starting point is available.
+Colors and transforms are outside the supported property vocabulary. Unconfigured
+fields still update normally.
 On web, computed styles resolve generated classes and CSS custom properties;
 Toned temporarily writes the target during the same commit, samples it, and
 restores the current animated value before paint. At completion, temporary inline
@@ -48,8 +52,9 @@ interruption retains current position and velocity. Timing interruptions start
 from the current visible value. Missing native fields reset immediately through
 the registered host adapter instead of interpolating to an invented zero.
 
-A controller schedules at most one animation frame and stops at rest. Detachment,
-ref handoff and disposal cancel scheduled work, including stale callbacks. Disposal
+A controller schedules at most one animation frame and stops at rest. Same-host
+ref handoffs preserve entry, transition and exit progress. Final detachment and
+disposal cancel scheduled work, including stale callbacks. Disposal
 never writes to a possibly reused host. Call `finish()` first when deliberately
 removing motion from a still-mounted host and wishing to settle at its target.
 Exit requires application-level presence retention; an exit interrupted by actual

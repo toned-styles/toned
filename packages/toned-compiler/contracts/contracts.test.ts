@@ -48,7 +48,8 @@ test('finite matrices enumerate exactly and bounded sampling discloses uncovered
     total: '16',
     selected: 3,
   })
-  expect(sampled.scenarios.map((s) => s.index)).toEqual(['0', '7', '15'])
+  expect(sampled.coverage.strategy).toBe('axis-covering')
+  expect(new Set(sampled.scenarios.map((s) => s.index)).size).toBe(3)
   const huge = createScenarios(
     {
       variants: Object.fromEntries(
@@ -207,4 +208,46 @@ test('omitted condition dimensions and malformed policies cannot yield successfu
       contracts: [{ id: 'bad', kind: 'typo', part: 'Root' }] as never,
     }),
   ).rejects.toThrow('malformed')
+})
+
+test('sampling covers every declared axis value without fastest-axis aliasing', () => {
+  const suite = createScenarios(
+    {
+      variants: { size: Array.from({ length: 100 }, (_, i) => i) },
+      themes: ['light', 'dark'],
+    },
+    { maxScenarios: 100, mode: 'sampled' },
+  )
+  expect(new Set(suite.scenarios.map((s) => s.variants.size)).size).toBe(100)
+  expect(suite.scenarios.filter((s) => s.theme === 'dark')).toHaveLength(50)
+  const dimensions = {
+    variants: { size: [0, 1, 2, 3], tone: [0, 1, 2, 3] },
+    facts: { focused: [false, true] },
+    themes: ['light', 'dark'],
+    texts: ['short', 'long', 'multiline'],
+    viewports: [
+      { width: 320, height: 600 },
+      { width: 1200, height: 800 },
+    ],
+  } as const
+  const mixed = createScenarios(dimensions, {
+    maxScenarios: 9,
+    mode: 'sampled',
+  })
+  expect(new Set(mixed.scenarios.map((s) => s.index)).size).toBe(9)
+  for (const [read, expected] of [
+    [(s: (typeof mixed.scenarios)[number]) => s.variants.size, 4],
+    [(s: (typeof mixed.scenarios)[number]) => s.variants.tone, 4],
+    [(s: (typeof mixed.scenarios)[number]) => s.facts.focused, 2],
+    [(s: (typeof mixed.scenarios)[number]) => s.theme, 2],
+    [(s: (typeof mixed.scenarios)[number]) => s.text, 3],
+    [(s: (typeof mixed.scenarios)[number]) => s.viewport?.width, 2],
+  ] as const)
+    expect(new Set(mixed.scenarios.map((s) => read(s))).size).toBe(expected)
+  expect(
+    createScenarios(dimensions, { maxScenarios: 9, mode: 'sampled' }),
+  ).toEqual(mixed)
+  expect(() =>
+    createScenarios(dimensions, { maxScenarios: 3, mode: 'sampled' }),
+  ).toThrow('requires at least 4')
 })

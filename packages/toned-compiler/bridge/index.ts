@@ -19,6 +19,7 @@ export interface SourceProposal extends DesignChange {
   readonly expiresAt: number
 }
 export interface SourceBridge extends InspectorTransport {
+  definition: NonNullable<InspectorTransport['definition']>
   propose(
     input: Parameters<InspectorTransport['propose']>[0],
     signal: AbortSignal,
@@ -226,6 +227,16 @@ export async function createSourceBridge(
       }),
     document: (uri, signal) =>
       enqueue(signal, async () => (await sync(uri, signal)).document),
+    definition: (input, signal) =>
+      enqueue(signal, async () => {
+        const query = parseQuery(input)
+        if (!query.uri || !query.name || !files.has(query.uri))
+          throw new Error(
+            'Toned bridge: definition requires an allowlisted URI and name',
+          )
+        for (const uri of files.keys()) await sync(uri, signal)
+        return project.lookup(query.name, query.uri)[0] ?? null
+      }),
     propose: (input, signal) =>
       enqueue(signal, async () => {
         const request = parseEditRequest(input)

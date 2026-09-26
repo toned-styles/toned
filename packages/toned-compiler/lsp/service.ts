@@ -257,12 +257,15 @@ export class DesignLanguageService {
     }
     return diagnostics
   }
-  propose(input: {
-    nodeId: string
-    value: DesignValue
-    expectedVersion: number
-    scope: { uri: string; owner: string; path?: readonly string[] }
-  }): { change: DesignChange; workspaceEdit: WorkspaceEdit } {
+  propose(
+    input: {
+      nodeId: string
+      value: DesignValue
+      expectedVersion: number
+      scope: { uri: string; owner: string; path?: readonly string[] }
+    },
+    editorVersion: (uri: string) => number | null = () => null,
+  ): { change: DesignChange; workspaceEdit: WorkspaceEdit } {
     const change = proposeValueEdit(this.project, input)
     return {
       change,
@@ -271,7 +274,7 @@ export class DesignLanguageService {
           {
             textDocument: {
               uri: change.edit.uri,
-              version: change.edit.version,
+              version: editorVersion(change.edit.uri),
             },
             edits: [
               {

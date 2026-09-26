@@ -94,6 +94,8 @@ export function proposeValueEdit(
   if (!node.valueSpan || node.opaque)
     throw new Error(node.opaque ?? 'Select an editable declaration value')
   let after = serialize(input.value)
+  // The model targets the inner literal so assertions, satisfies clauses and
+  // parentheses remain unchanged around this replacement.
   const before = document.text.slice(node.valueSpan.start, node.valueSpan.end)
   if (typeof input.value === 'string' && before.startsWith("'"))
     after = `'${input.value

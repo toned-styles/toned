@@ -199,7 +199,8 @@ export function prepareHostRelease(host: Host, owner: object): void {
   if (!host) return
   const entry = ownership.get(host)
   if (!entry?.owners.has(owner)) return
-  entry.driver?.cancel()
+  // A ref handoff may reattach this host in the same commit. Keep motion progress
+  // and pending exits alive; final releaseHost disposes the driver.
   writeStyles(host, aggregate(entry, owner), entry.state)
 }
 

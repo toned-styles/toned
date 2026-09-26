@@ -26,7 +26,7 @@ export interface ScenarioSuite<S extends Scenario = Scenario> {
     readonly kind: 'exhaustive' | 'sampled'
     readonly total: string
     readonly selected: number
-    readonly strategy: 'all' | 'evenly-spaced'
+    readonly strategy: 'all' | 'axis-covering'
     readonly dimensions: readonly {
       readonly name: string
       readonly values: number
@@ -121,12 +121,37 @@ export function createScenarios<const D extends ScenarioDimensions>(
       `Toned contracts: ${total} scenarios exceed budget ${max}; explicitly request sampled coverage or reduce dimensions`,
     )
   const count = Number(sampled ? BigInt(max) : total)
+  const indices = new Set<bigint>()
+  if (sampled) {
+    const minimum = Math.max(...axes.map((axis) => axis.values.length))
+    if (count < minimum)
+      throw new Error(
+        `Toned contracts: sampled budget ${count} cannot cover every axis value; requires at least ${minimum} scenarios`,
+      )
+    // A diagonal cycle covers every value. The largest axis makes these rows
+    // distinct; shorter axes are balanced within one observation.
+    for (let row = 0; row < minimum; row++) {
+      let index = 0n
+      for (const axis of axes)
+        index =
+          index * BigInt(axis.values.length) + BigInt(row % axis.values.length)
+      indices.add(index)
+    }
+    // A stride coprime to total visits every product index once. Starting near
+    // half the product spreads extra rows without scanning the full product.
+    const gcd = (a: bigint, b: bigint): bigint => {
+      while (b) [a, b] = [b, a % b]
+      return a
+    }
+    let stride = total / 2n + 1n
+    // total - 1 is always coprime; bounded attempts avoid a number-theory search.
+    for (let attempt = 0; gcd(stride, total) !== 1n; attempt++)
+      stride = attempt < 64 ? stride + 1n : total - 1n
+    for (let index = 0n; indices.size < count; index = (index + stride) % total)
+      indices.add(index)
+  } else for (let i = 0; i < count; i++) indices.add(BigInt(i))
   const scenarios: Scenario[] = []
-  for (let i = 0; i < count; i++) {
-    const index =
-      sampled && count > 1
-        ? (BigInt(i) * (total - 1n)) / BigInt(count - 1)
-        : BigInt(i)
+  for (const index of indices) {
     let cursor = index
     const scenario: {
       index: string
@@ -161,7 +186,7 @@ export function createScenarios<const D extends ScenarioDimensions>(
       kind: sampled ? 'sampled' : 'exhaustive',
       total: total.toString(),
       selected: count,
-      strategy: sampled ? 'evenly-spaced' : 'all',
+      strategy: sampled ? 'axis-covering' : 'all',
       dimensions: Object.freeze(
         axes.map((axis) =>
           Object.freeze({ name: axis.name, values: axis.values.length }),

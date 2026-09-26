@@ -53,8 +53,12 @@ toned propose ./src '<JSON scoped edit request>'
 Configure an LSP 3.17 client to run `toned-lsp --stdio` for TypeScript, TSX,
 JavaScript and JSX files, alongside its usual TypeScript language server.
 Completion, hover, definition, references, document symbols, diagnostics and
-literal-value code actions share the design index. Open-document incremental
-changes take precedence over disk. Closed files are restored from disk; watched
+literal-value code actions share the design index. Open-document snapshots
+take precedence over disk. The server requests full-document synchronization:
+this lets it discard oversized text while retaining a bounded open marker, then
+recover on the next valid snapshot without losing unsaved-editor ownership.
+Parsing remains coalesced and restricted to changed documents; this trades
+additional editor-to-server bytes for bounded memory and reliable recovery. Closed files are restored from disk; watched
 file notifications refresh unopened documents. Clients with dynamic file watching
 receive registrations; other clients must send `workspace/didChangeWatchedFiles`.
 Workspace roots are fixed at initialization (restart after changing roots).
@@ -68,7 +72,9 @@ Custom JSON-RPC requests:
 | `toned/proposeEdit` | scoped edit request | change report + versioned WorkspaceEdit |
 
 `toned.setValue` is an explicit execute-command operation that asks the editor to
-apply that versioned edit. For embedding, `@toned/compiler/lsp` exports
+apply that edit. Open documents carry their editor version; closed documents use
+`version: null` as required by LSP, while the proposal still validates the indexed
+source revision. The editor controls applying closed-file edits. For embedding, `@toned/compiler/lsp` exports
 `startLanguageServer({ input, output })`, returning an idempotent `dispose()`.
 The server accepts up to 16 file workspace roots. Initial indexing yields between
 files, skips generated/dependency directories and reports budget failures.

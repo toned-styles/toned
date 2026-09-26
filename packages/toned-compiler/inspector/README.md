@@ -40,3 +40,12 @@ selection. A selected-part filter applies to each declaration page and says so.
 This bounds DOM work without claiming omitted sheets/declarations do not exist.
 All source strings use textContent, never HTML. New selections and input changes
 invalidate pending requests; disposal aborts requests and removes the panel.
+
+
+Finite token choices resolve the sheet's system declaration before querying its
+vocabulary. The optional `transport.definition({ uri, name }, signal)` operation
+follows indexed relative import aliases; the built-in source bridge provides it.
+Custom transports without that operation support same-file systems only. An
+unresolved or opaque system keeps the JSON literal editor available without
+inventing a token vocabulary. HTTP transport errors include the response status;
+HTML or malformed JSON responses point to the development bridge endpoint.

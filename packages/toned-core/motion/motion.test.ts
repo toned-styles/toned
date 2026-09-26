@@ -158,7 +158,7 @@ describe('portable motion coordinated host output', () => {
     expect(await cancelled).toBe('finished') // already at exit target
     expect(f.pending.size).toBe(0)
   })
-  test('ref cleanup cancels pending exit before restoring caller declaration', async () => {
+  test('final ref release cancels pending exit after restoring caller declaration', async () => {
     const f = setup(1)
     const motion = attachMotion(f.host, {
       properties: ['opacity'],
@@ -168,9 +168,10 @@ describe('portable motion coordinated host output', () => {
     const promise = motion.exit()
     f.step(20)
     prepareHostRelease(f.host, f.owner)
-    expect(await promise).toBe('cancelled')
     expect(f.style['opacity']).toBe(1)
+    expect(motion.running).toBe(true)
     releaseHost(f.host, f.owner)
+    expect(await promise).toBe('cancelled')
     const count = f.patches.length
     f.step(500)
     expect(f.patches.length).toBe(count)
@@ -286,5 +287,28 @@ test('unrepresentable spring arithmetic cancels without another frame', async ()
   expect(await exit).toBe('cancelled')
   expect(f.pending.size).toBe(0)
   expect(motion.running).toBe(false)
+  motion.dispose()
+})
+
+test('native ref handoff preserves an in-flight exit and its completion', async () => {
+  const f = setup(1)
+  const motion = attachMotion(f.host, {
+    properties: ['opacity'],
+    frames: f.frames,
+    exit: { opacity: 0 },
+    transition: { type: 'timing', duration: 100 },
+  })
+  const result = motion.exit()
+  f.step(50)
+  expect(f.style['opacity']).toBe(0.5)
+  prepareHostRelease(f.host, f.owner)
+  recordHostCommit(f.host, { style: { opacity: 1 } }, {}, f.owner)
+  setStyles(f.host, { style: { opacity: 1 } }, f.owner)
+  expect(f.style['opacity']).toBe(0.5)
+  f.step(75)
+  expect(f.style['opacity']).toBe(0.25)
+  f.step(100)
+  expect(await result).toBe('finished')
+  expect(f.style['opacity']).toBe(0)
   motion.dispose()
 })
