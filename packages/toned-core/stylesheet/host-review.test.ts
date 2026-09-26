@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { expect, test } from 'vitest'
-import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
+import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import {
   prepareHostRelease,
   recordHostCommit,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
+import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import { recordHostCommit, setStyles } from './applyStyles.ts'
 
 // Minimal stand-in for an element's inline style. Mirrors a browser closely
