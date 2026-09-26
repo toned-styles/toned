@@ -8,7 +8,6 @@ import { createCssExecutor } from '../backends/css/execute.ts'
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import type { DefaultSystemKind } from '../types/stylesheet.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
-import { bp, cq } from './conditions.ts'
 import {
   fixedConditions,
   type SystemDefinition,
@@ -254,8 +253,6 @@ export function defineSystem<
     q: createQueries<C>(),
     usedConditions: new Set<string>(),
     // The generic builders, retyped to this system's declared names.
-    cq: cq as TokenSystem<S & C, C>['cq'],
-    bp: bp as TokenSystem<S & C, C>['bp'],
     style: (value) => immutableSnapshot(normalizeDeclarations(value)),
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}

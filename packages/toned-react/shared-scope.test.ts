@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import {
   defineSystem,
   getConfig,
@@ -42,8 +43,10 @@ test('local states and unrelated parts can render independently', () => {
 test('cross-part predicates require both their source and styled target', () => {
   const sheet = system
     .stylesheet({ Root: {}, Label: {}, Independent: {} })
-    .when(system.q.not(system.q.part('Root').state('hover')), {
-      Label: { $style: { opacity: 0.5 } },
+    .extend({
+      [system.q.not(system.q.part('Root').state('hover'))]: {
+        Label: { $style: { opacity: 0.5 } },
+      },
     })
   const instance = controller(sheet)
   expect(standaloneScopeRequirement(instance, 'Root')).toMatch(/Root and Label/)
@@ -59,8 +62,10 @@ test('cross-part predicates require both their source and styled target', () => 
 test('relations include both topology participants and an independent styled target', () => {
   const sheet = system
     .stylesheet({ Root: {}, Item: {}, Label: {}, Independent: {} })
-    .when(system.q.part('Root').has('Item', 'hover', { scope: 'child' }), {
-      Label: { $style: { opacity: 0.5 } },
+    .extend({
+      [system.q.part('Root').has('Item', 'hover', { scope: 'child' })]: {
+        Label: { $style: { opacity: 0.5 } },
+      },
     })
   const instance = controller(sheet)
   for (const part of ['Root', 'Item', 'Label'])
@@ -83,15 +88,12 @@ test('legacy ancestor and sibling state channels require the actual source part'
 })
 
 test('foreign platform branches cannot require scope on the current platform', () => {
-  const sheet = system
-    .stylesheet({ Root: {}, Label: {} })
-    .when(
-      system.q.all(
-        system.q.platform('native'),
-        system.q.part('Root').state('hover'),
-      ),
-      { Label: { $style: { opacity: 0.5 } } },
-    )
+  const sheet = system.stylesheet({ Root: {}, Label: {} }).extend({
+    [system.q.all(
+      system.q.platform('native'),
+      system.q.part('Root').state('hover'),
+    )]: { Label: { $style: { opacity: 0.5 } } },
+  })
   expect(
     standaloneScopeRequirement(controller(sheet, 'web'), 'Label'),
   ).toBeUndefined()
@@ -103,10 +105,11 @@ test('foreign platform branches cannot require scope on the current platform', (
 test('ownership is structural even when a variant-dependent relationship is inactive', () => {
   const sheet = system
     .stylesheet({ Root: {}, Label: {} })
-    .variants<{ linked: boolean }>()(() => ({}))
-    .when(system.q.all('[linked=true]', system.q.part('Root').state('hover')), {
-      Label: { $style: { opacity: 0.5 } },
-    })
+    .variants(($: Variants<{ linked: boolean }>, q) => ({
+      [q.all($.linked(true), q.part('Root').state('hover'))]: {
+        Label: { $style: { opacity: 0.5 } },
+      },
+    }))
   expect(standaloneScopeRequirement(controller(sheet), 'Label')).toBeDefined()
 })
 

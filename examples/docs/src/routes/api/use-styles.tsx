@@ -24,10 +24,11 @@ function ApiUseStyles() {
       <CodeBlock>{`import { useStyles } from '@toned/react'
 
 // Without variants
-const s = useStyles(stylesheet)
+const cardStyles = stylesheet({ card: { padding: 2 } })
+const base = useStyles(cardStyles)
 
 // With variants
-const s = useStyles(stylesheet, { variant: 'accent', size: 'm' })`}</CodeBlock>
+const selected = useStyles(buttonStyles, { variant: 'accent', size: 'm' })`}</CodeBlock>
 
       <h3 {...s.h3}>Parameters</h3>
       <p>
@@ -96,7 +97,7 @@ function Button() {
   card: { bgColor: 'elevated', borderRadius: 'large' },
 })
 
-function Card({ children }) {
+function Card({ children }: { children: React.ReactNode }) {
   const s = useStyles(cardStyles)
   return <div {...s.card}>{children}</div>
 }`}</CodeBlock>
@@ -106,7 +107,9 @@ function Card({ children }) {
         For stylesheets with variants, pass the variant state as the second
         argument. The hook will update whenever the state changes:
       </p>
-      <CodeBlock>{`function NavLink({ href, label, isActive }) {
+      <CodeBlock>{`function NavLink({ href, label, isActive }: {
+  href: string; label: string; isActive: boolean
+}) {
   const s = useStyles(navStyles, {
     active: isActive,
   })
@@ -118,7 +121,9 @@ function Card({ children }) {
         Since <code {...s.code}>useStyles</code> returns plain props objects,
         you can combine them with additional props:
       </p>
-      <CodeBlock>{`function Input({ error, ...rest }) {
+      <CodeBlock>{`function Input({ error, ...rest }:
+  React.ComponentProps<'input'> & { error: boolean }
+) {
   const s = useStyles(inputStyles, { error })
   return <input {...s.input.withProps<'input'>(rest)} />
 }`}</CodeBlock>

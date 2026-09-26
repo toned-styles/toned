@@ -5,6 +5,7 @@ import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 import { registerFixtureHost } from './__tests__/native-host-fixture.ts'
 import { setStyles } from './applyStyles.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
+import { overrideSheet } from './overrideSheet.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
 import {
   createVariantSelector,
@@ -125,6 +126,61 @@ describe('createStylesheet', () => {
 
       expect(withVariants).toBeDefined()
       expect(withVariants).not.toBe(stylesheet)
+    })
+
+    test('part composition resolves base declarations before variant overrides', () => {
+      const stylesheet = createStylesheet(mockTokenSystem, {
+        container: { bgColor: 'blue', paddingX: 2 },
+        label: {},
+      }).variants(
+        ($: import('../types/stylesheet.ts').Variants<{ size: 'sm' }>) => ({
+          [$.size('sm')]: { label: { $compose: 'container', paddingX: 4 } },
+        }),
+      )
+      const controller = stylesheet[SYMBOL_INIT](mockConfig, { size: 'sm' })
+      expect((controller as unknown as Base).rules['[size=sm]'].label).toEqual({
+        bgColor: 'blue',
+        paddingX: 4,
+      })
+    })
+
+    test('composition uses effective overridden defaults and respects removed leaves', () => {
+      type Mods = { size: 'sm' }
+      const sheet = createStylesheet(mockTokenSystem, {
+        source: { bgColor: 'blue', paddingX: 2, borderRadius: 'medium' },
+        target: {},
+      }).variants(($: import('../types/stylesheet.ts').Variants<Mods>) => ({
+        [$.size('sm')]: { target: {} },
+      }))
+      const first = overrideSheet(sheet, {
+        source: { bgColor: 'red', paddingX: null },
+      })
+      const composed = (
+        $: import('../types/stylesheet.ts').Variants<Mods>,
+      ) => ({
+        [$.size('sm')]: { target: { $compose: 'source' as const } },
+      })
+      const withoutRadius = overrideSheet(first, {
+        source: { borderRadius: null },
+      })
+      for (const derived of [
+        overrideSheet(first, { source: { borderRadius: null } }, composed),
+        withoutRadius.variants(composed),
+        withoutRadius.extend({}, composed),
+      ]) {
+        const controller = derived[SYMBOL_INIT](mockConfig, {
+          size: 'sm',
+        }) as unknown as Base
+        expect(controller.modsStyle['target']).toEqual({ bgColor: 'red' })
+      }
+      const original = sheet[SYMBOL_INIT](mockConfig, {
+        size: 'sm',
+      }) as unknown as Base
+      expect(original.rules.source).toEqual({
+        bgColor: 'blue',
+        paddingX: 2,
+        borderRadius: 'medium',
+      })
     })
 
     test('variants can be chained multiple times', () => {

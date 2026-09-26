@@ -1,4 +1,5 @@
 import type { QueryPredicate } from '../../system/queries.ts'
+import { queryExpression, type QueryKey } from '../../system/query-key.ts'
 import { relationFactKey } from '../relations.ts'
 import type { BitSet, CompiledPredicate } from './bitset.ts'
 import { matchesBits } from './bitset.ts'
@@ -13,7 +14,7 @@ export type PredicatePlan =
 
 /** Linear in AST size; preserves boolean structure instead of expanding DNF. */
 export function compilePredicate(
-  query: QueryPredicate,
+  input: QueryPredicate | QueryKey,
   options: {
     cssMediaMode: boolean
     cssPseudoMode: boolean
@@ -22,6 +23,7 @@ export function compilePredicate(
   },
   compileMask: (conditions: Conditions) => CompiledPredicate,
 ): PredicatePlan {
+  const query = queryExpression(input)
   if (query.op === 'relation')
     return {
       op: 'fact',
@@ -40,8 +42,11 @@ export function compilePredicate(
       ),
     }
   const key = query.key
-  if (key.startsWith('@platform.'))
+  if (key.startsWith('@platform.')) {
+    if (key !== '@platform.web' && key !== '@platform.native')
+      throw new Error(`Toned: unknown platform ${key}`)
     return { op: 'constant', value: key === `@platform.${options.platform}` }
+  }
   if (key[0] === '[')
     return { op: 'fact', mask: compileMask(parseVariantSelector(key)) }
   if (

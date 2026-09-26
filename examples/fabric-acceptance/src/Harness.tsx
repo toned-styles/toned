@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { defineSystem, defineToken } from '@toned/core'
 import { ConfigProvider, createElements, useStyles } from '@toned/react'
 import * as React from 'react'
@@ -489,9 +490,9 @@ const Variants = createElements(
     .stylesheet({
       Root: { $kind: 'view', $style: { width: 80, height: 32 } },
     })
-    .variants<{ expanded: boolean }>()(($) => ({
-    [$.expanded(true)]: { Root: { $style: { width: 176 } } },
-  })),
+    .variants(($: Variants<{ expanded: boolean }>) => ({
+      [$.expanded(true)]: { Root: { $style: { width: 176 } } },
+    })),
 )
 
 function RefScenario({ finish }: ScenarioProps) {
@@ -737,9 +738,9 @@ const Appearance = createElements(
         ':focus': { hint: 'active' },
       },
     })
-    .variants<{ loud: boolean }>()(($) => ({
-    [$.loud(true)]: { Label: { $style: { color: '#dd6600', opacity: 0.4 } } },
-  })),
+    .variants(($: Variants<{ loud: boolean }>) => ({
+      [$.loud(true)]: { Label: { $style: { color: '#dd6600', opacity: 0.4 } } },
+    })),
 )
 
 function AppearanceScenario({ finish }: ScenarioProps) {

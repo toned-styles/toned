@@ -95,6 +95,8 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
       /** Explicit descriptors resolve nested declarations in source order. */
       sourceOrder?: boolean
     },
+    /** Internal shared compilation input; omitted for standalone matchers. */
+    prepared?: ReturnType<typeof normalizeRules>,
   ) {
     this.cssMediaMode = options?.cssMediaMode ?? false
     this.cssPseudoMode = options?.cssPseudoMode ?? false
@@ -103,12 +105,15 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
     if (!Number.isInteger(this.cacheMax) || this.cacheMax < 0) {
       throw new Error('StyleMatcher cacheMax must be a non-negative integer')
     }
-    const normalized = normalizeRules(rules, {
-      cssMediaMode: this.cssMediaMode,
-      cssPseudoMode: this.cssPseudoMode,
-      stateAliases: options?.stateAliases,
-      sourceOrder: options?.sourceOrder,
-    })
+    const normalized =
+      prepared ??
+      normalizeRules(rules, {
+        cssMediaMode: this.cssMediaMode,
+        cssPseudoMode: this.cssPseudoMode,
+        stateAliases: options?.stateAliases,
+        sourceOrder: options?.sourceOrder,
+        platform: options?.platform,
+      })
     this.scheme = normalized.scheme
     this.list = normalized.list
     this.interactions = normalized.interactions

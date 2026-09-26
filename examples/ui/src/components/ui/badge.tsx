@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Slot } from 'radix-ui'
@@ -25,40 +26,44 @@ const badgeStyles = stylesheet({
       transition: 'color 0.15s, box-shadow 0.15s',
     },
   },
-}).variants<{
-  variant:
-    | 'default'
-    | 'secondary'
-    | 'destructive'
-    | 'outline'
-    | 'ghost'
-    | 'link'
-}>(($) => ({
-  [$.variant('default')]: {
-    root: { bgColor: 'action', textColor: 'on_action' },
-  },
-  [$.variant('secondary')]: {
-    root: { bgColor: 'action_secondary', textColor: 'on_action_secondary' },
-  },
-  [$.variant('destructive')]: {
-    root: { bgColor: 'destructive', textColor: 'on_destructive' },
-  },
-  [$.variant('outline')]: {
-    root: {
-      textColor: 'default',
-      borderColor: 'default',
+}).variants(
+  (
+    $: Variants<{
+      variant:
+        | 'default'
+        | 'secondary'
+        | 'destructive'
+        | 'outline'
+        | 'ghost'
+        | 'link'
+    }>,
+  ) => ({
+    [$.variant('default')]: {
+      root: { bgColor: 'action', textColor: 'on_action' },
     },
-  },
-  [$.variant('ghost')]: {
-    root: {},
-  },
-  [$.variant('link')]: {
-    root: {
-      textColor: 'action',
-      style: { textUnderlineOffset: '4px' },
+    [$.variant('secondary')]: {
+      root: { bgColor: 'action_secondary', textColor: 'on_action_secondary' },
     },
-  },
-}))
+    [$.variant('destructive')]: {
+      root: { bgColor: 'destructive', textColor: 'on_destructive' },
+    },
+    [$.variant('outline')]: {
+      root: {
+        textColor: 'default',
+        borderColor: 'default',
+      },
+    },
+    [$.variant('ghost')]: {
+      root: {},
+    },
+    [$.variant('link')]: {
+      root: {
+        textColor: 'action',
+        style: { textUnderlineOffset: '4px' },
+      },
+    },
+  }),
+)
 
 type BadgeVariant =
   | 'default'

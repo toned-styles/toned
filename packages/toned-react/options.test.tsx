@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { Variants } from '@toned/core'
 import { cleanup, render } from '@testing-library/react'
 import {
   defineConfig,
@@ -34,10 +35,8 @@ const system = defineSystem({
     resolve: (_: boolean, tokens: any) => ({ color: tokens.ink }),
   }),
 })
-const sheet = system
-  .stylesheet({ Root: { opacity: 0 } })
-  .variants<{ size: 's' | 'm' }>()(
-  ($) => ({
+const sheet = system.stylesheet({ Root: { opacity: 0 } }).variants(
+  ($: Variants<{ size: 's' | 'm' }>) => ({
     [$.size('m')]: { Root: { opacity: 0.5 } },
     [$.size('s')]: { Root: { opacity: 1 } },
   }),
@@ -96,9 +95,11 @@ test('ambient overrides target the exact composed sheet and apply after declared
 test('variants and overrides are ordinary scalar axis names', () => {
   const named = system
     .stylesheet({ Root: { opacity: 0 } })
-    .variants<{ variants: 'on' | 'off'; overrides: boolean }>()(($) => ({
-    [$.variants('on').overrides(true)]: { Root: { opacity: 1 } },
-  }))
+    .variants(
+      ($: Variants<{ variants: 'on' | 'off'; overrides: boolean }>) => ({
+        [$.variants('on').overrides(true)]: { Root: { opacity: 1 } },
+      }),
+    )
   function View({ active }: { active: boolean }) {
     const s = useStyles(named, { variants: 'on', overrides: active })
     return <div {...s.Root} data-testid="target" />

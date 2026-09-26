@@ -4,10 +4,18 @@ import type { ModType } from '../types/stylesheet.ts'
 const NAMED_PREFIX = '$named$_' as const
 const NONE_VALUE = '*' as const
 export type NamedStyleKey<Name extends string> = `$named$_${Name}`
-export type ExtractNamedStyles<R> = {
-  [K in keyof R]: K extends `$named$_${infer Name}` ? Name : never
-}[keyof R]
+export type { ExtractNamedStyles } from '../types/composition.ts'
 export type VariantKey = string
+
+declare const SELECTOR_TEXT: unique symbol
+/** @internal A selector produced by an axis builder, not an unchecked raw string. */
+export type BuiltVariantKey = string & { readonly [SELECTOR_TEXT]: string }
+/** @internal Strip selector methods while retaining the canonical literal key. */
+export type SelectorText<T extends string> = T extends {
+  readonly [SELECTOR_TEXT]: infer Key extends string
+}
+  ? Key
+  : T
 
 type Scalar = string | number | boolean
 type AxisValues<Value> = readonly [
@@ -169,7 +177,7 @@ export type VariantBuilder<
   Acc = {},
   Key extends string = '',
   Selections extends readonly Selection[] = [],
-> = Key & {
+> = Key & { readonly [SELECTOR_TEXT]: Key } & {
   [K in Exclude<keyof Mods, keyof Acc> as K extends string
     ? K
     : never]-?: K extends string

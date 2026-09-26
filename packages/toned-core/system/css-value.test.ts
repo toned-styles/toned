@@ -1,7 +1,6 @@
 import { expect, test } from 'vitest'
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
-import { WHEN_RULES } from '../stylesheet/matcher/normalizeRules.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
 import { defineSystem, defineToken } from './definers.ts'
@@ -50,15 +49,12 @@ for (const condition of [':hover', '@md'])
       }
     })
 
-test('advanced .when serializes portable raw fields without changing native resolver values', () => {
+test('computed query keys serialize portable raw fields without changing native resolver values', () => {
   const rules = {
     Root: { $style: base },
-    [WHEN_RULES]: [
-      {
-        predicate: system.q.all(system.q.part('Root').state('hover')),
-        rules: { Root: { $style: raw } },
-      },
-    ],
+    [system.q.all(system.q.part('Root').state('hover'))]: {
+      Root: { $style: raw },
+    },
   }
   const matcher = new StyleMatcher(rules, { cssPseudoMode: true })
   const output = system.exec({ tokens: {} }, matcher.match({}).Root)

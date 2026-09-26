@@ -23,12 +23,11 @@ export type { TonedTypeRegistry } from './registry.ts'
 export {
   type NullableOverride,
   type OverrideSheetRules,
+  type OverrideSheetVariantRules,
   overrideSheet,
 } from './stylesheet/overrideSheet.ts'
 export type { SystemDefinition, SystemOptions } from './system/definers.ts'
 export type {
-  Condition,
-  ContainerConditionBuilder,
   Palette,
   PaletteConfig,
   ThemeMeta,
@@ -37,9 +36,6 @@ export type {
 } from './system/index.ts'
 // System definition and configuration
 export {
-  and,
-  bp,
-  cq,
   defineAnimations,
   defineConfig,
   definePalette,
@@ -47,15 +43,10 @@ export {
   defineToken,
   defineUnit,
   getConfig,
-  not,
-  or,
   setConfig,
 } from './system/index.ts'
-export type {
-  QueryAtom,
-  QueryBuilder,
-  QueryPredicate,
-} from './system/queries.ts'
+export type { QueryBuilder } from './system/queries.ts'
+export type { QueryKey } from './system/query-key.ts'
 export type {
   SystemTheme,
   ThemeContract,

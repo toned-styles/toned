@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { Variants } from '@toned/core'
 
 /**
  * The RUNTIME half of container queries: an element declaring
@@ -10,7 +11,7 @@
  */
 import { act, cleanup, render } from '@testing-library/react'
 import {
-  cq,
+  dp,
   defineSystem,
   defineToken,
   getConfig,
@@ -21,7 +22,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import { bind, ContainerSizesContext, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
-const { stylesheet } = defineSystem(
+const { stylesheet, q } = defineSystem(
   {
     w: defineToken({
       values: ['narrow', 'wide'] as const,
@@ -127,7 +128,9 @@ describe('runtime container queries (binding)', () => {
     try {
       const hideStyles = stylesheet({
         Label: { w: 'narrow' },
-        [cq('card').below(100)]: { Label: { style: { display: 'none' } } },
+        [q.not(q.container('card', dp(400)))]: {
+          Label: { style: { display: 'none' } },
+        },
       })
       function HideChild() {
         const s = useBind(hideStyles)
@@ -180,7 +183,7 @@ test('measurements update committed styles during Suspense and survive its later
   const pending = new Promise<void>((resolve) => {
     release = resolve
   })
-  const measured = childStyles.variants<{ on: boolean }>()(($) => ({
+  const measured = childStyles.variants(($: Variants<{ on: boolean }>) => ({
     [$.on(true)]: { Label: { $style: { opacity: 1 } } },
     [$.on(false)]: { Label: { $style: { opacity: 0 } } },
   }))

@@ -1,3 +1,4 @@
+import type { Variants } from '../types/index.ts'
 import { expect, test } from 'vitest'
 import { buildStyles } from '../build/index.ts'
 import { defineSystem } from '../index.ts'
@@ -90,9 +91,9 @@ test('media and variant layouts compile with stable area output and no runtime d
       },
       Body: { '@platform web': { $area: base.area('body') } },
     })
-    .variants<{ expanded: boolean }>()(($) => ({
-    [$.expanded(true)]: { Root: { '@platform web': { $grid: wide } } },
-  }))
+    .variants(($: Variants<{ expanded: boolean }>) => ({
+      [$.expanded(true)]: { Root: { '@platform web': { $grid: wide } } },
+    }))
   const built = buildStyles(ui, { sheets: [sheet] })
   const renderer = createWebRenderer(ui, {
     tokens: {},

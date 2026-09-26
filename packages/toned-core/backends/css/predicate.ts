@@ -1,5 +1,6 @@
 import { type Predicate, queryPredicate } from '../../core/predicates.ts'
 import type { QueryPredicate } from '../../system/queries.ts'
+import type { QueryKey } from '../../system/query-key.ts'
 import { compileCssPredicateGuard } from './plan.ts'
 
 export {
@@ -9,7 +10,7 @@ export {
 
 /** Compatibility spelling adapter; shared semantic lowering owns the guards. */
 export function compilePredicateGuard(
-  predicate: QueryPredicate,
+  predicate: QueryPredicate | QueryKey,
   target: string,
   prefix: string,
   parameters: Record<string, unknown>,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { and, bp, cq, not, or } from '../system/conditions.ts'
+import { and, bp, cq, not, or } from '../compat/index.ts'
 import {
   atomToggleVar,
   clauseGuard,

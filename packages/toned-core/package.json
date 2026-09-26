@@ -10,6 +10,7 @@
     "./types": "./types/index.ts",
     "./stylesheet": "./stylesheet/index.ts",
     "./system": "./system/index.ts",
+    "./compat": "./compat/index.ts",
     "./utils": "./utils/index.ts",
     "./vite": "./vite/index.ts",
     "./registry": "./registry.ts",

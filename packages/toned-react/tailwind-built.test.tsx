@@ -30,8 +30,10 @@ test('a built utility backend patches cross-part host facts without rendering or
       Target: { opacity: 0 },
       Local: { opacity: 0, ':hover': { opacity: 1 } },
     })
-    .when(system.q.all(system.q.part('Source').state('hover')), {
-      Target: { opacity: 1 },
+    .extend({
+      [system.q.all(system.q.part('Source').state('hover'))]: {
+        Target: { opacity: 1 },
+      },
     })
   const profile = createTailwindBackend({
     id: 'host-test',

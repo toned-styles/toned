@@ -1,8 +1,15 @@
+import { createQueries } from '../../system/queries.ts'
 import { describe, expect, test } from 'vitest'
 import { cssTestValue } from '../../backends/css/test-values.test.helpers.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
+import { createVariantSelector } from '../variantSelector.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
-import { RULE_LAYERS, TOKEN_OPERATIONS, WHEN_RULES } from './normalizeRules.ts'
+import { RULE_LAYERS, TOKEN_OPERATIONS } from './normalizeRules.ts'
+
+const variants = createVariantSelector<{
+  emphasis: boolean
+  disabled: boolean
+}>()
 
 describe('collision-free matcher plans', () => {
   for (const count of [31, 32, 33, 63, 64, 65]) {
@@ -428,12 +435,9 @@ describe('legacy runtime condition precedence', () => {
         const guarded = new StyleMatcher(
           {
             ...rules,
-            [WHEN_RULES]: [
-              {
-                predicate: { op: 'atom', key: '[emphasis]' },
-                rules: { Label: { paint: 'guarded' } },
-              },
-            ],
+            [createQueries().all(variants.emphasis(true))]: {
+              Label: { paint: 'guarded' },
+            },
           },
           { sourceOrder },
         )
@@ -493,12 +497,9 @@ describe('indexed candidate precedence', () => {
     const matcher = new StyleMatcher({
       Root: { selected: -1 },
       ...manyRules,
-      [WHEN_RULES]: [
-        {
-          predicate: { op: 'not', operand: { op: 'atom', key: '[disabled]' } },
-          rules: { Root: { selected: 'enabled' } },
-        },
-      ],
+      [createQueries().not(variants.disabled(true))]: {
+        Root: { selected: 'enabled' },
+      },
     })
     expect(matcher.match({}).Root.selected).toBe('enabled')
     expect(matcher.match({ axis64: true }).Root.selected).toBe('enabled')

@@ -21,7 +21,7 @@ test('annotated callbacks preserve defaults and resolution across renderers', ()
     [$.active(false)]: { Root: { opacity: 0.5 as const } },
   })
   const sheet = base.variants(factory, { defaults: { active: true } })
-  const legacy = base.variants<Mods>()(factory, { defaults: { active: true } })
+  const legacy = base.variants<Mods>(factory)
   const artifact = buildStyles(ui, { sheets: [sheet, legacy] })
   const native = createNativeRenderer(ui, { tokens: {} })
   const web = createWebRenderer(ui, { tokens: {}, manifest: artifact.manifest })
@@ -35,7 +35,8 @@ test('annotated callbacks preserve defaults and resolution across renderers', ()
       opacity: variants.active === false ? 0.5 : 1,
     })
     expect(web.resolve(sheet, { variants }).Root).toEqual(
-      web.resolve(legacy, { variants }).Root,
+      web.resolve(legacy, { variants: { active: variants.active ?? true } })
+        .Root,
     )
   }
   expect(native.resolve(base).Root.style).toEqual({ opacity: 0 })

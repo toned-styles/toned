@@ -1,3 +1,5 @@
+import { isQueryKey, queryExpression } from '../system/query-key.ts'
+import type { QueryPredicate } from '../system/queries.ts'
 /**
  * The condition model behind every `'@…'` stylesheet key.
  *
@@ -228,29 +230,41 @@ export function evalExpr(expr: ConditionExpr, env: ConditionEnv): boolean {
  * registers these on the system ref; the css generator emits a toggle (and
  * its complement) for each registered atom.
  */
-/**
- * Walk a rules tree and register every ad-hoc condition atom it uses (as
- * canonical `name/>=len` strings). Called at stylesheet creation so a css
- * generator that imported the stylesheet modules can emit exactly the
- * toggles in use. Depth-limited: condition keys live at the root, element
- * and variant-entry levels; nothing legitimate sits deeper.
- */
-export function collectAdHocConditions(
-  node: unknown,
-  out: Set<string>,
-  depth = 0,
-): void {
-  if (!node || typeof node !== 'object' || depth > 5) return
-  for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
-    if (key[0] === '@' && !key.startsWith('@platform.')) {
-      const expr = parseConditionKey(key.slice(1))
-      if (expr) {
-        for (const atom of adHocAtoms(expr)) {
-          out.add(serializeAtom(atom))
-        }
-      }
+/** Register fixed-width atoms from ordinary keys, computed Boolean keys and
+ * legacy predicate metadata. Iteration supports deeply colocated declarations;
+ * identity tracking prevents cycles or repeated shared nodes from growing work. */
+export function collectAdHocConditions(node: unknown, out: Set<string>): void {
+  const collectKey = (key: string) => {
+    if (isQueryKey(key)) {
+      collectQuery(queryExpression(key))
+    } else if (key[0] === '@' && !key.startsWith('@platform.')) {
+      const expression = parseConditionKey(key.slice(1))
+      if (expression)
+        for (const atom of adHocAtoms(expression)) out.add(serializeAtom(atom))
     }
-    collectAdHocConditions(value, out, depth + 1)
+  }
+  const collectQuery = (query: QueryPredicate) => {
+    if (query.op === 'atom') collectKey(query.key)
+    else if (query.op === 'not') collectQuery(query.operand)
+    else if (query.op !== 'relation')
+      for (const operand of query.operands) collectQuery(operand)
+  }
+  const seen = new WeakSet<object>()
+  const pending: unknown[] = [node]
+  while (pending.length) {
+    const current = pending.pop()
+    if (!current || typeof current !== 'object' || seen.has(current)) continue
+    seen.add(current)
+    const record = current as Record<string, unknown>
+    if (record['op'] === 'atom' && typeof record['key'] === 'string')
+      collectKey(record['key'])
+    for (const [key, value] of Object.entries(record)) {
+      collectKey(key)
+      if (!['style', '$style', '$grid', '$area', '$webRules'].includes(key))
+        pending.push(value)
+    }
+    for (const symbol of Object.getOwnPropertySymbols(current))
+      pending.push((current as Record<symbol, unknown>)[symbol])
   }
 }
 

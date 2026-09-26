@@ -53,12 +53,17 @@ container: {
         selectors, rules). You create one with{' '}
         <code {...s.code}>defineSystem</code>:
       </p>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
+      <CodeBlock>{`import { defineSystem, defineToken } from '@toned/core'
 
-export const { system, stylesheet, t } = defineSystem(
-  { ...typo, ...colour, ...border, ...layout, ...shadow, ...sizes },
-  config,
-)`}</CodeBlock>
+export const { system, stylesheet, t } = defineSystem({
+  id: 'example',
+  tokens: {
+    padding: defineToken({
+      values: [0, 1, 2, 3] as const,
+      resolve: value => ({ padding: value * 4 }),
+    }),
+  },
+})`}</CodeBlock>
       <p>
         The returned <code {...s.code}>stylesheet</code> function is bound to
         that system's token set, giving you full autocompletion and type

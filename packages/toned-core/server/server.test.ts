@@ -9,9 +9,9 @@ test('pure native rendering evaluates platform predicates against native', () =>
       resolve: (value) => ({ opacity: value }),
     }),
   })
-  const sheet = system
-    .stylesheet({ Root: { opacity: 1 } })
-    .when(system.q.all(system.q.platform('native')), { Root: { opacity: 0 } })
+  const sheet = system.stylesheet({ Root: { opacity: 1 } }).extend({
+    [system.q.all(system.q.platform('native'))]: { Root: { opacity: 0 } },
+  })
   expect(
     createNativeRenderer(system, { tokens: {} }).resolve(sheet).Root.style[
       'opacity'

@@ -1,5 +1,7 @@
 'use client'
 
+import type { Variants } from '@toned/core'
+
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { CheckIcon } from 'lucide-react'
@@ -32,7 +34,7 @@ const checkboxStyles = stylesheet({
       transition: 'none',
     },
   },
-}).variants<{ checked: boolean }>(($) => ({
+}).variants(($: Variants<{ checked: boolean }>) => ({
   [$.checked(true)]: {
     root: { bgColor: 'action', textColor: 'on_action', borderColor: 'action' },
   },

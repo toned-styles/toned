@@ -1,8 +1,9 @@
+import type { Variants } from '../../types/index.ts'
 import { describe, expect, it, vi } from 'vitest'
 import { buildStyles } from '../../build/index.ts'
 import { compilePlan, compileRules, resolvePlan } from '../../core/plan.ts'
 import { createNativeRenderer, createWebRenderer } from '../../server/index.ts'
-import { RULE_LAYERS, WHEN_RULES } from '../../stylesheet/rule-protocol.ts'
+import { RULE_LAYERS } from '../../stylesheet/rule-protocol.ts'
 import { StyleMatcher } from '../../stylesheet/StyleMatcher.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
 import { resolveCssPlan } from './plan.ts'
@@ -73,12 +74,7 @@ describe('CSS shared-plan adapter', () => {
       system,
       {
         Root: { ink: 'red/37', style: { width: 10, opacity: 1 } },
-        [WHEN_RULES]: [
-          {
-            predicate,
-            rules: { Root: { style: { width: 20, opacity: 0.5 } } },
-          },
-        ],
+        [predicate]: { Root: { style: { width: 20, opacity: 0.5 } } },
         [RULE_LAYERS]: [{ Root: { style: { opacity: 1 } } }],
       },
       'web',
@@ -133,9 +129,9 @@ describe('CSS shared-plan adapter', () => {
     const system = defineSystem({ id: 'effects', tokens: { stretch } })
     const sheet = system
       .stylesheet({ Root: { stretch: 'always' } })
-      .variants<{ off: boolean }>()(($) => ({
-      [$.off(true)]: { Root: { stretch: 'none' } },
-    }))
+      .variants(($: Variants<{ off: boolean }>) => ({
+        [$.off(true)]: { Root: { stretch: 'none' } },
+      }))
     const artifact = buildStyles(system, { sheets: [sheet] })
     const renderer = createWebRenderer(system, {
       tokens: {},
@@ -338,4 +334,32 @@ it('t validates metadata immediately without reading a result getter', () => {
   expect(() => system.t({ $kind: 'view', $$type: 'text' } as never)).toThrow(
     '$kind and $$type must agree',
   )
+})
+
+it('does not mistake user part names for authored Boolean query boundaries', () => {
+  const legacy = defineSystem(tokens, {
+    breakpoints: { __breakpoints: { md: 600 } },
+  })
+  const styles = ['Root', 'query', 'when'].map((part) => {
+    const plan = compileRules(
+      legacy,
+      {
+        [part]: { gap: 0, ':hover': { gap: 4 }, '@md': { gap: 8 } },
+      },
+      'web',
+    )
+    expect(
+      plan.operations.every(
+        (operation) => operation.origin.query === undefined,
+      ),
+    ).toBe(true)
+    return resolveCssPlan(plan, legacy, {})[part]!.style
+  })
+  for (const media of [false, true])
+    for (const hover of [false, true]) {
+      const guards = { '--media-md': media, '--toned_hover': hover }
+      const expected = cssTestValue(styles[0]!, 'gap', guards)
+      for (const style of styles.slice(1))
+        expect(cssTestValue(style, 'gap', guards)).toBe(expected)
+    }
 })

@@ -1,4 +1,5 @@
 /** Compile-time contracts; tsc verifies each expected rejection. */
+import type { Variants } from '@toned/core'
 import { defineSystem, defineToken } from '@toned/core'
 import { createRef, forwardRef } from 'react'
 import { createElements } from './index.ts'
@@ -19,19 +20,25 @@ const plain = system.stylesheet({
 })
 const Plain = createElements(plain)
 const Sized = createElements(
-  plain.variants<{ size: 's' | 'l'; variant: 'neutral' | 'accent' }>()(($) => ({
-    [$.variant('accent')]: { Container: { tone: 'accent' } },
-  })),
+  plain.variants(
+    ($: Variants<{ size: 's' | 'l'; variant: 'neutral' | 'accent' }>) => ({
+      [$.variant('accent')]: { Container: { tone: 'accent' } },
+    }),
+  ),
 )
 const Defaulted = createElements(
-  plain.variants<{ size: 's' | 'l'; variant: 'neutral' | 'accent' }>()(
-    ($) => ({ [$.variant('accent')]: { Container: { tone: 'accent' } } }),
+  plain.variants(
+    ($: Variants<{ size: 's' | 'l'; variant: 'neutral' | 'accent' }>) => ({
+      [$.variant('accent')]: { Container: { tone: 'accent' } },
+    }),
     { defaults: { size: 's' } },
   ),
 )
 const AllDefaulted = createElements(
-  plain.variants<{ size: 's' | 'l' }>()(
-    ($) => ({ [$.size('l')]: { Container: { tone: 'accent' } } }),
+  plain.variants(
+    ($: Variants<{ size: 's' | 'l' }>) => ({
+      [$.size('l')]: { Container: { tone: 'accent' } },
+    }),
     { defaults: { size: 's' } },
   ),
 )
@@ -164,13 +171,15 @@ export function HostContracts() {
 }
 
 export function ReservedNameContracts() {
-  const childrenAxis = plain.variants<{ children: 's' | 'l' }>()(($) => ({
-    [$.children('s')]: { Container: { tone: 'accent' } },
-  }))
-  const keyAxis = plain.variants<{ key: 's' | 'l' }>()(($) => ({
+  const childrenAxis = plain.variants(
+    ($: Variants<{ children: 's' | 'l' }>) => ({
+      [$.children('s')]: { Container: { tone: 'accent' } },
+    }),
+  )
+  const keyAxis = plain.variants(($: Variants<{ key: 's' | 'l' }>) => ({
     [$.key('s')]: { Container: { tone: 'accent' } },
   }))
-  const refAxis = plain.variants<{ ref: 's' | 'l' }>()(($) => ({
+  const refAxis = plain.variants(($: Variants<{ ref: 's' | 'l' }>) => ({
     [$.ref('s')]: { Container: { tone: 'accent' } },
   }))
   // @ts-expect-error children must retain React's provider-content meaning

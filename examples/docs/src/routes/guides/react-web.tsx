@@ -98,7 +98,7 @@ export const buttonStyles = stylesheet({
   },
   label: {
     textColor: 'on_action',
-    typo: 'body',
+    typo: 'body_medium',
   },
 }).variants(($: Variants<{
   variant: 'primary' | 'secondary'

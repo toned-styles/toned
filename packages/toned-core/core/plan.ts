@@ -1,5 +1,5 @@
 import { validateGridDeclarations } from '../grid/validation.ts'
-import { normalizeRules } from '../stylesheet/matcher/normalizeRules.ts'
+import { sharedRuntimeNormalization } from '../stylesheet/matcher/sharedNormalization.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import {
   TOKEN_OPERATIONS,
@@ -36,6 +36,8 @@ export interface DeclarationOrigin {
   readonly token: string
   readonly layer: number
   readonly order: number
+  /** Authored Boolean query boundary, independent of user part/token names. */
+  readonly query?: true
   /** Legacy CSS source scope; portable backends retain the ordinary state fact. */
   readonly legacyChannel?: {
     readonly source: string
@@ -141,11 +143,12 @@ export function compileRules(
   const cached = cache.get(rules)?.get(system)?.get(platform)
   if (cached) return cached
   const prepared = resolvePlatformKeys(rules, platform)
-  const normalized = normalizeRules(prepared, {
-    cssMediaMode: false,
-    cssPseudoMode: false,
-    sourceOrder: !!system.id,
-  })
+  const preparedPlan = cache.get(prepared)?.get(system)?.get(platform)
+  if (preparedPlan) {
+    rememberPlan(rules, system, platform, preparedPlan)
+    return preparedPlan
+  }
+  const normalized = sharedRuntimeNormalization(prepared, !!system.id, platform)
   const layers = normalized.layers
   const operations: DeclarationOperation[] = []
   const extensions: DeclarationOperation[] = []
@@ -156,6 +159,7 @@ export function compileRules(
     rule: Record<string, any>,
     predicate: Predicate,
     path: readonly string[],
+    query = false,
   ) => {
     predicate = specializePlatform(predicate, platform)
     if (predicate === FALSE) return
@@ -199,6 +203,7 @@ export function compileRules(
             token: entry.key,
             layer: entry.layer,
             order,
+            ...(query ? { query: true as const } : {}),
             ...(legacyChannel ? { legacyChannel } : {}),
           },
         }
@@ -220,10 +225,12 @@ export function compileRules(
       conditionPredicate(key, values),
     )
     if (entry.predicate) operands.push(queryPredicate(entry.predicate))
-    append(entry.rule, { op: 'all', operands }, [
-      ...entry.conditions.keys(),
-      ...(entry.predicate ? ['when'] : []),
-    ])
+    append(
+      entry.rule,
+      { op: 'all', operands },
+      [...entry.conditions.keys(), ...(entry.predicate ? ['query'] : [])],
+      !!entry.predicate,
+    )
   }
   if (platform === 'web') validateGridDeclarations(prepared, extensions)
   if (system.id)
@@ -274,6 +281,18 @@ export function compileRules(
       ),
     ),
   })
+  operationsByPart(plan)
+  rememberPlan(rules, system, platform, plan)
+  if (prepared !== rules) rememberPlan(prepared, system, platform, plan)
+  return plan
+}
+
+function rememberPlan(
+  rules: object,
+  system: object,
+  platform: 'web' | 'native',
+  plan: CompiledPlan,
+): void {
   let systems = cache.get(rules)
   if (!systems) {
     systems = new WeakMap()
@@ -284,9 +303,7 @@ export function compileRules(
     platforms = new Map()
     systems.set(system, platforms)
   }
-  operationsByPart(plan)
   platforms.set(platform, plan)
-  return plan
 }
 
 /** Only prove conjunction/subset relationships. General Boolean implication is

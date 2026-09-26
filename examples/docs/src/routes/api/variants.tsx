@@ -32,7 +32,7 @@ function ApiVariants() {
       <h2 {...s.h2}>Signature</h2>
       <CodeBlock>{`import type { Variants } from '@toned/core'
 
-const styles = stylesheet({ ... }).variants(($: Variants<VariantMap>) => ({
+const styles = stylesheet({ elementName: {} }).variants(($: Variants<{ variantName: 'value' }>) => ({
   [$.variantName('value')]: {
     elementName: { /* token overrides */ },
   },
@@ -141,6 +141,28 @@ const buttonStyles = stylesheet({
   },
 }`}</CodeBlock>
 
+      <h3 {...s.h3}>Compound Queries Inside Variants</h3>
+      <p>
+        The second callback argument uses the same query builders as a base
+        stylesheet. Combine media, state and platform conditions where the
+        affected part is declared; no extra chaining method is needed.
+      </p>
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const styles = stylesheet({ container: { opacity: 1 } })
+  .variants(($: Variants<{ variant: 'accent' | 'quiet' }>, q) => ({
+    [$.variant('accent')]: {
+      container: {
+        [q.all(q.media('md'), q.not(q.state('active')))]: {
+          opacity: 0.75,
+        },
+        [q.any(q.state('hover'), q.state('focus'))]: {
+          opacity: 1,
+        },
+      },
+    },
+  }))`}</CodeBlock>
+
       <h2 {...s.h2}>Named Styles ($compose)</h2>
       <p>
         When multiple variants share common element overrides, you can extract
@@ -183,9 +205,16 @@ const buttonStyles = stylesheet({
         without repeating it.
       </p>
 
+      <p>
+        Named references autocomplete and reject misspellings. Composition is
+        recursive: later entries in an array override earlier entries, then the
+        consuming rule’s own properties win. Untyped declarations with unknown
+        references or cycles throw when the stylesheet is constructed.
+      </p>
+
       <h3 {...s.h3}>Element-Level $compose</h3>
       <p>
-        Inside a single variant rule, you can compose one element from another
+        Inside a variant rule, you can compose a declared part from another
         element defined in the same block. This is useful when several elements
         within a variant share a base set of tokens:
       </p>
@@ -205,8 +234,9 @@ const buttonStyles = stylesheet({
         <code {...s.code}>sidebar</code> inherit{' '}
         <code {...s.code}>paddingX</code> and <code {...s.code}>bgColor</code>{' '}
         from <code {...s.code}>base</code>, then add their own overrides. The
-        composed element (<code {...s.code}>base</code>) is not included in the
-        final output — it only serves as a source for composition.
+        source (<code {...s.code}>base</code>) must be a declared part. It
+        remains available to render. A sibling definition in the same rule takes
+        precedence over that part’s base declaration.
       </p>
 
       <h3 {...s.h3}>Composing Multiple Sources</h3>

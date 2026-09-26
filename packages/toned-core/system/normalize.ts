@@ -1,5 +1,7 @@
 import { fixedQueryWidth } from '../utils/conditions.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
+import { isQueryKey, queryExpression } from './query-key.ts'
+import type { QueryPredicate } from './queries.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -83,8 +85,12 @@ export function validateDeclarations(
     if (!isRecord(node)) return
     if (node['op'] === 'atom' && typeof node['key'] === 'string')
       walk({ [node['key']]: {} })
+    if (node['op'] === 'relation')
+      validateQuery(node as unknown as QueryPredicate)
     for (const [key, value] of Object.entries(node)) {
-      if (key.startsWith('@platform.')) {
+      if (isQueryKey(key)) {
+        validateQuery(queryExpression(key))
+      } else if (key.startsWith('@platform.')) {
         if (!['web', 'native'].includes(key.slice(10)))
           throw new Error(`Toned: unknown platform ${key}`)
       } else if (key.startsWith('@')) {
@@ -127,6 +133,17 @@ export function validateDeclarations(
     }
     for (const symbol of Object.getOwnPropertySymbols(node))
       walk((node as Record<symbol, unknown>)[symbol])
+  }
+  const validateQuery = (query: QueryPredicate): void => {
+    if (query.op === 'atom') walk({ [query.key]: {} })
+    else if (query.op === 'relation') {
+      const { scope, state, sourcePart, part } = query.relation
+      if (!sourcePart || !part || !['child', 'descendant'].includes(scope))
+        throw new Error('Toned: malformed relation query')
+      if (!knownStates.has(state))
+        throw new Error(`Toned: undeclared state ${state}`)
+    } else if (query.op === 'not') validateQuery(query.operand)
+    else for (const operand of query.operands) validateQuery(operand)
   }
   walk(input)
 }

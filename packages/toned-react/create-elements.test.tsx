@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { Variants } from '@toned/core'
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import * as React from 'react'
@@ -30,19 +31,19 @@ const sheet = system
     Root: { $kind: 'view', opacity: 0, ':hover': { opacity: 0.25 } },
     Label: { $kind: 'text', opacity: 0 },
   })
-  .variants<{ size: 's' | 'l' }>()(
-  ($) => ({
-    [$.size('s')]: {
-      Root: { opacity: 0.5, ':hover': { opacity: 0.25 } },
-      Label: { opacity: 0.5 },
-    },
-    [$.size('l')]: {
-      Root: { opacity: 1, ':hover': { opacity: 0.25 } },
-      Label: { opacity: 1 },
-    },
-  }),
-  { defaults: { size: 's' } },
-)
+  .variants(
+    ($: Variants<{ size: 's' | 'l' }>) => ({
+      [$.size('s')]: {
+        Root: { opacity: 0.5, ':hover': { opacity: 0.25 } },
+        Label: { opacity: 0.5 },
+      },
+      [$.size('l')]: {
+        Root: { opacity: 1, ':hover': { opacity: 0.25 } },
+        Label: { opacity: 1 },
+      },
+    }),
+    { defaults: { size: 's' } },
+  )
 
 // The factory is deliberately called before any host configuration is installed.
 const S = createElements(sheet)
@@ -112,12 +113,15 @@ test.each(['children', 'key', 'ref'] as const)(
   'factory diagnoses reserved React variant axis %s from selectors and defaults',
   (axis) => {
     const base = system.stylesheet({ Root: { opacity: 0 } })
-    const selected = base.variants<Record<string, 'on'>>()(($) => ({
+    const selected = base.variants(($: Variants<Record<string, 'on'>>) => ({
       [$[axis]!('on')]: { Root: { opacity: 1 } },
     }))
-    const defaulted = base.variants<Record<string, 'on'>>()(() => ({}), {
-      defaults: { [axis]: 'on' },
-    })
+    const defaulted = base.variants(
+      (_$: Variants<Record<string, 'on'>>) => ({}),
+      {
+        defaults: { [axis]: 'on' },
+      },
+    )
     for (const invalid of [selected, defaulted])
       expect(() => uncheckedCreateElements(invalid)).toThrow(
         `variant axis "${axis}" conflicts with React props`,
@@ -140,9 +144,13 @@ test('standalone parts use declared defaults and semantic host kinds', () => {
 
 test('a standalone part without variant defaults uses the base declaration', () => {
   const Required = createElements(
-    system.stylesheet({ Label: { opacity: 0 } }).variants<{
-      size: 's' | 'l'
-    }>()(($) => ({ [$.size('l')]: { Label: { opacity: 1 } } })),
+    system.stylesheet({ Label: { opacity: 0 } }).variants(
+      (
+        $: Variants<{
+          size: 's' | 'l'
+        }>,
+      ) => ({ [$.size('l')]: { Label: { opacity: 1 } } }),
+    ),
   )
   const view = render(<Required.Label data-testid="base" />)
   expect(view.getByTestId('base').style.opacity).toBe('0')

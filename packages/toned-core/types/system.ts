@@ -5,10 +5,6 @@ import type { SystemOptions } from '../system/definition.ts'
  * @module types/system
  */
 
-import type {
-  Condition,
-  ContainerConditionBuilder,
-} from '../system/conditions.ts'
 import type { QueryBuilder } from '../system/queries.ts'
 import type {
   AuthoredElementStyle,
@@ -17,24 +13,11 @@ import type {
   ValidateDeclaration,
 } from './stylesheet.ts'
 import type {
-  Breakpoints,
   TokenConfig,
   TokenStyle,
   TokenStyleDeclaration,
   Tokens,
 } from './tokens.ts'
-
-/** The container names a system config declares — never matches when absent. */
-type ContainerNamesOf<C> = C extends { containers: infer Ct }
-  ? keyof Ct & string
-  : never
-
-/** The breakpoint names a system config declares. */
-type BreakpointNamesOf<C> = C extends { media: infer M }
-  ? keyof M & string
-  : C extends { breakpoints: Breakpoints<infer B> }
-    ? keyof B & string
-    : never
 
 /**
  * Complete token system - returned from defineSystem().
@@ -79,17 +62,6 @@ export type TokenSystem<
    */
   usedConditions?: Set<string>
 
-  /**
-   * Condition builders, typed to THIS system's declared names — the
-   * centralized home (`const { cq, bp } = mySystem`). The standalone exports
-   * remain for generic tooling; combinators (`and`/`or`/`not`) are
-   * name-agnostic and stay standalone.
-   */
-  cq: <N extends ContainerNamesOf<SystemConfig>>(
-    name: N,
-  ) => ContainerConditionBuilder<N>
-  bp: <N extends BreakpointNamesOf<SystemConfig>>(name: N) => Condition<`@${N}`>
-
   q: QueryBuilder<SystemConfig>
 
   /** Create a stylesheet with element definitions */
@@ -97,7 +69,8 @@ export type TokenSystem<
 
   /** Pure immutable declaration helper: does not consult the renderer or theme. */
   style: <const T extends AuthoredElementStyle<S>>(
-    declaration: T & ValidateDeclaration<T, AuthoredElementStyle<S>, S>,
+    declaration: T &
+      ValidateDeclaration<T, AuthoredElementStyle<S>, S, never, true>,
   ) => Readonly<T>
 
   /** Create inline styles from token values */

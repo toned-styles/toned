@@ -111,11 +111,11 @@ it('Boolean AST collection retains fixed thresholds and rejects runtime-relative
     tokens: {},
     conditions: { containers: { card: {} } },
   })
-  const sheet = ui
-    .stylesheet({ Root: {} })
-    .when(ui.q.all(ui.q.media(dp(600)), ui.q.container('card', dp(300))), {
+  const sheet = ui.stylesheet({ Root: {} }).extend({
+    [ui.q.all(ui.q.media(dp(600)), ui.q.container('card', dp(300)))]: {
       Root: { $style: { opacity: 0 } },
-    })
+    },
+  })
   const artifact = buildStyles(ui, { sheets: [sheet] })
   expect(artifact.manifest.conditions).toEqual(['>=600px', 'card/>=300px'])
   expect(() => (ui.q.media as (x: unknown) => unknown)(percent(20))).toThrow(

@@ -2,7 +2,6 @@ import type { QueryPredicate } from '../system/queries.ts'
 
 /** Shared metadata carried from authoring through matching to output resolution.
  * Keep these registry keys stable for declarations crossing package boundaries. */
-export const WHEN_RULES = Symbol.for('@toned/when')
 export const APPLY_OVERRIDE = Symbol.for('@toned/override')
 export const RULE_LAYERS = Symbol.for('@toned/layers')
 export const CONDITIONAL_RULES = Symbol.for('@toned/conditionalRules')
@@ -12,10 +11,6 @@ export interface TokenOperation {
   readonly value: unknown
   readonly layer: number
   readonly conditional?: ConditionalRule
-}
-export interface WhenRule {
-  readonly predicate: QueryPredicate
-  readonly rules: RuleObject
 }
 export interface ConditionalRule {
   readonly predicate: QueryPredicate

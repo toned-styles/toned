@@ -6,6 +6,32 @@ platform. It decodes author-facing query keys into structured variant, media,
 container, state, platform, and relation facts once. Occurrence order and
 precedence layers stay separate from predicate identity.
 
+The controller's compatibility matcher and portable compiler share one runtime
+normalization for each declaration and cascade mode. CSS-condition lowering keeps
+its own spelling adapter because symbolic browser conditions differ from runtime
+facts. Matcher preparation/cache ownership lives under `stylesheet/matcher`; the
+controller only requests the prepared matcher. Standalone matcher construction
+still reads its inputs afresh.
+
+Portable plans are shared by both authored and platform-prepared rule identities,
+so compiling a sheet for diagnostics and mounting it do not construct the same
+platform plan twice. Preparing a resolved grid tree again is identity-preserving.
+The normalization cache uses weak declaration keys and four cascade/platform-mode slots;
+portable plans additionally separate system identity and platform. These caches
+contain no host or request state. Platform predicates are reduced before collecting
+controller state/relation requirements, so a web-only relational branch cannot
+require native topology support. Negation and OR retain that static reduction;
+queries that become unconditional keep their authored precedence/provenance.
+Sheets without platform atoms inside Boolean queries share their normalization
+across platforms when the prepared declaration identity is the same.
+
+Variant composition prepares effective declared defaults only when a referenced
+source or kind comparison needs them. Ordinary variant callbacks do not merge
+base/override defaults, and nested query groups do not clone inherited part maps
+until a composition reference needs that scope. Required source preparation is
+memoized within the authoring call; same-kind checks, override tombstones and
+nested metadata validation remain unchanged.
+
 A plan has named parts, part kinds, ordered token declarations, and declaration
 origins. It contains no generated class names, selector strings, CSS variable
 chains, host nodes, or live subscriptions. Opaque grid/selector/class extensions

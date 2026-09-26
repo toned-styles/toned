@@ -5,6 +5,8 @@
  * sharing is unaffected.
  */
 import { describe, expect, test } from 'vitest'
+import { defineGrid, fr } from '../grid/index.ts'
+import { RULE_LAYERS } from './rule-protocol.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'
@@ -64,6 +66,21 @@ describe('@platform keys', () => {
   test('rules without platform keys keep identity (matcher sharing intact)', () => {
     const plain = { root: { bgColor: 'base' } }
     expect(resolvePlatformKeys(plain, 'web')).toBe(plain)
+  })
+
+  test('prepared grid and override layers retain identity when prepared again', () => {
+    const grid = defineGrid('prepared', { columns: [fr(1)], areas: [['body']] })
+    const rules = {
+      root: { $grid: grid, style: { gap: 4 } },
+      child: { $area: grid.area('body') },
+      [RULE_LAYERS]: [{ root: { style: { gap: 8 } } }],
+    }
+    const prepared = resolvePlatformKeys(rules, 'web')
+    expect(prepared).not.toBe(rules)
+    expect(resolvePlatformKeys(prepared, 'web')).toBe(prepared)
+    expect(prepared.root.style.gap).toBe(4)
+    expect(prepared[RULE_LAYERS][0]!.root.style.gap).toBe(8)
+    expect(() => resolvePlatformKeys(rules, 'native')).toThrow()
   })
 
   test('resolution is memoized per platform', () => {

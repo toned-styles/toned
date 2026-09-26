@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { Variants } from '@toned/core'
 import { act, cleanup, render } from '@testing-library/react'
 import { defineSystem, defineToken } from '@toned/core'
 import type { NativeHostAdapter } from '@toned/core/stylesheet'
@@ -60,9 +61,9 @@ test('native createElements receives committed variants and semantic updates wit
         ':selected': { $style: { opacity: 0.5 } },
       },
     })
-    .variants<{ compact: boolean }>()(($) => ({
-    [$.compact(true)]: { Root: { $style: { width: 40 } } },
-  }))
+    .variants(($: Variants<{ compact: boolean }>) => ({
+      [$.compact(true)]: { Root: { $style: { width: 40 } } },
+    }))
   const S = createElements(sheet)
   const config = {
     ...native,
