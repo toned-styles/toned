@@ -7,6 +7,9 @@ packages:
   - '!examples/fabric-acceptance'
 
 allowBuilds:
+  # VSIX packaging needs neither Marketplace signing nor an OS credential store.
+  '@vscode/vsce-sign': false
+  keytar: false
   esbuild: true
 
 autoInstallPeers: false

@@ -91,20 +91,35 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     tokens: SystemTheme<NoInfer<S>>
   },
 ) {
-  const backend = Object.freeze({ ...options.backend })
-  if (backend.requiresBuild && !backend.manifest)
+  const backendManifest = options.backend.manifest
+  const sourceManifest = options.manifest ?? backendManifest
+  // Renderer validation is identity-cached; its build contract must not change
+  // when a caller mutates the manifest object or its condition/extension arrays.
+  const manifest =
+    sourceManifest &&
+    immutableSnapshot({
+      ...sourceManifest,
+      conditions: [...sourceManifest.conditions],
+      ...(sourceManifest.extensions
+        ? { extensions: [...sourceManifest.extensions] }
+        : {}),
+    })
+  const backend = Object.freeze({
+    ...options.backend,
+    ...(backendManifest ? { manifest } : {}),
+  })
+  if (backend.requiresBuild && !backendManifest)
     throw new Error(
       'Toned renderer: backend requires a validated build artifact; use buildTailwind and createTailwindRuntime',
     )
   if (
     backend.requiresBuild &&
     options.manifest &&
-    options.manifest.fingerprint !== backend.manifest?.fingerprint
+    options.manifest.fingerprint !== backendManifest?.fingerprint
   )
     throw new Error(
       'Toned renderer: supplied manifest does not match the bound backend artifact',
     )
-  const manifest = options.manifest ?? backend.manifest
   if (
     manifest &&
     (manifest.systemId !== (system.id ?? 'legacy') ||
@@ -118,7 +133,9 @@ export function createRenderer<S extends TokenStyleDeclaration>(
       'Toned renderer: build manifest has a different system definition; regenerate CSS',
     )
   const tokens = immutableSnapshot(options.tokens)
+  const validated = new WeakSet<object>()
   const validate = (sheet: object) => {
+    if (validated.has(sheet)) return
     const plan = getStylesheetPlan(sheet)
     if (plan.ref !== (system as unknown))
       throw new Error(
@@ -133,6 +150,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
         manifest,
         resolvePlatformKeys(plan.rules, backend.platform),
       )
+    validated.add(sheet)
   }
   const inputs = (sheet: object, input: RuntimeInput) => ({
     ...((sheet as Record<symbol, object>)[SYMBOL_DEFAULTS] ?? {}),
