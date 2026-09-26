@@ -146,5 +146,10 @@ export function resolvePlatformKeys<T>(
     CACHE.set(rules, byPlatform)
   }
   byPlatform.set(cacheKey, resolved)
+  if (resolved !== rules) {
+    // A prepared tree may retain grid references for registration/validation.
+    // Its generated fields and override layers must not be materialized twice.
+    CACHE.set(resolved as object, new Map([[cacheKey, resolved]]))
+  }
   return resolved
 }

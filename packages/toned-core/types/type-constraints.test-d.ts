@@ -3,6 +3,7 @@
  * no runtime assertions — `tsc` IS the test (it compiles with the package;
  * every `@ts-expect-error` line fails the build if the error disappears).
  */
+import { dp } from '../core/values.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 
 const bgColor = defineToken({
@@ -108,13 +109,15 @@ cqSystem.stylesheet({
   // condition EXPRESSIONS are root-level blocks — ad-hoc widths on declared
   // names, negation, algebra, and the system's typed builders as computed keys
   '@md&card/>=100': { root: { bgColor: 'accent' } },
-  [cqSystem.cq('card').min(100)]: { root: { bgColor: 'accent' } },
-  [cqSystem.cq('card').below(100)]: { root: { bgColor: 'accent' } },
+  [cqSystem.q.container('card', dp(400))]: { root: { bgColor: 'accent' } },
+  [cqSystem.q.not(cqSystem.q.container('card', dp(400)))]: {
+    root: { bgColor: 'accent' },
+  },
 })
 
 // (A hand-written '@nope/>=100' on an UNDECLARED container is not a compile
 // error at the root level — root keys are open by design, since any key is a
-// legal element name. The typed path is the builder (cq('nope') errors below);
+// legal element name. The typed path is the builder (q.container('nope', ...) errors below);
 // a hand-written undeclared name warns and drops at resolution.)
 
 cqSystem.stylesheet({
@@ -132,10 +135,10 @@ cqSystem.stylesheet({
 })
 
 // @ts-expect-error — the typed builder rejects an undeclared container name
-cqSystem.cq('nope')
+cqSystem.q.container('nope', dp(400))
 
 // @ts-expect-error — and an undeclared breakpoint name
-cqSystem.bp('mdd')
+cqSystem.q.media('mdd')
 
 // --- alpha modifier value widening -------------------------------------------
 

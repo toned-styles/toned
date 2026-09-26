@@ -1,3 +1,4 @@
+import type { Variants } from '../types/index.ts'
 import { expect, it } from 'vitest'
 import { buildTailwind, compileTailwindProfile } from '../build/tailwind.ts'
 import { compilePlan, resolvePlan } from '../core/plan.ts'
@@ -36,9 +37,9 @@ const all = (sheet: object) =>
 it('rejects missing conditional channels at build time, including an inactive variant', () => {
   const sheet = ui
     .stylesheet({ Root: { opacity: 1 } })
-    .variants<{ active: boolean }>()(($) => ({
-    [$.active(true)]: { Root: { '@wide': { opacity: 0 } } },
-  }))
+    .variants(($: Variants<{ active: boolean }>) => ({
+      [$.active(true)]: { Root: { '@wide': { opacity: 0 } } },
+    }))
   const strict = createTailwindBackend({
     id: 'strict',
     classesOnly: true,

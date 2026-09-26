@@ -1,27 +1,32 @@
 import { describe, expect, test } from 'vitest'
 import { createQueries, type QueryPredicate } from '../../system/queries.ts'
+import { queryExpression } from '../../system/query-key.ts'
+import { createVariantSelector } from '../variantSelector.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
-import {
-  CONDITIONAL_RULES,
-  type ConditionalRule,
-  WHEN_RULES,
-} from './normalizeRules.ts'
+import { CONDITIONAL_RULES, type ConditionalRule } from './normalizeRules.ts'
 
 const q = createQueries<
   { breakpoints: { __breakpoints: { md: 768; lg: 1024 } } },
   'Root' | 'Label'
 >()
+const $ = createVariantSelector<{
+  a: boolean
+  b: boolean
+  c: boolean
+  d: boolean
+  active: boolean
+}>()
 const atom = (key: string): QueryPredicate => ({ op: 'atom', key })
 
 describe('compiled boolean predicates', () => {
   test('all/any/not runtime facts agree with the truth table without DNF expansion', () => {
     const predicate = q.all(
-      q.any(atom('[a]'), atom('[b]')),
-      q.not(q.all(atom('[c]'), atom('[d]'))),
+      q.any($.a(true), $.b(true)),
+      q.not(q.all($.c(true), $.d(true))),
     )
     const matcher = new StyleMatcher({
       Root: { value: 'base' },
-      [WHEN_RULES]: [{ predicate, rules: { Root: { value: 'conditional' } } }],
+      [predicate]: { Root: { value: 'conditional' } },
     })
     for (let state = 0; state < 16; state++) {
       const a = Boolean(state & 1),
@@ -37,12 +42,9 @@ describe('compiled boolean predicates', () => {
   test('native platform predicates resolve against the selected host', () => {
     const rules = {
       Root: { value: 'base' },
-      [WHEN_RULES]: [
-        {
-          predicate: q.all(q.platform('native'), atom('[active]')),
-          rules: { Root: { value: 'native' } },
-        },
-      ],
+      [q.all(q.platform('native'), $.active(true))]: {
+        Root: { value: 'native' },
+      },
     }
     expect(
       new StyleMatcher(rules, { platform: 'native' }).match({ active: true })
@@ -59,12 +61,9 @@ describe('compiled boolean predicates', () => {
       {
         Root: {},
         Label: { value: 0 },
-        [WHEN_RULES]: [
-          {
-            predicate: q.all(q.media('md'), q.part('Root').state('hover')),
-            rules: { Label: { value: 1 } },
-          },
-        ],
+        [q.all(q.media('md'), q.part('Root').state('hover'))]: {
+          Label: { value: 1 },
+        },
       },
       { platform: 'native' },
     )
@@ -79,15 +78,10 @@ describe('compiled boolean predicates', () => {
     const matcher = new StyleMatcher(
       {
         Root: { value: 'base' },
-        [WHEN_RULES]: [
-          {
-            predicate: q.all(
-              atom('[active]'),
-              q.any(q.media('md'), q.not(q.part('Root').state('hover'))),
-            ),
-            rules: { Root: { value: 'conditional' } },
-          },
-        ],
+        [q.all(
+          $.active(true),
+          q.any(q.media('md'), q.not(q.part('Root').state('hover'))),
+        )]: { Root: { value: 'conditional' } },
       },
       { cssMediaMode: true, cssPseudoMode: true },
     )
@@ -97,7 +91,9 @@ describe('compiled boolean predicates', () => {
     ]
     expect(records).toHaveLength(1)
     expect(records[0]?.predicate).toEqual(
-      q.any(q.media('md'), q.not(q.part('Root').state('hover'))),
+      queryExpression(
+        q.any(q.media('md'), q.not(q.part('Root').state('hover'))),
+      ),
     )
     expect(records[0]?.style).toEqual({ value: 'conditional' })
     expect(matcher.scheme).not.toHaveProperty('@md')
@@ -108,12 +104,9 @@ describe('compiled boolean predicates', () => {
       {
         Root: {},
         Label: { value: 0 },
-        [WHEN_RULES]: [
-          {
-            predicate: q.all(q.media('md'), q.part('Root').state('hover')),
-            rules: { Label: { value: 1 } },
-          },
-        ],
+        [q.all(q.media('md'), q.part('Root').state('hover'))]: {
+          Label: { value: 1 },
+        },
       },
       { cssMediaMode: true, cssPseudoMode: true },
     )
@@ -130,12 +123,9 @@ describe('compiled boolean predicates', () => {
       {
         Root: {},
         Label: {},
-        [WHEN_RULES]: [
-          {
-            predicate: q.any(q.media('md'), q.part('Root').state('hover')),
-            rules: { Label: { value: 1 } },
-          },
-        ],
+        [q.any(q.media('md'), q.part('Root').state('hover'))]: {
+          Label: { value: 1 },
+        },
       },
       { cssMediaMode: true, cssPseudoMode: true },
     )
@@ -152,13 +142,8 @@ describe('compiled boolean predicates', () => {
     const matcher = new StyleMatcher(
       {
         Root: { value: 'base' },
-        [WHEN_RULES]: [
-          {
-            predicate: q.all(q.media('md')),
-            rules: { Root: { value: 'media' } },
-          },
-          { predicate: q.all(), rules: { Root: { value: 'last' } } },
-        ],
+        [q.all(q.media('md'))]: { Root: { value: 'media' } },
+        [q.all()]: { Root: { value: 'last' } },
       },
       { cssMediaMode: true },
     )
@@ -175,20 +160,16 @@ describe('compiled boolean predicates', () => {
       () =>
         new StyleMatcher({
           Root: {},
-          [WHEN_RULES]: [
-            { predicate: atom(':hover'), rules: { Root: { value: 1 } } },
-          ],
+          [q.all(q.state('hover'))]: { Root: { value: 1 } },
         }),
     ).toThrow('needs q.part')
     expect(
       () =>
         new StyleMatcher({
           Root: {},
-          [WHEN_RULES]: [
-            { predicate: atom('Missing:hover'), rules: { Root: { value: 1 } } },
-          ],
+          [q.all('Missing:hover' as never)]: { Root: { value: 1 } },
         }),
-    ).toThrow('Unknown .when part/state')
+    ).toThrow('Unknown query part/state')
   })
 })
 
@@ -203,12 +184,9 @@ test('large indexed plans retain and distinguish residual browser predicates', (
           { Root: { selected: index } },
         ]),
       ),
-      [WHEN_RULES]: [
-        {
-          predicate: q.any(q.media('md'), q.part('Root').state('hover')),
-          rules: { Label: { value: 1 } },
-        },
-      ],
+      [q.any(q.media('md'), q.part('Root').state('hover'))]: {
+        Label: { value: 1 },
+      },
     },
     { cssMediaMode: true, cssPseudoMode: true },
   )
@@ -216,6 +194,8 @@ test('large indexed plans retain and distinguish residual browser predicates', (
   const hovered = matcher.match({ axis64: true, 'Root:hover': true })
   expect(resting.Root.selected).toBe(64)
   expect(resting.Label[CONDITIONAL_RULES][0].predicate).toEqual(atom('@md'))
-  expect(hovered.Label[CONDITIONAL_RULES][0].predicate).toEqual(q.all())
+  expect(hovered.Label[CONDITIONAL_RULES][0].predicate).toEqual(
+    queryExpression(q.all()),
+  )
   expect(matcher.isEqual('Label', resting, hovered)).toBe(false)
 })

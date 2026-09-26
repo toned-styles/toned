@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { Variants } from '@toned/core'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem } from '@toned/core'
 import { defineGrid, fr } from '@toned/core/grid'
@@ -31,8 +32,10 @@ const base = system.stylesheet({
   Label: { $style: { opacity: 1 } },
   Independent: { $style: { opacity: 0.75 } },
 })
-const related = base.when(system.q.all(system.q.part('Root').state('hover')), {
-  Label: { $style: { opacity: 0.5 } },
+const related = base.extend({
+  [system.q.all(system.q.part('Root').state('hover'))]: {
+    Label: { $style: { opacity: 0.5 } },
+  },
 })
 const S = createElements(related)
 function mount(children: React.ReactNode) {
@@ -114,8 +117,10 @@ test('cross-part interaction stays inside sibling provider instances', () => {
 test('relationship topology participants require scope and scoped descendant states update styles', () => {
   const sheet = system
     .stylesheet({ Root: { $style: { opacity: 1 } }, Item: {} })
-    .when(system.q.part('Root').has('Item', 'hover'), {
-      Root: { $style: { opacity: 0.5 } },
+    .extend({
+      [system.q.part('Root').has('Item', 'hover')]: {
+        Root: { $style: { opacity: 0.5 } },
+      },
     })
   const Related = createElements(sheet)
   vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -249,9 +254,9 @@ test('validating repeated hosts stays linear through provider and descendant-onl
   const Repeated = createElements(
     system
       .stylesheet({ Item: { $style: { opacity: 1 } } })
-      .variants<{ compact: boolean }>()(($) => ({
-      [$.compact(true)]: { Item: { $style: { opacity: 0.5 } } },
-    })),
+      .variants(($: Variants<{ compact: boolean }>) => ({
+        [$.compact(true)]: { Item: { $style: { opacity: 0.5 } } },
+      })),
   )
   // The host integration is shared by system. Instrument it through a probe
   // controller without introducing a public export just for this assertion.

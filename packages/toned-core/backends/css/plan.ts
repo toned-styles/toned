@@ -175,7 +175,7 @@ function atoms(
 /** The unnamespaced checkpoint deliberately retains its fixed media/state
  * ladder inside each layer. New descriptors use source order on every backend.
  * Base raw styles outrank token classes, as they did as inline declarations.
- * Advanced .when boundaries always retain occurrence order, including legacy. */
+ * Compound query boundaries always retain occurrence order, including legacy. */
 function legacyOrder(
   operations: readonly ResolvedOperation[],
   system: TokenSystem<any>,
@@ -244,7 +244,7 @@ function legacyOrder(
     segment = []
   }
   for (const operation of operations) {
-    if (operation.origin.path.includes('when')) {
+    if (operation.origin.query) {
       flush()
       output.push(operation)
       continue
@@ -429,7 +429,7 @@ function lowerCssOperations(
             previous.atomic && prior ? chainValue(prior) : previous.value,
           )
         : !system.id &&
-            !operation.origin.path.includes('when') &&
+            !operation.origin.query &&
             atoms(operation.predicate)?.every((fact) => fact.kind === 'state')
           ? undefined
           : 'revert-layer'

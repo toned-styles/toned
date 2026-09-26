@@ -19,12 +19,15 @@ import type { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 export type { SYMBOL_INIT, SYMBOL_REF }
 
 import type { GridArea, GridDefinition } from '../grid/index.ts'
-import type { QueryBuilder, QueryPredicate } from '../system/queries.ts'
+import type { QueryBuilder } from '../system/queries.ts'
+import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
 import type { WebRules } from '../web/rules.ts'
 export declare const DEFAULT_KIND: unique symbol
 export type DefaultSystemKind = { readonly [DEFAULT_KIND]: 'view' }
 
 import type { Config, Platform } from './config.ts'
+import type { ValidVariantKey } from './variant-keys.ts'
+import type { ComposableParts } from './composition.ts'
 import type {
   Breakpoints,
   ElementType,
@@ -204,7 +207,10 @@ export type ElementStyleNew<
     false
   >
 } & {
-  [K in InferContainerAliases<S> | ConditionExprKeys<S>]?: ElementStyleNew<
+  [K in
+    | InferContainerAliases<S>
+    | ConditionExprKeys<S>
+    | QueryKey]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
@@ -236,13 +242,15 @@ export type ElementStyleNew<
         false
       >
 } & {
+  // A cross-part shorthand selects one source. Use q.all/any keys for multiple
+  // sources; recursive shorthand expansion makes generic schema unions explode.
   [K in `${Parts}${AvailablePseudo}`]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
     ET,
     Host,
-    Parts,
+    never,
     false
   >
 } & (Host extends 'web'
@@ -290,8 +298,27 @@ export type ExtractElements<T> = {
 export type ElementMap<
   S extends TokenStyleDeclaration,
   Elements extends string,
+  Kinds extends Partial<Record<Elements, ElementType | undefined>> = {},
 > = {
-  [E in Elements]?: AuthoredElementStyle<S>
+  [E in Elements]?: ElementStyleNew<
+    S,
+    Pseudo | InferStatePseudos<S>,
+    keyof InferBreakpoints<S> | InferContainerConditions<S>,
+    E extends keyof Kinds ? Kinds[E] : undefined,
+    undefined,
+    Elements,
+    false
+  >
+}
+
+type DeclarationKinds<S, T, Elements extends string, Kinds> = {
+  [E in Elements]: E extends keyof Kinds
+    ? Kinds[E]
+    : InferElementType<
+        T,
+        E,
+        S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
+      >
 }
 
 /**
@@ -312,7 +339,8 @@ type CrossElementSelector<
   | `${Elements}:focus`
   | `${Elements}:focus:hover`
   | `${Elements}:hover`
-  | `${Elements}${InferStatePseudos<S>}`
+  | `${Elements}${Pseudo | InferStatePseudos<S>}`
+  | `${Elements}~${Pseudo | InferStatePseudos<S>}`
 
 /**
  * One element's rules, exactly as `StylesheetInput` accepts them.
@@ -326,11 +354,15 @@ type CrossElementSelector<
 export type AuthoredElementStyle<
   S extends TokenStyleDeclaration,
   ET extends ElementType | undefined = undefined,
+  Parts extends string = never,
+  Host extends Platform | undefined = undefined,
 > = ElementStyleNew<
   S,
   Pseudo | InferStatePseudos<S>,
   keyof InferBreakpoints<S> | InferContainerConditions<S>,
-  ET
+  ET,
+  Host,
+  Parts
 >
 
 /** Validate inferred object keys recursively, including computed atom keys. */
@@ -348,25 +380,51 @@ export type ValidateDeclaration<
   Input,
   Shape,
   S extends TokenStyleDeclaration,
+  Parts extends string = never,
+  Local extends boolean = false,
 > = {
-  [K in keyof Input]: K extends `:${string}:${string}`
-    ? ValidCompound<
-        K,
-        Pseudo | InferStatePseudos<S> | InferStateChannels<S>
-      > extends true
+  [K in keyof Input]: K extends QueryKey
+    ? ValidQueryKey<K, S, Parts, Local> extends true
       ? K extends keyof Shape
-        ? ValidateDeclaration<Input[K], NonNullable<Shape[K]>, S>
+        ? ValidateDeclaration<
+            Input[K],
+            NonNullable<Shape[K]>,
+            S,
+            Parts,
+            K extends Parts ? true : Local
+          >
         : never
       : never
-    : K extends keyof Shape
-      ? Input[K] extends readonly unknown[]
-        ? Shape[K]
-        : Input[K] extends object
-          ? NonNullable<Shape[K]> extends object
-            ? ValidateDeclaration<Input[K], NonNullable<Shape[K]>, S>
+    : K extends `:${string}:${string}`
+      ? ValidCompound<
+          K,
+          Pseudo | InferStatePseudos<S> | InferStateChannels<S>
+        > extends true
+        ? K extends keyof Shape
+          ? ValidateDeclaration<
+              Input[K],
+              NonNullable<Shape[K]>,
+              S,
+              Parts,
+              K extends Parts ? true : Local
+            >
+          : never
+        : never
+      : K extends keyof Shape
+        ? Input[K] extends readonly unknown[]
+          ? Shape[K]
+          : Input[K] extends object
+            ? NonNullable<Shape[K]> extends object
+              ? ValidateDeclaration<
+                  Input[K],
+                  NonNullable<Shape[K]>,
+                  S,
+                  Parts,
+                  K extends Parts ? true : Local
+                >
+              : Shape[K]
             : Shape[K]
-          : Shape[K]
-      : never
+        : never
 }
 
 /**
@@ -386,7 +444,8 @@ export type StylesheetInput<
           T,
           K,
           S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
-        >
+        >,
+    Elements
   > &
     (string extends keyof T
       ? {}
@@ -400,22 +459,54 @@ export type StylesheetInput<
                   T,
                   K,
                   S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
-                >
+                >,
+            Elements
           >,
-          S
+          S,
+          Elements,
+          true
         >)
 } & {
-  [K in CrossElementSelector<Elements, S>]?: ElementMap<S, Elements>
+  [K in CrossElementSelector<Elements, S>]?: ElementMap<
+    S,
+    Elements,
+    DeclarationKinds<S, T, Elements, Kinds>
+  >
 } & {
   [B in (keyof InferBreakpoints<S> & string) | InferContainerConditions<S> as
     | `@${B}`
-    | `@media ${B}`]?: ElementMap<S, Elements>
+    | `@media ${B}`]?: ElementMap<
+    S,
+    Elements,
+    DeclarationKinds<S, T, Elements, Kinds>
+  >
 } & {
   /**
    * Condition-EXPRESSION blocks — see ConditionExprKeys for why these are
    * root-level only: `[not(cq('card').min(100))]: { Root: { … } }`.
    */
-  [K in ConditionExprKeys<S>]?: ElementMap<S, Elements>
+  [K in ConditionExprKeys<S>]?: ElementMap<
+    S,
+    Elements,
+    DeclarationKinds<S, T, Elements, Kinds>
+  >
+} & {
+  [K in QueryKey]?: ElementMap<
+    S,
+    Elements,
+    DeclarationKinds<S, T, Elements, Kinds>
+  >
+} & {
+  [K in keyof T as K extends QueryKey ? K : never]?: K extends QueryKey
+    ? ValidQueryKey<K, S, Elements> extends true
+      ? ValidateDeclaration<
+          T[K],
+          ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>,
+          S,
+          Elements
+        >
+      : never
+    : never
 } & {
   /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
   [P in Platform as `@platform.${P}` | `@platform ${P}`]?: {
@@ -430,7 +521,9 @@ export type StylesheetInput<
             E,
             S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
           >,
-      P
+      P,
+      Elements,
+      false
     >
   }
 }
@@ -534,16 +627,16 @@ export type VariantElementStyle<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Kind extends ElementType | undefined = undefined,
-> = AuthoredElementStyle<S, Kind> & {
+  AllParts extends string = Elements,
+  Host extends Platform | undefined = undefined,
+> = AuthoredElementStyle<S, Kind, AllParts, Host> & {
   $kind?: never
   $$type?: never
   /** Compose styles from other elements */
-  $compose?: Elements | Elements[]
+  $compose?: Elements | readonly Elements[]
 }
 
-/**
- * Named style definition - can only contain element styles
- */
+/** Compatibility type name for a reusable variant-rule fragment. */
 export type NamedStyleDef<
   S extends TokenStyleDeclaration,
   Elements extends string,
@@ -551,13 +644,23 @@ export type NamedStyleDef<
     Elements,
     undefined
   >,
-> = {
-  [E in Elements]?: VariantElementStyle<S, Elements, Kinds[E]>
-}
+> = VariantStyleDef<S, Elements, string, Kinds>
 
 /**
  * Variant style definition - can compose named styles and define element styles
  */
+export type VariantConditions<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+> =
+  | `@${keyof InferBreakpoints<S> & string}`
+  | `@media ${keyof InferBreakpoints<S> & string}`
+  | `@${InferContainerConditions<S>}`
+  | InferContainerAliases<S>
+  | ConditionExprKeys<S>
+  | CrossElementSelector<Elements, S>
+  | QueryKey
+
 export type VariantStyleDef<
   S extends TokenStyleDeclaration,
   Elements extends string,
@@ -566,11 +669,32 @@ export type VariantStyleDef<
     Elements,
     undefined
   >,
+  Host extends Platform | undefined = undefined,
 > = {
   /** Compose styles from named style definitions */
-  $compose?: Named | Named[]
+  $compose?: Named | readonly Named[]
 } & {
-  [E in Elements]?: VariantElementStyle<S, Elements, Kinds[E]>
+  [E in Elements]?: VariantElementStyle<
+    S,
+    ComposableParts<Kinds, E>,
+    Kinds[E],
+    Elements,
+    Host
+  >
+} & {
+  [K in VariantConditions<S, Elements>]?: VariantStyleDef<
+    S,
+    Elements,
+    Named,
+    Kinds,
+    Host
+  >
+} & {
+  [P in Platform as `@platform.${P}` | `@platform ${P}`]?: Host extends Platform
+    ? P extends Host
+      ? VariantStyleDef<S, Elements, Named, Kinds, P>
+      : never
+    : VariantStyleDef<S, Elements, Named, Kinds, P>
 }
 
 /**
@@ -581,9 +705,7 @@ export type VariantsCallbackResult<
   Elements extends string,
   R,
 > = {
-  [K in keyof R]: K extends NamedStyleKey<string>
-    ? NamedStyleDef<S, Elements>
-    : VariantStyleDef<S, Elements, ExtractNamedStyles<R>>
+  [K in keyof R]: VariantStyleDef<S, Elements, ExtractNamedStyles<R>>
 }
 
 /** Editor vocabulary omits forbidden optional-never fields; validation keeps
@@ -594,7 +716,7 @@ type VariantEditorShape<T> = T extends readonly unknown[]
     ? {
         [K in keyof T as [NonNullable<T[K]>] extends [never]
           ? never
-          : K]: VariantEditorShape<T[K]>
+          : K]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
       }
     : T
 
@@ -607,12 +729,39 @@ export type CheckedVariantRules<
     Elements,
     undefined
   >,
+  Mods extends ModType = ModType,
 > = {
   [K in keyof Input]: ValidateDeclaration<
     Input[K],
-    VariantStyleDef<S, Elements, string, Kinds>,
-    S
-  >
+    VariantStyleDef<
+      S,
+      Elements,
+      ExtractNamedStyles<Input>,
+      Kinds,
+      K extends `@platform${'.' | ' '}${infer Host extends Platform}`
+        ? Host
+        : undefined
+    >,
+    S,
+    Elements
+  > &
+    (K extends QueryKey
+      ? ValidQueryKey<K, S, Elements> extends true
+        ? unknown
+        : never
+      : K extends string
+        ? string extends K
+          ? unknown
+          : K extends
+                | NamedStyleKey<string>
+                | VariantConditions<S, Elements>
+                | `@platform.${Platform}`
+                | `@platform ${Platform}`
+            ? unknown
+            : ValidVariantKey<K, Mods> extends true
+              ? unknown
+              : never
+        : never)
 }
 
 /**
@@ -629,11 +778,7 @@ export type VariantsCallback<
 > = (
   $: VariantSelector<Mods>,
   q: QueryBuilder<S, Elements>,
-) => Record<
-  string,
-  | NamedStyleDef<S, Elements, Kinds>
-  | VariantStyleDef<S, Elements, string, Kinds>
->
+) => Record<string, VariantStyleDef<S, Elements, string, Kinds>>
 
 /**
  * Stylesheet with variants() method for adding conditional styles.
@@ -658,25 +803,6 @@ export interface StylesheetWithVariants<
   >,
   Defaults extends object = {},
 > {
-  /** Advanced boolean rules are validated separately from element keys. */
-  when<
-    const Rules extends {
-      [E in Elements]?: VariantElementStyle<S, Elements, Kinds[E]>
-    },
-  >(
-    predicate: QueryPredicate,
-    rules: Rules & {
-      [E in keyof Rules]: E extends Elements
-        ? ValidateDeclaration<
-            Rules[E],
-            VariantElementStyle<S, Elements, Kinds[E]>,
-            S
-          >
-        : never
-    },
-  ): Stylesheet<S, Kinds, Mods, Defaults> &
-    StylesheetWithVariants<S, Elements, Mods, Kinds, Defaults>
-
   /**
    * Define variants with a reusable selector annotation. The declared parts
    * supply query and style completions; inferred rules receive exact-key checks.
@@ -699,40 +825,27 @@ export interface StylesheetWithVariants<
     callback: (
       $: VariantSelector<M>,
       q: QueryBuilder<S, Elements>,
-    ) => Rules &
-      Record<
-        string,
-        VariantEditorShape<VariantStyleDef<S, Elements, string, Kinds>>
-      > &
-      CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds>,
+    ) => (
+      | Rules
+      | Record<
+          string,
+          VariantEditorShape<
+            VariantStyleDef<
+              S,
+              Elements,
+              ExtractNamedStyles<NoInfer<Rules>>,
+              Kinds
+            >
+          >
+        >
+    ) &
+      CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds, M>,
     options?: {
       defaults: D & {
         [K in keyof D]: K extends keyof M ? Exclude<M[K], undefined> : never
       }
     },
   ): Stylesheet<S, Kinds, M, D> &
-    StylesheetWithVariants<S, Elements, M, Kinds, D>
-
-  /** Compatibility factory for explicit generics split across two calls. */
-  variants<M extends ModType>(): <
-    const Rules extends Record<string, unknown>,
-    const D extends Partial<M> = {},
-  >(
-    callback: (
-      $: VariantSelector<M>,
-      q: QueryBuilder<S, Elements>,
-    ) => Rules &
-      Record<
-        string,
-        VariantEditorShape<VariantStyleDef<S, Elements, string, Kinds>>
-      > &
-      CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds>,
-    options?: {
-      defaults: D & {
-        [K in keyof D]: K extends keyof M ? Exclude<M[K], undefined> : never
-      }
-    },
-  ) => Stylesheet<S, Kinds, M, D> &
     StylesheetWithVariants<S, Elements, M, Kinds, D>
 
   // Explicit legacy type arguments opt into this compatibility signature.
@@ -765,7 +878,7 @@ export interface StylesheetWithVariants<
     const Extension extends StylesheetInput<
       S,
       Extension,
-      PickString<ExtractElements<Extension>>,
+      Elements | PickString<ExtractElements<Extension>>,
       Kinds
     >,
   >(

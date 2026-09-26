@@ -66,14 +66,43 @@ config)` retains its spacing-scale container behavior for migration.
 The finite builders `q.state`, `q.media`, `q.container(name, step)`,
 `q.part(name).state`, and `q.platform` return literal keys. Human aliases include
 `:hover`, `@media md`, `@container field wide`, and `@platform web`.
-Use advanced boolean expressions at sheet level:
+Query builders are bound to their system: use the callback's `q` (which also
+knows declared part names) or that system's `ui.q`. Compound platform predicates
+filter execution but keep `$style` portable. Nest an explicit
+`[q.platform('web')]` or `[q.platform('native')]` block to widen its style types.
+
+Use the same computed-key form for compound queries, including inside a part:
 
 ```ts
-const emphasis = ui.stylesheet({ Root: { opacity: 1 } }).when(
-  ui.q.not(ui.q.any(ui.q.media('md'), ui.q.part('Root').state('hover'))),
-  { Root: { opacity: 0 } },
-)
+const emphasis = ui.stylesheet(q => ({
+  Root: {
+    opacity: 1,
+    [q.not(q.any(q.media('md'), q.state('hover')))]: { opacity: 0 },
+  },
+}))
 ```
+
+The earlier standalone `bp`, `cq`, `and`, `or` and `not` builders are isolated in
+`@toned/core/compat`; new declarations use the system-bound `q` methods. Old
+`cq(name).min(number)` values used a system's spacing scale. When migrating to
+`q.container(name, dp(number))`, supply the resolved logical width: 100 legacy
+units at the default 4px base become `dp(400)`. Named steps retain the owning
+system's declared threshold through `q.container(name, 'wide')`.
+
+Compound builders produce self-contained deterministic keys; they do not allocate
+registry IDs or normalize Boolean expressions into an exponentially growing DNF.
+Pass operands inline or as a readonly tuple so TypeScript retains the expression
+and can validate every referenced part. Arbitrary runtime arrays lose that exact
+key information and are not accepted by checked declarations. Each expression is
+bounded to 512 nodes and 64 KiB and fails explicitly if it exceeds either limit.
+A bare `q.state(...)` binds to its enclosing part; sheet-level groups use
+`q.part('Root').state(...)`. The direct cross-part shorthand selects one source;
+use `q.all` or `q.any` for compound cross-part conditions.
+
+The experimental curried `.variants<Mods>()(factory)`, `q.rules(...)`, and
+`.when(...)` forms are removed. Annotate the single `.variants` callback and put
+compound conditions directly in its returned objects. Existing main-branch
+explicit-generic callback and object variant declarations remain compatible.
 
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
@@ -83,8 +112,16 @@ check the complete returned declaration, including excess keys in nested rules.
 The callback offers part, token, variant-value and system-query completions.
 Re-export the type from your design-system module to write `ui.Variants<Mods>`
 with a namespace import (`import * as ui from "./ui"`). Reusable type aliases and interfaces both work, including optional axes.
-The annotation has no runtime cost.
-The curried, explicit-generic direct callback and object signatures remain
+The annotation has no runtime cost. Literal rule keys are checked against declared
+axes and values, including combined attributes, named fragments and condition
+aliases. A misspelled literal remains an error beside a computed selector.
+TypeScript can widen arbitrary dynamically computed keys to a string index; their
+spelling cannot then be proved. Use `$.axis(value)` and the query builders for
+computed keys so arguments are checked before that widening occurs. Place
+platform-specific styles inside the variant's part or condition group: mixing a
+separate top-level platform rule with widened computed variant keys loses the
+key-to-host association needed to validate its raw styles.
+The main-compatible explicit-generic direct callback and object signatures remain
 compatible; the explicit-generic direct callback cannot catch every excess property.
 **Migration note:** callbacks without explicit method type arguments now use the
 checked overload, including callbacks annotated with the existing `VariantSelector`.
@@ -92,13 +129,47 @@ Previously accepted excess keys are rejected. Keep an extracted factory's result
 literal (for example `return { ... } as const`) so finite token values do not widen
 to `number` or `string`; inline callbacks receive that context automatically.
 Overload errors can mention `VariantsInput`, the final compatibility signature;
-check the callback's declarations and literal values first. This stricter inferred
-callback behavior is an intentional type-checking change.
+check the callback's declarations and literal values first. The checked signature
+must precede compatibility signatures to provide literal context: moving it last
+widens otherwise valid inline token and fragment values. Removing those signatures
+would break callers on main. This diagnostic limitation remains while those calls
+are supported. The stricter inferred callback behavior is an intentional
+type-checking change.
 Variant keys are canonical
 literal strings at runtime and in TypeScript, including multi-value selections.
 The matcher keeps a fast unsigned single-word path and uses multiple words beyond
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
+
+## Reuse named fragments and part declarations
+
+Declare a named fragment with `[$('interactive')]` inside the same variant
+callback and apply it with `$compose: 'interactive'` at rule level. The annotated
+callback infers the exact names for completion and rejects unknown names, including
+references inside other named fragments. Arrays compose from left to right; the
+rule's own declarations apply last. Named fragments do not create variant matches.
+
+Inside a part declaration, `$compose: 'Label'` instead refers to a declared part.
+The source comes from the same rule when present, otherwise from the sheet's base
+part declarations. Derived sheets use their effective declared defaults, including
+prior overrides and null removals, when copying base parts. Explicitly typed parts can compose only from the same kind,
+so composition cannot move text-only styles or kind-restricted tokens into views.
+Legacy unspecified kinds retain their previous permissive behavior. Composition
+copies styles, not the source part's `$kind`.
+
+Declared part names (and their `$Part` aliases) are also reserved as nested target
+keys by the legacy declaration grammar. A token cannot share one of those names
+at that position; its object payload would be interpreted as a target declaration.
+
+Part and named-fragment references resolve transitively. Unknown references and
+cycles throw during stylesheet construction, including in unused named fragments;
+untyped callers cannot silently lose styles. A composed source remains an ordinary
+part that can be rendered independently. The same composition rules apply inside
+media, container, cross-part, compound-query and platform groups. Put the condition
+around a part map when composing under that condition; `$compose` nested inside an
+individual part's condition block is rejected. Root query groups must name their
+source part (`q.part('Root').state('hover')`); local `q.state('hover')` belongs inside
+that part's declarations.
 
 ## Build CSS before rendering
 
@@ -303,7 +374,7 @@ Invalid coverage fails at declaration, and palette snapshots are immutable.
 ### Logical relationships and web selectors
 
 `q.part('Root').has('Item', 'checked', { scope: 'descendant' })` is a semantic
-condition accepted by `.when()` and boolean query composition. The default scope
+condition key accepted directly in declaration objects and boolean query composition. The default scope
 is `descendant`; `child` means the immediate **registered part** parent, not every
 intermediate host wrapper. Each mounted controller family owns its part graph.
 Targets in another stylesheet instance never contribute facts. Web ancestry uses
@@ -389,7 +460,9 @@ layout.stylesheet(q => ({
 
 The container name must be declared in the system; its threshold may be local.
 These keys retain exact literal types (`@>=600px`, `@card/>=300px`) and compose
-with `q.all`, `q.any`, and `q.not`. Both host evaluators and generated query
+with `q.all`, `q.any`, and `q.not`. Mix variants into these expressions through
+checked selectors such as `$.size('s')`; unchecked raw `'[size=s]'` operands are
+rejected by the query helper types. Both host evaluators and generated query
 preludes use the same fixed pixel number. Percentage, font-relative, and
 custom-property thresholds are rejected. Include sheets containing these
 queries in the normal build inventory, including lazy or overridden sheets.

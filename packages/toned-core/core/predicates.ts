@@ -1,6 +1,11 @@
 import { parseVariantSelector } from '../stylesheet/matcher/normalizeRules.ts'
 import { relationFactKey } from '../stylesheet/relations.ts'
 import type { QueryPredicate } from '../system/queries.ts'
+import {
+  isQueryKey,
+  queryExpression,
+  type QueryKey,
+} from '../system/query-key.ts'
 import { fixedQueryWidth, parseConditionKey } from '../utils/conditions.ts'
 
 export type Fact =
@@ -45,6 +50,7 @@ export function conditionPredicate(
   key: string,
   values: readonly string[] = ['true'],
 ): Predicate {
+  if (isQueryKey(key)) return queryPredicate(key)
   if (key.startsWith('@platform.')) {
     const name = key.slice(10)
     if (name !== 'web' && name !== 'native')
@@ -93,7 +99,8 @@ export function conditionPredicate(
   return atom({ kind: 'variant', axis: key, values })
 }
 
-export function queryPredicate(query: QueryPredicate): Predicate {
+export function queryPredicate(input: QueryPredicate | QueryKey): Predicate {
+  const query = queryExpression(input)
   if (query.op === 'relation')
     return atom({ kind: 'relation', relation: query.relation })
   if (query.op === 'not')

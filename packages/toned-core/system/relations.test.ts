@@ -1,10 +1,11 @@
 import { expect, test } from 'vitest'
 import { createQueries } from './queries.ts'
+import { queryExpression } from './query-key.ts'
 
 const q = createQueries<{ states: { checked: ':checked' } }, 'Root' | 'Item'>()
 test('relational expressions retain semantic metadata through boolean algebra', () => {
   const relation = q.part('Root').has('Item', 'checked', { scope: 'child' })
-  expect(relation).toEqual({
+  expect(queryExpression(relation)).toEqual({
     op: 'relation',
     relation: {
       sourcePart: 'Root',
@@ -13,8 +14,11 @@ test('relational expressions retain semantic metadata through boolean algebra', 
       scope: 'child',
     },
   })
-  expect(q.not(relation)).toEqual({ op: 'not', operand: relation })
-  expect(q.part('Root').has('Item', 'hover')).toEqual({
+  expect(queryExpression(q.not(relation))).toEqual({
+    op: 'not',
+    operand: queryExpression(relation),
+  })
+  expect(queryExpression(q.part('Root').has('Item', 'hover'))).toEqual({
     op: 'relation',
     relation: {
       sourcePart: 'Root',

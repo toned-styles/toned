@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Switch as SwitchPrimitive } from 'radix-ui'
@@ -30,7 +31,7 @@ const switchStyles = stylesheet({
       transition: 'transform 0.15s',
     },
   },
-}).variants<{ checked: boolean }>(($) => ({
+}).variants(($: Variants<{ checked: boolean }>) => ({
   [$.checked(true)]: {
     root: { bgColor: 'action' },
   },

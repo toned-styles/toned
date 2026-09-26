@@ -1,11 +1,15 @@
 import type { QueryBuilder } from '../system/queries.ts'
 import type {
-  AuthoredElementStyle,
   ElementType,
   ModType,
   TokenStyleDeclaration,
 } from '../types/index.ts'
-import type { ValidateDeclaration } from '../types/stylesheet.ts'
+import type {
+  ExtractNamedStyles,
+  StylesheetInput,
+  ValidateDeclaration,
+  VariantStyleDef,
+} from '../types/stylesheet.ts'
 import { APPLY_OVERRIDE } from './rule-protocol.ts'
 import type { VariantSelector } from './variantSelector.ts'
 
@@ -18,55 +22,72 @@ export type NullableOverride<T> = T extends (...args: any[]) => unknown
       ? { [K in keyof T]: NullableOverride<T[K]> }
       : T | null
 
+type OverrideDeclaration<
+  T,
+  Parts extends string,
+  Local extends boolean = false,
+> = T extends (...args: any[]) => unknown
+  ? T
+  : T extends readonly unknown[]
+    ? T | null
+    : T extends object
+      ? {
+          [K in keyof T as Local extends true
+            ? K extends '$kind' | '$$type'
+              ? never
+              : K
+            : K]: K extends '$compose'
+            ? T[K]
+            : Local extends true
+              ? K extends
+                  | `@${string}`
+                  | `${string}:${string}`
+                  | `[${string}`
+                  | Parts
+                  | `$${Parts}`
+                ? OverrideDeclaration<T[K], Parts, true>
+                : NullableOverride<T[K]>
+              : OverrideDeclaration<T[K], Parts, K extends Parts ? true : false>
+        }
+      : T | null
+
 type Meta<T> = T extends { readonly __toned__?: infer M } ? M : never
 type System<T> = Meta<T> extends {
   system: infer S extends TokenStyleDeclaration
 }
   ? S
   : TokenStyleDeclaration
-type Kinds<T> = Meta<T> extends { elements: infer E }
+type Kinds<T> = Meta<T> extends {
+  elements: infer E extends Record<string, ElementType | undefined>
+}
   ? E
   : Record<string, undefined>
 type Mods<T> = Meta<T> extends { mods: infer M extends ModType } ? M : never
 type Parts<T> = keyof Kinds<T> & string
+
+/** The authored sheet vocabulary, with nullable inherited style leaves. */
 export type OverrideSheetRules<T> = Meta<T> extends {
-  system: infer S extends TokenStyleDeclaration
-  elements: infer E
+  system: TokenStyleDeclaration
+  elements: Record<string, ElementType | undefined>
 }
-  ? {
-      [K in keyof E as K extends string ? K : never]?: NullableOverride<
-        AuthoredElementStyle<
-          S,
-          E[K] extends ElementType | undefined ? E[K] : undefined
-        >
-      >
-    } & {
-      [K in
-        | `${keyof E & string}:${string}`
-        | `${keyof E & string}~:${string}`]?: {
-        [P in keyof E as P extends string ? P : never]?: NullableOverride<
-          AuthoredElementStyle<
-            S,
-            E[P] extends ElementType | undefined ? E[P] : undefined
-          >
-        >
-      }
-    }
+  ? OverrideDeclaration<
+      StylesheetInput<System<T>, Record<string, unknown>, Parts<T>, Kinds<T>>,
+      Parts<T>
+    >
   : Record<string, unknown>
-type VariantRules<T> = Meta<T> extends {
-  system: infer S extends TokenStyleDeclaration
-  elements: infer E
+
+/** Shared by pure override sheets and React's ambient override entries. */
+export type OverrideSheetVariantRules<
+  T,
+  Named extends string = never,
+> = Meta<T> extends {
+  system: TokenStyleDeclaration
+  elements: Record<string, ElementType | undefined>
 }
-  ? {
-      $compose?: string | string[]
-    } & {
-      [K in keyof E as K extends string ? K : never]?: NullableOverride<
-        AuthoredElementStyle<
-          S,
-          E[K] extends ElementType | undefined ? E[K] : undefined
-        >
-      >
-    }
+  ? OverrideDeclaration<
+      VariantStyleDef<System<T>, Parts<T>, Named, Kinds<T>>,
+      Parts<T>
+    >
   : Record<string, unknown>
 
 /** Pure authoritative composition, shared by server resolution and React scopes.
@@ -78,16 +99,29 @@ export function overrideSheet<
 >(
   sheet: T,
   rules:
-    | (Rules & ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>>)
+    | (Rules &
+        ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>)
     | ((
         q: QueryBuilder<System<T>, Parts<T>>,
       ) => Rules &
-        ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>>),
+        ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>),
   variants?: (
     $: VariantSelector<Mods<T>>,
     q: QueryBuilder<System<T>, Parts<T>>,
   ) => Variants &
-    ValidateDeclaration<Variants, Record<string, VariantRules<T>>, System<T>>,
+    Record<
+      string,
+      OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Variants>>>
+    > &
+    ValidateDeclaration<
+      NoInfer<Variants>,
+      Record<
+        string,
+        OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Variants>>>
+      >,
+      System<T>,
+      Parts<T>
+    >,
 ): T
 export function overrideSheet(
   sheet: object,

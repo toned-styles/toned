@@ -122,9 +122,8 @@ base.variants(($: Variants<Record<string, string>>) => ({
   [$['size']!('s')]: { Root: { padding: 2, typo: 1 } },
 }))
 
-// Existing explicit-generic, curried and object forms remain callable.
+// Main-compatible explicit-generic and object forms remain callable.
 base.variants<Mods>(($) => ({ [$.size('s')]: { Root: { padding: 2 } } }))
-base.variants<Mods>()(($) => ({ [$.size('s')]: { Root: { padding: 2 } } }))
 base.variants<Mods>({ '[size=s]': { Root: { padding: 2 } } })
 
 // Interfaces and type aliases are equally usable as reusable axis schemas.

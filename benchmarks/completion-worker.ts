@@ -7,6 +7,16 @@ const source = process.argv[2]!
 const version = process.argv[3]!
 const evidenceDirectory = process.argv[4]!
 const rawStyle = process.argv.includes('--raw-style')
+const platformStyle = process.argv.includes('--platform-style')
+function fixtureStyle(day: number) {
+  if (!rawStyle && !platformStyle) return {}
+  const style = { paddingTop: day % 4, opacity: 0.9, width: 40, height: 32 }
+  return platformStyle
+    ? { '@platform.native': { style }, '@platform.web': { style } }
+    : rawStyle
+      ? { style }
+      : {}
+}
 const moduleAt = (name: string) =>
   import(pathToFileURL(join(source, name)).href)
 const hasModule = (name: string) => existsSync(join(source, name))
@@ -67,16 +77,7 @@ const cold_stylesheet_compile_us = measure(100, () => {
           {
             shade: 'rest',
             offset: day,
-            ...(rawStyle
-              ? {
-                  style: {
-                    paddingTop: day % 4,
-                    opacity: 0.9,
-                    width: 40,
-                    height: 32,
-                  },
-                }
-              : {}),
+            ...fixtureStyle(day),
           },
         ]),
       ),
@@ -90,7 +91,8 @@ const cold_stylesheet_compile_us = measure(100, () => {
     disabled: false,
   })
   assert.equal(base.getCurrentStyle('Day41').style.marginLeft, 41)
-  if (rawStyle) assert.equal(base.getCurrentStyle('Day41').style.width, 40)
+  if (rawStyle || platformStyle)
+    assert.equal(base.getCurrentStyle('Day41').style.width, 40)
   base.dispose?.()
   return base
 })
@@ -274,16 +276,7 @@ function DayScope({ day, selected }: { day: number; selected: boolean }) {
         .overrideStyles(sheet, {
           Root: {
             offset: day,
-            ...(rawStyle
-              ? {
-                  style: {
-                    paddingTop: day % 4,
-                    opacity: 0.9,
-                    width: 40,
-                    height: 32,
-                  },
-                }
-              : {}),
+            ...fixtureStyle(day),
             shade: selected ? 'selected' : day % 7 === 0 ? 'disabled' : 'rest',
             ':hover': { shade: selected ? 'selected' : 'rest' },
           },
@@ -335,7 +328,7 @@ for (let round = 0; round < 6; round++) {
   for (let day = 0; day < 42; day++) {
     const button = container.querySelector(`[data-day="${day}"]`) as HTMLElement
     assert.equal(button.style.marginLeft, `${day}px`)
-    if (rawStyle) assert.equal(button.style.width, '40px')
+    if (rawStyle || platformStyle) assert.equal(button.style.width, '40px')
   }
   const updateStart = performance.now()
   await React.act(async () => {

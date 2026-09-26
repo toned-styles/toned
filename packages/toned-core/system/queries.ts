@@ -1,8 +1,17 @@
+import {
+  booleanQuery,
+  notQuery,
+  relationQuery,
+  type BooleanQuery,
+  type NotQuery,
+  type QueryKey,
+  type RelationQuery,
+} from './query-key.ts'
+import type { BuiltVariantKey } from '../stylesheet/variantSelector.ts'
 import type { LogicalLength } from '../core/values.ts'
 import type { Relation } from '../stylesheet/relations.ts'
 import type { Platform } from '../types/config.ts'
-import type { CheckedVariantRules, Pseudo } from '../types/stylesheet.ts'
-import type { TokenStyleDeclaration } from '../types/tokens.ts'
+import type { Pseudo } from '../types/stylesheet.ts'
 
 type FixedLength<N extends number = number> = LogicalLength & {
   unit: 'dp'
@@ -37,15 +46,11 @@ export type QueryAtom<C, Parts extends string = string> =
   | `@platform.${Platform}`
   | `${Parts}:${State<C>}`
   | `[${string}]`
+type QueryOperand<C, Parts extends string> =
+  | Exclude<QueryAtom<C, Parts>, `[${string}]`>
+  | BuiltVariantKey
+  | QueryKey
 export type QueryBuilder<C, Parts extends string = string> = {
-  /** TypeScript does not excess-check callback return values. This identity
-   * constructor checks the inferred variant rule map before returning it. */
-  rules<const Input>(
-    input: Input &
-      (C extends TokenStyleDeclaration
-        ? CheckedVariantRules<C, Parts, Input>
-        : never),
-  ): Input
   state<N extends State<C>>(name: N): `:${N}`
   media<N extends Media<C>>(name: N): `@${N}`
   media<const N extends number>(minimum: FixedLength<N>): `@>=${N}px`
@@ -62,33 +67,26 @@ export type QueryBuilder<C, Parts extends string = string> = {
   ): {
     state<St extends State<C>>(state: St): `${N}:${St}`
     /** Relationships stay inside one mounted instance and use registered part ancestry. */
-    has<Target extends Parts, St extends State<C>>(
+    has<
+      Target extends Parts,
+      St extends State<C>,
+      Scope extends 'child' | 'descendant' = 'descendant',
+    >(
       part: Target,
       state: St,
-      options?: { scope?: 'child' | 'descendant' },
-    ): QueryPredicate
+      options?: { scope?: Scope },
+    ): RelationQuery<N, Target, St, Scope>
   }
   platform<P extends Platform>(platform: P): `@platform.${P}`
-  all(
-    ...operands: readonly (QueryAtom<C, Parts> | QueryPredicate)[]
-  ): QueryPredicate
-  any(
-    ...operands: readonly (QueryAtom<C, Parts> | QueryPredicate)[]
-  ): QueryPredicate
-  not(operand: QueryAtom<C, Parts> | QueryPredicate): QueryPredicate
+  all<const A extends readonly QueryOperand<C, Parts>[]>(
+    ...operands: A
+  ): BooleanQuery<'all', A>
+  any<const A extends readonly QueryOperand<C, Parts>[]>(
+    ...operands: A
+  ): BooleanQuery<'any', A>
+  not<const A extends QueryOperand<C, Parts>>(operand: A): NotQuery<A>
 }
-const predicate = (value: string | QueryPredicate): QueryPredicate => {
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    ['atom', 'relation', 'all', 'any', 'not'].includes(value.op)
-  )
-    return value
-  const key = String(value)
-  if (!/^(?:@[^\s]+|[^:]*:[^\s]+|\[.+\])$/.test(key))
-    throw new Error(`Toned: invalid query atom ${key}`)
-  return Object.freeze({ op: 'atom', key })
-}
+
 const fixedKey = (value: string | FixedLength): string => {
   if (typeof value === 'string') return value
   if (
@@ -103,14 +101,12 @@ const fixedKey = (value: string | FixedLength): string => {
     )
   return `>=${value.value}px`
 }
-/** Finite atom builders return primitive literal keys; boolean expressions are
- * deliberately objects and cannot silently widen an element's key space. */
+/** Every condition builder returns a deterministic computed property key. */
 export function createQueries<C, Parts extends string = string>(): QueryBuilder<
   C,
   Parts
 > {
   return Object.freeze({
-    rules: <Input>(input: Input) => input,
     state: (name: string) => `:${name}`,
     media: (name: string | FixedLength) => `@${fixedKey(name)}`,
     container: (name: string, step: string | FixedLength) =>
@@ -121,29 +117,11 @@ export function createQueries<C, Parts extends string = string>(): QueryBuilder<
         part: string,
         state: string,
         options?: { scope?: 'child' | 'descendant' },
-      ) =>
-        Object.freeze({
-          op: 'relation',
-          relation: Object.freeze({
-            sourcePart: name,
-            part,
-            state,
-            scope: options?.scope ?? 'descendant',
-          }),
-        }),
+      ) => relationQuery(name, part, state, options?.scope ?? 'descendant'),
     }),
     platform: (platform: string) => `@platform.${platform}`,
-    all: (...operands: (string | QueryPredicate)[]) =>
-      Object.freeze({
-        op: 'all',
-        operands: Object.freeze(operands.map(predicate)),
-      }),
-    any: (...operands: (string | QueryPredicate)[]) =>
-      Object.freeze({
-        op: 'any',
-        operands: Object.freeze(operands.map(predicate)),
-      }),
-    not: (operand: string | QueryPredicate) =>
-      Object.freeze({ op: 'not', operand: predicate(operand) }),
+    all: (...operands: string[]) => booleanQuery('all', operands),
+    any: (...operands: string[]) => booleanQuery('any', operands),
+    not: (operand: string) => notQuery(operand),
   }) as QueryBuilder<C, Parts>
 }

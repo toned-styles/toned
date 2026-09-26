@@ -7,6 +7,7 @@ import {
 } from '../../stylesheet/rule-protocol.ts'
 import type { SystemOptions } from '../../system/definition.ts'
 import { normalizeDeclarations } from '../../system/normalize.ts'
+import { isQueryKey } from '../../system/query-key.ts'
 import type {
   TokenStyle,
   TokenStyleDeclaration,
@@ -20,7 +21,11 @@ import { resolveCssPlan } from './plan.ts'
  * The result goes through the same declaration compiler as stylesheets;
  * there is no separate matcher, resolver, or field cascade in this adapter. */
 function expand(key: string, value: unknown): Record<string, unknown> {
-  if ((key[0] === ':' || key[0] === '@') && key.includes('_')) {
+  if (
+    !isQueryKey(key) &&
+    (key[0] === ':' || key[0] === '@') &&
+    key.includes('_')
+  ) {
     const separator = key.indexOf('_')
     return {
       [key.slice(0, separator)]: expand(key.slice(separator + 1), value),

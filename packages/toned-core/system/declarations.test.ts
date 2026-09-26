@@ -84,7 +84,7 @@ describe('declaration normalization', () => {
     })
     expect(q.state('focus-visible')).toBe(':focus-visible')
     expect(q.part('Root').state('hover')).toBe('Root:hover')
-    expect(typeof q.all(q.media('md'))).toBe('object')
+    expect(typeof q.all(q.media('md'))).toBe('string')
   })
   test('rejects conflicting or conditional kinds', () => {
     expect(() =>

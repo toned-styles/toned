@@ -49,8 +49,11 @@ import {
 import { type ContainerSizes, MountedFamily } from './mounted-family.ts'
 import { registerStylesheetPlan } from './plans.ts'
 import { type Relation, relationFactKey } from './relations.ts'
-import { APPLY_OVERRIDE, RULE_LAYERS, WHEN_RULES } from './rule-protocol.ts'
-import { StyleMatcher } from './StyleMatcher.ts'
+import { declarationLayers } from './removals.ts'
+import { APPLY_OVERRIDE, RULE_LAYERS } from './rule-protocol.ts'
+import { assertOverrideMetadata } from './overrideValidation.ts'
+import type { StyleMatcher } from './StyleMatcher.ts'
+import { sharedMatcher } from './matcher/sharedMatcher.ts'
 import {
   deepMerge,
   extractOrderedKeys,
@@ -80,51 +83,6 @@ type ElementStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
 const EMPTY_DECLARATION = Object.freeze({})
-
-/*
- * Compiled matchers, shared across every Base built from the same rules.
- *
- * `flattenRules` + `compile` are pure over `(rules, cssMediaMode,
- * cssPseudoMode)`, and the bitmask-keyed match cache is instance-independent —
- * so two Buttons need one matcher, not two compilations (measured ~15.6µs per
- * instance, paid again per SSR request). Keyed weakly on the rules object (one
- * per stylesheet, module-lived) and by the two css-mode bits.
- */
-const MATCHER_CACHE = new WeakMap<object, Map<number, StyleMatcher>>()
-
-function sharedMatcher(
-  rules: BaseRules,
-  cssMediaMode: boolean,
-  cssPseudoMode: boolean,
-  stateAliases: Readonly<Record<string, string>> | undefined,
-  platform?: 'web' | 'native',
-  sourceOrder = false,
-): StyleMatcher {
-  let byMode = MATCHER_CACHE.get(rules)
-  if (!byMode) {
-    byMode = new Map()
-    MATCHER_CACHE.set(rules, byMode)
-  }
-  const key =
-    (cssMediaMode ? 1 : 0) |
-    (cssPseudoMode ? 2 : 0) |
-    (platform === 'native' ? 4 : platform === 'web' ? 8 : 0) |
-    (sourceOrder ? 16 : 0)
-  let matcher = byMode.get(key)
-  if (!matcher) {
-    // stateAliases are constant for a given rules object (one system per
-    // stylesheet), so they never diverge across cache hits on the same rules.
-    matcher = new StyleMatcher(rules, {
-      cssMediaMode,
-      cssPseudoMode,
-      stateAliases: Object.keys(stateAliases ?? {}),
-      platform,
-      sourceOrder,
-    })
-    byMode.set(key, matcher)
-  }
-  return matcher
-}
 
 // ModState represents the current state of modifiers (variants, media queries, pseudo-states)
 // Kept as AnyValue because keys are dynamic: variant names, breakpoint keys, and element:pseudo combinations
@@ -163,13 +121,15 @@ function elementNamesOf(rules: AnyValue): Set<string> {
 function mergeOverrideVariants(
   sheetVariants: AnyValue,
   variantsArg: ($: AnyValue, q?: AnyValue) => AnyValue,
-  baseElements: Set<string>,
+  baseRules: AnyValue,
   q?: AnyValue,
+  defaultKind?: string,
 ): AnyValue {
   const existing = sheetVariants ?? {}
   const incoming = processVariantRules(
     variantsArg(createVariantSelector([], { rejectDuplicates: true }), q),
-    baseElements,
+    baseRules,
+    defaultKind,
   )
 
   const merged: AnyValue = { ...existing }
@@ -203,6 +163,21 @@ function mergeOverrideVariants(
   return merged
 }
 
+/** Composition copies the sheet's current declared defaults. Prepare removals
+ * before merging authoritative layers so null cannot resurrect an older value. */
+function compositionDefaults(
+  rules: AnyValue,
+  layers: readonly AnyValue[],
+): AnyValue {
+  if (!layers.length) return rules
+  const source = { ...rules }
+  Object.defineProperty(source, RULE_LAYERS, { value: layers })
+  return declarationLayers(source).reduce(
+    (merged, layer) => deepMerge(merged, layer),
+    {},
+  )
+}
+
 export function createStylesheet<
   S extends TokenStyleDeclaration,
   _Mods extends ModType,
@@ -211,7 +186,6 @@ export function createStylesheet<
   ref: TokenSystem<S>,
   rules: T,
   variantRules?: AnyValue,
-  whenRules: Array<{ predicate: AnyValue; rules: AnyValue }> = [],
   overrideLayers: AnyValue[] = [],
   defaults: Readonly<Record<string, unknown>> = {},
 ): PreVariantsStylesheet<
@@ -237,11 +211,6 @@ export function createStylesheet<
   variantRules = normalizeDeclarations(variantRules)
   // Merge base rules with variants - StyleMatcher handles the format directly
   const mergedRules = { ...mergeRules(rules, variantRules) }
-  if (whenRules.length)
-    Object.defineProperty(mergedRules, WHEN_RULES, {
-      value: whenRules,
-      enumerable: true,
-    })
   if (overrideLayers.length)
     Object.defineProperty(mergedRules, RULE_LAYERS, {
       value: overrideLayers,
@@ -304,51 +273,21 @@ export function createStylesheet<
     },
     // Add variants method for chaining
     variants: <M extends ModType>(
-      variantsArg?: AnyValue,
+      variantsArg: AnyValue,
       variantOptions?: { defaults?: Record<string, unknown> },
     ): AnyValue => {
-      const build = (
-        input: AnyValue,
-        options?: { defaults?: Record<string, unknown> },
-      ) => {
-        const raw =
-          typeof input === 'function'
-            ? input(
-                createVariantSelector<M>([], { rejectDuplicates: true }),
-                ref.q,
-              )
-            : input
-        const variants = mergeOverrideVariants(
-          variantRules,
-          () => raw,
-          elementNamesOf(rules),
-          ref.q,
-        )
-        return createStylesheet<S, M, T>(
-          ref,
-          rules,
-          variants,
-          whenRules,
-          overrideLayers,
-          { ...defaults, ...options?.defaults },
-        )
-      }
-      return variantsArg === undefined
-        ? build
-        : build(variantsArg, variantOptions)
-    },
-    when: (predicate: AnyValue, elementRules: AnyValue) =>
-      createStylesheet<S, _Mods, T>(
-        ref,
-        rules,
+      const variants = mergeOverrideVariants(
         variantRules,
-        [
-          ...whenRules,
-          { predicate, rules: normalizeDeclarations(elementRules) },
-        ],
-        overrideLayers,
-        defaults,
-      ),
+        typeof variantsArg === 'function' ? variantsArg : () => variantsArg,
+        () => compositionDefaults(rules, overrideLayers),
+        ref.q,
+        ref.id ? 'view' : undefined,
+      )
+      return createStylesheet<S, M, T>(ref, rules, variants, overrideLayers, {
+        ...defaults,
+        ...variantOptions?.defaults,
+      })
+    },
     // Ordinary derivation changes defaults; existing matching variants retain
     // their normal precedence over those defaults.
     extend: (
@@ -365,15 +304,15 @@ export function createStylesheet<
         ? mergeOverrideVariants(
             variantRules,
             variantsArg,
-            elementNamesOf(extendedRules),
+            () => compositionDefaults(extendedRules, overrideLayers),
             ref.q,
+            ref.id ? 'view' : undefined,
           )
         : variantRules
       return createStylesheet<S, _Mods, AnyValue>(
         ref,
         extendedRules,
         variants,
-        whenRules,
         overrideLayers,
         defaults,
       )
@@ -389,13 +328,18 @@ export function createStylesheet<
           ? extensionRules(ref.q)
           : extensionRules,
       )
-      const variants = variantsArg
+      const parts = elementNamesOf(rules)
+      assertOverrideMetadata(extension, parts)
+      const authoredVariants = variantsArg?.(
+        createVariantSelector([], { rejectDuplicates: true }),
+        ref.q,
+      )
+      assertOverrideMetadata(authoredVariants, parts)
+      const variants = authoredVariants
         ? processVariantRules(
-            variantsArg(
-              createVariantSelector([], { rejectDuplicates: true }),
-              ref.q,
-            ),
-            elementNamesOf(rules),
+            authoredVariants,
+            () => compositionDefaults(rules, [...overrideLayers, extension]),
+            ref.id ? 'view' : undefined,
           )
         : undefined
       const layer = mergeRules(extension, normalizeDeclarations(variants))
@@ -403,7 +347,6 @@ export function createStylesheet<
         ref,
         rules,
         variantRules,
-        whenRules,
         [...overrideLayers, layer],
         defaults,
       )

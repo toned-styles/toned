@@ -1,7 +1,10 @@
 'use client'
 
 import type { QueryBuilder } from '@toned/core/system'
-import type { ValidateDeclaration } from '@toned/core/types/stylesheet'
+import type {
+  ExtractNamedStyles,
+  ValidateDeclaration,
+} from '@toned/core/types/stylesheet'
 
 export {
   ConfigProvider,
@@ -11,12 +14,10 @@ export {
 } from './runtime-config.ts'
 
 import {
-  type AuthoredElementStyle,
-  type ElementType,
   type ModType,
-  type NullableOverride as OverrideDeclaration,
+  type OverrideSheetRules,
+  type OverrideSheetVariantRules,
   SYMBOL_INIT,
-  type TokenStyle,
   type TokenStyleDeclaration,
   type VariantSelector,
 } from '@toned/core'
@@ -324,70 +325,13 @@ export const bind = _bind as <T extends StylesheetLike>(
   stylesheet: T,
 ) => BoundElementsOf<T>
 
-/**
- * The bound counterpart of `useStyles`: same arguments (mods in the hook call),
- * returns components (`<s.Root/>`) that also carry the raw prop-bag. Mods are
- * typed exactly as `useStyles`' — required iff the stylesheet declares them, and
- * only declared values accepted.
- */
-/**
- * Partial rules accepted as an override of T: any subset of its elements, each
- * a token style of its system. Nested pseudo/breakpoint blocks are allowed and
- * deep-merge into the sheet's own.
- */
-export type StyleOverrideRules<T extends StylesheetLike> =
-  InferMeta<T> extends {
-    system: infer Sys extends TokenStyleDeclaration
-    elements: infer E
-  }
-    ? {
-        [K in keyof E as K extends string ? K : never]?: OverrideDeclaration<
-          AuthoredElementStyle<
-            Sys,
-            E[K] extends ElementType | undefined ? E[K] : undefined
-          >
-        >
-      } & {
-        /** Cross-element channel keys ('Source:hover', 'Source~:<state>') ride
-         * the override's base rules; the matcher resolves them on the derived
-         * sheet exactly as on an authored one. */
-        [K in
-          | `${keyof E & string}:${string}`
-          | `${keyof E & string}~:${string}`]?: {
-          [T2 in keyof E as T2 extends string
-            ? T2
-            : never]?: OverrideDeclaration<TokenStyle<Sys>>
-        }
-      }
-    : Record<string, TokenStyle<TokenStyleDeclaration>>
-
-/** Pair a stylesheet with override rules, type-checked against the sheet.
- * `scope` gates the entry on the host's ambient scope channel (see
- * Config.useStyleOverrideScope — the haelo host feeds symbiote's zone path). */
-/**
- * What an override may say about one matcher: the sheet's elements, each
- * taking what the stylesheet's own element rules take.
- *
- * Deliberately NOT `StyleOverrideRules`, which also carries the cross-element
- * channel keys. Those are template-literal keys, and an intersection holding
- * one accepts any string, which switches excess-property checking off for the
- * whole object — an unknown element name would then pass here while the
- * stylesheet rejects it.
- */
-export type StyleOverrideVariantRules<T extends StylesheetLike> =
-  InferMeta<T> extends {
-    system: infer Sys extends TokenStyleDeclaration
-    elements: infer E
-  }
-    ? { $compose?: string | string[] } & {
-        [K in keyof E as K extends string ? K : never]?: OverrideDeclaration<
-          AuthoredElementStyle<
-            Sys,
-            E[K] extends ElementType | undefined ? E[K] : undefined
-          >
-        >
-      }
-    : Record<string, AuthoredElementStyle<TokenStyleDeclaration>>
+/** Pure and ambient overrides share the same nullable declaration vocabulary. */
+export type StyleOverrideRules<T extends StylesheetLike> = OverrideSheetRules<T>
+/** Kept as a public compatibility alias; call-site validation infers exact names. */
+export type StyleOverrideVariantRules<
+  T extends StylesheetLike,
+  Named extends string = string,
+> = OverrideSheetVariantRules<T, Named>
 
 /**
  * An override entry, with the stylesheet's own `.variants()` on it.
@@ -414,10 +358,18 @@ export interface OverrideEntry<T extends StylesheetLike>
       >,
       q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
     ) => Rules &
+      Record<
+        string,
+        OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Rules>>>
+      > &
       ValidateDeclaration<
-        Rules,
-        Record<string, StyleOverrideVariantRules<T>>,
-        OverrideSystem<T>
+        NoInfer<Rules>,
+        Record<
+          string,
+          OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Rules>>>
+        >,
+        OverrideSystem<T>,
+        OverrideParts<T>
       >,
   ): OverrideEntry<T>
 }
@@ -429,11 +381,21 @@ export const overrideStyles = _overrideStyles as <
   sheet: T,
   rules:
     | (Rules &
-        ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>)
+        ValidateDeclaration<
+          Rules,
+          StyleOverrideRules<T>,
+          OverrideSystem<T>,
+          OverrideParts<T>
+        >)
     | ((
         q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
       ) => Rules &
-        ValidateDeclaration<Rules, StyleOverrideRules<T>, OverrideSystem<T>>),
+        ValidateDeclaration<
+          Rules,
+          StyleOverrideRules<T>,
+          OverrideSystem<T>,
+          OverrideParts<T>
+        >),
   opts?: { scope?: string },
 ) => OverrideEntry<T>
 

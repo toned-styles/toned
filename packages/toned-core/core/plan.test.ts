@@ -1,6 +1,8 @@
+import type { Variants } from '../types/index.ts'
 import { describe, expect, it, vi } from 'vitest'
 import { cssVariablesBackend } from '../backends/index.ts'
 import { buildStyles } from '../build/index.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 import { createNativeRenderer, createRenderer } from '../server/index.ts'
 import { RULE_LAYERS } from '../stylesheet/rule-protocol.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
@@ -34,14 +36,43 @@ const system = () =>
   })
 
 describe('portable declaration plan', () => {
+  it('shares portable plans between authored and platform-prepared inputs in either compilation order', () => {
+    const ui = system()
+    for (const preparedFirst of [false, true]) {
+      const rules = {
+        Root: {
+          gap: 4,
+          '@platform.web': { gap: 8 },
+          '@platform.native': { gap: 12 },
+        },
+      }
+      const prepared = resolvePlatformKeys(rules, 'web')
+      const first = compileRules(ui, preparedFirst ? prepared : rules, 'web')
+      expect(compileRules(ui, preparedFirst ? rules : prepared, 'web')).toBe(
+        first,
+      )
+      expect(
+        foldOperations(resolvePlan(first, ui, {}, {})['Root']!).style,
+      ).toEqual({ gap: 8 })
+      const native = compileRules(ui, rules, 'native')
+      expect(native).not.toBe(first)
+      expect(
+        foldOperations(resolvePlan(native, ui, {}, {})['Root']!).style,
+      ).toEqual({ gap: 12 })
+      expect(compileRules(system(), rules, 'web')).not.toBe(first)
+    }
+  })
+
   it('evaluates tokens without invoking the CSS executor and preserves source-order winners', () => {
     const ui = system()
     const sheet = ui
       .stylesheet({ Root: { gap: 0, paint: 'red' } })
-      .variants<{ size: 'small' | 'large'; accent: boolean }>()(($) => ({
-      [$.size('small').accent(true)]: { Root: { gap: 12 } },
-      [$.size('small')]: { Root: { gap: 4 } },
-    }))
+      .variants(
+        ($: Variants<{ size: 'small' | 'large'; accent: boolean }>) => ({
+          [$.size('small').accent(true)]: { Root: { gap: 12 } },
+          [$.size('small')]: { Root: { gap: 4 } },
+        }),
+      )
     const spy = vi.spyOn(ui, 'exec').mockImplementation(() => {
       throw new Error('CSS executor called')
     })
@@ -198,7 +229,7 @@ it('specializes platform AST branches before collecting complete build operation
   const ui = system()
   const sheet = ui
     .stylesheet({ Root: { gap: 0 } })
-    .when(ui.q.all(ui.q.platform('native')), { Root: { gap: 8 } })
+    .extend({ [ui.q.all(ui.q.platform('native'))]: { Root: { gap: 8 } } })
   const web = compilePlan(ui, sheet, 'web')
   const native = compilePlan(ui, sheet, 'native')
   expect(

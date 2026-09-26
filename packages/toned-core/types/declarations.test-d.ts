@@ -1,3 +1,4 @@
+import type { Variants } from './index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
 
 const ui = defineSystem(
@@ -96,9 +97,8 @@ ui.stylesheet({
 })
 ui.stylesheet({
   Root: {
-    // @ts-expect-error structured advanced predicates are not element keys
     [q.all(q.media('md'))]: { paint: 'base' },
-    // @ts-expect-error even beside an invalid advanced key ordinary typos are rejected
+    // @ts-expect-error ordinary typos are rejected beside valid compound keys
     piant: 'accent',
   },
 })
@@ -135,18 +135,24 @@ defineSystem(invalidPortable)
 q.all('@unknown')
 
 const simple = ui.stylesheet({ Root: { paint: 'base' } })
-simple.when(q.all(q.media('md'), q.part('Root').state('hover')), {
-  Root: { paint: 'accent' },
-})
-simple.when(q.all(q.media('md')), {
-  Root: {
-    // @ts-expect-error advanced rule maps retain token typo checks
-    piant: 'accent',
+simple.extend({
+  [q.all(q.media('md'), q.part('Root').state('hover'))]: {
+    Root: { paint: 'accent' },
   },
 })
-simple.when(q.all(q.media('md')), {
-  // @ts-expect-error advanced rule maps only address declared parts
-  Nope: { paint: 'accent' },
+simple.extend({
+  [q.all(q.media('md'))]: {
+    Root: {
+      // @ts-expect-error advanced rule maps retain token typo checks
+      piant: 'accent',
+    },
+  },
+})
+simple.extend({
+  [q.all(q.media('md'))]: {
+    // @ts-expect-error advanced rule maps only address declared parts
+    Nope: { paint: 'accent' },
+  },
 })
 
 const flexible = defineToken({
@@ -163,36 +169,21 @@ flexibleSystem.stylesheet({
     flexible: 'oops',
   },
 })
-simple.variants<{ open: boolean }>(($, q) =>
-  // @ts-expect-error checked variant return rejects excess token keys
-  q.rules({
-    [$.open(true)]: {
-      Root: { [q.state('hover')]: { paint: 'base' }, piant: 'accent' },
-    },
-  }),
-)
-
-simple.variants<{ open: boolean }>(($, q) =>
-  q.rules({
-    [$.open(true)]: { Root: { [q.state('hover')]: { paint: 'accent' } } },
-  }),
-)
-
-simple.variants<{ open: boolean }>()(($, q) => ({
+simple.variants(($: Variants<{ open: boolean }>, q) => ({
   [$.open(true)]: { Root: { [q.state('hover')]: { paint: 'accent' } } },
 }))
 // @ts-expect-error the canonical inferred callback rejects an excess token beside a computed atom
-simple.variants<{ open: boolean }>()(($, q) => ({
+simple.variants(($: Variants<{ open: boolean }>, q) => ({
   [$.open(true)]: {
     Root: { [q.state('hover')]: { paint: 'base' }, piant: 'accent' },
   },
 }))
 // @ts-expect-error unknown nested properties are checked recursively
-simple.variants<{ open: boolean }>()(($, q) => ({
+simple.variants(($: Variants<{ open: boolean }>, q) => ({
   [$.open(true)]: { Root: { [q.state('hover')]: { piant: 'base' } } },
 }))
 // @ts-expect-error wrong token values are checked through the canonical factory
-simple.variants<{ open: boolean }>()(($) => ({
+simple.variants(($: Variants<{ open: boolean }>) => ({
   [$.open(true)]: { Root: { paint: 'typo' } },
 }))
 

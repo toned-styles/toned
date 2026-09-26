@@ -2,7 +2,6 @@
 import { expect, test } from 'vitest'
 import { getConfig } from '../system/config.ts'
 import { defineSystem } from '../system/definers.ts'
-import { WHEN_RULES } from './rule-protocol.ts'
 import { Base } from './StyleSheet.ts'
 
 const system = defineSystem({})
@@ -21,9 +20,7 @@ function setup(platform: 'web' | 'native' = 'web') {
       Root: { style: { opacity: 1 } },
       Item: {},
       Middle: {},
-      [WHEN_RULES]: [
-        { predicate, rules: { Root: { style: { opacity: 0.5 } } } },
-      ],
+      [predicate]: { Root: { style: { opacity: 0.5 } } },
     },
   })
 }
@@ -95,12 +92,9 @@ test('declared checked state responds to real input events without a styling ren
     rules: {
       Root: { style: { opacity: 1 } },
       Item: {},
-      [WHEN_RULES]: [
-        {
-          predicate: system.q.part('Root').has('Item', 'checked'),
-          rules: { Root: { style: { opacity: 0.5 } } },
-        },
-      ],
+      [system.q.part('Root').has('Item', 'checked')]: {
+        Root: { style: { opacity: 0.5 } },
+      },
     },
   })
   const root = document.createElement('div'),
@@ -172,12 +166,9 @@ test('native host topology and semantic state callbacks drive the same relation 
     rules: {
       Root: { style: { opacity: 1 } },
       Item: {},
-      [WHEN_RULES]: [
-        {
-          predicate: system.q.part('Root').has('Item', 'checked'),
-          rules: { Root: { style: { opacity: 0.5 } } },
-        },
-      ],
+      [system.q.part('Root').has('Item', 'checked')]: {
+        Root: { style: { opacity: 0.5 } },
+      },
     },
   })
   const a = base.attach('Root', root, { style: { opacity: 1 } }),
@@ -213,12 +204,9 @@ test('programmatic focus drives relational focus-visible without synthetic chang
     rules: {
       Root: { style: { opacity: 1 } },
       Item: {},
-      [WHEN_RULES]: [
-        {
-          predicate: local.q.part('Root').has('Item', 'focus-visible'),
-          rules: { Root: { style: { opacity: 0.5 } } },
-        },
-      ],
+      [local.q.part('Root').has('Item', 'focus-visible')]: {
+        Root: { style: { opacity: 0.5 } },
+      },
     },
   })
   const root = document.createElement('div'),
@@ -237,4 +225,71 @@ test('programmatic focus drives relational focus-visible without synthetic chang
   detachRoot()
   stop()
   root.remove()
+})
+
+test('foreign platform query relations impose no native host capability requirements', () => {
+  const q = system.q
+  const relation = q.part('Root').has('Item', 'hover')
+  for (const predicate of [
+    q.all(q.platform('web'), relation),
+    q.not(q.any(q.platform('native'), relation)),
+    q.any(q.platform('native'), relation),
+  ]) {
+    const rules = {
+      Root: {},
+      Item: {},
+      [predicate]: { Root: { style: { opacity: 0.5 } } },
+    }
+    const base = new Base({
+      ref: system,
+      rules,
+      config: { ...getConfig(), platform: 'native' },
+    })
+    expect(
+      Object.keys(base.matcher.scheme).some((key) =>
+        key.startsWith('relation:'),
+      ),
+    ).toBe(false)
+    expect(base.matcher.interactions).toEqual({})
+    expect(() => {
+      const dispose = base.mount()
+      dispose()
+    }).not.toThrow()
+  }
+  const nested = new Base({
+    ref: system,
+    config: { ...getConfig(), platform: 'native' },
+    rules: {
+      Root: {},
+      [q.all(q.platform('web'))]: {
+        [relation]: { Root: { style: { opacity: 0.5 } } },
+      },
+    },
+  })
+  expect(Object.keys(nested.matcher.scheme)).toEqual([])
+  expect(() => {
+    const dispose = nested.mount()
+    dispose()
+  }).not.toThrow()
+})
+
+test('native platform query branches still require supported relation topology', () => {
+  const q = system.q
+  for (const predicate of [
+    q.all(q.platform('native'), q.part('Root').has('Item', 'hover')),
+    q.any(q.platform('web'), q.part('Root').has('Item', 'hover')),
+  ]) {
+    const base = new Base({
+      ref: system,
+      config: { ...getConfig(), platform: 'native' },
+      rules: {
+        Root: {},
+        Item: {},
+        [predicate]: { Root: { style: { opacity: 0.5 } } },
+      },
+    })
+    expect(() => base.mount()).toThrow(
+      /nativeHost.parentOf and subscribeTopology/,
+    )
+  }
 })

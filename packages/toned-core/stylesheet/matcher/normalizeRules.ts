@@ -1,4 +1,10 @@
 import type { QueryPredicate } from '../../system/queries.ts'
+import {
+  bindQueryPart,
+  isQueryKey,
+  queryExpression,
+  type QueryKey,
+} from '../../system/query-key.ts'
 import { mergeStyle } from '../../utils/mergeStyle.ts'
 import { warnOnce } from '../../utils/warn.ts'
 import { resolveCrossHoverCss } from '../crossHover.ts'
@@ -8,10 +14,9 @@ import {
   type RuleObject,
   TOKEN_OPERATIONS,
   type TokenOperation,
-  WHEN_RULES,
-  type WhenRule,
 } from '../rule-protocol.ts'
 import { unescapeSelectorPart } from '../variantSelector.ts'
+import { specializeQuery } from './specializeQuery.ts'
 
 export {
   CONDITIONAL_RULES,
@@ -20,8 +25,6 @@ export {
   type RuleObject,
   TOKEN_OPERATIONS,
   type TokenOperation,
-  WHEN_RULES,
-  type WhenRule,
 } from '../rule-protocol.ts'
 
 export type Conditions = ReadonlyMap<string, readonly string[]>
@@ -157,6 +160,7 @@ export function normalizeRules(
     cssPseudoMode: boolean
     stateAliases?: readonly string[]
     sourceOrder?: boolean
+    platform?: 'web' | 'native'
   },
 ) {
   const elementSet = new Set<string>()
@@ -167,6 +171,10 @@ export function normalizeRules(
   const list: Record<string, { rule: RuleObject }> = Object.create(null)
   const ordered: NormalizedRule[] = []
   let hasMediaRules = false
+  let hasPlatformQueries = false
+  const recordPlatformQuery = () => {
+    hasPlatformQueries = true
+  }
   let conditionDepth = 0
   let predicate: QueryPredicate | undefined
   let deferred: Array<() => void> = []
@@ -195,9 +203,6 @@ export function normalizeRules(
   }
   for (const declaration of layers) {
     collectElements(declaration)
-    const whenRules: readonly WhenRule[] =
-      declaration[WHEN_RULES as unknown as string] ?? []
-    for (const entry of whenRules) collectElements(entry.rules)
   }
 
   const emit = (
@@ -271,7 +276,7 @@ export function normalizeRules(
       // Legacy declarations specialize their complete parent rule, including
       // later sibling parts. Only nested traversal is deferred: overlapping
       // sibling variants still execute in declaration order, without a global
-      // specificity sort. Explicit descriptors and .when use occurrence order.
+      // specificity sort. Explicit descriptors and query keys use occurrence order.
       if (!options.sourceOrder && !predicate) deferred.push(visit)
       else visit()
     }
@@ -295,6 +300,36 @@ export function normalizeRules(
     return result
   }
 
+  const withQuery = (
+    input: QueryPredicate | QueryKey,
+    part: string | undefined,
+    apply: () => void,
+  ) => {
+    const bound = bindQueryPart(queryExpression(input), part)
+    const query = options.platform
+      ? specializeQuery(bound, options.platform, recordPlatformQuery)
+      : bound
+    if (query.op === 'any' && query.operands.length === 0) return
+    registerPredicate(query)
+    const declarationLayer = layer
+    const visit = () => {
+      const savedPredicate = predicate
+      const savedIdentity = predicateIdentity
+      const savedLayer = layer
+      layer = declarationLayer
+      predicate = savedPredicate
+        ? { op: 'all', operands: [savedPredicate, query] }
+        : query
+      predicateIdentity = `?${JSON.stringify(predicate)}`
+      apply()
+      predicate = savedPredicate
+      predicateIdentity = savedIdentity
+      layer = savedLayer
+    }
+    if (!options.sourceOrder && !predicate) deferred.push(visit)
+    else visit()
+  }
+
   const walkElement = (
     conditions: Conditions,
     element: string,
@@ -314,7 +349,17 @@ export function normalizeRules(
         if (occurrence.conditional) {
           const savedPredicate = predicate
           const savedIdentity = predicateIdentity
-          predicate = occurrence.conditional.predicate
+          const bound = bindQueryPart(
+            queryExpression(occurrence.conditional.predicate),
+            element,
+          )
+          const query = options.platform
+            ? specializeQuery(bound, options.platform, recordPlatformQuery)
+            : bound
+          registerPredicate(query)
+          predicate = savedPredicate
+            ? { op: 'all', operands: [savedPredicate, query] }
+            : query
           predicateIdentity = `?${JSON.stringify(predicate)}`
           walkElement(conditions, element, occurrence.conditional.style, prefix)
           predicate = savedPredicate
@@ -332,7 +377,11 @@ export function normalizeRules(
       return
     }
     for (const key in node) {
-      if (key[0] === ':' && key.includes('_')) {
+      if (isQueryKey(key)) {
+        withQuery(key, element, () =>
+          walk(conditions, localMap(element, node[key]), prefix),
+        )
+      } else if (key[0] === ':' && key.includes('_')) {
         emit(conditions, element, prefix + key, node[key])
       } else if (key[0] === ':' || key[0] === '@') {
         const pseudo = key[0] === ':'
@@ -375,7 +424,9 @@ export function normalizeRules(
     const parentDeferred = deferred
     deferred = []
     for (const key in node) {
-      if (key[0] === '[') {
+      if (isQueryKey(key)) {
+        withQuery(key, undefined, () => walk(conditions, node[key], prefix))
+      } else if (key[0] === '[') {
         withConditions(conditions, parseVariantSelector(key), (next) =>
           walk(next, node[key], prefix),
         )
@@ -437,9 +488,13 @@ export function normalizeRules(
     const key = query.key
     if (key[0] === ':')
       throw new Error(
-        'A sheet-level .when state needs q.part(name).state(name)',
+        'A sheet-level query state needs q.part(name).state(name)',
       )
-    if (key.startsWith('@platform.')) return
+    if (key.startsWith('@platform.')) {
+      if (key !== '@platform.web' && key !== '@platform.native')
+        throw new Error(`Toned: unknown platform ${key}`)
+      return
+    }
     if (key[0] === '[') {
       for (const [axis, values] of parseVariantSelector(key)) {
         scheme[axis] ??= new Set()
@@ -455,7 +510,7 @@ export function normalizeRules(
     } else if (isCross(key)) {
       const [part, state] = key.split(':')
       if (!part || !state || !elementSet.has(part))
-        throw new Error(`Unknown .when part/state: ${key}`)
+        throw new Error(`Unknown query part/state: ${key}`)
       // Cross-part state is a controller fact even in CSS mode. The compiler
       // keeps a same-part condition symbolic, but a named sibling/descendant
       // relationship must not silently become the nearest `_s` CSS source.
@@ -464,7 +519,7 @@ export function normalizeRules(
       values.add('true')
       interactions[part] ??= {}
       interactions[part][`:${state}`] = true
-    } else throw new Error(`Unsupported .when atom: ${key}`)
+    } else throw new Error(`Unsupported query atom: ${key}`)
   }
   for (const authored of layers) {
     const start = ordered.length
@@ -475,14 +530,6 @@ export function normalizeRules(
       ? resolveCrossHoverCss(authored, options.stateAliases ?? [], elementSet)
       : authored
     walk(new Map(), declaration)
-    const whenRules: readonly WhenRule[] =
-      declaration[WHEN_RULES as unknown as string] ?? []
-    for (const entry of whenRules) {
-      registerPredicate(entry.predicate)
-      predicate = entry.predicate
-      predicateIdentity = `?${JSON.stringify(predicate)}`
-      walk(new Map(), entry.rules)
-    }
     if (layer && Object.keys(layerBase).length) {
       ordered.splice(start, 0, {
         conditions: new Map(),
@@ -499,6 +546,7 @@ export function normalizeRules(
     interactions,
     elementSet,
     hasMediaRules,
+    hasPlatformQueries,
     layers,
   }
 }

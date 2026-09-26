@@ -1,9 +1,5 @@
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import {
-  adHocAtoms,
-  parseConditionKey,
-  serializeAtom,
-} from '../utils/conditions.ts'
+import { collectAdHocConditions } from '../utils/conditions.ts'
 import { collectWebRules } from '../web/collect.ts'
 
 export type BuildManifest = Readonly<{
@@ -107,36 +103,5 @@ export function collectManifestConditions(
   input: unknown,
   out: Set<string>,
 ): void {
-  const visited = new WeakSet<object>()
-  const key = (name: string) => {
-    if (!name.startsWith('@') || name.startsWith('@platform.')) return
-    const expression = parseConditionKey(name.slice(1))
-    if (expression)
-      for (const atom of adHocAtoms(expression)) out.add(serializeAtom(atom))
-  }
-  const walk = (value: unknown): void => {
-    if (!value || typeof value !== 'object' || visited.has(value)) return
-    visited.add(value)
-    if (Array.isArray(value)) {
-      value.forEach(walk)
-      return
-    }
-    const record = value as Record<string | symbol, unknown>
-    if (record['op'] === 'atom' && typeof record['key'] === 'string')
-      key(record['key'])
-    for (const name of Reflect.ownKeys(value)) {
-      if (typeof name === 'string') {
-        key(name)
-        if (
-          name === 'style' ||
-          name === '$style' ||
-          name === '$grid' ||
-          name === '$area'
-        )
-          continue
-      }
-      walk(record[name])
-    }
-  }
-  walk(input)
+  collectAdHocConditions(input, out)
 }

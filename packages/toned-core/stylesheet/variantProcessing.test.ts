@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
+import { createQueries } from '../system/queries.ts'
 
 import {
   deepMerge,
@@ -171,7 +172,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result).toEqual({
       '[size=sm]': {
@@ -192,7 +193,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result['[size=sm]'].container).toEqual({
       borderWidth: 1,
@@ -212,7 +213,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     // Element-level $compose looks up sibling elements in the same rule
     expect(result['[size=sm]'].container).toEqual({
@@ -233,7 +234,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result).not.toHaveProperty('$named$_shared')
     expect(result).toHaveProperty('[size=sm]')
@@ -254,7 +255,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result['[size=sm]'].container).toEqual({
       borderWidth: 1,
@@ -278,7 +279,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     // The own element rule should override the composed value
     expect(result['[size=sm]'].container).toEqual({
@@ -298,7 +299,7 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result['[variant=accent]'].label).toEqual({
       color: 'yellow',
@@ -310,6 +311,7 @@ describe('processVariantRules', () => {
   test('element-level $compose strips $compose from source element', () => {
     const variantRules = {
       '[variant=accent]': {
+        other: { padding: 2 },
         source: { $compose: 'other', color: 'red' },
         target: {
           $compose: 'source',
@@ -318,10 +320,11 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
-    // $compose should be stripped from the source when merging into target
+    // Transitive composition is resolved before metadata is stripped.
     expect(result['[variant=accent]'].target).toEqual({
+      padding: 2,
       color: 'red',
       fontSize: 14,
     })
@@ -335,7 +338,7 @@ describe('processVariantRules', () => {
       '[variant=accent]': { container: { bgColor: 'yellow' } },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result['[size=sm]']).toEqual({ container: { paddingX: 2 } })
     expect(result['[size=md]']).toEqual({ container: { paddingX: 4 } })
@@ -356,13 +359,174 @@ describe('processVariantRules', () => {
       },
     }
 
-    const result = processVariantRules(variantRules, new Set())
+    const result = processVariantRules(variantRules, {})
 
     expect(result['[size=sm]'].footer).toEqual({
       fontWeight: 'bold',
       lineHeight: 1.5,
       textAlign: 'center',
     })
+  })
+
+  test('resolves transitive named composition with deterministic precedence', () => {
+    const rules = {
+      $named$_base: { Root: { padding: 1, ':hover': { opacity: 0.5 } } },
+      $named$_interactive: { $compose: 'base', Root: { padding: 2 } },
+      '[active]': { $compose: ['base', 'interactive'], Root: { margin: 3 } },
+    }
+    const before = JSON.stringify(rules)
+    expect(processVariantRules(rules, {})['[active]']).toEqual({
+      Root: { padding: 2, margin: 3, ':hover': { opacity: 0.5 } },
+    })
+    expect(JSON.stringify(rules)).toBe(before)
+  })
+
+  test('rejects unknown named references, including inherited object properties', () => {
+    for (const name of ['missing', 'toString', '__proto__']) {
+      expect(() =>
+        processVariantRules({ '[active]': { $compose: name } }, {}),
+      ).toThrow(`unknown named style "${name}"`)
+    }
+  })
+
+  test('rejects unknown sibling references rather than dropping them', () => {
+    expect(() =>
+      processVariantRules(
+        { '[active]': { Root: { $compose: 'Missing' } } },
+        {},
+      ),
+    ).toThrow('unknown part "Missing"')
+    expect(
+      processVariantRules(
+        { '[active]': { Root: { $compose: 'Base' } } },
+        {
+          Base: { $kind: 'text', padding: 2, ':hover': { opacity: 0.5 } },
+        },
+      ),
+    ).toEqual({
+      '[active]': { Root: { padding: 2, ':hover': { opacity: 0.5 } } },
+    })
+  })
+
+  test('rejects named composition cycles even in unused fragments', () => {
+    expect(() =>
+      processVariantRules(
+        {
+          $named$_a: { $compose: 'b' },
+          $named$_b: { $compose: 'a' },
+        },
+        {},
+      ),
+    ).toThrow('named style composition cycle: a -> b -> a')
+  })
+
+  test('rejects sibling composition cycles', () => {
+    expect(() =>
+      processVariantRules(
+        {
+          '[active]': {
+            Root: { $compose: 'Label' },
+            Label: { $compose: 'Root' },
+          },
+        },
+        {},
+      ),
+    ).toThrow('part composition cycle in [active]: Root -> Label -> Root')
+  })
+
+  test('rejects cross-kind composition from untyped callers', () => {
+    expect(() =>
+      processVariantRules(
+        { '[active]': { Root: { $compose: 'Label' } } },
+        {
+          Root: { $kind: 'view' },
+          Label: { $kind: 'text', $style: { fontSize: 14 } },
+        },
+      ),
+    ).toThrow('cannot compose text part "Label" into view part "Root"')
+    expect(() =>
+      processVariantRules(
+        { '[active]': { Root: { $compose: 'Label' } } },
+        {
+          Root: {},
+          Label: { $$type: 'text', $style: { fontSize: 14 } },
+        },
+        'view',
+      ),
+    ).toThrow('cannot compose text part "Label" into view part "Root"')
+  })
+
+  test('resolves named and part composition inside nested query groups', () => {
+    const q = createQueries<{}>()
+    const hover = q.all(q.part('Root').state('hover'))
+    const focus = q.all(q.part('Root').state('focus'))
+    const result = processVariantRules(
+      {
+        $named$_interactive: { Root: { padding: 2 } },
+        '[active]': {
+          Source: { padding: 4 },
+          [hover]: {
+            $compose: 'interactive',
+            Label: { $compose: 'Source', opacity: 0.5 },
+            [focus]: { $compose: 'interactive', Root: { opacity: 1 } },
+          },
+        },
+      },
+      { Root: {}, Label: {}, Source: {} },
+    )
+    expect(result['[active]'][hover]).toEqual({
+      Root: { padding: 2 },
+      Label: { padding: 4, opacity: 0.5 },
+      [focus]: { Root: { padding: 2, opacity: 1 } },
+    })
+  })
+
+  test('resolves the same composition vocabulary in media, cross-part and platform groups', () => {
+    for (const condition of [
+      '@md',
+      '@media md',
+      '@card/wide',
+      '@container card wide',
+      'Root:hover',
+      '@platform.web',
+      '@platform native',
+    ]) {
+      const result = processVariantRules(
+        {
+          $named$_shared: { Root: { padding: 2 } },
+          '[active]': {
+            [condition]: { $compose: 'shared', Label: { $compose: 'Source' } },
+          },
+        },
+        { Root: {}, Label: {}, Source: { opacity: 0.5 } },
+      )
+      expect(result['[active]'][condition]).toEqual({
+        Root: { padding: 2 },
+        Label: { opacity: 0.5 },
+      })
+    }
+  })
+
+  test('rejects composition nested inside a part condition', () => {
+    expect(() =>
+      processVariantRules(
+        {
+          '[active]': {
+            Root: { ':hover': { $compose: 'Label' } },
+          },
+        },
+        { Root: {}, Label: {} },
+      ),
+    ).toThrow('$compose belongs on a rule or part')
+  })
+
+  test('rejects malformed references from untyped callers', () => {
+    expect(() =>
+      processVariantRules({ '[active]': { $compose: 42 } }, {}),
+    ).toThrow('$compose requires a name or an array of names')
+    expect(() =>
+      processVariantRules({ '[active]': { Root: { $compose: null } } }, {}),
+    ).toThrow('$compose requires a name or an array of names')
   })
 })
 
@@ -427,4 +591,49 @@ describe('mergeRules', () => {
     expect(baseRules).toEqual({ container: { bgColor: 'blue' } })
     expect(variantRules).toEqual({ label: { textColor: 'white' } })
   })
+})
+
+test('ordinary and nested variant declarations do not prepare composition defaults', () => {
+  const defaults = vi.fn(() => {
+    throw new Error('unused defaults were prepared')
+  })
+  const rules = {
+    '[active]': {
+      Root: { opacity: 1 },
+      '@wide': {
+        Root: { opacity: 0.5 },
+        'Root:hover': { Label: { opacity: 0 } },
+      },
+    },
+  }
+  expect(processVariantRules(rules, defaults)).toEqual(rules)
+  expect(defaults).not.toHaveBeenCalled()
+  expect(() =>
+    processVariantRules(
+      { '[active]': { Root: { ':hover': { $compose: 'Label' } } } },
+      defaults,
+    ),
+  ).toThrow('$compose belongs on a rule or part')
+  expect(defaults).not.toHaveBeenCalled()
+})
+
+test('composition defaults are prepared once and nested groups inherit resolved parent parts', () => {
+  const defaults = vi.fn(() => ({
+    Root: { $kind: 'view', opacity: 0 },
+    Label: { $kind: 'view' },
+    Source: { $kind: 'view', padding: 4 },
+  }))
+  const result = processVariantRules(
+    {
+      '[active]': {
+        Source: { padding: 8 },
+        Root: { $compose: 'Source' },
+        '@wide': { Label: { $compose: 'Root' } },
+      },
+    },
+    defaults,
+  )
+  expect(result['[active]'].Root).toEqual({ padding: 8 })
+  expect(result['[active]']['@wide'].Label).toEqual({ padding: 8 })
+  expect(defaults).toHaveBeenCalledTimes(1)
 })

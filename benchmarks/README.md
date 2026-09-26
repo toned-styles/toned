@@ -108,6 +108,79 @@ override derivations, zero interaction renders and zero retained disposal sample
 Do not combine the raw-style cold numbers with the default fixture's scalar-token
 numbers; the declarations intentionally contain different work.
 
+## September 26 shared compilation follow-up against `2fb925e`
+
+The compatibility matcher and portable compiler now reuse their runtime rule
+normalization. The cache is weakly owned by declarations with four finite
+cascade/platform-mode slots; a standalone matcher still reads mutable inputs afresh.
+CSS-condition lowering retains its separate adapter. Matcher preparation moved
+out of the mounted controller into `stylesheet/matcher/sharedMatcher.ts`.
+
+Portable compilation also shares one plan between an authored rule tree and its
+platform-prepared identity. Previously development diagnostics could compile the
+first while a mounted controller compiled the second. Preparing an already
+resolved grid tree now returns the same object, preserving materialized fields
+and override layers. Regression tests verify both compiler/matcher request orders,
+platform/system isolation, grid idempotence and standalone input mutation.
+
+The final composition optimization also makes effective source-default preparation
+lazy. Plain override variants perform no default-source merge; nested condition
+maps do not clone inherited parts until a composition reference needs them. A
+no-composition part retains its already copied own style instead of copying it
+again. Structural tests verify no supplier/default merge for plain rules, one
+preparation for referenced sources, and unchanged kind, override/null and nested
+metadata validation.
+
+After the final lazy composition-source preparation change, one paired run per
+fixture against `2fb925e` used identical guarded fixtures. All effective override,
+null, kind and static-metadata checks remained enabled. Parent validation work
+was paused during these two pairs, though this remains a shared host:
+
+| Workload and measurement | `2fb925e` | Delivered follow-up |
+| --- | ---: | ---: |
+| Scalar shared construction, µs | 0.376 | 0.413 |
+| Scalar cold compilation, µs | 273.395 | 249.935 |
+| Scalar ordinary React mount, ms | 1.872 | 2.854 |
+| Scalar override mount, ms | 5.760 | 5.319 |
+| Scalar override update, ms | 2.215 | 2.107 |
+| Platform-style shared construction, µs | 0.384 | 0.395 |
+| Platform-style cold compilation, µs | 487.569 | 456.995 |
+| Platform-style ordinary React mount, ms | 1.831 | 1.819 |
+| Platform-style override mount, ms | 9.093 | 7.522 |
+| Platform-style override update, ms | 3.467 | 2.971 |
+
+Cold compilation and override mounting/updates are lower in these final pairs.
+Shared construction is slower in both, and ordinary scalar React mounting is
+substantially slower. These observations do not establish a universal speedup or
+attribute each timing difference to one change. The report retains eighteen
+earlier pairs, including the preceding implementation's approximately 19% scalar
+override regression and other mixed results:
+[full recorded measurements](results/2026-09-26-normalization.json).
+
+The structural improvements are one runtime normalization instead of two when
+the matcher and portable compiler consume the same declaration, and no effective
+default-source merging for variants that do not compose. Platform-sensitive
+queries get separate web/native metadata; platform-neutral prepared trees still
+share normalized data. Stronger authoring validation and effective override
+source handling remain enabled. The final rerun followed an actual code
+optimization; earlier timing regressions remain in the report.
+
+The new fixture switch exercises the platform-specific duplication explicitly:
+
+```sh
+node benchmarks/completion.mjs 2fb925e --platform-style
+```
+
+It puts the same four-field style used by `--raw-style` inside both
+`@platform.web` and `@platform.native` blocks on each cold day part and each
+per-child override. Foreign blocks must be discarded; the selected block's width
+is asserted on native resolution and web hosts. Choose one style switch per run;
+`--raw-style` remains unchanged. All twenty paired runs passed the existing guard,
+resolver, host-write, override-derivation, declaration-emission and disposal
+assertions: 42/0/42 writes, 84 resolver calls, two changed override factories,
+zero styling interaction renders and zero retained disposal samples. Retention
+samples do not prove whole-application leak freedom.
+
 ## Controller, host, React and typechecking acceptance
 
 Run `node benchmarks/completion.mjs [checkpoint]` with HQ's root dependencies

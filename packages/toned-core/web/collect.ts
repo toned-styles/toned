@@ -29,8 +29,7 @@ export function collectWebRules(
         conditional ||
         (typeof key === 'string' &&
           ((key.startsWith('@') && !key.startsWith('@platform')) ||
-            key.startsWith(':'))) ||
-        (typeof key === 'symbol' && Symbol.keyFor(key) === '@toned/when')
+            key.startsWith(':')))
       walk((value as Record<PropertyKey, unknown>)[key], nested)
     }
   }

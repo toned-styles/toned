@@ -64,9 +64,8 @@ import { renderToString } from 'react-dom/server'
 import { App } from './App.tsx'
 export function render() {
   return renderToString(<App />)
-}
-
-// entry-client.tsx
+}`}</CodeBlock>
+      <CodeBlock>{`// entry-client.tsx
 import { hydrateRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 const root = document.getElementById('root')

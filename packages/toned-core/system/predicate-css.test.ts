@@ -1,10 +1,7 @@
 import { expect, test } from 'vitest'
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
-import {
-  RULE_LAYERS,
-  WHEN_RULES,
-} from '../stylesheet/matcher/normalizeRules.ts'
+import { RULE_LAYERS } from '../stylesheet/matcher/normalizeRules.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
 import { defineSystem, defineToken } from './definers.ts'
 import { namespaceCss } from './namespace.ts'
@@ -118,7 +115,7 @@ for (const strict of [false, true])
       }
       const rules = {
         Root: { paint: 1, width: 1 },
-        [WHEN_RULES]: [lowerGuard],
+        [lowerGuard.predicate]: lowerGuard.rules,
         [RULE_LAYERS]: [{ Root: { paint: 0.5 } }],
       }
       const matcher = new StyleMatcher(rules, { cssPseudoMode: true })
@@ -157,7 +154,10 @@ for (const strict of [false, true])
         {
           ...rules,
           [RULE_LAYERS]: [
-            { Root: { paint: 0.5 }, [WHEN_RULES]: [higherGuard] },
+            {
+              Root: { paint: 0.5 },
+              [higherGuard.predicate]: higherGuard.rules,
+            },
           ],
         },
         { cssPseudoMode: true },

@@ -1,20 +1,8 @@
 /**
- * The ergonomic face of the condition model (utils/conditions.ts): builders
- * that SERIALIZE TO CANONICAL STRING KEYS — the same trick the variant `$`
- * builder uses — so a stylesheet writes
- *
- *   [cq('field-group').min('25rem')]: { flexLayout: 'row' },
- *   [not(cq('card').min(400))]: { display: 'none' },
- *   [and(bp('md'), cq('card').min('30rem'))]: { … },
- *
- * and the object key IS the canonical `'@…'` spelling — hand-writable,
- * greppable, and identical across platforms. `below(x)` is `not(min(x))`:
- * the comparison surface is min-width plus algebra, nothing else.
- *
- * Combinators normalize to DNF at build time, so the core only ever parses
- * the flat `|`/`&`/`!` grammar.
- *
- * @module system/conditions
+ * Compatibility for the older standalone condition algebra.
+ * New declarations use the system-bound q builder. These helpers preserve
+ * spacing-scale container lengths and the historical flat DNF key grammar.
+ * @module compat/conditions
  */
 
 import {
@@ -24,14 +12,7 @@ import {
   serializeExpr,
 } from '../utils/conditions.ts'
 
-/**
- * A condition node. TYPED as its serialized key intersected with the carried
- * DNF — the VariantBuilder trick — so a builder result is a legal COMPUTED
- * OBJECT KEY with a precise template type (`cq('card').min(100)` types as
- * `'@card/>=100' & {…}`), and the stylesheet input's shaped key patterns
- * check it. At runtime it is an object whose toString/toPrimitive yield the
- * key.
- */
+/** A legacy condition is its serialized string key, at runtime and in types. */
 export type Condition<K extends `@${string}` = `@${string}`> = K
 
 /**
@@ -79,8 +60,8 @@ export type ContainerConditionBuilder<N extends string> = {
 
 /**
  * A declared container's condition builder. The name must be declared in the
- * system's `containers`; the VALUES are free at the use site. Prefer the
- * SYSTEM's `cq` (defineSystem returns one typed to its declared names).
+ * legacy system's `containers`; the VALUES are free at the use site.
+ * New declarations use q.container with declared steps or explicit dp lengths.
  */
 export function cq<N extends string>(name: N): ContainerConditionBuilder<N> {
   return {

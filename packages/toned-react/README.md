@@ -174,7 +174,7 @@ const s = useStyles(sheet, { active: false })
 Axes with defaults become optional; other required axes remain required. Omitted
 and explicitly `undefined` values select the default. Declared defaults themselves
 must be defined scalar values; `null` never means a variant value. Defaults persist
-through `extend`, `when`, and override layers. The existing `useBind` flat modifier
+through `extend`, computed query groups, and override layers. The existing `useBind` flat modifier
 argument remains unchanged.
 
 The existing `useBind`, `bind`, and `$scope` APIs remain supported. `useBind` returns

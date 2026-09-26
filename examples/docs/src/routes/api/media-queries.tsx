@@ -20,14 +20,21 @@ function ApiMediaQueries() {
       </p>
 
       <h2 {...s.h2}>Breakpoints</h2>
-      <p>The base system defines these breakpoints:</p>
-      <CodeBlock>{`// From @toned/systems/base/config.ts
-export const breakpoints = defineBreakpoints({
-  xs: 0,    // mobile-first default
-  sm: 480,  // small phones landscape
-  md: 768,  // tablets
-  lg: 992,  // small desktops
-  xl: 1200, // large desktops
+      <p>Declare named viewport thresholds in logical pixels:</p>
+      <CodeBlock>{`import { defineSystem } from '@toned/core'
+
+export const ui = defineSystem({
+  id: 'responsive',
+  tokens: {},
+  conditions: {
+    media: {
+      xs: 0,    // mobile-first default
+      sm: 480,  // small phones landscape
+      md: 768,  // tablets
+      lg: 992,  // small desktops
+      xl: 1200, // large desktops
+    },
+  },
 })`}</CodeBlock>
 
       <h2 {...s.h2}>Using Breakpoints in Stylesheets</h2>
@@ -136,12 +143,14 @@ const styles = stylesheet({
 }).variants(($: Variants<{ layout: 'grid' | 'list' }>) => ({
   [$.layout('grid')]: {
     container: {
-      style: { display: 'grid', gridTemplateColumns: '1fr' },
-      '@md': {
-        style: { gridTemplateColumns: '1fr 1fr' },
-      },
-      '@lg': {
-        style: { gridTemplateColumns: '1fr 1fr 1fr' },
+      '@platform web': {
+        $style: { display: 'grid', gridTemplateColumns: '1fr' },
+        '@md': {
+          $style: { gridTemplateColumns: '1fr 1fr' },
+        },
+        '@lg': {
+          $style: { gridTemplateColumns: '1fr 1fr 1fr' },
+        },
       },
     },
   },

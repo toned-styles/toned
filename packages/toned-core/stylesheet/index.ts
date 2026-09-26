@@ -17,6 +17,7 @@ export {
 export {
   type NullableOverride,
   type OverrideSheetRules,
+  type OverrideSheetVariantRules,
   overrideSheet,
 } from './overrideSheet.ts'
 export { stylesheetParts, stylesheetVariantAxes } from './plans.ts'

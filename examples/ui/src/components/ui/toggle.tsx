@@ -1,5 +1,7 @@
 'use client'
 
+import type { Variants } from '@toned/core'
+
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Toggle as TogglePrimitive } from 'radix-ui'
@@ -30,54 +32,56 @@ const toggleStyles = stylesheet({
     pointerEvents: 'none',
     opacity: 0.5,
   },
-}).variants<{
-  variant: 'default' | 'outline'
-  size: 'default' | 'sm' | 'lg'
-  pressed: boolean
-}>(($) => ({
-  [$.variant('default')]: {
-    root: {
-      style: { background: 'transparent' },
+}).variants(
+  (
+    $: Variants<{
+      variant: 'default' | 'outline'
+      size: 'default' | 'sm' | 'lg'
+      pressed: boolean
+    }>,
+  ) => ({
+    [$.variant('default')]: {
+      root: {
+        style: { background: 'transparent' },
+      },
     },
-  },
-  [$.variant('outline')]: {
-    root: {
-      borderColor: 'default',
-      borderWidth: 'thin',
-      shadow: 'small',
-      style: { background: 'transparent' },
+    [$.variant('outline')]: {
+      root: {
+        borderColor: 'default',
+        borderWidth: 'thin',
+        shadow: 'small',
+        style: { background: 'transparent' },
+        ':hover': { bgColor: 'subtle', textColor: 'subtle' },
+      },
     },
-    'root:hover': {
+    [$.size('default')]: {
+      root: {
+        height: '2.25rem',
+        paddingX: 2,
+        minWidth: '2.25rem',
+      },
+    },
+    [$.size('sm')]: {
+      root: {
+        height: '2rem',
+        minWidth: '2rem',
+        paddingY: 0,
+        paddingX: 1.5,
+      },
+    },
+    [$.size('lg')]: {
+      root: {
+        height: '2.5rem',
+        minWidth: '2.5rem',
+        paddingY: 0,
+        paddingX: 2.5,
+      },
+    },
+    [$.pressed(true)]: {
       root: { bgColor: 'subtle', textColor: 'subtle' },
     },
-  },
-  [$.size('default')]: {
-    root: {
-      height: '2.25rem',
-      paddingX: 2,
-      minWidth: '2.25rem',
-    },
-  },
-  [$.size('sm')]: {
-    root: {
-      height: '2rem',
-      minWidth: '2rem',
-      paddingY: 0,
-      paddingX: 1.5,
-    },
-  },
-  [$.size('lg')]: {
-    root: {
-      height: '2.5rem',
-      minWidth: '2.5rem',
-      paddingY: 0,
-      paddingX: 2.5,
-    },
-  },
-  [$.pressed(true)]: {
-    root: { bgColor: 'subtle', textColor: 'subtle' },
-  },
-}))
+  }),
+)
 
 function Toggle({
   className,

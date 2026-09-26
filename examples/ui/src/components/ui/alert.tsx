@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
@@ -41,22 +42,27 @@ const alertStyles = stylesheet({
       gap: '4px',
     },
   },
-}).variants<{
-  variant: 'default' | 'destructive'
-}>(($) => ({
-  [$.variant('default')]: {
-    root: { bgColor: 'elevated', textColor: 'default' },
-  },
-  [$.variant('destructive')]: {
-    root: {
-      bgColor: 'elevated',
-      textColor: 'destructive',
-      style: {
-        borderColor: 'color-mix(in srgb, var(--destructive) 50%, transparent)',
+}).variants(
+  (
+    $: Variants<{
+      variant: 'default' | 'destructive'
+    }>,
+  ) => ({
+    [$.variant('default')]: {
+      root: { bgColor: 'elevated', textColor: 'default' },
+    },
+    [$.variant('destructive')]: {
+      root: {
+        bgColor: 'elevated',
+        textColor: 'destructive',
+        style: {
+          borderColor:
+            'color-mix(in srgb, var(--destructive) 50%, transparent)',
+        },
       },
     },
-  },
-}))
+  }),
+)
 
 type AlertVariant = 'default' | 'destructive'
 

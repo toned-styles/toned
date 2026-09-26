@@ -6,6 +6,7 @@
  * elements the stylesheet DECLARED — a typo'd element name is a compile
  * error, not a silent `any`.
  */
+import type { Variants } from '@toned/core'
 import { alpha, defineSystem, defineToken, overrideSheet } from '@toned/core'
 import { bind, overrideStyles, useBind, useStyles } from './index.ts'
 
@@ -194,10 +195,10 @@ overrideStyles(overridable, (q) => ({
 
 export function CompletionContracts() {
   // Defaulted axes may be omitted; non-defaulted axes stay required.
-  const defaultedSheet = system
-    .stylesheet({ Root: {} })
-    .variants<{ size: 's' | 'm'; tone: 'quiet' | 'accent' }>()(
-    ($) => ({ [$.size('s')]: { Root: {} } }),
+  const defaultedSheet = system.stylesheet({ Root: {} }).variants(
+    ($: Variants<{ size: 's' | 'm'; tone: 'quiet' | 'accent' }>) => ({
+      [$.size('s')]: { Root: {} },
+    }),
     { defaults: { size: 'm' } },
   )
   useStyles(defaultedSheet, { tone: 'quiet' })
@@ -235,8 +236,8 @@ export function CompletionContracts() {
   useStyles(derived)
   // @ts-expect-error composition preserves variant value checking
   useStyles(derived, { tone: 'missing' })
-  system.stylesheet({ Root: {} }).variants<{ size: 's' | 'm' }>()(
-    ($) => ({ [$.size('s')]: { Root: {} } }),
+  system.stylesheet({ Root: {} }).variants(
+    ($: Variants<{ size: 's' | 'm' }>) => ({ [$.size('s')]: { Root: {} } }),
     // @ts-expect-error undefined is not a declared default value
     { defaults: { size: undefined } },
   )
