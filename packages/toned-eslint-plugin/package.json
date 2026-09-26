@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "description": "Optional import-aware Toned and readt rules for ESLint and Oxlint.",
+  "description": "Optional import-aware Toned and React rules for ESLint and Oxlint.",
   "exports": {
     ".": "./index.js",
-    "./readt": "./readt.js"
+    "./react": "./react.js"
   },
   "files": [
     "analysis.js",
     "rules.js",
     "index.js",
-    "readt.js",
+    "react.js",
     "README.md"
   ],
   "sideEffects": false,
