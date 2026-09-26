@@ -224,4 +224,37 @@ describe('bounded static module resolution', () => {
     )
     expect(project.tokensForSystem('ui', uri('types.ts'))).toEqual([])
   })
+  it('contains wildcard substitutions after URL resolution, including absolute and trimmed captures', () => {
+    const project = new DesignProject()
+    project.configureModules(root, { '@source/*': ['*'] })
+    const outside = 'file:///outside.ts'
+    project.update(outside, 'export const token=defineToken({values:[1]})', 1)
+    for (const from of [
+      '@source//outside',
+      '@source///outside',
+      '@source/ /outside',
+      '@source/ //[',
+      '@source/\n/outside',
+      '@source/\t/outside',
+      '@source/.\n./outside',
+    ]) {
+      expect(project.resolveImport(uri('consumer.ts'), from)).toBeUndefined()
+    }
+    project.update(
+      uri('inside.ts'),
+      'export const token=defineToken({values:[2]})',
+      1,
+    )
+    expect(project.resolveImport(uri('consumer.ts'), '@source/inside')).toBe(
+      uri('inside.ts'),
+    )
+    project.update(
+      uri('$&.ts'),
+      'export const token=defineToken({values:[3]})',
+      1,
+    )
+    expect(project.resolveImport(uri('consumer.ts'), '@source/$&')).toBe(
+      uri('$&.ts'),
+    )
+  })
 })

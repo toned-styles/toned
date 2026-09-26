@@ -51,3 +51,34 @@ test('the same scope selects traversal, source files and watched updates', () =>
     includesWorkspaceFile(root, 'file:///repo/lib/ui/card.test.tsx', include),
   ).toBe(false)
 })
+
+test('dot segments in accepted include paths are canonical before traversal and file matching', () => {
+  const { include } = parseWorkspaceOptions({
+    toned: { include: ['./src', 'src/./ui', './src/.', '.', './.'] },
+  })
+  expect(include).toEqual(['src', 'src/ui', '.'])
+  const narrow = parseWorkspaceOptions({
+    toned: { include: ['./src/./ui/.'] },
+  }).include
+  expect(narrow).toEqual(['src/ui'])
+  expect(
+    includesWorkspaceDirectory('file:///repo', 'file:///repo/src', narrow),
+  ).toBe(true)
+  expect(
+    includesWorkspaceDirectory('file:///repo', 'file:///repo/src/ui', narrow),
+  ).toBe(true)
+  expect(
+    includesWorkspaceFile(
+      'file:///repo',
+      'file:///repo/src/ui/card.ts',
+      narrow,
+    ),
+  ).toBe(true)
+  expect(
+    includesWorkspaceFile(
+      'file:///repo',
+      'file:///repo/src/other/card.ts',
+      narrow,
+    ),
+  ).toBe(false)
+})

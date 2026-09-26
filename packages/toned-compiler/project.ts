@@ -292,6 +292,7 @@ export class DesignProject {
               ? ''
               : from.slice(prefix!.length, from.length - suffix.length)
           if (
+            middle.startsWith('/') ||
             middle.split('/').includes('..') ||
             middle.includes('\\') ||
             middle.includes(':') ||
@@ -300,9 +301,19 @@ export class DesignProject {
             middle.includes('#')
           )
             return []
-          bases = targets.map(
-            (target) => new URL(target.replace('*', middle), root).href,
-          )
+          bases = targets.flatMap((target) => {
+            // Resolve first, then enforce containment: URL parsing can trim
+            // whitespace or normalize separators in an otherwise valid capture.
+            try {
+              const resolved = new URL(
+                target.replace('*', () => middle),
+                root,
+              ).href
+              return resolved.startsWith(root) ? [resolved] : []
+            } catch {
+              return []
+            }
+          })
           break
         }
       }

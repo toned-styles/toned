@@ -30,3 +30,28 @@ The extension is disabled in untrusted and virtual workspaces. It uses its own
 bundled server, accepts no workspace executable path, and performs no telemetry
 or network calls. Source edits are applied by the editor; no filesystem write
 bridge is started by this client.
+
+## Editor acceptance
+
+The standalone fixture under `fixture/` contains its own system, tokens and sheet;
+it does not require an HQ checkout. With VS Code installed, run:
+
+```sh
+VSCODE_EXECUTABLE_PATH="/Applications/Visual Studio Code.app/Contents/MacOS/Code" pnpm --filter toned-vscode test:editor
+```
+
+On Linux, set the variable to the installed GUI executable instead. The runner
+uses a temporary copy of the fixture and fresh user/extension directories, then
+removes them. It downloads nothing, disables the built-in TypeScript extension
+for this test, and verifies Toned indexing, completion, hover, definition,
+unsaved diagnostics and completion edits in the actual extension host. The
+120-second deadline and process-group cleanup currently require macOS or Linux;
+the extension itself also supports Windows. The HQ repository separately tests
+its real source graph through its own stdio acceptance script.
+
+Unexpected server crashes evict the failed workspace session and show a warning.
+Opening another source document, running a Toned command, or selecting **Restart**
+starts a fresh session; recovery does not automatically loop on a crashing index.
+A slow transport close after confirmed process exit is reported and released.
+If the OS has not confirmed termination, ownership is retained and the next stop
+can retry, rather than permanently caching a rejected shutdown promise.

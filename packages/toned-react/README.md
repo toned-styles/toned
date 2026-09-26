@@ -295,11 +295,17 @@ when those fields are unchanged. Keep host callback implementations stable.
 `useStyleOverrideScope` reads at the consuming component so nested host contexts
 retain their meaning. React cannot replace an arbitrary custom hook with a
 potentially different hook sequence inside that mounted consumer. Accordingly,
-`ConfigProvider` validates that this hook's identity stays fixed; changing or
-removing it requires a new provider `key`, which explicitly remounts that host
+`TonedProvider`, `ConfigProvider`, and legacy global consumers validate that this
+hook's identity stays fixed; changing or removing it requires a new provider
+`key`, which explicitly remounts that host
 integration. Other configuration updates and context value changes do not require
 that remount. A named Toned error diagnoses a changed hook before React encounters
 an inconsistent hook count.
+
+Legacy `setConfig` callers must install their scope hook before mounting, or
+unmount their consumers before replacing or removing it. This guard is intentional:
+swapping arbitrary hooks in an existing component can change React's hook order.
+Updating values read by the same hook remains supported without a remount.
 
 Module-level `bind(sheet)` and legacy `t` getters are pure, static snapshots of the
 installed configuration. They cannot consume provider context outside React.

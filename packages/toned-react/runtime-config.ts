@@ -23,7 +23,7 @@ function useStableScopeHook(hook: Config['useStyleOverrideScope']) {
   const installed = useRef(hook)
   if (installed.current !== hook)
     throw new Error(
-      'Toned provider: useStyleOverrideScope must remain the same hook while mounted; give the provider a new key to install a different host scope hook',
+      'Toned runtime: useStyleOverrideScope must remain the same hook while mounted; give the provider a new key, or remount legacy consumers after setConfig, to install a different host scope hook',
     )
 }
 

@@ -5,6 +5,7 @@ import {
   LanguageClient,
 } from 'vscode-languageclient/node'
 import { OwnedServer } from './owned-server.ts'
+import { evictClosedSession } from './session-lifecycle.ts'
 
 type Session = {
   client: LanguageClient
@@ -84,7 +85,42 @@ function start(document: vscode.TextDocument): Session | undefined {
     outputChannel: output,
     errorHandler: {
       error: () => ({ action: ErrorAction.Continue }),
-      closed: () => ({ action: CloseAction.DoNotRestart }),
+      closed: () => {
+        if (
+          evictClosedSession(
+            sessions,
+            key,
+            session,
+            stopping || server.isStopping,
+            () => {
+              output.appendLine(
+                `Toned server stopped unexpectedly for ${folder.name}.`,
+              )
+              void vscode.window
+                .showWarningMessage(
+                  `Toned stopped unexpectedly in ${folder.name}. Open a source file or restart to recover.`,
+                  'Restart',
+                )
+                .then(
+                  (action) => {
+                    if (action === 'Restart') return restart()
+                  },
+                  (error) => {
+                    output.appendLine(
+                      `Toned notification failed: ${String(error)}`,
+                    )
+                  },
+                )
+            },
+          )
+        )
+          void server
+            .stop()
+            .catch((error) =>
+              output.appendLine(`Toned crash cleanup failed: ${String(error)}`),
+            )
+        return { action: CloseAction.DoNotRestart }
+      },
     },
   })
   const session: Session = { client, ready: Promise.resolve(), server }

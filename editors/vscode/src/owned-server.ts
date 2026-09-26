@@ -83,9 +83,18 @@ export class OwnedServer {
     }
   }
 
+  get isStopping(): boolean {
+    return this.cancellation.signal.aborted
+  }
+
   stop(): Promise<void> {
     this.cancellation.abort()
-    this.stopping ??= this.finish()
+    this.stopping ??= this.finish().catch((error) => {
+      // A still-live process stays owned, but a later stop may retry once the OS
+      // delivers its exit. Never cache a failed cleanup forever.
+      this.stopping = undefined
+      throw error
+    })
     return this.stopping
   }
 
@@ -102,7 +111,17 @@ export class OwnedServer {
       )
       if (!this.didClose) {
         child.kill('SIGKILL')
-        await bounded(this.closed!, 2_000)
+        await bounded(this.closed!, 2_000).catch((error) => {
+          if (child.exitCode === null && child.signalCode === null) throw error
+          // The process exited; inherited or delayed pipe closure must not poison
+          // the workspace session. Release our remaining transport handles.
+          this.report(
+            `Toned server exited with delayed stream closure: ${String(error)}`,
+          )
+          child.stdin?.destroy()
+          child.stdout?.destroy()
+          child.stderr?.destroy()
+        })
       }
     }
     if (!this.initialized && this.cleanup)

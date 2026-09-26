@@ -34,7 +34,21 @@ export function parseWorkspaceOptions(value: unknown): WorkspaceOptions {
     throw new Error('Toned modules must be an object')
   // Mapping contents are validated by DesignProject.configureModules, shared with other hosts.
   return {
-    ...(include === undefined ? {} : { include: [...include] }),
+    ...(include === undefined
+      ? {}
+      : {
+          include: [
+            ...new Set(
+              include.map(
+                (path: string) =>
+                  path
+                    .split('/')
+                    .filter((segment) => segment !== '.')
+                    .join('/') || '.',
+              ),
+            ),
+          ],
+        }),
     ...(modules === undefined
       ? {}
       : { modules: modules as Readonly<Record<string, readonly string[]>> }),

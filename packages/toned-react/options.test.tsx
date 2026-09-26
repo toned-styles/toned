@@ -1,11 +1,14 @@
 // @vitest-environment happy-dom
-import type { Variants } from '@toned/core'
+
 import { cleanup, render } from '@testing-library/react'
+import type { Variants } from '@toned/core'
 import {
   defineConfig,
   defineSystem,
   defineToken,
+  getConfig,
   overrideSheet,
+  setConfig,
 } from '@toned/core'
 import { cssVariablesBackend } from '@toned/core/backends'
 import { createRenderer } from '@toned/core/server'
@@ -437,4 +440,42 @@ test('scope hooks read nested contexts and provider replacement requires an expl
   expect(() => view.rerender(wrap(config, 'with-scope'))).toThrow(
     'give the provider a new key',
   )
+})
+
+test('legacy global scope hooks can update context but require remounting before replacement', () => {
+  const previous = { ...getConfig() }
+  const Scope = React.createContext('first')
+  const useScope = () => React.useContext(Scope)
+  function View() {
+    const s = useStyles(sheet)
+    return <div {...s.Root} data-testid="legacy-scope" />
+  }
+  try {
+    setConfig({ ...config, useStyleOverrideScope: useScope })
+    const view = render(
+      <Scope.Provider value="first">
+        <View />
+      </Scope.Provider>,
+    )
+    view.rerender(
+      <Scope.Provider value="second">
+        <View />
+      </Scope.Provider>,
+    )
+    expect(view.getByTestId('legacy-scope').style.opacity).toBe('0.5')
+    setConfig({ useStyleOverrideScope: undefined })
+    expect(() =>
+      view.rerender(
+        <Scope.Provider value="second">
+          <View />
+        </Scope.Provider>,
+      ),
+    ).toThrow('remount legacy consumers')
+    view.unmount()
+    const remounted = render(<View />)
+    expect(remounted.getByTestId('legacy-scope').style.opacity).toBe('0.5')
+  } finally {
+    cleanup()
+    setConfig(previous)
+  }
 })
