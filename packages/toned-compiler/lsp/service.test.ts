@@ -31,12 +31,15 @@ describe('design language service', () => {
       service.definition(uri, document.positionAt(offset - 2)),
     ).toHaveLength(1)
     const node = service.project.at(uri, offset)!
-    const proposal = service.propose({
-      nodeId: node.id,
-      value: 4,
-      expectedVersion: 1,
-      scope: { uri, owner: 'styles' },
-    })
+    const proposal = service.propose(
+      {
+        nodeId: node.id,
+        value: 4,
+        expectedVersion: 1,
+        scope: { uri, owner: 'styles' },
+      },
+      () => 1,
+    )
     expect(proposal.workspaceEdit.documentChanges?.[0]).toMatchObject({
       textDocument: { uri, version: 1 },
       edits: [{ newText: '4' }],
@@ -67,7 +70,7 @@ describe('design language service', () => {
     ).toBe(true)
     service.dispose()
   })
-  it('serves actual JSON-RPC lifecycle, incremental edits and custom inspection requests', async () => {
+  it('serves actual JSON-RPC lifecycle, snapshot edits and custom inspection requests', async () => {
     const incoming = new PassThrough(),
       outgoing = new PassThrough()
     const server = createConnection(
@@ -88,7 +91,7 @@ describe('design language service', () => {
         rootUri: null,
         capabilities: {},
       })) as { capabilities: { textDocumentSync: number } }
-      expect(initialized.capabilities.textDocumentSync).toBe(2)
+      expect(initialized.capabilities.textDocumentSync).toBe(1)
       await client.sendNotification('initialized', {})
       await client.sendNotification('textDocument/didOpen', {
         textDocument: {
@@ -115,11 +118,7 @@ describe('design language service', () => {
         textDocument: { uri, version: 2 },
         contentChanges: [
           {
-            range: {
-              start: position,
-              end: { ...position, character: position.character + 1 },
-            },
-            text: '4',
+            text: source.replace('gap:2', 'gap:4'),
           },
         ],
       })
@@ -146,18 +145,15 @@ describe('design language service', () => {
         total: number
       }
       expect(refused.total).toBe(0)
-      expect(registration.documents.size).toBe(0)
-      await client.sendNotification('textDocument/didOpen', {
-        textDocument: {
-          uri,
-          languageId: 'typescriptreact',
-          version: 4,
-          text: source,
-        },
+      expect(registration.documents.size).toBe(1)
+      await client.sendNotification('textDocument/didChange', {
+        textDocument: { uri, version: 4 },
+        contentChanges: [{ text: source }],
       })
       expect(await client.sendRequest('toned/inspect', { uri })).toMatchObject({
         total: expect.any(Number),
       })
+      expect(registration.service.project.get(uri)?.text).toBe(source)
       await client.sendNotification('textDocument/didClose', {
         textDocument: { uri },
       })

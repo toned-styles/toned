@@ -7,7 +7,11 @@ import {
 } from 'vscode-languageserver/node.js'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { parseEditRequest, parseQuery } from '../requests.ts'
-import { loadWorkspace, readWorkspaceFile } from '../workspace.ts'
+import {
+  includesWorkspaceFile,
+  loadWorkspace,
+  readWorkspaceFile,
+} from '../workspace.ts'
 import { DesignLanguageService } from './service.ts'
 
 /** Register on an explicit connection, allowing real protocol tests without global stdio. */
@@ -49,7 +53,7 @@ export function registerLanguageServer(
           diagnostics: [...service.diagnostics(uri)],
         })
       } catch (error) {
-        removeOpen(uri)
+        // Keep the editor snapshot so the next change can repair a parse-budget failure.
         service.forget(uri)
         connection.sendDiagnostics({
           uri,
@@ -92,7 +96,7 @@ export function registerLanguageServer(
         ?.dynamicRegistration === true
     return {
       capabilities: {
-        textDocumentSync: TextDocumentSyncKind.Incremental,
+        textDocumentSync: TextDocumentSyncKind.Full,
         completionProvider: { triggerCharacters: [':', "'", '"', '.'] },
         hoverProvider: true,
         definitionProvider: true,
@@ -153,7 +157,22 @@ export function registerLanguageServer(
     }
   })
   const rejectDocument = (uri: string, version: number, cause: unknown) => {
-    removeOpen(uri)
+    // Full synchronization lets us retain only a bounded open marker for rejected
+    // buffers. The next snapshot can recover without close/reopen, and disk
+    // notifications can never replace an unsaved, over-budget editor document.
+    const previous = documents.get(uri)
+    if (uri.length <= 8192 && (previous || documents.size < 4096)) {
+      removeOpen(uri)
+      documents.set(
+        uri,
+        TextDocument.create(
+          uri,
+          previous?.languageId ?? 'typescriptreact',
+          version,
+          '',
+        ),
+      )
+    }
     pending.delete(uri)
     service.forget(uri)
     connection.sendDiagnostics({
@@ -220,29 +239,16 @@ export function registerLanguageServer(
     if (!previous) return
     if (textDocument.version <= previous.version) return
     try {
-      if (contentChanges.length > 10000)
-        throw new Error('Toned document change batch budget exceeded')
-      // Keep the committed snapshot intact if a malformed/oversized change fails.
-      let next = TextDocument.create(
-        previous.uri,
-        previous.languageId,
-        previous.version,
-        previous.getText(),
+      if (contentChanges.length !== 1 || 'range' in contentChanges[0]!)
+        throw new Error('Toned requires a full document snapshot per change')
+      queueDocument(
+        TextDocument.create(
+          previous.uri,
+          previous.languageId,
+          textDocument.version,
+          contentChanges[0]!.text,
+        ),
       )
-      for (const change of contentChanges) {
-        const removed =
-          'range' in change
-            ? next.offsetAt(change.range.end) -
-              next.offsetAt(change.range.start)
-            : next.getText().length
-        if (
-          change.text.length > 1_000_000 ||
-          next.getText().length - removed + change.text.length > 1_000_000
-        )
-          throw new Error('Toned document character budget exceeded')
-        next = TextDocument.update(next, [change], textDocument.version)
-      }
-      queueDocument(next)
     } catch (cause) {
       rejectDocument(textDocument.uri, textDocument.version, cause)
     }
@@ -309,7 +315,10 @@ export function registerLanguageServer(
             edit: {
               documentChanges: [
                 {
-                  textDocument: { uri: node.uri, version: document!.version },
+                  textDocument: {
+                    uri: node.uri,
+                    version: documents.get(node.uri)?.version ?? null,
+                  },
                   edits: [item.textEdit],
                 },
               ],
@@ -334,7 +343,12 @@ export function registerLanguageServer(
     workspaces: Object.fromEntries(indexingStatus),
   }))
   connection.onRequest('toned/proposeEdit', (params) =>
-    validated(() => service.propose(parseEditRequest(params))),
+    validated(() =>
+      service.propose(
+        parseEditRequest(params),
+        (uri) => documents.get(uri)?.version ?? null,
+      ),
+    ),
   )
   connection.onExecuteCommand(async (params) => {
     if (params.command !== 'toned.setValue' || params.arguments?.length !== 1)
@@ -343,7 +357,10 @@ export function registerLanguageServer(
         'Expected toned.setValue with one scoped edit request',
       )
     const proposal = validated(() =>
-      service.propose(parseEditRequest(params.arguments![0])),
+      service.propose(
+        parseEditRequest(params.arguments![0]),
+        (uri) => documents.get(uri)?.version ?? null,
+      ),
     )
     return connection.workspace.applyEdit(proposal.workspaceEdit)
   })
@@ -397,7 +414,14 @@ export function registerLanguageServer(
     }
   }
   function enqueueDiskChange(uri: string, type: number) {
-    if (disposed || documents.has(uri) || !rootFor(uri)) return
+    const root = rootFor(uri)
+    if (
+      disposed ||
+      documents.has(uri) ||
+      !root ||
+      !includesWorkspaceFile(root, uri)
+    )
+      return
     if (
       uri.length > 8192 ||
       (!diskChanges.has(uri) && diskChanges.size >= 4096)

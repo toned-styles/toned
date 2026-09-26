@@ -430,3 +430,155 @@ it('paginates reference results with usable offsets and exact totals', () => {
   )
   expect(() => project.referencesTo(node, { limit: 501 })).toThrow('limit')
 })
+
+it('distinguishes member labels and type names from actual lexical references', () => {
+  const text = `const card=ui.stylesheet({Root:{gap:1}});
+    interface Props { card: string }
+    type T = { card(): void }
+    class K { card = 1; cardMethod(){}; get cardGetter(){return 1} }
+    enum E { card }
+    type Qualified = Namespace.card;
+    const x=1; export { x as card }; export { card as publicCard };
+    export { card as remote } from './other';
+    const jsx = <X card={card} />;
+    const shorthand = {card}; const computed = {[card]: 1};
+    const access = Namespace.card;
+    type Value = typeof card;
+    card: while(false) { break card }
+    consume(card);`
+  const project = new DesignProject()
+  project.update(uri, text, 0)
+  const refs = project.referencesTo(
+    project.lookup('card', uri).find((node) => node.kind === 'sheet')!,
+  )
+  const expected = [
+    text.indexOf('card='),
+    text.indexOf('card as publicCard'),
+    text.indexOf('card} />'),
+    text.indexOf('card};'),
+    text.indexOf('card]: 1'),
+    text.indexOf('card;\n    card:'),
+    text.lastIndexOf('card);'),
+  ]
+  expect(refs.items.map((item) => item.start)).toEqual(expected)
+})
+
+it.each([
+  "'red' as const",
+  "('red')",
+  "('red' satisfies string)",
+  "(('red' /* retain this */ as const) satisfies string)",
+])('literal edits preserve the initializer wrapper: %s', (initializer) => {
+  const text = `const s=ui.stylesheet({Root:{color:${initializer}}})`
+  const project = new DesignProject()
+  project.update(uri, text, 0)
+  const node = project.query({ name: 'color' }).items[0]!
+  const { edit } = proposeValueEdit(project, {
+    nodeId: node.id,
+    value: 'green',
+    expectedVersion: 0,
+    scope: { uri, owner: 's' },
+  })
+  expect(edit.before).toBe("'red'")
+  expect(applyDesignEdit(text, 0, edit)).toBe(text.replace("'red'", "'green'"))
+})
+
+it('preserves angle assertions in TypeScript files and protects asserted shared values', () => {
+  const file = 'file:///workspace/angle.ts'
+  const text = 'const s=ui.stylesheet({Root:{gap:(<number>2)}})'
+  const project = new DesignProject()
+  project.update(file, text, 0)
+  const node = project.query({ name: 'gap' }).items[0]!
+  const { edit } = proposeValueEdit(project, {
+    nodeId: node.id,
+    value: 4,
+    expectedVersion: 0,
+    scope: { uri: file, owner: 's' },
+  })
+  expect(applyDesignEdit(text, 0, edit)).toBe(
+    text.replace('<number>2', '<number>4'),
+  )
+  const shared = parseDesignDocument(
+    file,
+    'const shared=2; const s=ui.stylesheet({Root:{gap:(shared as number)}})',
+    0,
+  )
+  expect(shared.nodes.find((item) => item.name === 'gap')?.opaque).toBeDefined()
+})
+
+it('merges chained variant metadata in declaration order without reversing rules', () => {
+  const text = `type First={size:'s'|'m';disabled:boolean}; type Second={size:'l';tone:'accent'|'quiet'};
+    const s=ui.stylesheet({Root:{gap:1}})
+      .variants(($:Variants<First>)=>({[$.size('s')]:{Root:{gap:2}}}))
+      .variants(($:Variants<Second>)=>({[$.size('l')]:{Root:{gap:4}}}))`
+  const document = parseDesignDocument(uri, text, 0)
+  const sheet = document.nodes.find((node) => node.kind === 'sheet')!
+  expect(sheet.variants).toEqual({
+    size: ['l'],
+    disabled: [false, true],
+    tone: ['accent', 'quiet'],
+  })
+  expect(sheet.variantType).toBe('First -> Second')
+  expect(
+    document.nodes
+      .filter((node) => node.kind === 'declaration' && node.name === 'gap')
+      .map((node) => [node.path[0], node.value]),
+  ).toEqual([
+    ['Root', 1],
+    ['variants:1', 2],
+    ['variants:2', 4],
+  ])
+})
+
+it('does not present a partial chain as a complete finite schema', () => {
+  const text = `type Known={size:'s'|'m'}; const s=ui.stylesheet({Root:{gap:1}})
+    .variants(($:Variants<Known>)=>({})).variants(($:Variants<ImportedMods>)=>({}))
+    .variants(($:Variants<{tone:'accent'}>)=>({}))`
+  const document = parseDesignDocument(uri, text, 0)
+  expect(
+    document.nodes.find((node) => node.kind === 'sheet')?.variants,
+  ).toBeUndefined()
+  expect(
+    document.diagnostics.some((item) => item.code === 'opaque-variants'),
+  ).toBe(true)
+})
+
+it('keeps computed keys and values as references without confusing namespace, enum or intrinsic JSX names', () => {
+  const text = `const card=ui.stylesheet({Root:{gap:1}});
+    namespace Inner { const card=1; consume(card) }
+    enum Values { card=1, another=card }
+    const view=<card/>;
+    const localFunction = function card(){ return card };
+    const object={ [card](card:number){return card}, get other(){return card} };
+    interface Shape extends card {}
+    class Extends extends card {}`
+  const project = new DesignProject()
+  project.update(uri, text, 0)
+  const refs = project.referencesTo(
+    project.lookup('card', uri).find((node) => node.kind === 'sheet')!,
+  )
+  expect(refs.items.map((item) => item.start)).toEqual([
+    text.indexOf('card='),
+    text.indexOf('card](card'),
+    text.indexOf('card} };'),
+    text.lastIndexOf('card {}'),
+  ])
+})
+
+it.each([
+  "type Unknown = { [axis: string]: 's' | 'm' }",
+  "interface Unknown extends Imported { size: 's' | 'm' }",
+])('does not omit unknown axes from a chained schema: %s', (declaration) => {
+  const document = parseDesignDocument(
+    uri,
+    `${declaration};const s=ui.stylesheet({Root:{}})
+    .variants(($:Variants<{tone:'accent'}>)=>({})).variants(($:Variants<Unknown>)=>({}))`,
+    0,
+  )
+  expect(
+    document.nodes.find((node) => node.kind === 'sheet')?.variants,
+  ).toBeUndefined()
+  expect(
+    document.diagnostics.some((item) => item.code === 'opaque-variants'),
+  ).toBe(true)
+})

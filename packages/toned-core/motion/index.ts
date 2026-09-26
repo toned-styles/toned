@@ -94,16 +94,16 @@ const finite = (value: unknown, name: string): number =>
   typeof value === 'number' && Number.isFinite(value)
     ? value
     : error(`${name} must be finite`)
-function numeric(value: unknown, property: string): number {
+function numeric(value: unknown, property: string): number | undefined {
   if (typeof value === 'number') return finite(value, property)
   if (
     typeof value === 'string' &&
     /^-?(?:\d+\.?\d*|\.\d+)(?:px)?$/.test(value.trim())
   )
     return finite(Number.parseFloat(value), property)
-  return error(
-    `${property} requires a numeric or pixel-resolved target; received ${String(value)}`,
-  )
+  // Valid computed CSS can be intrinsic, percentage-based or a shorthand tuple.
+  // Preserve that declaration without attempting numeric interpolation.
+  return undefined
 }
 function validate(options: MotionOptions): void {
   if (!options.properties.length) error('Choose at least one motion property')
@@ -205,8 +205,10 @@ export function attachMotion(
         const value =
           computed?.getPropertyValue(camelToKebab(property)) ??
           next['style']?.[property]
-        if (value != null && value !== '')
-          values[property] = numeric(value, property)
+        if (value != null && value !== '') {
+          const number = numeric(value, property)
+          if (number !== undefined) values[property] = number
+        }
       }
     }
     return values

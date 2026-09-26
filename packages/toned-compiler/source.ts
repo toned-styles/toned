@@ -37,6 +37,68 @@ const callName = (node: ts.CallExpression) =>
       ? node.expression.text
       : ''
 
+/** A lexical binding reference, not a member label or a declaration in the type namespace.
+ * Computed member keys and shorthand properties remain real value references. */
+function isBindingReference(node: ts.Identifier): boolean {
+  const parent = node.parent
+  if (
+    ts.isPropertyAssignment(parent) ||
+    ts.isPropertyDeclaration(parent) ||
+    ts.isPropertySignature(parent) ||
+    ts.isMethodDeclaration(parent) ||
+    ts.isMethodSignature(parent) ||
+    ts.isGetAccessorDeclaration(parent) ||
+    ts.isSetAccessorDeclaration(parent) ||
+    ts.isEnumMember(parent) ||
+    ts.isJsxAttribute(parent) ||
+    ts.isTypeAliasDeclaration(parent) ||
+    ts.isInterfaceDeclaration(parent) ||
+    ts.isTypeParameterDeclaration(parent) ||
+    ts.isModuleDeclaration(parent) ||
+    ts.isEnumDeclaration(parent)
+  )
+    return parent.name !== node
+  if (ts.isPropertyAccessExpression(parent)) return parent.name !== node
+  if (ts.isQualifiedName(parent)) return parent.right !== node
+  if (ts.isJsxNamespacedName(parent) || ts.isNamedTupleMember(parent))
+    return false
+  if (
+    (ts.isJsxOpeningElement(parent) ||
+      ts.isJsxClosingElement(parent) ||
+      ts.isJsxSelfClosingElement(parent)) &&
+    parent.tagName === node &&
+    /^[a-z]/.test(node.text)
+  )
+    return false
+  if (
+    ts.isLabeledStatement(parent) ||
+    ts.isBreakStatement(parent) ||
+    ts.isContinueStatement(parent)
+  )
+    return parent.label !== node
+  if (ts.isImportSpecifier(parent) || ts.isBindingElement(parent))
+    return parent.propertyName !== node
+  if (ts.isExportSpecifier(parent)) {
+    // Remote re-exports refer to another module, even when names happen to match.
+    if (
+      ts.isExportDeclaration(parent.parent.parent) &&
+      parent.parent.parent.moduleSpecifier
+    )
+      return false
+    return (parent.propertyName ?? parent.name) === node
+  }
+  // Type queries (`typeof card`) still refer to the value binding. A type
+  // reference named card belongs to a separate namespace and cannot prove it.
+  if (ts.isTypeReferenceNode(parent)) return false
+  if (
+    ts.isExpressionWithTypeArguments(parent) &&
+    ts.isHeritageClause(parent.parent) &&
+    ts.isInterfaceDeclaration(parent.parent.parent)
+  )
+    return false
+  return true
+}
+
 /** An intentionally finite evaluator: never imports or executes project JavaScript. */
 type EvaluationBudget = { remaining: number }
 function literal(
@@ -217,14 +279,21 @@ function variantShape(
   if (!ts.isTypeLiteralNode(node)) return undefined
   const result: Record<string, readonly DesignValue[] | null> =
     Object.create(null)
-  for (const member of node.members)
-    if (ts.isPropertySignature(member) && member.type && member.name)
-      result[propertyName(member.name, member.getSourceFile())] = typeValues(
-        member.type,
-        aliases,
-        0,
-        budget,
-      )
+  for (const member of node.members) {
+    if (
+      !ts.isPropertySignature(member) ||
+      !member.type ||
+      !member.name ||
+      ts.isComputedPropertyName(member.name)
+    )
+      return undefined
+    result[propertyName(member.name, member.getSourceFile())] = typeValues(
+      member.type,
+      aliases,
+      0,
+      budget,
+    )
+  }
   return result
 }
 
@@ -271,6 +340,7 @@ export function parseDesignDocument(
   }
   let lexicalNodes = 0
   const lexical = (node: ts.Node, scope: Scope) => {
+    const outerScope = scope
     if (++lexicalNodes > 200_000)
       throw new Error(`Toned index: syntax node budget exceeded: ${uri}`)
     if (ts.isFunctionDeclaration(node) && node.name)
@@ -280,6 +350,8 @@ export function parseDesignDocument(
     if (
       ts.isClassExpression(node) ||
       ts.isClassDeclaration(node) ||
+      ts.isModuleBlock(node) ||
+      ts.isEnumDeclaration(node) ||
       ts.isFunctionLike(node) ||
       ts.isBlock(node) ||
       ts.isCatchClause(node) ||
@@ -294,6 +366,9 @@ export function parseDesignDocument(
         function: ts.isFunctionLike(node),
       }
     scopes.set(node, scope)
+    if (ts.isEnumDeclaration(node))
+      for (const member of node.members)
+        if (ts.isIdentifier(member.name)) scope.bindings.add(member.name.text)
     if (ts.isVariableDeclaration(node) || ts.isParameter(node)) {
       let target = scope
       if (
@@ -313,7 +388,17 @@ export function parseDesignDocument(
     if (ts.isImportSpecifier(node) || ts.isNamespaceImport(node))
       scope.bindings.add(node.name.text)
     if (ts.isIdentifier(node)) identifiers.push(node)
-    ts.forEachChild(node, (child) => lexical(child, scope))
+    ts.forEachChild(node, (child) =>
+      lexical(
+        child,
+        ts.isFunctionLike(node) &&
+          node.name &&
+          ts.isComputedPropertyName(node.name) &&
+          child === node.name
+          ? outerScope
+          : scope,
+      ),
+    )
   }
   lexical(source, globalScope)
   let bindingSteps = 1_000_000
@@ -355,7 +440,9 @@ export function parseDesignDocument(
     if (ts.isInterfaceDeclaration(node) && node.parent === source)
       aliases.set(
         node.name.text,
-        ts.factory.createTypeLiteralNode(node.members),
+        node.heritageClauses?.length
+          ? ts.factory.createKeywordTypeNode(ts.SyntaxKind.UnknownKeyword)
+          : ts.factory.createTypeLiteralNode(node.members),
       )
     if (
       ts.isImportDeclaration(node) &&
@@ -391,17 +478,7 @@ export function parseDesignDocument(
   }
   visit(source)
   for (const node of identifiers)
-    if (
-      bindingScope(node) === globalScope &&
-      !(ts.isPropertyAssignment(node.parent) && node.parent.name === node) &&
-      !(
-        ts.isPropertyAccessExpression(node.parent) && node.parent.name === node
-      ) &&
-      !(
-        ts.isImportSpecifier(node.parent) && node.parent.propertyName === node
-      ) &&
-      !(ts.isBindingElement(node.parent) && node.parent.propertyName === node)
-    )
+    if (isBindingReference(node) && bindingScope(node) === globalScope)
       references.push({
         name: node.text,
         span: span(node, source),
@@ -457,7 +534,12 @@ export function parseDesignDocument(
     const result = evaluate(property.initializer)
     const own = evaluate(property.initializer, new Map())
     return {
-      valueSpan: span(property.initializer, source),
+      // Preserve assertions, satisfies clauses, parentheses and their comments.
+      // They affect type inference even though the finite evaluator unwraps them.
+      valueSpan: span(
+        own ? unwrap(property.initializer) : property.initializer,
+        source,
+      ),
       expression: property.initializer.getText(source),
       ...(result ? { value: result.value } : {}),
       ...(!own
@@ -595,8 +677,13 @@ export function parseDesignDocument(
       callName(expression) !== 'stylesheet'
     )
       continue
-    let variantType: string | undefined,
-      shape: Readonly<Record<string, readonly DesignValue[] | null>> | undefined
+    // Chained declarations are applied in source order. Later schemas replace
+    // repeated axes while earlier distinct axes remain available to runtime rules.
+    variants.reverse()
+    const variantTypes: string[] = []
+    const mergedShape: Record<string, readonly DesignValue[] | null> =
+      Object.create(null)
+    let completeShape = true
     for (const variant of variants) {
       const factory = variant.arguments[0] && unwrap(variant.arguments[0])
       if (
@@ -609,22 +696,34 @@ export function parseDesignDocument(
             ? annotation.typeArguments?.[0]
             : variant.typeArguments?.[0]
         if (type) {
-          variantType = type.getText(source)
-          shape = variantShape(type, aliases, 0, evaluationBudget)
-        }
-      }
+          variantTypes.push(type.getText(source))
+          const shape = variantShape(type, aliases, 0, evaluationBudget)
+          if (shape) Object.assign(mergedShape, shape)
+          else completeShape = false
+        } else completeShape = false
+      } else completeShape = false
     }
+    if (variants.length && !completeShape)
+      diagnostics.push({
+        code: 'opaque-variants',
+        severity: 'information',
+        message:
+          'A chained variant schema is not statically known; its complete axis vocabulary requires TypeScript resolution.',
+        span: span(declaration, source),
+      })
     const system = ts.isPropertyAccessExpression(expression.expression)
       ? expression.expression.expression.getText(source)
       : undefined
     add('sheet', owner, owner, [], declaration, declaration.name, {
       system,
-      variants: shape,
-      variantType,
+      variants: variants.length && completeShape ? mergedShape : undefined,
+      // A display chain, not an invented TypeScript intersection: duplicate axes
+      // use later vocabularies. A single annotation retains its original spelling.
+      variantType: variantTypes.length ? variantTypes.join(' -> ') : undefined,
     })
     for (const [index, input] of [
       expression.arguments[0],
-      ...variants.reverse().map((v) => v.arguments[0]),
+      ...variants.map((v) => v.arguments[0]),
     ].entries()) {
       const body = bodyOf(input, true)
       if (body) rules(body, owner, index ? [`variants:${index}`] : [], false)

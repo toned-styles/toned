@@ -193,3 +193,49 @@ test('operation queues are bounded and cancellation after replacement begins rep
     source.replace('padding: 1', 'padding: 2'),
   )
 })
+
+test('definition lookup follows allowlisted relative system aliases and refreshes their declaration', async () => {
+  const { root, path, uri } = await setup()
+  const systemPath = join(root, 'system.ts')
+  await fs.writeFile(
+    systemPath,
+    `export const theme = defineSystem({ id: 'choice', tokens: { padding: defineToken({ values: [1, 2] }) } })`,
+  )
+  await fs.writeFile(
+    path,
+    `import { theme as ui } from './system'
+export const styles = ui.stylesheet({ Root: { padding: 1 } })`,
+  )
+  const bridge = await createSourceBridge({
+    root,
+    files: ['button.ts', 'system.ts'],
+  })
+  try {
+    const definition = await bridge.definition({ uri, name: 'ui' }, signal())
+    expect(definition).toMatchObject({
+      kind: 'system',
+      name: 'theme',
+      uri: pathToFileURL(systemPath).href,
+    })
+    const tokens = await bridge.query(
+      {
+        kind: 'token',
+        uri: definition!.uri,
+        owner: definition!.owner,
+        limit: 2,
+      },
+      signal(),
+    )
+    expect(tokens.items[0]?.values).toEqual([1, 2])
+    await fs.writeFile(
+      systemPath,
+      'export const renamed = defineSystem({ tokens: {} })',
+    )
+    expect(await bridge.definition({ uri, name: 'ui' }, signal())).toBeNull()
+    await expect(
+      bridge.definition({ uri: 'file:///outside.ts', name: 'ui' }, signal()),
+    ).rejects.toThrow('allowlisted')
+  } finally {
+    await bridge.dispose()
+  }
+})

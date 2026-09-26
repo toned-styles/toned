@@ -3,9 +3,11 @@
 `createScenarios` enumerates explicit finite variant, fact, theme, text and viewport
 inputs. Variant literal types survive enumeration, so `scenario.variants` can be
 passed directly to the matching typed renderer. The default limit is 256 scenarios.
-Exceeding a limit fails unless `mode: 'sampled'` is explicit; sampling selects evenly
-spaced Cartesian indices, including the endpoints when the budget exceeds one.
-It is neither random nor pairwise coverage. Reports retain exact total cardinality
+Exceeding a limit fails unless `mode: 'sampled'` is explicit. Sampling first cycles
+through every axis value, then fills remaining slots with distinct product indices
+using a deterministic coprime stride. Every declared value appears at least once;
+the budget must be at least the largest axis cardinality, otherwise sampling
+fails explicitly. This is per-axis coverage, neither random nor pairwise coverage. Reports retain exact total cardinality
 as a decimal string, selected count and dimension cardinalities. Empty axes and
 duplicated values are errors. Omitted dimensions contribute no variation.
 

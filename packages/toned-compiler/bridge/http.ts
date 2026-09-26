@@ -152,6 +152,14 @@ export function createSourceBridgeHandler(
             { ...query, limit: query.limit ?? 100 },
             controller.signal,
           )
+        } else if (message['method'] === 'definition') {
+          const query = parseQuery(input)
+          if (!query.uri || !query.name)
+            throw new Error('Expected definition URI and name')
+          result = await bridge.definition(
+            { uri: query.uri, name: query.name },
+            controller.signal,
+          )
         } else if (message['method'] === 'document') {
           if (
             !input ||

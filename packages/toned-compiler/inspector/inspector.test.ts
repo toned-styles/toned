@@ -21,6 +21,7 @@ afterEach(() => {
     instance.dispose()
   })
   document.body.replaceChildren()
+  vi.unstubAllGlobals()
 })
 function setup(extra?: Partial<InspectorTransport>) {
   const project = new DesignProject()
@@ -194,3 +195,67 @@ test('browser transport refuses to send its capability to a different origin', (
     }),
   ).toThrow('same-origin')
 })
+
+test('imported system aliases offer values from the declaring module, including explicit sheet selection', async () => {
+  const { project, transport, inspector } = setup()
+  project.update(
+    'file:///design/system.ts',
+    source.split('// Preserve')[0]!.replace('const ui =', 'export const ui ='),
+    1,
+  )
+  project.update(
+    uri,
+    `import { ui as imported } from './system'
+export const styles = imported.stylesheet({ Root: { padding: 1 } })`,
+    2,
+  )
+  transport.definition = async (input) =>
+    project.lookup(input.name, input.uri)[0] ?? null
+  await inspector.select({ uri, owner: 'styles' })
+  await openPadding()
+  const choices = document.querySelector<HTMLSelectElement>(
+    'select[aria-label="Declared token values"]',
+  )!
+  expect([...choices.options].map((option) => option.textContent)).toEqual([
+    'Choose a declared value',
+    '0',
+    '1',
+    '2',
+  ])
+  choices.value = '2'
+  choices.dispatchEvent(new Event('change'))
+  expect(document.querySelector('textarea')!.value).toBe('2')
+})
+
+test.each([
+  [404, 'text/html', '<html>Not found</html>', 'expected application/json'],
+  [502, 'application/json', '<html>Gateway</html>', 'invalid JSON response'],
+  [200, 'application/json', 'null', 'invalid JSON response'],
+  [
+    409,
+    'application/json',
+    JSON.stringify({ error: 'Source changed' }),
+    'Source changed',
+  ],
+])(
+  'HTTP %s responses expose useful bridge diagnostics',
+  async (status, type, body, detail) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(body, { status, headers: { 'content-type': type } }),
+      ),
+    )
+    const transport = createHttpInspectorTransport({
+      endpoint: '/__toned/source',
+      token: 'test',
+    })
+    await expect(
+      transport.query({ limit: 1 }, new AbortController().signal),
+    ).rejects.toThrow(`HTTP ${status}`)
+    await expect(
+      transport.query({ limit: 1 }, new AbortController().signal),
+    ).rejects.toThrow(detail)
+  },
+)

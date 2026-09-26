@@ -22,6 +22,25 @@ const excluded = new Set([
   'coverage',
   '.worktrees',
 ])
+/** The same lexical inclusion policy is used for initial scans and watcher updates. */
+export function includesWorkspaceFile(rootUri: string, uri: string): boolean {
+  try {
+    const path = fileURLToPath(uri)
+    const local = relative(fileURLToPath(rootUri), path)
+    return (
+      local !== '' &&
+      local !== '..' &&
+      !local.startsWith(`..${sep}`) &&
+      !isAbsolute(local) &&
+      !local.split(sep).some((part) => excluded.has(part)) &&
+      ['.ts', '.tsx', '.js', '.jsx'].includes(extname(path)) &&
+      !/\.(test|test-d|spec|d)\.[cm]?[jt]sx?$/.test(path)
+    )
+  } catch {
+    return false
+  }
+}
+
 /** Async host I/O only; source analysis never imports the application's modules. */
 export async function loadWorkspace(
   project: DesignProject,
@@ -66,8 +85,10 @@ export async function loadWorkspace(
       }
       if (
         !entry.isFile() ||
-        !['.ts', '.tsx', '.js', '.jsx'].includes(extname(path)) ||
-        /\.(test|test-d|spec|d)\.[cm]?[jt]sx?$/.test(path)
+        !includesWorkspaceFile(
+          pathToFileURL(root).href,
+          pathToFileURL(path).href,
+        )
       ) {
         skipped++
         continue

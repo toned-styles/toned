@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import {
   prepareHostRelease,
   recordHostCommit,
@@ -9,6 +9,7 @@ import {
 import { attachMotion, type MotionFrameDriver } from './index.ts'
 
 afterEach(() => {
+  vi.restoreAllMocks()
   document.body.innerHTML = ''
   document.head.innerHTML = ''
 })
@@ -111,3 +112,52 @@ test('external baseline survives animated property removal', () => {
   expect(f.host.style.opacity).toBe('0.3')
   motion.dispose()
 })
+
+test.each([
+  ['top', 'auto'],
+  ['gap', 'normal'],
+  ['width', 'auto'],
+  ['height', 'auto'],
+  ['margin', '0px 8px'],
+  ['padding', '0px 8px'],
+  ['borderRadius', '50%'],
+] as const)(
+  'computed %s=%s jumps while other properties keep animating',
+  (property, value) => {
+    const f = setup()
+    let computedValue = value as string
+    const realComputedStyle = window.getComputedStyle.bind(window)
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => {
+      const computed = realComputedStyle(element)
+      const read = computed.getPropertyValue.bind(computed)
+      computed.getPropertyValue = (name) =>
+        name ===
+        property.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+          ? computedValue
+          : read(name)
+      return computed
+    })
+    const update = (opacity: number, target: string | number) =>
+      setStyles(f.host, { style: { opacity, [property]: target } }, f.owner)
+    update(0, value)
+    const motion = attachMotion(f.host, {
+      properties: ['opacity', property],
+      frames: f.frames,
+      transition: { type: 'timing', duration: 100 },
+    })
+    computedValue = '20px'
+    update(1, 20)
+    expect(f.host.style[property]).toBe('20px')
+    f.step(50)
+    expect(Number(f.host.style.opacity)).toBe(0.5)
+    computedValue = value
+    update(1, value)
+    expect(f.host.style[property]).toBe(value)
+    f.step(100)
+    expect(f.host.style.opacity).toBe('0.75')
+    f.step(150)
+    expect(f.host.style.opacity).toBe('1')
+    expect(f.host.style[property]).toBe(value)
+    motion.dispose()
+  },
+)

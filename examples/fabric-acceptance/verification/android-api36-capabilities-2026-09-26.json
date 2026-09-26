@@ -2,10 +2,10 @@
   "verifiedOn": "2026-09-26",
   "java": "OpenJDK 21.0.2",
   "scope": "Eight automatic scenarios and real native touch, 69 assertions. Includes native host motion using deterministic JS frame inputs and finite adaptive layouts from actual parent measurements; excludes UI-thread animation, per-frame paint guarantees, iOS, topology/recycling and native grid.",
-  "provenance": "Built and executed from the final frozen September 26 design-tools and portable-capabilities working tree, including the final runtime and acceptance-source formatting. build.inputs identifies the exact staged packages, acceptance sources and Android inputs used for this device execution; build.apk identifies the executed APK. The retained results and screenshot come from that exact build.",
+  "provenance": "Built and executed from the frozen September 26 review-corrected working tree, including preserved motion progress during ref handoffs and discrete web computed-value fallback. build.inputs identifies the exact staged packages, acceptance sources and Android inputs used for this device execution; build.apk identifies the executed APK. The retained results and screenshot come from that exact build. The 69 device assertions retain their documented scope; the new mid-entry and mid-exit rerender regressions are covered separately by the guarded React and native-writer tests.",
   "build": {
-    "inputs": "1e2099d757cd4d880fd513bd0f283044fd9d6b765f517e80155b1c711946a523",
-    "apk": "f0c4b388e655bc1fa763cd187b0ac0fe76c1d74bf161967676d81a79c5b76eb0",
+    "inputs": "66e8c21c264f36b58753d3b9e2318e9ce2f9cebefe2b49ea3f026f65f4716283",
+    "apk": "688a02058bc3175c276645df0a4fb2bb7cfde2213027f56f58cf3b5718c404e7",
     "avd": "Medium_Phone_API_36.1",
     "fingerprint": "google/sdk_gphone64_arm64/emu64a:16/BE4B.251210.005/14574095:user/release-keys",
     "abi": "arm64-v8a"

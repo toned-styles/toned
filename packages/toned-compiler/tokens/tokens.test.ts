@@ -189,3 +189,38 @@ test('partial resolver context and unsupported reference overrides cannot be map
     )['token'],
   ).toBeDefined()
 })
+
+test('many small overlays reuse private groups and preserve frozen large source snapshots', () => {
+  const base = {
+    group: Object.fromEntries(
+      Array.from({ length: 6000 }, (_, i) => [
+        `token${i}`,
+        Object.freeze({ $type: 'number', $value: i }),
+      ]),
+    ),
+  }
+  Object.freeze(base.group)
+  Object.freeze(base)
+  const document = {
+    version: '2025.10',
+    sets: {
+      base: {
+        sources: [
+          { $ref: 'base.json' },
+          ...Array.from({ length: 2000 }, (_, i) => ({
+            group: { token0: { $type: 'number', $value: i } },
+          })),
+        ],
+      },
+    },
+    resolutionOrder: [{ $ref: '#/sets/base' }],
+  }
+  const result = resolveDtcgContext(document, {
+    sources: { 'base.json': base },
+  })
+  expect(result.resolved).toBe(true)
+  expect(result.library.tokens).toHaveLength(6000)
+  expect(result.library.tokens[0]?.value).toBe(1999)
+  expect(base.group['token0']?.$value).toBe(0)
+  expect(result.library.tokens.at(-1)?.value).toBe(5999)
+})

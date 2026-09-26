@@ -27,6 +27,11 @@ export interface InspectorTransport {
     signal: AbortSignal,
   ): Promise<DesignPage<DesignNode>>
   document(uri: string, signal: AbortSignal): Promise<DesignDocument>
+  /** Resolve a lexical name, including indexed relative import aliases. */
+  definition?(
+    input: { readonly uri: string; readonly name: string },
+    signal: AbortSignal,
+  ): Promise<DesignNode | null>
   propose(
     input: {
       readonly nodeId: string
@@ -187,22 +192,33 @@ export function mountDesignInspector(
         return
       }
       let values = node.values
-      const sheet = sheetPage.find(
-        (entry) => entry.uri === node.uri && entry.owner === node.owner,
+      const sheet = source.nodes.find(
+        (entry) => entry.kind === 'sheet' && entry.owner === node.owner,
       )
       if (!values && sheet?.system) {
-        const tokens = await options.transport.query(
-          {
-            kind: 'token',
-            name: node.name,
-            uri: node.uri,
-            owner: sheet.system,
-            limit: 2,
-          },
-          task.signal,
-        )
+        const system = options.transport.definition
+          ? await options.transport.definition(
+              { uri: sheet.uri, name: sheet.system },
+              task.signal,
+            )
+          : source.nodes.find(
+              (entry) => entry.kind === 'system' && entry.name === sheet.system,
+            )
         if (!task.current()) return
-        if (tokens.total === 1) values = tokens.items[0]?.values
+        if (system?.kind === 'system') {
+          const tokens = await options.transport.query(
+            {
+              kind: 'token',
+              name: node.name,
+              uri: system.uri,
+              owner: system.owner,
+              limit: 2,
+            },
+            task.signal,
+          )
+          if (!task.current()) return
+          if (tokens.total === 1) values = tokens.items[0]?.values
+        }
       }
       const editor = document.createElement('textarea')
       editor.setAttribute('aria-label', 'JSON literal value')

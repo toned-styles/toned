@@ -36,30 +36,34 @@ export function resolveDtcgContext(
   for (const name of Object.keys(options.context ?? {}))
     if (!Object.hasOwn(modifiers, name))
       fail('invalid-context', ['modifiers', name], 'Unknown modifier selection')
-  let merged: JsonObject = {},
-    steps = 0,
+  const merged: Record<string, JsonValue> = Object.create(null)
+  let steps = 0,
     mergedFields = 0
   const active = new Set<string>(),
     sourceCache = new Map<string, JsonObject>()
-  const merge = (before: JsonObject, after: JsonObject): JsonObject => {
-    const result: Record<string, JsonValue> = Object.assign(
-      Object.create(null),
-      before,
-    )
+  // Only this accumulator is mutable. Clone group containers once on insertion;
+  // frozen source snapshots and token/metadata payloads remain untouched.
+  const merge = (
+    result: Record<string, JsonValue>,
+    after: JsonObject,
+  ): void => {
     for (const [key, value] of Object.entries(after)) {
       if (++mergedFields > 200000)
         throw new Error('Toned DTCG: merged field budget exceeded')
       const previous = result[key]
-      result[key] =
+      if (
         !key.startsWith('$') &&
         object(value) &&
-        object(previous) &&
-        !Object.hasOwn(value, '$value') &&
-        !Object.hasOwn(previous, '$value')
-          ? merge(previous, value)
-          : value
+        !Object.hasOwn(value, '$value')
+      ) {
+        const group: Record<string, JsonValue> =
+          object(previous) && !Object.hasOwn(previous, '$value')
+            ? previous
+            : Object.create(null)
+        merge(group, value)
+        result[key] = group
+      } else result[key] = value
     }
-    return result
   }
   const source = (value: JsonValue, path: string[]): void => {
     if (++steps > 10000)
@@ -125,10 +129,10 @@ export function resolveDtcgContext(
             sourceCache.set(ref, loaded)
           }
         }
-        if (tokens) merged = merge(merged, tokens)
+        if (tokens) merge(merged, tokens)
       }
       active.delete(ref)
-    } else merged = merge(merged, value)
+    } else merge(merged, value)
   }
   const sources = (value: JsonValue | undefined, path: string[]) => {
     if (!Array.isArray(value)) {

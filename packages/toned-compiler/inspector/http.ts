@@ -28,10 +28,32 @@ export function createHttpInspectorTransport(options: {
       credentials: 'same-origin',
       cache: 'no-store',
     })
-    const payload = (await response.json()) as { result?: T; error?: string }
+    const type = response.headers
+      .get('content-type')
+      ?.split(';')[0]
+      ?.trim()
+      .toLowerCase()
+    if (type !== 'application/json')
+      throw new Error(
+        `Source bridge returned HTTP ${response.status}: expected application/json; check the development bridge endpoint`,
+      )
+    let payload: { result?: T; error?: string }
+    try {
+      const parsed: unknown = await response.json()
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new Error()
+      payload = parsed as typeof payload
+    } catch {
+      signal.throwIfAborted()
+      throw new Error(
+        `Source bridge returned HTTP ${response.status}: invalid JSON response`,
+      )
+    }
     if (!response.ok || payload.error)
       throw new Error(
-        payload.error ?? `Source bridge returned ${response.status}`,
+        typeof payload.error === 'string'
+          ? `Source bridge returned HTTP ${response.status}: ${payload.error}`
+          : `Source bridge returned HTTP ${response.status}`,
       )
     if (!Object.hasOwn(payload, 'result'))
       throw new Error('Source bridge returned no result')
@@ -40,6 +62,7 @@ export function createHttpInspectorTransport(options: {
   return {
     query: (input, signal) => send('query', input, signal),
     document: (uri, signal) => send('document', { uri }, signal),
+    definition: (input, signal) => send('definition', input, signal),
     propose: (input, signal) => send('propose', input, signal),
     apply: (input, signal) => send('apply', input, signal),
   }
