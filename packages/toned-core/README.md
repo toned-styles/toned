@@ -208,6 +208,9 @@ changes still require rebuilding the CSS asset; schema validation is not a sourc
 The build manifest records ad-hoc conditions and the exact static system schema,
 including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema
 or an undeclared condition with a regeneration instruction; it never injects a rule.
+Token names are canonicalized in that schema, so a bundler changing module-export
+enumeration order does not invalidate an otherwise identical system. This does
+not reorder emitted CSS or weaken its byte-level artifact fingerprint.
 
 `@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
 explicit optional development tool. The old `dom` entry remains compatible.

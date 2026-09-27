@@ -58,7 +58,12 @@ export function assertBuildArtifact({ css, manifest }: BuildArtifact): void {
 /** Structural identity is compared exactly, never through the CSS content hash.
  * Function implementations still require the normal build/asset version pipeline. */
 export function systemDefinition(system: TokenStyleDeclaration): string {
-  const tokenShapes = Object.entries(system).flatMap(([name, token]) => {
+  // Module namespaces can enumerate exports differently after bundling. The
+  // schema is keyed by token name; asset bytes retain their own fingerprint.
+  const entries = Object.entries(system).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )
+  const tokenShapes = entries.flatMap(([name, token]) => {
     if (
       !token ||
       typeof token !== 'object' ||

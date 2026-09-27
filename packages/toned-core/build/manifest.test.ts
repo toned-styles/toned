@@ -7,6 +7,35 @@ import {
   buildStyles,
 } from './index.ts'
 
+test('bundled token enumeration order does not invalidate the build manifest', () => {
+  const width = defineToken({ values: [20, 40], resolve: (value) => ({ width: value }) })
+  const opacity = defineToken({ values: [0, 1], resolve: (value) => ({ opacity: value }) })
+  const built = defineSystem({ id: 'bundled', tokens: { width, opacity } })
+  const bundled = defineSystem({ id: 'bundled', tokens: { opacity, width } })
+  const rules = { Root: { width: 20, opacity: 1 } } as const
+  const artifact = buildStyles(built, { sheets: [built.stylesheet(rules)] })
+  const expected = createWebRenderer(built, { manifest: artifact.manifest }).resolve(
+    built.stylesheet(rules),
+  )
+  const actual = createWebRenderer(bundled, { manifest: artifact.manifest }).resolve(
+    bundled.stylesheet(rules),
+  )
+  expect(actual.Root.className).toBe(expected.Root.className)
+  expect(actual.Root.style).toEqual(expected.Root.style)
+  expect(() => assertBuildArtifact(artifact)).not.toThrow()
+
+  const changed = defineSystem({
+    id: 'bundled',
+    tokens: {
+      opacity,
+      width: defineToken({ values: [20, 60], resolve: (value) => ({ width: value }) }),
+    },
+  })
+  expect(() => createWebRenderer(changed, { manifest: artifact.manifest })).toThrow(
+    'different system definition',
+  )
+})
+
 test('manifest rejects a stale named threshold even with the same system ID', () => {
   const old = defineSystem({
     id: 'responsive',
