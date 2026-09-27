@@ -107,5 +107,6 @@ export {
   isWebRules,
   type WebRuleStyle,
   type WebRules,
+  type WEB_RULES,
   webRules,
 } from './web/rules.ts'

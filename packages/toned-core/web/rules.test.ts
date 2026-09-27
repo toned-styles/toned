@@ -33,6 +33,37 @@ function types() {
 }
 void types
 
+test('CSS media groups preserve rem thresholds, cascade order, scope and identity', () => {
+  const groups = {
+    '(min-width: 40rem)': webRules({ '&': { display: 'flex' } }),
+    '(min-width: 80rem)': webRules({ '& > span': { display: 'none' } }),
+  }
+  const value = webRules({ '&': { display: 'block' } }, { media: groups })
+  groups['(min-width: 40rem)'] = webRules({ '&': { display: 'none' } })
+  const { className, css } = compileWebRules(value, 'portal', '.scope')
+  expect(css).toBe(
+    `.scope .${className}{display:block;}\n@media (min-width: 40rem){\n.scope .${className}{display:flex;}\n}\n@media (min-width: 80rem){\n.scope .${className} > span{display:none;}\n}`,
+  )
+  expect(Object.isFrozen(value.media)).toBe(true)
+  expect(
+    compileWebRules(webRules(value.rules, { media: groups }), 'portal')
+      .className,
+  ).not.toBe(className)
+  expect(compileWebRules(webRules(value.rules), 'portal').className).not.toBe(
+    className,
+  )
+  for (const query of [
+    '',
+    '(width: 1px) {} body',
+    'screen; color:red',
+    'screen/*',
+    '@import "x"',
+  ])
+    expect(() => webRules({}, { media: { [query]: value } })).toThrow(
+      /media query/,
+    )
+})
+
 test('anchors nesting selectors without changing quoted attribute ampersands', () => {
   const artifact = compileWebRules(
     webRules({ '&[data-value="A&B"]': { opacity: 0.5 } }),

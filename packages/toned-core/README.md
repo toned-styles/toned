@@ -461,10 +461,31 @@ require `readState`. Unsupported host capabilities throw named errors.
 Use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
 `'@platform.web'` block for CSS selectors or pseudo-elements. Styles use checked
 CSS property types. Each entry has one `&`-anchored selector; comma lists and
-at-rules are rejected (write separate entries or use typed queries). Exact DOM
+at-rules are rejected as selector keys. Exact DOM
 child syntax such as `& > input:checked` belongs here, distinct from the portable
 registered-part relationship. The generated CSS belongs to the normal build
 artifact, and native resolution must never silently interpret it as native style.
+
+For browser-only media semantics, including rem breakpoints and reduced-motion
+preferences, pass explicit media groups. These do not change the fixed-pixel
+contract of portable conditions:
+
+```ts
+webRules({}, {
+  media: {
+    '(min-width: 64rem)': webRules({ '&': { display: 'flex' } }),
+    '(prefers-reduced-motion: reduce)': webRules({ '&': { animation: 'none' } }),
+  },
+})
+```
+
+Groups retain declaration order and the owning selector/scope. They are immutable,
+participate in the extension's content identity, and must be inventoried before
+rendering. Selector-only extension identities remain unchanged. Media query
+support belongs to the browser; the builder rejects empty queries, block delimiters
+and comments. This is a CSS-only extension, unavailable to document/native backends.
+For exported inferred sheets, `import type { WEB_RULES } from '@toned/core'`
+lets TypeScript name the opaque brand during declaration emit.
 
 ## Pure authoritative overrides
 
