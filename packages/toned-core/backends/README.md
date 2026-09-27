@@ -164,3 +164,13 @@ CSS units and expressions are rejected. Native-only shadows/transforms, web clas
 grid, CSS extensions and browser-dependent branches are unavailable. Use explicit
 variants for document choices. Font registration, pagination, SVG drawing, images,
 and PDF metadata remain owned by the document renderer.
+
+### Generated alpha-color compatibility
+
+Alpha-capable atomic rules emit a plain color first, a `color-mix(in oklab, …,
+transparent)` fallback second, and the existing relative-color expression last.
+A browser that cannot parse relative colors retains the canvas or text color;
+with color-mix support it also retains the alpha modifier, including the source
+color's own alpha. Modern rendering keeps its previous final expression. This
+fallback contract covers generated atomic rules; raw authored CSS and inline
+conditional expressions retain their own browser requirements.

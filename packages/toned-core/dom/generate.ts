@@ -432,6 +432,13 @@ export function generate<const S extends TokenStyleDeclaration>(
         // parameter) can wash it without a token x alpha rule explosion.
         if (alphaChannel?.includes(cssProp) && alphaWrappable(cssValue)) {
           alphaProps.add(cssProp)
+          // Keep an ordinary color when the browser cannot parse relative
+          // colors. color-mix preserves source alpha and the modifier on
+          // browsers that support it; RCS remains the final modern value.
+          const property = camelToKebab(cssProp)
+          const plain = serializeCssValue(cssProp, cssValue)
+          cssRule += `${property}:${plain};`
+          cssRule += `${property}:color-mix(in oklab, ${plain} calc(var(${alphaVarName(cssProp)}, 1) * 100%), transparent);`
           cssValue = withAlphaExpr(cssValue, `var(${alphaVarName(cssProp)}, 1)`)
         }
         cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, cssValue)};`
