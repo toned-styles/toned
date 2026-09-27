@@ -49,6 +49,36 @@ it('preserves opaque selector references through immutable style snapshots', () 
   expect(declaration.$webRules).toBe(extension)
 })
 
+it('inventories media extensions and rejects a stale manifest after a query changes', () => {
+  const ui = defineSystem({ id: 'media-extension', tokens: {} })
+  const sheet = (query: string) =>
+    ui.stylesheet({
+      Root: {
+        '@platform web': {
+          $webRules: webRules(
+            {},
+            {
+              media: {
+                [query]: webRules({ '&': { display: 'flex' } }),
+              },
+            },
+          ),
+        },
+      },
+    })
+  const original = sheet('(min-width: 64rem)')
+  const artifact = buildStyles(ui, { sheets: [original], layer: 'utilities' })
+  assertBuildArtifact(artifact)
+  expect(artifact.css).toContain('@media (min-width: 64rem)')
+  const renderer = createWebRenderer(ui, { manifest: artifact.manifest })
+  expect(renderer.resolve(original).Root.className).toContain(
+    artifact.manifest.extensions?.[0],
+  )
+  expect(() => renderer.resolve(sheet('(min-width: 80rem)'))).toThrow(
+    'webRules absent from build inventory',
+  )
+})
+
 it('scopes each selector rule without prefixing multiline declaration values', () => {
   const ui = defineSystem({ id: 'scoped-extension', tokens: {} })
   const sheet = ui.stylesheet({
