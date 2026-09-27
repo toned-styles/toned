@@ -13,19 +13,31 @@ const outsideStrings = (value: string, transform: (text: string) => string) =>
     )
     .map((piece, i) => (i % 2 ? piece : transform(piece)))
     .join('')
-const parameters = (value: string, id: string) =>
+export function externalCssVariables(
+  names: readonly string[] = [],
+): readonly string[] {
+  if (names.some((name) => !/^--[a-zA-Z_][\w-]*$/.test(name)))
+    throw new Error(
+      'Toned: external CSS variables must be complete custom-property names',
+    )
+  return Object.freeze([...new Set(names)].sort())
+}
+const parameters = (value: string, id: string, external: ReadonlySet<string>) =>
   outsideStrings(value, (part) =>
-    part.replace(/--[a-zA-Z_][\w-]*/g, (name) => `--${id}-${name.slice(2)}`),
+    part.replace(/--[a-zA-Z_][\w-]*/g, (name) =>
+      external.has(name) ? name : `--${id}-${name.slice(2)}`,
+    ),
   )
 const animations = (value: string, id: string) =>
   value.replace(/(?<![\w-])toned_([\w-]+)/g, `${id}-toned_$1`)
 export function namespaceCss(
   css: string,
   id: string,
-  options?: { scope?: string },
+  options?: { scope?: string; externalCssVariables?: readonly string[] },
 ): string {
   validateSystemId(id)
-  return outsideStrings(parameters(css, id), (part) =>
+  const external = new Set(externalCssVariables(options?.externalCssVariables))
+  return outsideStrings(parameters(css, id, external), (part) =>
     animations(part, id),
   ).replace(/([^{}]+)\{/g, (block, selector: string) => {
     if (selector.trimStart().startsWith('@')) return block
@@ -45,13 +57,20 @@ export function namespaceCss(
 }
 export function namespaceOutput<
   T extends { style: object; className?: string },
->(output: T, id: string): T {
+>(
+  output: T,
+  id: string,
+  options?: { externalCssVariables?: readonly string[] },
+): T {
   validateSystemId(id)
+  const external = new Set(externalCssVariables(options?.externalCssVariables))
   const style: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(output.style)) {
-    style[key.startsWith('--') ? parameters(key, id) : key] =
+    style[key.startsWith('--') ? parameters(key, id, external) : key] =
       typeof value === 'string'
-        ? outsideStrings(parameters(value, id), (part) => animations(part, id))
+        ? outsideStrings(parameters(value, id, external), (part) =>
+            animations(part, id),
+          )
         : value
   }
   return {

@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'vitest'
+import { buildStyles } from '../build/index.ts'
+import { createWebRenderer } from '../server/index.ts'
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
 import { defineGrid, fr } from '../grid/index.ts'
@@ -107,6 +109,59 @@ describe('declaration normalization', () => {
   })
 })
 describe('system namespace', () => {
+  test('explicit external variables retain their application-owned names in CSS and runtime output', () => {
+    const system = defineSystem({
+      id: 'marketing',
+      externalCssVariables: ['--brand'],
+      tokens: {
+        paint: defineToken({
+          values: ['brand', 'private'],
+          resolve: (value) => ({
+            color: value === 'brand' ? 'var(--brand)' : 'var(--private)',
+            backgroundColor: 'var(--private)',
+          }),
+        }),
+      },
+    })
+    const css = generate(system.system, { id: system.id })
+    expect(css).toContain('color:var(--brand)')
+    expect(css).toContain('background-color:var(--marketing-private)')
+    expect(css).not.toContain('var(--marketing-brand)')
+    const sheet = system.stylesheet({
+      Root: { paint: 'private', ':hover': { paint: 'brand' } },
+    })
+    const output = createWebRenderer(system, {
+      tokens: {},
+      manifest: buildStyles(system, { sheets: [sheet] }).manifest,
+    }).resolve(sheet).Root
+    expect(JSON.stringify(output)).toContain('var(--brand)')
+    expect(JSON.stringify(output)).toContain('--marketing-toned_hover')
+    expect(JSON.stringify(output)).not.toContain('--marketing-brand')
+  })
+  test('external variable lists are validated, snapshotted and canonicalized', () => {
+    const names = ['--z', '--a', '--z']
+    const system = defineSystem({
+      id: 'snapshot',
+      tokens: {},
+      externalCssVariables: names,
+    })
+    names.push('--later')
+    expect(system.system).toMatchObject({
+      externalCssVariables: ['--a', '--z'],
+    })
+    expect(() =>
+      defineSystem({
+        id: 'invalid',
+        tokens: {},
+        externalCssVariables: ['brand'],
+      }),
+    ).toThrow('complete custom-property names')
+    expect(() =>
+      namespaceCss('.part{color:red}', 'invalid', {
+        externalCssVariables: ['--bad name'],
+      }),
+    ).toThrow('complete custom-property names')
+  })
   test('two systems give distinct classes, state parameters, and keyframes', () => {
     const css =
       '.paint_base{opacity:var(--toned_hover)} ._:hover{--toned_hover: ;}@keyframes toned_spin{to{opacity:0.5}}'

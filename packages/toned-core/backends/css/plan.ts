@@ -450,7 +450,11 @@ function lowerCssOperations(
       style[field] = result.value
   pruneParameters(style, parameters, fields)
   const output = { className: [...classes].join(' '), style }
-  return namespace && system.id ? namespaceOutput(output, system.id) : output
+  return namespace && system.id
+    ? namespaceOutput(output, system.id, {
+        externalCssVariables: system.system.externalCssVariables,
+      })
+    : output
 }
 
 /** Entry shared by pure SSR and mounted CSS hosts. All selection and token

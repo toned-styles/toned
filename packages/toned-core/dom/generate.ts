@@ -60,6 +60,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     containers,
     base,
     layoutContext: layout,
+    externalCssVariables,
     ...system
   }: S,
   opts?: {
@@ -537,6 +538,6 @@ export function generate<const S extends TokenStyleDeclaration>(
   styles += alphaClasses
 
   return opts?.id
-    ? namespaceCss(styles, opts.id, { scope: opts.scope })
+    ? namespaceCss(styles, opts.id, { scope: opts.scope, externalCssVariables })
     : styles
 }
