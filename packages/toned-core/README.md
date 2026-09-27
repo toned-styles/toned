@@ -265,6 +265,25 @@ and function values retain their identity and disable this caching, so valid
 mutable payloads remain observable. Legacy `system.t` continues reading its live
 installed context on each getter access.
 
+`createInlineRenderer(ui, { tokens })` produces concrete web style props for email
+and static HTML without a manifest, global configuration, hooks, or CSS assets.
+Spread the complete result of `renderer.resolve(sheet).Part` into the email
+component. Explicit variants and platform branches work; media, state, container,
+relation conditions and CSS extensions are rejected before branch selection.
+CSS variables, class names, non-finite numbers and structured CSS values are also
+rejected. Email-client property support remains the template author's responsibility;
+this backend does not add Outlook fallbacks or rewrite unsupported CSS.
+All pure renderer constructors return the exported `PureRenderer<S>` contract,
+so applications can export renderer instances from declaration-emitting packages.
+
+`createPdfRenderer(ui, { tokens })` resolves static report styles in a finite
+profile shared by React PDF and Forme. Numeric measurements are points. It keeps
+percentage dimensions and PDF `textDecoration`, and rejects browser conditions,
+CSS variables, web units, native-only fields, transforms and grid. The profile
+uses native platform branches but has its own field/value validation; it does not
+pretend that React Native and PDF hosts have identical style contracts. See the
+email and PDF examples for full-props spreading into their host components.
+
 `createNativeRenderer` evaluates the same declarations with explicit host facts
 and rejects fields outside its documented finite native profile. Unsupported CSS
 properties and values fail visibly instead of reaching a native host silently.

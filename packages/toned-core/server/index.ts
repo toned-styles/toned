@@ -1,7 +1,12 @@
 import { resolveCssPlan } from '../backends/css/plan.ts'
 /** Pure resolution: no React imports, global config installation or host writes. */
 import type { OutputBackend, ResolvedProps } from '../backends/index.ts'
-import { cssVariablesBackend, nativeBackend } from '../backends/index.ts'
+import {
+  cssVariablesBackend,
+  inlineBackend,
+  nativeBackend,
+  pdfBackend,
+} from '../backends/index.ts'
 import type { BuildManifest } from '../build/index.ts'
 import {
   assertManifestConditions,
@@ -59,6 +64,24 @@ type Arguments<T, Theme> = [SheetVariants<T>] extends [never]
     ? [input?: Partial<Input<T, Theme>>]
     : [input: Input<T, Theme>]
 
+/** Public, declaration-portable contract for pure server and document renderers. */
+export interface PureRenderer<S extends TokenStyleDeclaration> {
+  readonly backend: OutputBackend
+  readonly system: TokenSystem<S>
+  readonly tokens: SystemTheme<S>
+  readonly manifest: BuildManifest | undefined
+  validate(sheet: object): void
+  readonly t: TokenSystem<S>['t']
+  resolve<T extends object>(
+    sheet: T,
+    ...args: Arguments<T, SystemTheme<S>>
+  ): SheetOutput<T>
+  explain<T extends object>(
+    sheet: T,
+    ...args: Arguments<T, SystemTheme<S>>
+  ): ReturnType<typeof explainPlan> & { output: SheetOutput<T> }
+}
+
 /** CSS custom-property references without mutable process-global token state. */
 export function cssVariableTokens(): Tokens {
   return certifyImmutableReference(
@@ -97,7 +120,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     manifest?: BuildManifest
     tokens: SystemTheme<NoInfer<S>>
   },
-) {
+): PureRenderer<S> {
   const backendManifest = options.backend.manifest
   const sourceManifest = options.manifest ?? backendManifest
   // Renderer validation is identity-cached; its build contract must not change
@@ -157,6 +180,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
         manifest,
         resolvePlatformKeys(plan.rules, backend.platform),
       )
+    backend.validatePlan?.(compilePlan(system, sheet, backend.platform))
     validated.add(sheet)
   }
   const inputs = (sheet: object, input: RuntimeInput) => ({
@@ -190,6 +214,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
         if (backend.id === 'css-vars' && manifest)
           assertManifestConditions(manifest, rules)
         const plan = compileRules(system, rules, backend.platform)
+        backend.validatePlan?.(plan)
         if (backend.id === 'css-vars')
           return resolveCssPlan(plan, system, tokens, {})['Root']!
         const selected =
@@ -272,4 +297,20 @@ export function createNativeRenderer<S extends TokenStyleDeclaration>(
   options: { tokens: SystemTheme<NoInfer<S>> },
 ) {
   return createRenderer(system, { ...options, backend: nativeBackend })
+}
+
+/** Static HTML/email output with explicit literal theme tokens and no global installation. */
+export function createInlineRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: { tokens: SystemTheme<NoInfer<S>> },
+) {
+  return createRenderer(system, { ...options, backend: inlineBackend })
+}
+
+/** Static PDF point values in the supported React PDF/Forme profile. */
+export function createPdfRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: { tokens: SystemTheme<NoInfer<S>> },
+) {
+  return createRenderer(system, { ...options, backend: pdfBackend })
 }
