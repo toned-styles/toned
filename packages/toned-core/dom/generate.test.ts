@@ -3,6 +3,26 @@ import { defineToken } from '../system/definers.ts'
 import { generate } from './generate.ts'
 
 describe('generate', () => {
+  test('alpha-capable atomics keep plain and color-mix browser fallbacks', () => {
+    const result = generate({
+      ink: defineToken({
+        values: ['muted'] as const,
+        resolve: () => ({ color: 'var(--muted)' }),
+        alphaChannel: ['color'],
+      }),
+    })
+    const plain = 'color:var(--muted);'
+    const mix =
+      'color:color-mix(in oklab, var(--muted) calc(var(--toned-alpha-color, 1) * 100%), transparent);'
+    const relative =
+      'color:rgb(from var(--muted) r g b / calc(alpha * var(--toned-alpha-color, 1)));'
+    expect(result).toContain(`.ink_muted{${plain}${mix}${relative}}`)
+    expect(result).toContain('.ink\\$50{--toned-alpha-color:0.5}')
+    expect(result).toContain(
+      "@property --toned-alpha-color {syntax:'<number>';inherits:false;initial-value:1;}",
+    )
+  })
+
   describe('sibling and focus-within channels', () => {
     test('the system css carries sibling-hover, focus-within and sibling-state toggles', () => {
       const result = generate({
