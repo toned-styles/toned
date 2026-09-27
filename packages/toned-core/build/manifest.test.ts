@@ -77,6 +77,29 @@ test('manifest rejects changes to static alpha vocabulary and pseudo presence', 
   }
 })
 
+test('the same tokens in another key order are the same system', () => {
+  // A system spread from module namespaces gets its key order from the runtime:
+  // sorted by name under the spec (Bun, Node), declaration order under Vite's
+  // SSR module runner. Neither order may make the committed manifest stale.
+  const lineHeight = { values: [0] as const, resolve: () => ({ lineHeight: 1 }) }
+  const letterSpacing = {
+    values: [''] as const,
+    resolve: () => ({ letterSpacing: '0' }),
+  }
+  const built = defineSystem({
+    id: 'key-order',
+    tokens: { letterSpacing, lineHeight },
+  })
+  const { manifest } = buildStyles(built, { sheets: [] })
+  const reordered = defineSystem({
+    id: 'key-order',
+    tokens: { lineHeight, letterSpacing },
+  })
+  expect(() =>
+    createWebRenderer(reordered, { manifest, tokens: {} }),
+  ).not.toThrow()
+})
+
 test('an asset check detects CSS changed independently from its manifest', () => {
   const ui = defineSystem({ id: 'asset', tokens: {} })
   const artifact = buildStyles(ui, { sheets: [] })
