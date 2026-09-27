@@ -197,7 +197,13 @@ const { css, manifest } = buildStyles(ui, { sheets: [button, emphasis], layer: '
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
 condition variables and keyframes with their ID. Theme variables consumed by such
 a system must use the same namespace; `namespaceCss` in the system subpath can
-namespace a generated palette. Application-provided external CSS is not discovered. Resolver implementation
+namespace a generated palette. A system consuming an existing application palette can
+declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
+`tokens`. These exact custom-property names remain unchanged in generated CSS and
+runtime output; classes, condition toggles and undeclared variables remain isolated.
+The immutable, validated list is part of the manifest contract. External variables
+must be supplied by the application; Toned does not discover or emit their values.
+Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
 The build manifest records ad-hoc conditions and the exact static system schema,
 including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema

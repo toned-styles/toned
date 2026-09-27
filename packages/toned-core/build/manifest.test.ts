@@ -29,6 +29,22 @@ test('build/runtime namespaces cannot be independently overridden', () => {
     'runtime system namespace',
   )
 })
+test('manifest rejects a changed external variable contract', () => {
+  const original = defineSystem({
+    id: 'external',
+    tokens: {},
+    externalCssVariables: ['--brand'],
+  })
+  const current = defineSystem({
+    id: 'external',
+    tokens: {},
+    externalCssVariables: ['--accent'],
+  })
+  const { manifest } = buildStyles(original, { sheets: [] })
+  expect(() => createWebRenderer(current, { manifest, tokens: {} })).toThrow(
+    'different system definition',
+  )
+})
 test('manifest collection sees deep conditions and internal layer/AST symbols', () => {
   const system = defineSystem({}, { containers: { card: {} } })
   const condition = { '@card/>=400': { Root: { style: { opacity: 0 } } } }

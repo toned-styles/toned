@@ -93,6 +93,7 @@ export function systemDefinition(system: TokenStyleDeclaration): string {
     animations: system.animations,
     bridges: system.bridges,
     responsiveTokens: system.responsiveTokens,
+    externalCssVariables: system.externalCssVariables,
     tokens: tokenShapes,
   })
 }
