@@ -1,5 +1,5 @@
 import type { BuildManifest } from '../build/manifest.ts'
-import type { ResolvedOperation } from '../core/plan.ts'
+import type { CompiledPlan, ResolvedOperation } from '../core/plan.ts'
 import type { TokenSystem } from '../types/index.ts'
 
 /** Output adapters consume resolved fields, never selector strings or host refs. */
@@ -21,6 +21,8 @@ export type OutputBackend = Readonly<{
   /** Build profiles must be bound to their validated artifact before rendering. */
   readonly requiresBuild?: boolean
   readonly manifest?: BuildManifest
+  /** Validate every authored branch before variants or host facts select output. */
+  validatePlan?(plan: CompiledPlan): void
   resolvePlan?(
     operations: readonly ResolvedOperation[],
     context: { system: TokenSystem<any>; part: string },
@@ -36,7 +38,9 @@ export const cssVariablesBackend: OutputBackend = Object.freeze({
     Object.freeze({ ...input, style: Object.freeze({ ...input.style }) }),
 })
 
+export { inlineBackend } from './inline.ts'
 export { nativeBackend } from './native.ts'
+export { pdfBackend } from './pdf.ts'
 
 export type {
   ParameterMapping,
