@@ -259,9 +259,15 @@ export function useStyles<T extends StylesheetLike>(
  * required, wrong values rejected. The no-`as` signature forbids `as`
  * entirely, so a mistyped `as` call cannot fall through to the open signature
  * and silently pass.
+ *
+ * `const` keeps `as="div"` inferred as the literal 'div'. Without it the
+ * literal is widened to `string` whenever the host's `JSX.IntrinsicElements`
+ * carries a PATTERN key — React Three Fiber's `ThreeElements` is keyed
+ * `Uncapitalize<string>` — and `ComponentPropsWithRef<string>` is `{}`, so any
+ * child or host prop was rejected and callers had to write `as="div"`.
  */
 type BoundCallable = {
-  <As extends HostElement>(
+  <const As extends HostElement>(
     props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>,
   ): ReactElement
   (props?: { as?: never } & Record<string, unknown>): ReactElement
