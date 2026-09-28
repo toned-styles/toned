@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { flattenSelectorBlocks } from './selectorBlocks.ts'
+import { SYMBOL_STYLE } from './symbols.ts'
 
 describe('flattenSelectorBlocks', () => {
   test('flattens a breakpoint block into underscore-joined keys', () => {
@@ -100,6 +101,24 @@ describe('flattenSelectorBlocks', () => {
 
     expect(result[marker]).toBe('kept')
     expect(result).toHaveProperty('@md_padding', 'large')
+  })
+
+  test("reads a t() result's stored style rather than its own keys", () => {
+    // A t() result exposes computed style/className getters as enumerable
+    // keys; its tokens live behind SYMBOL_STYLE.
+    const inner = {
+      [SYMBOL_STYLE]: { padding: 'large' },
+      get style() {
+        return { padding: 16 }
+      },
+      get className() {
+        return undefined
+      },
+    }
+
+    const result = flattenSelectorBlocks({ padding: 'small', '@md': inner })
+
+    expect(result).toEqual({ padding: 'small', '@md_padding': 'large' })
   })
 
   test('flattens an empty block to nothing', () => {

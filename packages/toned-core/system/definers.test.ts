@@ -629,6 +629,34 @@ describe('t() nested selector blocks', () => {
       expect(style['padding']).toBe('var(--media-md__padding, 4px)')
     })
 
+    test('a t() result nested in a block matches the plain-object form', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const { t } = makeSystem()
+
+      const nested = t({ padding: 'small', '@md': t({ padding: 'large' }) })
+      const plain = t({ padding: 'small', '@md': { padding: 'large' } })
+
+      // Flattening the result's own keys would surface its style/className
+      // getters as '@md_style' / '@md_className' instead of its tokens.
+      expect(nested.style).toEqual(plain.style)
+      expect(warn).not.toHaveBeenCalled()
+      warn.mockRestore()
+    })
+
+    test('skips falsy arguments, so a conditional style can be inlined', () => {
+      const { t } = makeSystem()
+      const selected = false as boolean
+
+      const style = t(
+        { bgColor: 'base' },
+        selected && { bgColor: 'accent' },
+        null,
+        undefined,
+      ).style as AnyStyle
+
+      expect(style).toEqual({ backgroundColor: '#fff' })
+    })
+
     test("does not mutate the caller's object", () => {
       const { t } = makeSystem()
       const input = {

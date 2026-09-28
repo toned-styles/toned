@@ -140,6 +140,9 @@ export function defineSystem<
     t: (...values) => {
       const value: Record<string, unknown> & { style?: unknown } = {}
       for (const v of values) {
+        // `cond && { ... }` hands us false/undefined when the condition fails.
+        if (!v) continue
+
         // A previous t() result already stores a flattened style; only
         // caller-authored objects carry nested '@bp' / ':pseudo' blocks.
         // Flattening before the merge is what makes repeated arguments for the

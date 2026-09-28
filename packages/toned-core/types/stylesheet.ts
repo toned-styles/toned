@@ -32,11 +32,28 @@ export type PickString<K> = K extends string ? K : never
 /** Brand symbol for internal type discrimination */
 declare const _internalBrand: unique symbol
 
-/** Merge tuple of objects into intersection type */
+/** A skipped `t()` argument, as produced by `cond && { ... }` */
+type Falsy = false | null | undefined
+
+/** Later keys replace earlier ones, as `Object.assign` does at runtime */
+type Override<L, R> = Omit<L, keyof R> & R
+
+/**
+ * Fold `t()` arguments left to right. Intersecting them instead would reduce
+ * `t({ bgColor: 'a' }, { bgColor: 'b' })` to `never`. An argument that may be
+ * falsy only may apply, so it widens the result instead of replacing it.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: tuple manipulation requires any[]
-type Merge<D extends any[]> = D extends [infer First, ...infer Rest]
-  ? First & Merge<Rest>
-  : Record<string, never>
+type Merge<D extends any[], Acc = object> = D extends [infer First, ...infer Rest]
+  ? Merge<
+      Rest,
+      [Exclude<First, Falsy>] extends [never]
+        ? Acc
+        : [Extract<First, Falsy>] extends [never]
+          ? Override<Acc, First>
+          : Acc | Override<Acc, Exclude<First, Falsy>>
+    >
+  : Acc
 
 /**
  * A token style plus the nested `':pseudo'` and `'@breakpoint'` blocks that both
@@ -80,7 +97,7 @@ export type TokenStyleWithSelectors<
  * ```
  */
 export type TFun<S extends TokenStyleDeclaration> = <
-  D extends TokenStyleWithSelectors<S>[],
+  D extends (TokenStyleWithSelectors<S> | Falsy)[],
 >(
   ...values: [...D]
 ) => Merge<D> & {

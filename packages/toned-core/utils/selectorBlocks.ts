@@ -9,6 +9,8 @@
  * @module utils/selectorBlocks
  */
 
+import { SYMBOL_STYLE } from './symbols.ts'
+
 // biome-ignore lint/suspicious/noExplicitAny: token style values are dynamic
 type AnyValue = any
 
@@ -43,8 +45,14 @@ export function flattenSelectorBlocks<T extends object>(input: T): T {
   for (const key of Object.keys(input)) {
     if (key[0] !== '@' && key[0] !== ':') continue
 
-    const block = (input as Record<string, AnyValue>)[key]
-    if (!isBlock(block)) continue
+    const value = (input as Record<string, AnyValue>)[key]
+    if (!isBlock(value)) continue
+
+    // A nested t() result keeps its tokens behind SYMBOL_STYLE; its own keys
+    // are the computed style/className getters, not token properties.
+    const block = (
+      SYMBOL_STYLE in value ? value[SYMBOL_STYLE] : value
+    ) as Record<string, AnyValue>
 
     // Copy lazily, and only once, on the first block we actually flatten.
     // Spread preserves symbol-keyed internals (SYMBOL_REF and friends).
