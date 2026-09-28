@@ -23,6 +23,12 @@ import type { QueryBuilder } from '../system/queries.ts'
 import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
 import type { WebRules } from '../web/rules.ts'
 export declare const DEFAULT_KIND: unique symbol
+/** Type-only key carrying the target a cross-part shorthand key is checked
+ *  against (see ElementStyleNew); never written, never at runtime. */
+declare const CROSS_PART: unique symbol
+/** Type-only key: the target a written cross-element key is checked against
+ *  inside variant rules. */
+declare const CROSS_ELEMENT: unique symbol
 export type DefaultSystemKind = { readonly [DEFAULT_KIND]: 'view' }
 
 import type { Config, Platform } from './config.ts'
@@ -242,9 +248,19 @@ export type ElementStyleNew<
         false
       >
 } & {
-  // A cross-part shorthand selects one source. Use q.all/any keys for multiple
-  // sources; recursive shorthand expansion makes generic schema unions explode.
-  [K in `${Parts}${AvailablePseudo}`]?: ElementStyleNew<
+  /*
+   * A cross-part shorthand (`'Item:hover'`) selects one source. Use q.all/any
+   * keys for multiple sources; recursive shorthand expansion makes generic
+   * schema unions explode.
+   *
+   * The keys are NOT enumerated here. `[K in `${Parts}${AvailablePseudo}`]`
+   * gave every part one optional member per sibling part per pseudo, at every
+   * nesting level — a sheet cost parts² × pseudos (160 parts: 4.95s of check
+   * time against 0.64s without it). The target a cross-part key is checked
+   * against rides this one type-only member instead, and ValidateDeclaration
+   * checks the keys actually WRITTEN against it.
+   */
+  [CROSS_PART]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
@@ -328,19 +344,39 @@ type DeclarationKinds<S, T, Elements extends string, Kinds> = {
  * (`'trigger:open'`) — a parent's data-state styling a descendant. A single
  * state only: compound `state:hover` cross keys stay out of the CSS channel.
  */
-type CrossElementSelector<
+/** What may follow a part name in a cross-element key (`'Item:hover'`,
+ *  `'Root~:open'`). */
+type CrossSuffix<S extends TokenStyleDeclaration> =
+  | ':active'
+  | ':active:focus'
+  | ':active:focus:hover'
+  | ':active:hover'
+  | ':focus'
+  | ':focus:hover'
+  | ':hover'
+  | Pseudo
+  | InferStatePseudos<S>
+  | `~${Pseudo | InferStatePseudos<S>}`
+
+/**
+ * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
+ * `${Elements}${CrossSuffix}` union is never built. Enumerating it as mapped
+ * keys (root, variant conditions, and each part) made a sheet cost
+ * parts x suffixes, instantiated again for every sheet.
+ */
+type IsCrossElementKey<
+  K,
   Elements extends string,
   S extends TokenStyleDeclaration,
-> =
-  | `${Elements}:active`
-  | `${Elements}:active:focus`
-  | `${Elements}:active:focus:hover`
-  | `${Elements}:active:hover`
-  | `${Elements}:focus`
-  | `${Elements}:focus:hover`
-  | `${Elements}:hover`
-  | `${Elements}${Pseudo | InferStatePseudos<S>}`
-  | `${Elements}~${Pseudo | InferStatePseudos<S>}`
+> = K extends `${infer _Part extends Elements}:${infer Rest}`
+  ? `:${Rest}` extends CrossSuffix<S>
+    ? true
+    : false
+  : K extends `${infer _Part extends Elements}~${infer Rest}`
+    ? `~${Rest}` extends CrossSuffix<S>
+      ? true
+      : false
+    : false
 
 /**
  * One element's rules, exactly as `StylesheetInput` accepts them.
@@ -354,7 +390,11 @@ type CrossElementSelector<
 export type AuthoredElementStyle<
   S extends TokenStyleDeclaration,
   ET extends ElementType | undefined = undefined,
-  Parts extends string = never,
+  // Kept for callers; the shape no longer depends on it. Cross-part keys are
+  // checked by ValidateDeclaration, which receives the parts itself, so the
+  // element shape is instantiated ONCE per system and element kind and shared
+  // by every sheet, instead of once per sheet's part-name union.
+  _Parts extends string = never,
   Host extends Platform | undefined = undefined,
 > = ElementStyleNew<
   S,
@@ -362,7 +402,7 @@ export type AuthoredElementStyle<
   keyof InferBreakpoints<S> | InferContainerConditions<S>,
   ET,
   Host,
-  Parts
+  never
 >
 
 /** Validate inferred object keys recursively, including computed atom keys. */
@@ -395,6 +435,36 @@ export type ValidateDeclaration<
           >
         : never
       : never
+    : [typeof CROSS_ELEMENT extends keyof Shape ? true : false, IsCrossElementKey<K, Parts, S>] extends [true, true]
+      ? ValidateDeclaration<
+          Input[K],
+          NonNullable<Shape[typeof CROSS_ELEMENT & keyof Shape]>,
+          S,
+          Parts,
+          Local
+        >
+    : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
+      // per written key made each sheet cost parts × pseudos again.
+      K extends `${infer _Part extends Parts}:${infer Rest}`
+      ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
+        ? K extends keyof Shape
+        ? ValidateDeclaration<
+            Input[K],
+            NonNullable<Shape[K]>,
+            S,
+            Parts,
+            K extends Parts ? true : Local
+          >
+          : typeof CROSS_PART extends keyof Shape
+            ? ValidateDeclaration<
+                Input[K],
+                NonNullable<Shape[typeof CROSS_PART]>,
+                S,
+                never,
+                Local
+              >
+            : never
+        : never
     : K extends `:${string}:${string}`
       ? ValidCompound<
           K,
@@ -509,7 +579,17 @@ export type StylesheetInput<
           true
         >)
 } & {
-  [K in CrossElementSelector<Elements, S>]?: ElementMap<
+  [K in keyof T as IsCrossElementKey<K, Elements, S> extends true
+    ? K
+    : never]?: ElementMap<
+    S,
+    Elements,
+    DeclarationKinds<S, T, Elements, Kinds>
+  >
+} & {
+  /** Target of a written cross-element key when the rules type is generic
+   *  (override rules): ValidateDeclaration resolves it by key shape. */
+  [CROSS_ELEMENT]?: ElementMap<
     S,
     Elements,
     DeclarationKinds<S, T, Elements, Kinds>
@@ -693,14 +773,14 @@ export type NamedStyleDef<
  */
 export type VariantConditions<
   S extends TokenStyleDeclaration,
-  Elements extends string,
+  // Cross-element keys are matched by IsCrossElementKey, not listed here.
+  _Elements extends string,
 > =
   | `@${keyof InferBreakpoints<S> & string}`
   | `@media ${keyof InferBreakpoints<S> & string}`
   | `@${InferContainerConditions<S>}`
   | InferContainerAliases<S>
   | ConditionExprKeys<S>
-  | CrossElementSelector<Elements, S>
   | QueryKey
 
 export type VariantStyleDef<
@@ -731,6 +811,9 @@ export type VariantStyleDef<
     Kinds,
     Host
   >
+} & {
+  /** Target of a written cross-element key (see IsCrossElementKey). */
+  [CROSS_ELEMENT]?: VariantStyleDef<S, Elements, Named, Kinds, Host>
 } & {
   [P in Platform as `@platform.${P}` | `@platform ${P}`]?: Host extends Platform
     ? P extends Host
@@ -800,9 +883,11 @@ export type CheckedVariantRules<
                 | `@platform.${Platform}`
                 | `@platform ${Platform}`
             ? unknown
-            : ValidVariantKey<K, Mods> extends true
+            : IsCrossElementKey<K, Elements, S> extends true
               ? unknown
-              : never
+              : ValidVariantKey<K, Mods> extends true
+                ? unknown
+                : never
         : never)
 }
 
