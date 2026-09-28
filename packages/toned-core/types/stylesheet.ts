@@ -422,6 +422,15 @@ export type ValidateDeclaration<
   S extends TokenStyleDeclaration,
   Parts extends string = never,
   Local extends boolean = false,
+  /*
+   * `true` only for a stylesheet's own parts, where the authored shape is
+   * intersected alongside and already checks every plain leaf. There a plain
+   * leaf answers `unknown` instead of being validated a second time — that
+   * re-check was ~75% of a part's type cost. Special subtrees (computed query
+   * keys, compound pseudos, cross-part and cross-element keys) switch it back
+   * off: their leaves are the only contextual type those keys get (see ValidLeaf).
+   */
+  Light extends boolean = false,
 > = {
   [K in keyof Input]: K extends QueryKey
     ? ValidQueryKey<K, S, Parts, Local> extends true
@@ -482,7 +491,9 @@ export type ValidateDeclaration<
         : never
       : K extends keyof Shape
         ? Input[K] extends readonly unknown[]
-          ? ValidLeaf<Input[K], Shape[K]>
+          ? Light extends true
+            ? unknown
+            : ValidLeaf<Input[K], Shape[K]>
           : Input[K] extends object
             ? NonNullable<Shape[K]> extends object
               ? ValidateDeclaration<
@@ -490,10 +501,15 @@ export type ValidateDeclaration<
                   NonNullable<Shape[K]>,
                   S,
                   Parts,
-                  K extends Parts ? true : Local
+                  K extends Parts ? true : Local,
+                  Light
                 >
+              : Light extends true
+                ? unknown
+                : ValidLeaf<Input[K], Shape[K]>
+            : Light extends true
+              ? unknown
               : ValidLeaf<Input[K], Shape[K]>
-            : ValidLeaf<Input[K], Shape[K]>
         : never
 }
 
@@ -576,6 +592,7 @@ export type StylesheetInput<
           >,
           S,
           Elements,
+          true,
           true
         >)
 } & {
