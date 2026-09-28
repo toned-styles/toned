@@ -13,13 +13,22 @@ export type ExtractNamedStyles<Input> = UnwrapName<NamedKeys<Input>>
 
 /** Cross-kind composition could smuggle kind-restricted tokens/raw styles.
  * Unspecified legacy kinds retain their historical permissive behavior. */
-export type ComposableParts<Kinds, Target extends keyof Kinds> = {
-  [Source in keyof Kinds]: undefined extends Kinds[Target]
+export type ComposableParts<Kinds, Target extends keyof Kinds> =
+  undefined extends Kinds[Target]
+    ? keyof Kinds & string
+    : ComposableForKind<Kinds, Kinds[Target]>
+
+/**
+ * The sources a target of kind `TargetKind` may compose. Keyed on the KIND, not
+ * the target: every target of one kind shares one instantiation, so a sheet
+ * costs parts x kinds here rather than parts x parts (mapping all sources once
+ * per target was quadratic in the sheet's part count).
+ */
+type ComposableForKind<Kinds, TargetKind> = {
+  [Source in keyof Kinds]: undefined extends Kinds[Source]
     ? Source
-    : undefined extends Kinds[Source]
+    : [Kinds[Source]] extends [TargetKind]
       ? Source
-      : [Kinds[Source]] extends [Kinds[Target]]
-        ? Source
-        : never
+      : never
 }[keyof Kinds] &
   string
