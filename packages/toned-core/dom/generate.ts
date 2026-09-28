@@ -5,7 +5,8 @@
  */
 
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { camelToKebab } from '../utils/css.ts'
+import { camelToKebab, withCssUnit } from '../utils/css.ts'
+import { PSEUDO_STATES } from '../utils/pseudo.ts'
 
 const tokens = new Proxy(
   {},
@@ -25,31 +26,29 @@ export function generate<const S extends TokenStyleDeclaration>({
 }: S) {
   let styles = ''
 
+  let rootRule = ''
+  let rules = ''
+
+  // Pseudo-state toggles first, and unconditionally: `pseudoMode: 'css'` reads
+  // them whether or not the system declares any breakpoints.
+  for (const pseudo of PSEUDO_STATES) {
+    const name = `--toned_${pseudo.slice(1)}`
+    rootRule += `${name}: initial;`
+    // make it work as expected with nested elements
+    rules += `._${pseudo} {${name}: ;} ._${pseudo} ._ {${name}: initial;} ._${pseudo} ._${pseudo} {${name}: ;}`
+  }
+
   if (breakpoints) {
-    const bpValues = breakpoints.__breakpoints
-
-    const PSEUDO_STATES = ['hover', 'focus', 'active']
-
-    let rootRule = ''
-    let rules = ''
-
-    PSEUDO_STATES.forEach((pseudo) => {
-      const name = `--toned_${pseudo}`
-      rootRule += `${name}: initial;`
-      // make it work as expected with nested elements
-      rules += `._:${pseudo} {${name}: ;} ._:${pseudo} ._ {${name}: initial;} ._:${pseudo} ._:${pseudo} {${name}: ;}`
-    })
-
-    for (const [key, value] of Object.entries(bpValues)) {
+    for (const [key, value] of Object.entries(breakpoints.__breakpoints)) {
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
 
       rootRule += `${varName}: initial;`
       rules += `@media (min-width: ${value}px) { html { ${varName}: ; } }`
     }
-
-    styles += `html {${rootRule}}`
-    styles += rules
   }
+
+  styles += `html {${rootRule}}`
+  styles += rules
 
   // handle custom tokens
 
@@ -74,7 +73,9 @@ export function generate<const S extends TokenStyleDeclaration>({
       let cssRule = ''
 
       for (const cssProp in result) {
-        cssRule += `${camelToKebab(cssProp)}:${result[cssProp]};`
+        // Same unit rule as the runtime path: a resolver may return a bare
+        // number, and a static rule has no later step that would suffix it.
+        cssRule += `${camelToKebab(cssProp)}:${withCssUnit(cssProp, result[cssProp])};`
       }
 
       const ruleKey = `${key}_${value}`

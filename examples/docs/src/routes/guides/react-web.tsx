@@ -56,6 +56,7 @@ export default setConfig(
     useClassName: true,  // output className props
     useMedia: true,      // enable responsive breakpoints
     mediaMode: 'css',    // use real CSS @media rules
+    pseudoMode: 'css',   // resolve :hover/:focus/:active in CSS
   }),
 )`}</CodeBlock>
 
@@ -142,13 +143,22 @@ export function Button({ label, variant = 'primary' }: {
         and is recommended for production web apps.
       </p>
       <p>
-        <strong>useMedia: true</strong> -- Enables responsive breakpoint support
-        in stylesheets.
+        <strong>useMedia: true</strong> -- Enables responsive breakpoint
+        support.
       </p>
       <p>
         <strong>mediaMode: 'css'</strong> -- Compiles responsive breakpoints
         into native CSS <code {...s.code}>@media</code> rules rather than
-        evaluating them in JavaScript.
+        evaluating them in JavaScript. Also required for{' '}
+        <code {...s.code}>@</code> blocks in inline <code {...s.code}>t</code>{' '}
+        styles, which have no JavaScript equivalent.
+      </p>
+      <p>
+        <strong>pseudoMode: 'css'</strong> -- Resolves{' '}
+        <code {...s.code}>:hover</code>, <code {...s.code}>:focus</code> and{' '}
+        <code {...s.code}>:active</code> through CSS custom properties instead
+        of JavaScript event listeners. See{' '}
+        <a href="/guides/interactive">Interactive Styles</a>.
       </p>
     </article>
   )

@@ -4,8 +4,7 @@
  * @module stylesheet/applyStyles
  */
 
-import { camelToKebab } from '../utils/css.ts'
-import { unitlessNumbers } from './unitlessNumbers.ts'
+import { camelToKebab, withCssUnit } from '../utils/css.ts'
 
 // biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
 type AnyValue = any
@@ -22,6 +21,12 @@ const baselineValues = new WeakMap<object, Record<string, string>>()
 // ownership checks compare against the browser's normalized form. Lets us tell
 // "toned still owns this property" from "another source has since changed it".
 const lastWrittenValues = new WeakMap<object, Record<string, string>>()
+
+// Style-map key to the name CSSOM knows it by. Custom properties are already
+// their own spelling and are case-sensitive, so kebab-casing one would look up
+// a name that was never set.
+const cssName = (key: string) =>
+  key.startsWith('--') ? key : camelToKebab(key)
 
 export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
   if (!curr) return
@@ -43,7 +48,7 @@ export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
       if (prev) {
         for (const key of prev) {
           if (key in styleObject.style) continue
-          const live: string = curr.style.getPropertyValue(camelToKebab(key))
+          const live: string = curr.style.getPropertyValue(cssName(key))
           // If the live value isn't what toned last wrote, another source now
           // owns this property — leave it untouched rather than clobber it.
           if (key in lastWritten && live !== lastWritten[key]) continue
@@ -59,26 +64,31 @@ export const setStyles = (curr: Ref | undefined, styleObject: RefStyle) => {
         // Capture the pre-toned baseline on first sight, and refresh it if a
         // non-toned source has changed the live value since toned last wrote.
         if (!(key in baselines)) {
-          baselines[key] = curr.style.getPropertyValue(camelToKebab(key))
+          baselines[key] = curr.style.getPropertyValue(cssName(key))
         } else if (key in lastWritten) {
-          const live = curr.style.getPropertyValue(camelToKebab(key))
+          const live = curr.style.getPropertyValue(cssName(key))
           if (live !== lastWritten[key]) baselines[key] = live
         }
         const v = styleObject.style[key]
-        if (typeof v === 'number' && !unitlessNumbers.has(key)) {
-          result[key] = `${v}px`
-        } else {
-          result[key] = v
-        }
+        result[key] = withCssUnit(key, v)
         currentKeys.add(key)
       }
 
-      Object.assign(curr.style, result)
+      for (const key in result) {
+        const value = result[key]
+        // CSSOM exposes custom properties through setProperty only; assigning
+        // one lands as an expando and never reaches the CSS. Empty removes.
+        if (key.startsWith('--')) {
+          curr.style.setProperty(key, value == null ? '' : String(value))
+        } else {
+          curr.style[key] = value
+        }
+      }
 
       // Record what toned actually wrote (read back so later comparisons use the
       // DOM's normalized form) to detect future foreign writes.
       for (const key of currentKeys) {
-        lastWritten[key] = curr.style.getPropertyValue(camelToKebab(key))
+        lastWritten[key] = curr.style.getPropertyValue(cssName(key))
       }
 
       prevStyleKeys.set(curr, currentKeys)

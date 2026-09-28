@@ -3,8 +3,12 @@ import { setStyles } from './applyStyles.ts'
 
 // Minimal stand-in for an element's inline style. Mirrors a browser closely
 // enough for setStyles' web branch: toned writes camelCase properties via
-// Object.assign and reads them back with getPropertyValue(kebab). No value
+// direct assignment and reads them back with getPropertyValue(kebab). No value
 // normalization, so reads return exactly what was written.
+//
+// Custom properties are held separately, because CSSOM does not expose them as
+// IDL attributes: only setProperty registers one, and '' removes it. Assigning
+// `style['--x']` lands as an expando that never reaches the CSS.
 type FakeStyle = {
   getPropertyValue(prop: string): string
   setProperty(prop: string, value: string): void
@@ -13,17 +17,22 @@ type FakeEl = { style: FakeStyle }
 
 function makeEl(): FakeEl {
   const kebabToCamel = (prop: string) =>
-    prop.startsWith('--')
-      ? prop
-      : prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+    prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+
+  const custom: Record<string, string> = {}
 
   const style = {
     getPropertyValue(prop: string): string {
+      if (prop.startsWith('--')) return custom[prop] ?? ''
       const v = style[kebabToCamel(prop)]
       return v == null ? '' : String(v)
     },
-    // Stand-in for a non-toned source writing an inline property.
     setProperty(prop: string, value: string): void {
+      if (prop.startsWith('--')) {
+        if (value === '') delete custom[prop]
+        else custom[prop] = value
+        return
+      }
       style[kebabToCamel(prop)] = value
     },
   } as FakeStyle
@@ -98,5 +107,56 @@ describe('setStyles (web) baseline restore', () => {
     // Drop it while toned still owns it → the original value comes back.
     setStyles(el, { style: { opacity: 1 } })
     expect(cssValue(el, 'color')).toBe('rebeccapurple')
+  })
+})
+
+describe('setStyles (web) custom properties', () => {
+  // The var() chains exec emits are only worth anything if their toggle
+  // declarations reach the CSS, which takes setProperty.
+
+  test('writes a toggle declaration alongside the chain that reads it', () => {
+    const el = makeEl()
+
+    setStyles(el, {
+      style: {
+        '--media-md__padding': 'var(--media-md) 16px',
+        padding: 'var(--media-md__padding, 4px)',
+      },
+    })
+
+    expect(cssValue(el, '--media-md__padding')).toBe('var(--media-md) 16px')
+    expect(cssValue(el, 'padding')).toBe('var(--media-md__padding, 4px)')
+  })
+
+  test('clears a custom property toned no longer writes', () => {
+    const el = makeEl()
+
+    setStyles(el, { style: { '--media-md__padding': 'var(--media-md) 16px' } })
+    expect(cssValue(el, '--media-md__padding')).toBe('var(--media-md) 16px')
+
+    setStyles(el, { style: { color: 'red' } })
+    expect(cssValue(el, '--media-md__padding')).toBe('')
+  })
+
+  test('leaves a numeric custom property unitless', () => {
+    const el = makeEl()
+
+    // A custom property holds arbitrary text, so the implicit px a length
+    // carries in a style map must not be applied to it.
+    setStyles(el, { style: { '--gap': 8, paddingTop: 8 } })
+
+    expect(cssValue(el, '--gap')).toBe('8')
+    expect(cssValue(el, 'padding-top')).toBe('8px')
+  })
+
+  test('preserves case in a custom property name', () => {
+    const el = makeEl()
+
+    // Custom property names are case-sensitive, so kebab-casing '--myGap'
+    // would write (and read back) a name nobody declared.
+    setStyles(el, { style: { '--myGap': '4px' } })
+
+    expect(cssValue(el, '--myGap')).toBe('4px')
+    expect(cssValue(el, '--my-gap')).toBe('')
   })
 })

@@ -53,7 +53,8 @@ const { system, stylesheet, t } = defineSystem(tokens, config)`}</CodeBlock>
       </p>
       <p>
         <strong>t</strong> -- A utility for creating inline token styles. Useful
-        for one-off styling without defining a full stylesheet.
+        for one-off styling without defining a full stylesheet. It accepts the
+        same responsive and interactive blocks a stylesheet element does.
       </p>
 
       <h2 {...s.h2}>Example</h2>
@@ -82,6 +83,61 @@ export const { system, stylesheet, t } = defineSystem(
 function Heading() {
   return <h1 {...t({ typo: 'heading_1' })}>Hello</h1>
 }`}</CodeBlock>
+      <p>
+        Multiple arguments merge left to right, so a later one overrides an
+        earlier one. This is the usual way to layer a conditional style over a
+        base:
+      </p>
+      <CodeBlock>{`import { t } from '@toned/systems/base'
+
+function Row({ selected }) {
+  return <div {...t({ bgColor: 'surface' }, selected && { bgColor: 'action' })} />
+}`}</CodeBlock>
+
+      <h3 {...s.h3}>Breakpoint and Pseudo-State Blocks</h3>
+      <p>
+        <code {...s.code}>t</code> accepts the same nested{' '}
+        <code {...s.code}>'@breakpoint'</code> and{' '}
+        <code {...s.code}>':pseudo'</code> blocks as an element definition in a{' '}
+        <a href="/api/stylesheet">stylesheet</a>, so an inline style can be
+        responsive or interactive without reaching for one:
+      </p>
+      <CodeBlock>{`import { t } from '@toned/systems/base'
+
+function Card() {
+  return (
+    <div
+      {...t({
+        paddingX: 2,
+        bgColor: 'surface',
+        '@md': { paddingX: 4 },
+        ':hover': { bgColor: 'action' },
+      })}
+    />
+  )
+}`}</CodeBlock>
+      <p>
+        Blocks are one level deep: a breakpoint block cannot contain another
+        breakpoint, and neither can contain the cross-element{' '}
+        <code {...s.code}>$element</code> references a stylesheet supports. Both
+        kinds accept the <code {...s.code}>style</code> escape hatch, and when
+        two arguments target the same block their properties merge rather than
+        replace:
+      </p>
+      <CodeBlock>{`import { t } from '@toned/systems/base'
+
+// Both survive: { '@md': { paddingX: 4, gap: 1 } }
+t({ '@md': { paddingX: 4 } }, { '@md': { gap: 1 } })`}</CodeBlock>
+      <p>
+        These blocks compile to CSS custom-property fallback chains, so they
+        require <code {...s.code}>mediaMode: 'css'</code> and{' '}
+        <code {...s.code}>pseudoMode: 'css'</code> respectively. Under any other
+        mode -- including React Native -- the block is dropped, the base token
+        value still applies, and a development-only warning names the config
+        option that would enable it. See{' '}
+        <a href="/api/media-queries">Media Queries</a> and{' '}
+        <a href="/guides/interactive">Interactive Styles</a>.
+      </p>
     </article>
   )
 }

@@ -1,4 +1,4 @@
-import { getConfig } from '../system/config.ts'
+import { getConfig, resolveModes } from '../system/config.ts'
 import type {
   Config,
   ModType,
@@ -6,6 +6,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import { IS_PRODUCTION } from '../utils/env.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
@@ -25,11 +26,6 @@ type AnyValue = any
 type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
-
-// Bundlers replace `process.env.NODE_ENV`; fall back to non-production when the
-// global is unavailable so dev-only warnings still surface in browser bundles.
-const IS_PRODUCTION =
-  (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
 
 type ElementStyle = AnyValue
 
@@ -141,6 +137,9 @@ type BaseRules = AnyValue
 export class Base {
   config: Config
 
+  /** Media/pseudo modes resolved once from `config`; see `resolveModes`. */
+  modes: Pick<Config, 'mediaMode' | 'pseudoMode'>
+
   ref: BaseRef
   rules: BaseRules
 
@@ -180,9 +179,11 @@ export class Base {
     this.tokens = this.config.getTokens()
     this.refs = {}
 
-    const mediaMode =
-      this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
-    const pseudoMode = this.config.pseudoMode ?? 'runtime'
+    // One reading of the modes for the whole instance: StyleMatcher decides
+    // whether to flatten selector blocks, and exec decides whether to emit the
+    // custom property chains those flattened keys turn into.
+    this.modes = resolveModes(this.config)
+    const { mediaMode, pseudoMode } = this.modes
     this.matcher = new StyleMatcher(rules, {
       cssMediaMode: mediaMode === 'css',
       cssPseudoMode: pseudoMode === 'css',
@@ -231,7 +232,11 @@ export class Base {
   // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
   applyTokens(value: ElementStyle): any {
     return this.ref.exec(
-      { tokens: this.tokens, useClassName: this.config.useClassName },
+      {
+        tokens: this.tokens,
+        useClassName: this.config.useClassName,
+        ...this.modes,
+      },
       value,
     )
   }
@@ -338,10 +343,10 @@ export class Base {
   private pruneEl(elementKey: ElementKey, el: AnyValue) {
     const ref = this.refs[elementKey]
     if (ref instanceof Set) ref.delete(el)
-     for (const pseudo of PSEUDO_STATES) {
+    for (const pseudo of PSEUDO_STATES) {
       this._activeEls[`${elementKey}${pseudo}`]?.delete(el)
-     }
-   }
+    }
+  }
 
   // A copy of modsState with every element's interaction pseudo mods forced
   // off. Used to resolve non-interactive elements in multi-instance mode so a
@@ -433,14 +438,20 @@ export class Base {
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
           for (const el of ref) {
-            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            if (!el.isConnected) {
+              this.pruneEl(elementKey, el)
+              continue
+            }
             setStyles(el, restingStyle)
           }
         } else {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
           for (const el of ref) {
-            if (!el.isConnected) { this.pruneEl(elementKey, el); continue }
+            if (!el.isConnected) {
+              this.pruneEl(elementKey, el)
+              continue
+            }
             setStyles(el, style)
           }
         }

@@ -138,10 +138,18 @@ export const { system, stylesheet, t } = defineSystem(
   },
 })`}</CodeBlock>
       <p>
+        The same <code {...s.code}>@</code> blocks work inline with{' '}
+        <code {...s.code}>t</code>, alongside <code {...s.code}>':hover'</code>{' '}
+        and friends.
+      </p>
+      <p>
         When <code {...s.code}>mediaMode</code> is set to{' '}
         <code {...s.code}>'css'</code> in your config, these generate real CSS{' '}
-        <code {...s.code}>@media</code> rules. In JavaScript mode they are
-        evaluated at runtime.
+        <code {...s.code}>@media</code> rules. In JavaScript mode a stylesheet
+        evaluates them at runtime, while inline <code {...s.code}>t</code>{' '}
+        blocks -- which compile to CSS custom properties and have no runtime
+        equivalent -- are dropped with a development-only warning. See{' '}
+        <a href="/api/media-queries">Media Queries</a>.
       </p>
     </article>
   )

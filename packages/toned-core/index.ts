@@ -27,6 +27,7 @@ export type {
   TokenConfig,
   TokenStyle,
   TokenStyleDeclaration,
+  TokenStyleWithSelectors,
   Tokens,
 } from './types/index.ts'
 

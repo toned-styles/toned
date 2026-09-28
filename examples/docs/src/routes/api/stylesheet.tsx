@@ -108,6 +108,11 @@ const styles = stylesheet({
     '@lg': { paddingX: 6 },
   },
 })`}</CodeBlock>
+      <p>
+        The same blocks are accepted by the inline <code {...s.code}>t</code>{' '}
+        utility -- see <a href="/api/define-system">defineSystem</a> -- though
+        the root-level and cross-element forms remain stylesheet-only.
+      </p>
     </article>
   )
 }
