@@ -159,6 +159,10 @@ export class Base {
   private _warnedCrossElement = new Set<ElementKey>()
 
   // The compiled rule last written to each mounted element, so applyElementStyles
+  // can skip rewriting inline styles on siblings whose resolved style is
+  // unchanged (StyleMatcher caches the rule, so reference identity is a valid,
+  // cheap signal).
+  private _lastAppliedRule = new WeakMap<AnyValue, AnyValue>()
 
   constructor({
     ref,
@@ -407,8 +411,9 @@ export class Base {
           // variant) — so the shared global modsState (which can only represent one
           // element's interaction, and may be stale after an unmount) can never leak
           // a sibling's live state onto other instances. Group by signature to reuse
-          // match() results; prune disconnected nodes in-place as we iterate (Set
-          // delete during for..of is safe).
+          // match() results, and skip elements whose resolved rule is unchanged to
+          // avoid no-op DOM writes; prune disconnected nodes in-place as we iterate
+          // (Set delete during for..of is safe).
           const styleBySignature = new Map<string, AnyValue>()
           for (const el of ref) {
             if (!el.isConnected) {
@@ -416,14 +421,16 @@ export class Base {
               continue
             }
             const active = this.activePseudos(elementKey, el)
+            const rule = this.matchedRule(elementKey, active)
+            if (rule !== undefined && this._lastAppliedRule.get(el) === rule) {
+              continue
+            }
             const signature = this.pseudoSignature(active)
             if (!styleBySignature.has(signature)) {
-              styleBySignature.set(
-                signature,
-                this.styleForPseudos(elementKey, active),
-              )
+              styleBySignature.set(signature, this.applyTokens(rule))
             }
             setStyles(el, styleBySignature.get(signature))
+            this._lastAppliedRule.set(el, rule)
           }
         } else if (isMultiInstance) {
           // A non-interactive element shared across instances may still be a
