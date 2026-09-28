@@ -412,7 +412,7 @@ export type ValidateDeclaration<
         : never
       : K extends keyof Shape
         ? Input[K] extends readonly unknown[]
-          ? Shape[K]
+          ? ValidLeaf<Input[K], Shape[K]>
           : Input[K] extends object
             ? NonNullable<Shape[K]> extends object
               ? ValidateDeclaration<
@@ -422,10 +422,52 @@ export type ValidateDeclaration<
                   Parts,
                   K extends Parts ? true : Local
                 >
-              : Shape[K]
-            : Shape[K]
+              : ValidLeaf<Input[K], Shape[K]>
+            : ValidLeaf<Input[K], Shape[K]>
         : never
 }
+
+/**
+ * A LEAF of a validated declaration: what a written value is checked, and
+ * contextually typed, against.
+ *
+ * A single written value (the normal case: one literal) gets the whole allowed
+ * type, exactly as before. That is load-bearing twice over: it is what the
+ * error names, and this object is also a CONTEXTUAL type whose concrete keys
+ * (a computed `q.all(…)` key, say) hide the index signatures the authored shape
+ * matches the same key with — so this leaf is the only thing offering
+ * `$compose` completions or keeping a nested `'sticky'` from widening to
+ * `string` (`toned-editor` fixture, `query-keys.test-d.ts`).
+ *
+ * A `never` or UNION value that fits gets `unknown` instead, and that is the
+ * fix for TS2590. Every caller intersects its input with this validation
+ * (`Rules & ValidateDeclaration<Rules, …>`). A generic call written INSIDE the
+ * rules (a `web({ … })` helper) is contextually typed before `Rules` is
+ * inferred, so the leaves it sees are not what was written but `never` or the
+ * rules constraint's own value union — and returning the allowed union there
+ * made each leaf `Values & (Values | null)`: two union objects, which the
+ * checker crosses member by member before reducing, with
+ * `` `a/${number}` & `b/${number}` `` never reducing. A colour token with
+ * `alphaChannel` has 2N members, so a leaf cost (2N)² and crossed the
+ * 100,000-member limit at ~160 colours. `unknown` drops out of the
+ * intersection: the cost is linear in the palette
+ * (`toned-react/override-scale.test-d.ts` pins 1,000 colours), and a union
+ * that does NOT fit still fails against the allowed type.
+ */
+type ValidLeaf<Value, Allowed> = [Value] extends [never]
+  ? unknown
+  : true extends IsUnion<Value>
+    ? [Value] extends [Allowed]
+      ? unknown
+      : Allowed
+    : Allowed
+
+/** `true` when T has more than one member (distributes, so `never` → `never`). */
+type IsUnion<T, U = T> = T extends unknown
+  ? [U] extends [T]
+    ? false
+    : true
+  : never
 
 /**
  * Stylesheet input type - defines elements and cross-element selectors.
