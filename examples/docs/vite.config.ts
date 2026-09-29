@@ -2,10 +2,14 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import tanstackRouter from '@tanstack/router-plugin/vite'
 import toned from '@toned/core/vite'
-import { system } from '@toned/systems/base'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { componentDocs } from './src/plugins/component-docs.ts'
+import { choiceStyles, homeStyles } from './src/styles/home.ts'
+import { proseStyles } from './src/styles/prose.ts'
+import { showcaseStyles } from './src/styles/showcase.ts'
+import { docsSystem } from './src/styles/system.ts'
+import { visualStyles } from './src/styles/visualisations.ts'
 
 const uiRoot = fileURLToPath(new URL('../ui', import.meta.url))
 
@@ -16,7 +20,23 @@ export default defineConfig({
     },
   },
   plugins: [
-    toned({ system }),
+    toned({
+      system: docsSystem,
+      sheets: [
+        homeStyles,
+        showcaseStyles,
+        choiceStyles,
+        visualStyles,
+        proseStyles,
+      ],
+      inputs: [
+        'src/styles/visualisations.ts',
+        'src/styles/prose.ts',
+        'src/styles/system.ts',
+        'src/styles/home.ts',
+        'src/styles/showcase.ts',
+      ],
+    }),
     componentDocs({
       componentsDir: path.join(uiRoot, 'src/components/ui'),
       tsconfigPath: path.join(uiRoot, 'tsconfig.json'),

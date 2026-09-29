@@ -23,3 +23,19 @@ Compilation checks the examples; Fabric device acceptance remains the gate
 for actual mounted native behavior. The native TypeScript 7 process used by
 HQ is outside JavaScript I/O guards, while guarded child runners still prove
 their JavaScript guard installation.
+
+
+The homepage (`/`) and `/playground` share a local web design system, explicit
+renderer, and build manifest. The style studio uses real component variants;
+the token map uses the same accent vocabulary; the layout explorer uses a named
+480px container condition. Its connection animation respects reduced motion.
+Getting Started lives at `/getting-started`, while `/ui` retains the component
+gallery. The playground source panels import the authored modules as text, so
+shown source and running declarations stay together. This is a visual variant
+playground, not an arbitrary code execution sandbox.
+
+Brand assets live in `public/brand`: the folded-T symbol and outlined wordmark
+are SVGs, with no external font or image request. The homepage and playground
+are prerendered alongside the guides. The HQ docs runner checks README snippets,
+variant state preservation, resets, container switching, mobile overflow,
+reduced motion, guide navigation, syntax highlighting, and the gallery.

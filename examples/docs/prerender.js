@@ -8,6 +8,8 @@ const resolve = (p) => path.resolve(__dirname, p)
 // All known routes to prerender
 const routes = [
   '/',
+  '/getting-started',
+  '/playground',
   '/concepts',
   '/api/define-system',
   '/api/stylesheet',

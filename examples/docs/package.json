@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node server.js",
-    "build": "vite build --outDir dist/client && vite build --outDir dist/server --ssr src/entry-server.tsx && node prerender.js",
+    "build": "vite build --configLoader runner --outDir dist/client && vite build --configLoader runner --outDir dist/server --ssr src/entry-server.tsx && node prerender.js",
     "preview": "vite preview --outDir dist/client",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
