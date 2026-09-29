@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label.tsx'
 import { Separator } from '@/components/ui/separator.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const fieldStyles = stylesheet({
+export const fieldStyles = stylesheet({
   fieldSet: {
     display: 'flex',
     flexLayout: 'column',

@@ -9,6 +9,7 @@ export interface ComponentEntry<
 }
 
 export interface DocDescriptor {
+  description?: string
   entries: ComponentEntry[]
   preview?: (components: Record<string, ComponentType<any>>) => ReactNode
 }
@@ -23,11 +24,13 @@ export function c<C extends ComponentType<any>>(
 }
 
 export function doc(config: {
+  description?: string
   components: ComponentEntry[]
   preview?: (components: Record<string, ComponentType<any>>) => ReactNode
 }): DocDescriptor {
   return {
     entries: config.components,
+    description: config.description,
     preview: config.preview,
   }
 }

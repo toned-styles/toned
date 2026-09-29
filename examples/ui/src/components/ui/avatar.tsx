@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Avatar as AvatarPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const avatarStyles = stylesheet({
+export const avatarStyles = stylesheet({
   root: {
     position: 'relative',
     display: 'flex',

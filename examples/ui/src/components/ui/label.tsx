@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Label as LabelPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const labelStyles = stylesheet({
+export const labelStyles = stylesheet({
   root: {
     display: 'flex',
     alignItems: 'center',

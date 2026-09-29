@@ -6,7 +6,7 @@ import type * as React from 'react'
 
 import { Button } from '@/components/ui/button.tsx'
 
-const dialogStyles = stylesheet({
+export const dialogStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input.tsx'
 import { Textarea } from '@/components/ui/textarea.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const inputGroupStyles = stylesheet({
+export const inputGroupStyles = stylesheet({
   root: {
     borderColor: 'default',
     borderWidth: 'thin',

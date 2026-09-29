@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://toned.style/getting-started">Get started</a> ·
   <a href="https://toned.style/playground">Try the playground</a> ·
-  <a href="https://toned.style/ui">Component gallery</a> ·
+  <a href="https://toned.style/ui">Explore the UI collection</a> ·
   <a href="packages/toned-react/README.md">React API</a>
 </p>
 
@@ -37,6 +37,10 @@ connects the styles to your mounted components.
 
 [Play with a real component](https://toned.style/playground): change its tone,
 shape, density, and theme, then inspect the stylesheet and tokens behind it.
+
+Build more than a button. The [UI collection](https://toned.style/ui) brings
+components together in a working workspace demo. Open any component to inspect
+its actual source, adjust props, and experiment with scoped token overrides live.
 
 ## A small taste
 

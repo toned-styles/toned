@@ -129,7 +129,9 @@ function SourceSection() {
               aria-label="Studio variant source"
             >
               <code>
-                {showcaseSource.slice(showcaseSource.indexOf('.variants('))}
+                {showcaseSource.slice(
+                  Math.max(0, showcaseSource.indexOf('.variants(')),
+                )}
               </code>
             </pre>
           </div>

@@ -5,7 +5,7 @@ import { Drawer as DrawerPrimitive } from 'vaul'
 
 import { cn } from '@/lib/utils.ts'
 
-const drawerStyles = stylesheet({
+export const drawerStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',

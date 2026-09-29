@@ -2,7 +2,7 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Loader2Icon } from 'lucide-react'
 
-const spinnerStyles = stylesheet({
+export const spinnerStyles = stylesheet({
   root: {
     width: '1rem',
     height: '1rem',

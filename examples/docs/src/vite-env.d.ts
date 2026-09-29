@@ -17,6 +17,13 @@ declare module 'virtual:component-docs/*' {
     props: Record<string, PropDoc>
   }
 
+  export interface SheetSource {
+    name: string
+    source: string
+    parts: string[]
+  }
+  export const source: string
+  export const sheets: SheetSource[]
   const docs: ComponentDoc[]
   export default docs
 }
@@ -27,7 +34,11 @@ declare module 'virtual:component-docs/index' {
   export const names: string[]
   export const loaders: Record<
     string,
-    () => Promise<{ default: ComponentDoc[] }>
+    () => Promise<{
+      default: ComponentDoc[]
+      source: string
+      sheets: import('virtual:component-docs/*').SheetSource[]
+    }>
   >
 }
 

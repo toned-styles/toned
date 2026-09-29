@@ -4,7 +4,7 @@ import { Slot } from 'radix-ui'
 import { Separator } from '@/components/ui/separator.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const buttonGroupStyles = stylesheet({
+export const buttonGroupStyles = stylesheet({
   root: {
     display: 'flex',
     alignItems: 'stretch',

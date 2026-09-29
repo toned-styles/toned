@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/input-group.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const comboboxStyles = stylesheet({
+export const comboboxStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',

@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Tooltip as TooltipPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const tooltipStyles = stylesheet({
+export const tooltipStyles = stylesheet({
   content: {
     bgColor: 'emphasized',
     textColor: 'on_action',

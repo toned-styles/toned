@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Slider as SliderPrimitive } from 'radix-ui'
 import * as React from 'react'
 
-const sliderStyles = stylesheet({
+export const sliderStyles = stylesheet({
   root: {
     position: 'relative',
     display: 'flex',

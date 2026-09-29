@@ -25,12 +25,16 @@ export async function render(url: string) {
     passthrough.on('end', () => resolve(Buffer.concat(chunks).toString()))
     passthrough.on('error', reject)
 
+    let piped = false
     const { pipe } = renderToPipeableStream(
       <StrictMode>
         <RouterProvider router={router} />
       </StrictMode>,
       {
         onAllReady() {
+          // Lazy route retries can notify readiness again; a stream has one destination.
+          if (piped) return
+          piped = true
           pipe(passthrough)
         },
         onError: reject,

@@ -8,7 +8,7 @@ import { CheckIcon } from 'lucide-react'
 import { Checkbox as CheckboxPrimitive } from 'radix-ui'
 import * as React from 'react'
 
-const checkboxStyles = stylesheet({
+export const checkboxStyles = stylesheet({
   root: {
     borderColor: 'input',
     borderWidth: 'thin',

@@ -7,7 +7,7 @@ import type * as React from 'react'
 import { Button } from '@/components/ui/button.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const alertDialogStyles = stylesheet({
+export const alertDialogStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',

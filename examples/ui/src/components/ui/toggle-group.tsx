@@ -7,7 +7,7 @@ import * as React from 'react'
 import { toggleStyles } from '@/components/ui/toggle.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const toggleGroupStyles = stylesheet({
+export const toggleGroupStyles = stylesheet({
   root: {
     display: 'flex',
     alignItems: 'center',

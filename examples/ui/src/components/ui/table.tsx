@@ -4,7 +4,7 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
-const tableStyles = stylesheet({
+export const tableStyles = stylesheet({
   container: {
     position: 'relative',
     width: '100%',

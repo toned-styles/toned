@@ -2,7 +2,7 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
-const inputStyles = stylesheet({
+export const inputStyles = stylesheet({
   root: {
     borderColor: 'input',
     borderWidth: 'thin',

@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { HoverCard as HoverCardPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const hoverCardStyles = stylesheet({
+export const hoverCardStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',

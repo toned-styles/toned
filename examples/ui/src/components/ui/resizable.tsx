@@ -5,7 +5,7 @@ import { stylesheet } from '@toned/systems/base'
 import { GripVerticalIcon } from 'lucide-react'
 import * as ResizablePrimitive from 'react-resizable-panels'
 
-const resizableStyles = stylesheet({
+export const resizableStyles = stylesheet({
   group: {
     display: 'flex',
     height: '100%',

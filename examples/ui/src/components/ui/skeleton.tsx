@@ -1,7 +1,7 @@
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 
-const skeletonStyles = stylesheet({
+export const skeletonStyles = stylesheet({
   root: {
     bgColor: 'skeleton',
     borderRadius: 'medium',

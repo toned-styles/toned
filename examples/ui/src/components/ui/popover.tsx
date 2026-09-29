@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Popover as PopoverPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const popoverStyles = stylesheet({
+export const popoverStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',

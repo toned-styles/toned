@@ -27,6 +27,7 @@ export const homeStyles = stylesheet({
   },
   Header: {
     display: 'flex',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 4,
@@ -44,8 +45,8 @@ export const homeStyles = stylesheet({
   Nav: {
     display: 'flex',
     alignItems: 'center',
-    gap: 5,
-    fontSize: '14px',
+    gap: 3,
+    fontSize: '13px',
     fontWeight: 500,
     '@md': { gap: 8 },
   },

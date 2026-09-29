@@ -97,7 +97,7 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
 
       // Per-component metadata
       const filePath = path.join(options.componentsDir, `${name}.tsx`)
-      if (!fs.existsSync(filePath)) {
+      if (!getComponentNames(options.componentsDir).includes(name)) {
         return 'export default [];'
       }
 
@@ -166,7 +166,9 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
         }),
       )
 
-      const data = `export default ${JSON.stringify(processed)};`
+      const source = fs.readFileSync(filePath, 'utf8')
+      const sheets = stylesheetSources(source, filePath)
+      const data = `export default ${JSON.stringify(processed)};\nexport const source = ${JSON.stringify(source)};\nexport const sheets = ${JSON.stringify(sheets)};`
       cache.set(name, { mtimeMs: stat.mtimeMs, data })
       return data
     },
@@ -207,4 +209,50 @@ function extractPreview(description: string): {
     preview: match?.[1]?.trim(),
     cleanDescription: description.replace(/@preview\s+.+?(?:\n|$)/, '').trim(),
   }
+}
+
+/** Read declarations at build time; never execute editor text or ship TypeScript's parser. */
+function stylesheetSources(source: string, filePath: string) {
+  const file = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  )
+  const sheets: { name: string; source: string; parts: string[] }[] = []
+  for (const statement of file.statements) {
+    if (!ts.isVariableStatement(statement)) continue
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || !declaration.initializer)
+        continue
+      let expression = declaration.initializer
+      while (
+        ts.isCallExpression(expression) &&
+        ts.isPropertyAccessExpression(expression.expression)
+      ) {
+        expression = expression.expression.expression
+      }
+      if (
+        !ts.isCallExpression(expression) ||
+        expression.expression.getText(file) !== 'stylesheet'
+      )
+        continue
+      const rules = expression.arguments[0]
+      if (!rules || !ts.isObjectLiteralExpression(rules)) continue
+      const parts = rules.properties.flatMap((property) => {
+        if (!ts.isPropertyAssignment(property)) return []
+        const name = property.name
+        const key =
+          ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : ''
+        return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(key) ? [key] : []
+      })
+      sheets.push({
+        name: declaration.name.text,
+        source: `const ${declaration.getText(file)}`,
+        parts,
+      })
+    }
+  }
+  return sheets
 }

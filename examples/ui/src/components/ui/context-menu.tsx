@@ -6,7 +6,7 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
 import { ContextMenu as ContextMenuPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const contextMenuStyles = stylesheet({
+export const contextMenuStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',

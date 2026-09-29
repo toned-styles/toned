@@ -4,7 +4,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Switch as SwitchPrimitive } from 'radix-ui'
 import * as React from 'react'
 
-const switchStyles = stylesheet({
+export const switchStyles = stylesheet({
   root: {
     display: 'inline-flex',
     flexShrink: '0',

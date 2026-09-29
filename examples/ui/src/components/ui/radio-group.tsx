@@ -4,7 +4,7 @@ import { CircleIcon } from 'lucide-react'
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const radioGroupStyles = stylesheet({
+export const radioGroupStyles = stylesheet({
   root: {
     display: 'grid',
     gap: 3,
