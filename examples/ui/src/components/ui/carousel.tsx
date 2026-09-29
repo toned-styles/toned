@@ -43,7 +43,7 @@ function useCarousel() {
   return context
 }
 
-const carouselStyles = stylesheet({
+export const carouselStyles = stylesheet({
   root: {
     position: 'relative',
   },

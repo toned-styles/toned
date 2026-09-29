@@ -6,15 +6,10 @@ export const playgroundStyles = stylesheet({
     gap: 5,
   },
   title: {
-    fontSize: '30px',
+    fontSize: '40px',
     fontWeight: 700,
     letterSpacing: '-0.025em',
-    style: {
-      background: 'var(--gradient-brand-text)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
-    },
+    textColor: 'default',
   },
   description: {
     fontSize: '15px',
@@ -40,6 +35,7 @@ export const playgroundStyles = stylesheet({
     minHeight: '240px',
     bgColor: 'default',
     style: {
+      borderStyle: 'solid',
       backgroundImage:
         'radial-gradient(circle, var(--border) 1px, transparent 1px)',
       backgroundSize: '20px 20px',

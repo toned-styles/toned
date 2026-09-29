@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 
 import { cn } from '@/lib/utils.ts'
 
-const emptyStyles = stylesheet({
+export const emptyStyles = stylesheet({
   root: {
     display: 'flex',
     flexLayout: 'column',

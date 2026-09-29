@@ -5,7 +5,7 @@ import type * as React from 'react'
 import { Separator } from '@/components/ui/separator.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const itemStyles = stylesheet({
+export const itemStyles = stylesheet({
   group: {
     display: 'flex',
     flexLayout: 'column',

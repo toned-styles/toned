@@ -15,7 +15,7 @@ import {
 import { Label } from '@/components/ui/label.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const formStyles = stylesheet({
+export const formStyles = stylesheet({
   item: {
     display: 'grid',
     gap: 2,

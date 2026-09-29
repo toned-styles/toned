@@ -1,5 +1,6 @@
 import type { PropDoc } from 'virtual:component-docs/*'
 import { useStyles } from '@toned/react'
+import { useId } from 'react'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import {
@@ -22,7 +23,11 @@ interface PropControlsProps {
 function getControlType(
   prop: PropDoc,
 ): 'boolean' | 'select' | 'text' | 'number' | 'readonly' {
+  if (prop.name === 'asChild') return 'readonly'
   const typeName = prop.type.name
+    .split(' | ')
+    .filter((value) => value !== 'undefined' && value !== 'null')
+    .join(' | ')
 
   if (typeName === 'boolean') return 'boolean'
 
@@ -91,10 +96,12 @@ function PropControl({
 }) {
   const s = useStyles(playgroundStyles)
   const controlType = getControlType(prop)
+  const id = useId()
 
   return (
     <div {...s.controlRow}>
       <Label
+        htmlFor={id}
         title={prop.description || undefined}
         style={{ minWidth: '120px', flexShrink: 0 }}
       >
@@ -104,6 +111,7 @@ function PropControl({
       <div {...s.controlInput}>
         {controlType === 'boolean' && (
           <Switch
+            id={id}
             checked={Boolean(value)}
             onCheckedChange={(checked) => onChange(checked)}
             size="sm"
@@ -114,7 +122,7 @@ function PropControl({
             value={String(value ?? '')}
             onValueChange={(val) => onChange(val)}
           >
-            <SelectTrigger size="sm">
+            <SelectTrigger id={id} size="sm">
               <SelectValue placeholder="—" />
             </SelectTrigger>
             <SelectContent>
@@ -128,6 +136,7 @@ function PropControl({
         )}
         {controlType === 'text' && (
           <Input
+            id={id}
             type="text"
             value={String(value ?? '')}
             onChange={(e) => onChange(e.target.value)}
@@ -135,6 +144,7 @@ function PropControl({
         )}
         {controlType === 'number' && (
           <Input
+            id={id}
             type="number"
             value={String(value ?? '')}
             onChange={(e) => onChange(Number(e.target.value))}

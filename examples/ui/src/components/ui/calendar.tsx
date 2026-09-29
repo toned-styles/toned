@@ -14,7 +14,7 @@ import {
 import { Button, buttonStyles } from '@/components/ui/button.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const calendarStyles = stylesheet({
+export const calendarStyles = stylesheet({
   root: {
     bgColor: 'default',
     padding: 3,

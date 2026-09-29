@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { Separator as SeparatorPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const separatorStyles = stylesheet({
+export const separatorStyles = stylesheet({
   root: {
     bgColor: 'subtle',
     flexShrink: '0',

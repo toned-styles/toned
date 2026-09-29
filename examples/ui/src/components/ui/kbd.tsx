@@ -1,7 +1,7 @@
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 
-const kbdStyles = stylesheet({
+export const kbdStyles = stylesheet({
   root: {
     bgColor: 'muted',
     textColor: 'muted',

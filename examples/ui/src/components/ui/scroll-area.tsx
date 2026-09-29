@@ -3,7 +3,7 @@ import { stylesheet } from '@toned/systems/base'
 import { ScrollArea as ScrollAreaPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const scrollAreaStyles = stylesheet({
+export const scrollAreaStyles = stylesheet({
   root: {
     position: 'relative',
   },

@@ -8,7 +8,7 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils.ts'
 
-const inputOtpStyles = stylesheet({
+export const inputOtpStyles = stylesheet({
   container: {
     display: 'flex',
     alignItems: 'center',

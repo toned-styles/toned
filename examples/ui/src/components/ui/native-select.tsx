@@ -5,7 +5,7 @@ import type * as React from 'react'
 
 import { cn } from '@/lib/utils.ts'
 
-const nativeSelectStyles = stylesheet({
+export const nativeSelectStyles = stylesheet({
   wrapper: {
     position: 'relative',
     width: 'fit-content',

@@ -61,8 +61,8 @@ export default defineConfig({
 })`}</CodeBlock>
       <p>
         Without Vite, call{' '}
-        <code {...s.code}>buildStyles(ui, {'{ sheets }'})</code>
-        from <code {...s.code}>@toned/core/build</code> in your build script and
+        <code {...s.code}>buildStyles(ui, {'{ sheets }'})</code> from{' '}
+        <code {...s.code}>@toned/core/build</code> in your build script and
         serve its CSS and manifest together.
       </p>
       <h2 {...s.h2}>Configure and render</h2>
@@ -71,14 +71,14 @@ import 'virtual:toned.css'
 import manifest from 'virtual:toned.manifest'
 import { createWebRenderer } from '@toned/core/server'
 import { createElements, TonedProvider } from '@toned/react'
-import web from '@toned/react/react-web'
+import { webHost } from '@toned/react/hosts/web'
 import { ui, buttonStyles } from './styles.ts'
 
 const renderer = createWebRenderer(ui, { manifest, tokens: {} })
 const S = createElements(buttonStyles)
 
 export function App() {
-  return <TonedProvider renderer={renderer} host={web}>
+  return <TonedProvider renderer={renderer} host={webHost}>
     <S size="s">
       <S.Root as="button" type="button"><S.Label as="span">Save</S.Label></S.Root>
     </S>
@@ -98,8 +98,8 @@ declare module 'virtual:toned.manifest' {
         isolated.
       </p>
       <p>
-        <code {...s.code}>useStyles</code> prop bags and the existing
-        <code {...s.code}>useBind</code> API remain supported. See the
+        <code {...s.code}>useStyles</code> prop bags and the existing{' '}
+        <code {...s.code}>useBind</code> API remain supported. See the{' '}
         <a href="/api/use-styles">React bindings guide</a> for their contracts.
       </p>
     </article>

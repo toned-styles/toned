@@ -23,6 +23,10 @@ const routes = [
   '/guides/ssr',
   '/ui',
   '/ui/button',
+  '/ui/card',
+  '/ui/input',
+  '/ui/progress',
+  '/ui/switch',
 ]
 
 async function prerender() {

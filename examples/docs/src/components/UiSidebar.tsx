@@ -1,85 +1,56 @@
-import type { Variants } from '@toned/core'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { stylesheet } from '@toned/systems/base'
+import { useState } from 'react'
 import { componentNames } from '../lib/component-registry.ts'
-
-const uiSidebarStyles = stylesheet({
-  sidebar: {
-    width: '200px',
-    flexShrink: '0',
-    display: 'none',
-    '@md': {
-      display: 'block',
-    },
-  },
-  sectionTitle: {
-    fontSize: '11px',
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    paddingY: 0.5,
-    paddingX: 1.5,
-    marginBottom: 0.75,
-    textColor: 'muted',
-    opacity: 0.7,
-  },
-  link: {
-    display: 'block',
-    paddingY: 0.75,
-    paddingX: 1.5,
-    borderRadius: 'large',
-    textDecoration: 'none',
-    fontSize: '13.5px',
-    lineHeight: 1.5,
-    cursor: 'pointer',
-    textColor: 'subtle',
-    style: {
-      transition: 'background-color 0.15s ease, color 0.15s ease',
-    },
-    ':hover': {
-      bgColor: 'subtle',
-    },
-  },
-}).variants(($: Variants<{ active?: 'true' }>) => ({
-  [$.active('true')]: {
-    link: {
-      textColor: 'on_action',
-      fontWeight: 500,
-      style: {
-        background: 'var(--gradient-brand)',
-      },
-      ':hover': {
-        style: {
-          background: 'var(--gradient-brand)',
-        },
-      },
-    },
-  },
-}))
+import { libraryStyles } from '../styles/library.ts'
 
 export function UiSidebar() {
+  const s = useStyles(libraryStyles)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-
-  return (
-    <nav {...useStyles(uiSidebarStyles, {}).sidebar}>
-      <div {...useStyles(uiSidebarStyles, {}).sectionTitle}>Components</div>
-      {componentNames.map((name) => (
-        <NavLink key={name} name={name} isActive={pathname === `/ui/${name}`} />
-      ))}
-    </nav>
+  const [query, setQuery] = useState('')
+  const names = componentNames.filter((name) =>
+    name.includes(query.toLowerCase().trim()),
   )
-}
-
-function NavLink({ name, isActive }: { name: string; isActive: boolean }) {
-  const s = useStyles(uiSidebarStyles, {
-    active: isActive ? 'true' : undefined,
-  })
   return (
-    <Link to={`/ui/${name}` as string} {...s.link}>
-      {name.charAt(0).toUpperCase() + name.slice(1)}
-    </Link>
+    <nav {...s.sidebar} aria-label="UI components">
+      <Link
+        to="/ui"
+        {...s.link.with(
+          (pathname === '/ui' || pathname === '/ui/') && s.activeLink,
+        )}
+        aria-current={
+          pathname === '/ui' || pathname === '/ui/' ? 'page' : undefined
+        }
+      >
+        Showcase
+      </Link>
+      <label {...s.eyebrow} htmlFor="component-search">
+        {componentNames.length} components
+      </label>
+      <input
+        id="component-search"
+        {...s.input}
+        type="search"
+        placeholder="Find a component…"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+      <div {...s.links}>
+        {names.map((name) => (
+          <Link
+            key={name}
+            to="/ui/$component"
+            params={{ component: name }}
+            {...s.link.with(pathname === `/ui/${name}` && s.activeLink)}
+            aria-current={pathname === `/ui/${name}` ? 'page' : undefined}
+          >
+            {name.charAt(0).toUpperCase() + name.slice(1)}
+          </Link>
+        ))}
+        {names.length === 0 && <p {...s.muted}>No matching components.</p>}
+      </div>
+    </nav>
   )
 }

@@ -6,7 +6,7 @@ import type * as React from 'react'
 
 import { cn } from '@/lib/utils.ts'
 
-const navMenuStyles = stylesheet({
+export const navMenuStyles = stylesheet({
   root: {
     position: 'relative',
     display: 'flex',

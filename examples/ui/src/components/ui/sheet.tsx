@@ -6,7 +6,7 @@ import { XIcon } from 'lucide-react'
 import { Dialog as SheetPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const sheetStyles = stylesheet({
+export const sheetStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',

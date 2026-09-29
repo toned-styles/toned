@@ -5,7 +5,7 @@ import type * as React from 'react'
 
 import { cn } from '@/lib/utils.ts'
 
-const tabsStyles = stylesheet({
+export const tabsStyles = stylesheet({
   root: {
     display: 'flex',
     gap: 2,

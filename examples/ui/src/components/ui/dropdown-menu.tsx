@@ -6,7 +6,7 @@ import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const menuStyles = stylesheet({
+export const menuStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',

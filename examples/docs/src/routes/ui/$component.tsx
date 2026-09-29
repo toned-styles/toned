@@ -1,13 +1,12 @@
 import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
 import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DocDescriptor } from '../../../../ui/src/lib/doc.tsx'
-import { usePlaygroundPortal } from '../../components/PlaygroundContext.tsx'
 import { ComponentPreview } from '../../components/playground/ComponentPreview.tsx'
 import { DocPreview } from '../../components/playground/DocPreview.tsx'
 import { PropControls } from '../../components/playground/PropControls.tsx'
+import { StylesheetWorkbench } from '../../components/playground/StylesheetWorkbench.tsx'
 import { componentModules } from '../../lib/component-registry.ts'
 import { playgroundStyles } from '../../styles/playground.ts'
 
@@ -70,16 +69,13 @@ function ComponentPlayground() {
         }
 
         if (!docData || docData.length === 0) {
-          setError(`No documentation found for "${name}"`)
+          setDocs([])
           return
         }
         const componentDocs = docData.filter((d: ComponentDoc) =>
           /^[A-Z]/.test(d.displayName),
         )
-        if (componentDocs.length === 0) {
-          setError(`No components found in "${name}"`)
-          return
-        }
+
         setDocs(componentDocs)
       })
       .catch((err: unknown) => {
@@ -108,14 +104,26 @@ function ComponentPlayground() {
 
   // Doc descriptor path — type-safe previews
   if (docDescriptor) {
-    return <DocPlayground doc={docDescriptor} docgenDocs={docs ?? []} />
+    return (
+      <DocPlayground
+        key={name}
+        name={name}
+        mod={mod}
+        doc={docDescriptor}
+        docgenDocs={docs ?? []}
+      />
+    )
   }
 
   // Fallback: react-docgen-typescript only. A route change or an empty metadata
   // result must not turn an absent primary entry into a render-time crash.
   const primaryDoc = docs?.[0]
   if (!docs || !primaryDoc)
-    return <div {...s.errorBanner}>No component metadata for {name}</div>
+    return (
+      <StylesheetWorkbench key={name} name={name} mod={mod}>
+        <p {...s.compoundNotice}>Explore the {name} integration source.</p>
+      </StylesheetWorkbench>
+    )
   const isCompound = docs.length > 1
 
   return (
@@ -133,9 +141,11 @@ function ComponentPlayground() {
       </div>
 
       {isCompound ? (
-        <CompoundPlayground docs={docs} mod={mod} />
+        <StylesheetWorkbench key={name} name={name} mod={mod}>
+          <CompoundPlayground docs={docs} mod={mod} />
+        </StylesheetWorkbench>
       ) : (
-        <SimplePlayground doc={primaryDoc} mod={mod} />
+        <SimplePlayground key={name} name={name} doc={primaryDoc} mod={mod} />
       )}
     </div>
   )
@@ -146,11 +156,18 @@ function ComponentPlayground() {
 function readPropsFromUrl(): Record<string, Record<string, string>> {
   const params = new URLSearchParams(window.location.search)
   const result: Record<string, Record<string, string>> = {}
-  for (const [key, value] of params) {
+  for (const [key, value] of [...params].slice(0, 100)) {
     const dot = key.indexOf('.')
     if (dot === -1) continue
     const comp = key.slice(0, dot)
     const prop = key.slice(dot + 1)
+    if (
+      !/^[A-Z][a-zA-Z0-9]*$/.test(comp) ||
+      !/^[a-zA-Z][a-zA-Z0-9-]*$/.test(prop) ||
+      ['constructor', 'prototype'].includes(prop) ||
+      value.length > 2000
+    )
+      continue
     if (!result[comp]) result[comp] = {}
     result[comp][prop] = value
   }
@@ -177,24 +194,15 @@ function writePropsToUrl(
   window.history.replaceState(null, '', url)
 }
 
-/** Renders children into the right sidebar portal when available, or inline as fallback */
-function PortalToSidebar({ children }: { children: ReactNode }) {
-  const portalRef = usePlaygroundPortal()
-  const [target, setTarget] = useState<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    setTarget(portalRef?.current ?? null)
-  }, [portalRef])
-
-  if (target) return createPortal(children, target)
-  return <>{children}</>
-}
-
 /** Doc-descriptor-based playground with per-component prop controls */
 function DocPlayground({
   doc,
   docgenDocs,
+  name,
+  mod,
 }: {
+  name: string
+  mod: Record<string, unknown>
   doc: DocDescriptor
   docgenDocs: ComponentDoc[]
 }) {
@@ -223,7 +231,16 @@ function DocPlayground({
     for (const entry of doc.entries) {
       states[entry.name] = {
         ...entry.defaultProps,
-        ...urlOverrides[entry.name],
+        ...Object.fromEntries(
+          Object.entries(urlOverrides[entry.name] ?? {}).map(([key, value]) => [
+            key,
+            coerceValue(
+              value,
+              docgenByName[entry.name]?.props[key]?.type.name ??
+                typeof entry.defaultProps[key],
+            ),
+          ]),
+        ),
       }
     }
     return states
@@ -250,7 +267,8 @@ function DocPlayground({
   return (
     <div {...s.container}>
       <div>
-        <div {...s.title}>{primaryName}</div>
+        <h1 {...s.title}>{primaryName}</h1>
+        {doc.description && <p {...s.description}>{doc.description}</p>}
         {isCompound && (
           <div {...s.exportBadge}>
             Exports: {doc.entries.map((e) => e.name).join(', ')}
@@ -258,17 +276,34 @@ function DocPlayground({
         )}
       </div>
 
-      <DocPreview doc={doc} propStates={propStates} />
+      <StylesheetWorkbench key={name} name={name} mod={mod}>
+        <DocPreview doc={doc} propStates={propStates} />
+      </StylesheetWorkbench>
 
-      <PortalToSidebar>
+      <div {...s.container}>
         {doc.entries.map((entry) => {
           const docgen = docgenByName[entry.name]
-          if (!docgen) return null
+          const props = { ...docgen?.props }
+          for (const [name, value] of Object.entries(entry.defaultProps)) {
+            if (
+              props[name] ||
+              !['string', 'number', 'boolean'].includes(typeof value)
+            )
+              continue
+            props[name] = {
+              name,
+              type: { name: typeof value },
+              required: false,
+              description: '',
+              defaultValue: { value: String(value) },
+            }
+          }
+          if (!Object.keys(props).length) return null
           return (
             <PropControls
               key={entry.name}
               title={isCompound ? `${entry.name} props` : undefined}
-              props={docgen.props}
+              props={props}
               values={propStates[entry.name] ?? {}}
               onChange={(prop, value) =>
                 updatePropState(entry.name, prop, value)
@@ -276,19 +311,22 @@ function DocPlayground({
             />
           )
         })}
-      </PortalToSidebar>
+      </div>
     </div>
   )
 }
 
 /** Single-export component: live preview + prop controls (fallback) */
 function SimplePlayground({
+  name,
   doc,
   mod,
 }: {
+  name: string
   doc: ComponentDoc
   mod: Record<string, unknown>
 }) {
+  const s = useStyles(playgroundStyles)
   const Comp = mod[doc.displayName] as React.ComponentType<
     Record<string, unknown>
   > | null
@@ -299,8 +337,10 @@ function SimplePlayground({
 
   return (
     <>
-      <ComponentPreview component={Comp} props={propValues} />
-      <PortalToSidebar>
+      <StylesheetWorkbench key={name} name={name} mod={mod}>
+        <ComponentPreview component={Comp} props={propValues} />
+      </StylesheetWorkbench>
+      <div {...s.container}>
         <PropControls
           props={doc.props}
           values={propValues}
@@ -308,7 +348,7 @@ function SimplePlayground({
             setPropValues((prev) => ({ ...prev, [name]: value }))
           }
         />
-      </PortalToSidebar>
+      </div>
     </>
   )
 }
@@ -334,7 +374,7 @@ function CompoundPlayground({
           </span>
         </div>
       </div>
-      <PortalToSidebar>
+      <div {...s.container}>
         {docs.map((doc) => {
           const propEntries = Object.entries(doc.props).filter(
             ([name]) => name !== 'ref' && name !== 'key',
@@ -363,7 +403,7 @@ function CompoundPlayground({
             </div>
           )
         })}
-      </PortalToSidebar>
+      </div>
     </>
   )
 }
@@ -389,6 +429,10 @@ function initializeProps(
 }
 
 function coerceValue(raw: string, typeName: string): unknown {
+  typeName = typeName
+    .split(' | ')
+    .filter((value) => value !== 'undefined' && value !== 'null')
+    .join(' | ')
   if (typeName === 'boolean') return raw === 'true'
   if (typeName === 'number') return Number(raw)
   return raw

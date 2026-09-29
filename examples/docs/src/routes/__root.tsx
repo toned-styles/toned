@@ -21,7 +21,9 @@ function RootLayout() {
     if (toggle) toggle.checked = false
   }, [pathname])
 
-  if (pathname === '/' || pathname === '/playground')
+  if (pathname === '/ui' || pathname.startsWith('/ui/')) return <Outlet />
+
+  if (pathname === '/' || pathname.replace(/\/$/, '') === '/playground')
     return (
       <ShowcaseProvider>
         <Outlet />

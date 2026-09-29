@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const commandStyles = stylesheet({
+export const commandStyles = stylesheet({
   root: {
     bgColor: 'elevated',
     textColor: 'default',

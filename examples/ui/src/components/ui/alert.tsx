@@ -3,7 +3,7 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
-const alertStyles = stylesheet({
+export const alertStyles = stylesheet({
   root: {
     borderRadius: 'large',
     borderColor: 'default',

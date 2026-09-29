@@ -2,7 +2,7 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
-const textareaStyles = stylesheet({
+export const textareaStyles = stylesheet({
   root: {
     borderColor: 'input',
     borderWidth: 'thin',

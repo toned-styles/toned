@@ -9,7 +9,7 @@ import type * as React from 'react'
 import { type Button, buttonStyles } from '@/components/ui/button.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const paginationStyles = stylesheet({
+export const paginationStyles = stylesheet({
   root: {
     display: 'flex',
     justifyContent: 'center',
