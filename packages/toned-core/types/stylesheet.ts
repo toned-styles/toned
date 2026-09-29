@@ -322,7 +322,10 @@ export type ElementMap<
     keyof InferBreakpoints<S> | InferContainerConditions<S>,
     E extends keyof Kinds ? Kinds[E] : undefined,
     undefined,
-    Elements,
+    // Never the part names: the shape does not use them (cross-part keys are
+    // checked by ValidateDeclaration), and passing them made each sheet's
+    // element shape a distinct type whose keys were resolved again per sheet.
+    never,
     false
   >
 }
@@ -405,6 +408,16 @@ export type AuthoredElementStyle<
   never
 >
 
+/**
+ * `keyof Shape`, computed ONCE per shape. A bare `keyof` inside a conditional
+ * is recomputed on every instantiation — for an element shape that is every
+ * token and every key pattern, resolved again for each key written at each
+ * nesting level (~300k instantiations on a 160-part sheet). A conditional
+ * type's instantiations are cached by their arguments, so wrapping it makes
+ * the key set a lookup.
+ */
+type ShapeKeys<T> = [T] extends [unknown] ? keyof T : never
+
 /** Validate inferred object keys recursively, including computed atom keys. */
 type ValidCompound<
   Key extends string,
@@ -432,39 +445,110 @@ export type ValidateDeclaration<
    */
   Light extends boolean = false,
 > = {
-  [K in keyof Input]: K extends QueryKey
-    ? ValidQueryKey<K, S, Parts, Local> extends true
-      ? K extends keyof Shape
-        ? ValidateDeclaration<
-            Input[K],
-            NonNullable<Shape[K]>,
-            S,
-            Parts,
-            K extends Parts ? true : Local
-          >
-        : never
-      : never
-    : [typeof CROSS_ELEMENT extends keyof Shape ? true : false, IsCrossElementKey<K, Parts, S>] extends [true, true]
+  [K in keyof Input]: K extends ShapeKeys<Shape>
+    ? K extends QueryKey | `:${string}:${string}`
+      ? // In the shape (as a pattern), so a Light walk stays Light below it.
+        ValidateSpecial<Input, Shape, S, Parts, Local, K, Light>
+      : [
+            K extends '$style' | `$named$_${string}`
+              ? false
+              : K extends `$${string}`
+                ? true
+                : false,
+          ] extends [true]
+        ? // A `$` member is a VALUE (`$webRules: webRules(…)`, a `$grid`
+          // definition, `$compose`), never nested rules — only `$style` (and
+          // a variant's named fragments, which are rules) are walked.
+          // Descending into a constructed value re-walked its whole type
+          // (csstype's ~800 properties for every `$webRules`) per sheet.
+          Light extends true
+          ? unknown
+          : ValidLeaf<Input[K], Shape[K]>
+        : Light extends true
+          ? Input[K] extends object
+            ? Input[K] extends readonly unknown[]
+              ? unknown
+              : NonNullable<Shape[K]> extends object
+                ? ValidateDeclaration<
+                    Input[K],
+                    NonNullable<Shape[K]>,
+                    S,
+                    Parts,
+                    K extends Parts ? true : Local,
+                    Light
+                  >
+                : unknown
+            : unknown
+          : Input[K] extends readonly unknown[]
+            ? ValidLeaf<Input[K], Shape[K]>
+            : Input[K] extends object
+              ? NonNullable<Shape[K]> extends object
+                ? ValidateDeclaration<
+                    Input[K],
+                    NonNullable<Shape[K]>,
+                    S,
+                    Parts,
+                    K extends Parts ? true : Local,
+                    Light
+                  >
+                : ValidLeaf<Input[K], Shape[K]>
+              : ValidLeaf<Input[K], Shape[K]>
+    : ValidateSpecial<Input, Shape, S, Parts, Local, K>
+}
+
+/** The keys a plain shape lookup cannot validate: computed query keys,
+ *  compound pseudos, and cross-part / cross-element keys. */
+type ValidateSpecial<
+  Input,
+  Shape,
+  S extends TokenStyleDeclaration,
+  Parts extends string,
+  Local extends boolean,
+  K extends keyof Input,
+  /*
+   * Only for the keys the shape itself carries as patterns (query keys and
+   * compound pseudos): there the authored shape checks the leaves, exactly as
+   * for plain keys. Cross-part and cross-element keys are not in the shape, so
+   * their leaves are always checked here.
+   */
+  Light extends boolean = false,
+> = K extends QueryKey
+  ? ValidQueryKey<K, S, Parts, Local> extends true
+    ? K extends ShapeKeys<Shape>
       ? ValidateDeclaration<
           Input[K],
-          NonNullable<Shape[typeof CROSS_ELEMENT & keyof Shape]>,
+          NonNullable<Shape[K]>,
           S,
           Parts,
-          Local
+          K extends Parts ? true : Local,
+          Light
         >
+      : never
+    : never
+  : [
+        typeof CROSS_ELEMENT extends ShapeKeys<Shape> ? true : false,
+        IsCrossElementKey<K, Parts, S>,
+      ] extends [true, true]
+    ? ValidateDeclaration<
+        Input[K],
+        NonNullable<Shape[typeof CROSS_ELEMENT & ShapeKeys<Shape>]>,
+        S,
+        Parts,
+        Local
+      >
     : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
       // per written key made each sheet cost parts × pseudos again.
       K extends `${infer _Part extends Parts}:${infer Rest}`
       ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
-        ? K extends keyof Shape
-        ? ValidateDeclaration<
-            Input[K],
-            NonNullable<Shape[K]>,
-            S,
-            Parts,
-            K extends Parts ? true : Local
-          >
-          : typeof CROSS_PART extends keyof Shape
+        ? K extends ShapeKeys<Shape>
+          ? ValidateDeclaration<
+              Input[K],
+              NonNullable<Shape[K]>,
+              S,
+              Parts,
+              K extends Parts ? true : Local
+            >
+          : typeof CROSS_PART extends ShapeKeys<Shape>
             ? ValidateDeclaration<
                 Input[K],
                 NonNullable<Shape[typeof CROSS_PART]>,
@@ -474,44 +558,23 @@ export type ValidateDeclaration<
               >
             : never
         : never
-    : K extends `:${string}:${string}`
-      ? ValidCompound<
-          K,
-          Pseudo | InferStatePseudos<S> | InferStateChannels<S>
-        > extends true
-        ? K extends keyof Shape
-          ? ValidateDeclaration<
-              Input[K],
-              NonNullable<Shape[K]>,
-              S,
-              Parts,
-              K extends Parts ? true : Local
-            >
+      : K extends `:${string}:${string}`
+        ? ValidCompound<
+            K,
+            Pseudo | InferStatePseudos<S> | InferStateChannels<S>
+          > extends true
+          ? K extends ShapeKeys<Shape>
+            ? ValidateDeclaration<
+                Input[K],
+                NonNullable<Shape[K]>,
+                S,
+                Parts,
+                K extends Parts ? true : Local,
+                Light
+              >
+            : never
           : never
         : never
-      : K extends keyof Shape
-        ? Input[K] extends readonly unknown[]
-          ? Light extends true
-            ? unknown
-            : ValidLeaf<Input[K], Shape[K]>
-          : Input[K] extends object
-            ? NonNullable<Shape[K]> extends object
-              ? ValidateDeclaration<
-                  Input[K],
-                  NonNullable<Shape[K]>,
-                  S,
-                  Parts,
-                  K extends Parts ? true : Local,
-                  Light
-                >
-              : Light extends true
-                ? unknown
-                : ValidLeaf<Input[K], Shape[K]>
-            : Light extends true
-              ? unknown
-              : ValidLeaf<Input[K], Shape[K]>
-        : never
-}
 
 /**
  * A LEAF of a validated declaration: what a written value is checked, and
@@ -572,37 +635,16 @@ export type StylesheetInput<
           T,
           K,
           S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
-        >,
-    Elements
-  > &
-    (string extends keyof T
-      ? {}
-      : ValidateDeclaration<
-          K extends keyof T ? T[K] : never,
-          AuthoredElementStyle<
-            S,
-            K extends keyof Kinds
-              ? Kinds[K]
-              : InferElementType<
-                  T,
-                  K,
-                  S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
-                >,
-            Elements
-          >,
-          S,
-          Elements,
-          true,
-          true
-        >)
-} & {
-  [K in keyof T as IsCrossElementKey<K, Elements, S> extends true
-    ? K
-    : never]?: ElementMap<
-    S,
-    Elements,
-    DeclarationKinds<S, T, Elements, Kinds>
+        >
   >
+} & {
+  // Pre-filtered by shape: the `infer … extends Elements` match is the costly
+  // part, and a plain part name can never be a cross-element key.
+  [K in keyof T as K extends `${string}:${string}` | `${string}~${string}`
+    ? IsCrossElementKey<K, Elements, S> extends true
+      ? K
+      : never
+    : never]?: ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>
 } & {
   /** Target of a written cross-element key when the rules type is generic
    *  (override rules): ValidateDeclaration resolves it by key shape. */
@@ -661,10 +703,56 @@ export type StylesheetInput<
             S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
           >,
       P,
-      Elements,
+      never,
       false
     >
   }
+}
+
+/**
+ * The key validation of a stylesheet's own parts, kept OUT of
+ * `StylesheetInput` and applied to the argument instead
+ * (`style: T & StylesheetValidation<S, T>`).
+ *
+ * Inside the constraint, every part's type was `authored shape & validation`:
+ * a fresh intersection per part, which the checker reduces by materializing
+ * all ~300 merged properties of the element shape — for every part of every
+ * sheet (~1.5ms of check time for a two-part sheet). On the argument, a part
+ * is intersected with its own written literal instead, whose properties are
+ * only the keys written, while the constraint relates each part to the one
+ * shared authored shape.
+ */
+export type StylesheetValidation<
+  S extends TokenStyleDeclaration,
+  T,
+  Elements extends string = PickString<ExtractElements<T>>,
+  Kinds extends Partial<Record<string, ElementType | undefined>> = {},
+> = {
+  // A sheet whose rules are a string-keyed record (not a literal) has no
+  // part names to validate against. Neither does the constraint itself, which
+  // is what `T` becomes when inference fails a leaf: its pattern keys would
+  // read as invalid query keys and bury the real error at the wrong line.
+  [K in Elements]?: string extends K
+    ? unknown
+    : QueryKey extends keyof NonNullable<T[K & keyof T]>
+      ? unknown
+      : ValidateDeclaration<
+          K extends keyof T ? T[K] : never,
+          AuthoredElementStyle<
+            S,
+            K extends keyof Kinds
+              ? Kinds[K]
+              : InferElementType<
+                  T,
+                  K,
+                  S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
+                >
+          >,
+          S,
+          Elements,
+          true,
+          true
+        >
 }
 
 // =============================================================================
@@ -766,9 +854,11 @@ export type VariantElementStyle<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Kind extends ElementType | undefined = undefined,
-  AllParts extends string = Elements,
+  // Kept for callers; the shape no longer depends on it (see
+  // AuthoredElementStyle), so every sheet shares one part shape per kind.
+  _AllParts extends string = Elements,
   Host extends Platform | undefined = undefined,
-> = AuthoredElementStyle<S, Kind, AllParts, Host> & {
+> = AuthoredElementStyle<S, Kind, never, Host> & {
   $kind?: never
   $$type?: never
   /** Compose styles from other elements */
@@ -860,7 +950,80 @@ type VariantEditorShape<T> = T extends readonly unknown[]
           ? never
           : K]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
       }
-    : T
+    : T extends null | undefined
+      ? T
+      : // A leaf's VALUE vocabulary comes from the validation intersected
+        // alongside (ValidLeaf); offering the token union here as well
+        // crossed the two unions member by member in every contextual leaf
+        // type. (`undefined` stays: an optional nested block is `X |
+        // undefined`, and `unknown` there would swallow `X` itself.)
+        unknown
+
+/**
+ * One part's editor vocabulary inside a variant rule: the authored element
+ * shape minus its static metadata (`$kind`/`$$type` cannot be restated in a
+ * variant) and minus forbidden never-valued members.
+ *
+ * Built from the system, the part's kind and the host ONLY, so it is
+ * instantiated once per system and shared by every sheet. Mapping the sheet's
+ * own `VariantStyleDef` instead re-resolved every token of every part for
+ * each `.variants()` call (~130k instantiations for a five-part sheet).
+ */
+type VariantEditorElement<
+  S extends TokenStyleDeclaration,
+  Kind extends ElementType | undefined,
+  Host extends Platform | undefined,
+> = VariantEditorTop<AuthoredElementStyle<S, Kind, never, Host>>
+
+type VariantEditorTop<T> = {
+  [K in keyof T as K extends '$kind' | '$$type'
+    ? never
+    : [NonNullable<T[K]>] extends [never]
+      ? never
+      : K]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
+}
+
+/**
+ * The contextual (editor) shape of one variant rule — and, with no named
+ * fragments, of an override's rules; see VariantEditorElement. Only the
+ * vocabulary lives here: what is VALID is decided by ValidateDeclaration
+ * against the full rules type.
+ */
+export type VariantEditorDef<
+  S extends TokenStyleDeclaration,
+  Elements extends string,
+  Named extends string,
+  Kinds extends Record<Elements, ElementType | undefined>,
+  Host extends Platform | undefined = undefined,
+> = ([Named] extends [never]
+  ? unknown
+  : {
+      $compose?: Named | readonly Named[]
+    }) & {
+  [E in Elements]?: VariantEditorElement<S, Kinds[E], Host> & {
+    $compose?: ComposableParts<Kinds, E> | readonly ComposableParts<Kinds, E>[]
+  }
+} & {
+  [K in VariantConditions<S, Elements>]?: VariantEditorDef<
+    S,
+    Elements,
+    Named,
+    Kinds,
+    Host
+  >
+} & {
+  [P in Platform as Host extends Platform
+    ? P extends Host
+      ? `@platform.${P}` | `@platform ${P}`
+      : never
+    : `@platform.${P}` | `@platform ${P}`]?: VariantEditorDef<
+    S,
+    Elements,
+    Named,
+    Kinds,
+    P
+  >
+}
 
 /** Explicit constructor for excess-key checking inside callback return values. */
 export type CheckedVariantRules<
@@ -973,13 +1136,11 @@ export interface StylesheetWithVariants<
       | Rules
       | Record<
           string,
-          VariantEditorShape<
-            VariantStyleDef<
-              S,
-              Elements,
-              ExtractNamedStyles<NoInfer<Rules>>,
-              Kinds
-            >
+          VariantEditorDef<
+            S,
+            Elements,
+            ExtractNamedStyles<NoInfer<Rules>>,
+            Kinds
           >
         >
     ) &
@@ -1026,7 +1187,15 @@ export interface StylesheetWithVariants<
       Kinds
     >,
   >(
-    rules: Extension,
+    rules: Extension &
+      NoInfer<
+        StylesheetValidation<
+          S,
+          Extension,
+          Elements | PickString<ExtractElements<Extension>>,
+          Kinds
+        >
+      >,
     /**
      * Variant rules to merge into the sheet's own table, over the SHEET's
      * axes. A matcher the sheet declared is replaced; one it did not is
@@ -1142,7 +1311,9 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   // string during inference and the token constraint silently never applies.
   const T extends StylesheetInput<S, T>,
 >(
-  style: T | ((q: QueryBuilder<S>) => T),
+  style:
+    | (T & NoInfer<StylesheetValidation<S, T>>)
+    | ((q: QueryBuilder<S>) => T & NoInfer<StylesheetValidation<S, T>>),
 ) => PreVariantsStylesheet<
   S,
   /*

@@ -15,8 +15,10 @@ export {
 
 import {
   type ModType,
+  type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
+  type OverrideVariantContext,
   SYMBOL_INIT,
   type TokenStyleDeclaration,
   type VariantSelector,
@@ -365,11 +367,13 @@ export interface OverrideEntry<T extends StylesheetLike>
         InferMods<T> extends ModType ? InferMods<T> : never
       >,
       q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-    ) => Rules &
-      Record<
-        string,
-        OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Rules>>>
-      > &
+    ) => (
+      | Rules
+      | Record<
+          string,
+          OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Rules>>>
+        >
+    ) &
       ValidateDeclaration<
         NoInfer<Rules>,
         Record<
@@ -384,11 +388,16 @@ export interface OverrideEntry<T extends StylesheetLike>
 
 export const overrideStyles = _overrideStyles as <
   T extends StylesheetLike,
-  const Rules extends StyleOverrideRules<T>,
+  const Rules extends Record<string, unknown>,
 >(
   sheet: T,
+  /*
+   * Contextually typed by OverrideRulesContext (shared element shapes);
+   * validated by ValidateDeclaration against the full rules type. The rules
+   * type as the constraint re-derived itself against each call's literal.
+   */
   rules:
-    | (Rules &
+    | ((Rules | OverrideRulesContext<T>) &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,
@@ -397,7 +406,7 @@ export const overrideStyles = _overrideStyles as <
         >)
     | ((
         q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-      ) => Rules &
+      ) => (Rules | OverrideRulesContext<T>) &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,
