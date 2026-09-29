@@ -14,6 +14,7 @@ export {
 } from './runtime-config.ts'
 
 import {
+  type EditorOnly,
   type ModType,
   type OverrideRulesContext,
   type OverrideSheetRules,
@@ -367,13 +368,14 @@ export interface OverrideEntry<T extends StylesheetLike>
         InferMods<T> extends ModType ? InferMods<T> : never
       >,
       q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-    ) => (
+    ) => EditorOnly<
       | Rules
       | Record<
           string,
           OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Rules>>>
-        >
-    ) &
+        >,
+      Rules
+    > &
       ValidateDeclaration<
         NoInfer<Rules>,
         Record<
@@ -397,7 +399,7 @@ export const overrideStyles = _overrideStyles as <
    * type as the constraint re-derived itself against each call's literal.
    */
   rules:
-    | ((Rules | OverrideRulesContext<T>) &
+    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,
@@ -406,7 +408,7 @@ export const overrideStyles = _overrideStyles as <
         >)
     | ((
         q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-      ) => (Rules | OverrideRulesContext<T>) &
+      ) => EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,
