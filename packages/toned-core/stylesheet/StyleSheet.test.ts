@@ -916,8 +916,8 @@ describe('cross-element interaction isolation (multi-instance)', () => {
       fakeInteractiveEl(),
       fakeInteractiveEl(),
     ]
-    base.refs['container'] = [c1, c2]
-    base.refs['label'] = [l1, l2]
+    base.refs['container'] = new Set([c1, c2])
+    base.refs['label'] = new Set([l1, l2])
 
     base.setElementActive('container', ':hover', c1, true)
     base.applyState(
@@ -944,8 +944,8 @@ describe('cross-element interaction isolation (multi-instance)', () => {
     const base = newBase()
     const c = fakeInteractiveEl()
     const l = fakeInteractiveEl()
-    base.refs['container'] = [c]
-    base.refs['label'] = [l]
+    base.refs['container'] = new Set([c])
+    base.refs['label'] = new Set([l])
 
     base.setElementActive('container', ':hover', c, true)
     base.applyState(
