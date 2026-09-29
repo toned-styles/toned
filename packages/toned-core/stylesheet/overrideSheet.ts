@@ -8,6 +8,7 @@ import type {
   ExtractNamedStyles,
   StylesheetInput,
   ValidateDeclaration,
+  VariantEditorDef,
   VariantStyleDef,
 } from '../types/stylesheet.ts'
 import { APPLY_OVERRIDE } from './rule-protocol.ts'
@@ -45,7 +46,11 @@ type OverrideDeclaration<
                   | `[${string}`
                   | Parts
                   | `$${Parts}`
-                ? OverrideDeclaration<T[K], Parts, true>
+                ? // Below a part the sheet's part names are never keys, so
+                  // they are not carried down: an element's override shape
+                  // is then the same type for every sheet of the system,
+                  // instead of being re-derived (~300 keys a level) for each.
+                  OverrideDeclaration<T[K], never, true>
                 : NullableOverride<T[K]>
               : OverrideDeclaration<T[K], Parts, K extends Parts ? true : false>
         }
@@ -76,6 +81,32 @@ export type OverrideSheetRules<T> = Meta<T> extends {
     >
   : Record<string, unknown>
 
+/**
+ * What an override's rules are CONTEXTUALLY typed by (completions, literal
+ * typing): the sheet's parts over element shapes shared by every sheet of the
+ * system. Validation is separate — ValidateDeclaration against
+ * OverrideSheetRules. Using OverrideSheetRules as the contextual type (or the
+ * constraint) re-derived the whole nullable rules tree against each call's
+ * literal: ~10k instantiations per `overrideStyles` call on a dialog sheet.
+ */
+export type OverrideRulesContext<T> = Meta<T> extends {
+  system: TokenStyleDeclaration
+  elements: Record<string, ElementType | undefined>
+}
+  ? VariantEditorDef<System<T>, Parts<T>, never, Kinds<T>>
+  : Record<string, unknown>
+
+/** The contextual vocabulary of one override variant rule; see OverrideRulesContext. */
+export type OverrideVariantContext<
+  T,
+  Named extends string = never,
+> = Meta<T> extends {
+  system: TokenStyleDeclaration
+  elements: Record<string, ElementType | undefined>
+}
+  ? VariantEditorDef<System<T>, Parts<T>, Named, Kinds<T>>
+  : Record<string, unknown>
+
 /** Shared by pure override sheets and React's ambient override entries. */
 export type OverrideSheetVariantRules<
   T,
@@ -94,25 +125,27 @@ export type OverrideSheetVariantRules<
  * Construct the derived sheet before build collection when it adds CSS structure. */
 export function overrideSheet<
   T extends object,
-  const Rules extends OverrideSheetRules<T>,
+  const Rules extends Record<string, unknown>,
   const Variants extends Record<string, unknown> = {},
 >(
   sheet: T,
   rules:
-    | (Rules &
+    | ((Rules | OverrideRulesContext<T>) &
         ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>)
     | ((
         q: QueryBuilder<System<T>, Parts<T>>,
-      ) => Rules &
+      ) => (Rules | OverrideRulesContext<T>) &
         ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>),
   variants?: (
     $: VariantSelector<Mods<T>>,
     q: QueryBuilder<System<T>, Parts<T>>,
-  ) => Variants &
-    Record<
-      string,
-      OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Variants>>>
-    > &
+  ) => (
+    | Variants
+    | Record<
+        string,
+        OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Variants>>>
+      >
+  ) &
     ValidateDeclaration<
       NoInfer<Variants>,
       Record<

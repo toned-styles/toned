@@ -22,8 +22,10 @@ export { defineGrid, fr } from './grid/index.ts'
 export type { TonedTypeRegistry } from './registry.ts'
 export {
   type NullableOverride,
+  type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
+  type OverrideVariantContext,
   overrideSheet,
 } from './stylesheet/overrideSheet.ts'
 export type { SystemDefinition, SystemOptions } from './system/definers.ts'

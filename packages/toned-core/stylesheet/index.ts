@@ -16,8 +16,10 @@ export {
 } from './native-host.ts'
 export {
   type NullableOverride,
+  type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
+  type OverrideVariantContext,
   overrideSheet,
 } from './overrideSheet.ts'
 export {
