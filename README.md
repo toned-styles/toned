@@ -36,6 +36,30 @@ inputs. [Motion](packages/toned-core/motion/README.md) adds timing/spring
 transitions, interruption and reduced motion through the existing host writer.
 Both capabilities are opt-in subpath imports, preserving the ordinary runtime.
 
+## Editor mode
+
+Part of Toned's typing exists only for editor completions: the vocabulary a
+`.variants()` callback, `overrideStyles` / `overrideSheet` rules and the blocks
+nested inside them are contextually typed by. Diagnostics never depend on it,
+so a batch check skips it. The switch is automatic and needs no setup:
+
+- **Editors: on.** A language server loads a referenced project's _source_
+  rather than its declarations. That holds for TypeScript 7's native server
+  (`tsc --lsp --stdio`: VS Code's TypeScript Native extension with the
+  workspace `typescript.tsdk`, or nvim's `tsgo` / `tsc --lsp` config) and for
+  the JS `tsserver` (VS Code's built-in extension, nvim's `ts_ls` / `vtsls`).
+- **`tsc` / `tsc -b` and CI: off.** A consumer compiles against the referenced
+  project's emitted `.d.ts`, where `EditorModeProbe`'s private member has no
+  type (see `packages/toned-core/types/editor-mode.ts`). A published package is
+  consumed through its declarations too.
+
+Hover `import('@toned/core').EditorMode` to see which mode a program is in. A
+program that compiles Toned's sources directly — Toned's own packages, a
+project mapping `@toned/core` to source without a project reference, or a tool
+that loads references from source (HQ's `oxlint --type-aware` pass) — runs in
+editor mode. Language-service plugins are not used: TypeScript 7's native
+server does not load them.
+
 ## Contracts and verification
 
 - [Implementation status](SPEC-COMPLETION.md) records supported contracts and

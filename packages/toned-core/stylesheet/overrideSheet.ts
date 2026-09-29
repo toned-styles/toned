@@ -1,4 +1,5 @@
 import type { QueryBuilder } from '../system/queries.ts'
+import type { EditorOnly } from '../types/editor-mode.ts'
 import type {
   ElementType,
   ModType,
@@ -130,22 +131,23 @@ export function overrideSheet<
 >(
   sheet: T,
   rules:
-    | ((Rules | OverrideRulesContext<T>) &
+    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>)
     | ((
         q: QueryBuilder<System<T>, Parts<T>>,
-      ) => (Rules | OverrideRulesContext<T>) &
+      ) => EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>),
   variants?: (
     $: VariantSelector<Mods<T>>,
     q: QueryBuilder<System<T>, Parts<T>>,
-  ) => (
+  ) => EditorOnly<
     | Variants
     | Record<
         string,
         OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Variants>>>
-      >
-  ) &
+      >,
+    Variants
+  > &
     ValidateDeclaration<
       NoInfer<Variants>,
       Record<

@@ -22,6 +22,7 @@ import type { GridArea, GridDefinition } from '../grid/index.ts'
 import type { QueryBuilder } from '../system/queries.ts'
 import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
 import type { WebRules } from '../web/rules.ts'
+import type { EditorOnly } from './editor-mode.ts'
 export declare const DEFAULT_KIND: unique symbol
 /** Type-only key carrying the target a cross-part shorthand key is checked
  *  against (see ElementStyleNew); never written, never at runtime. */
@@ -664,9 +665,11 @@ export type StylesheetInput<
 } & {
   /**
    * Condition-EXPRESSION blocks — see ConditionExprKeys for why these are
-   * root-level only: `[not(cq('card').min(100))]: { Root: { … } }`.
+   * root-level only: `[not(cq('card').min(100))]: { Root: { … } }`. The
+   * `'@container <name> <step>'` alias normalizes to `'@<name>/<step>'` at
+   * every level, so the root accepts it as well.
    */
-  [K in ConditionExprKeys<S>]?: ElementMap<
+  [K in ConditionExprKeys<S> | InferContainerAliases<S>]?: ElementMap<
     S,
     Elements,
     DeclarationKinds<S, T, Elements, Kinds>
@@ -728,32 +731,83 @@ export type StylesheetValidation<
   Elements extends string = PickString<ExtractElements<T>>,
   Kinds extends Partial<Record<string, ElementType | undefined>> = {},
 > = {
-  // A sheet whose rules are a string-keyed record (not a literal) has no
-  // part names to validate against. Neither does the constraint itself, which
-  // is what `T` becomes when inference fails a leaf: its pattern keys would
-  // read as invalid query keys and bury the real error at the wrong line.
-  [K in Elements]?: string extends K
-    ? unknown
-    : QueryKey extends keyof NonNullable<T[K & keyof T]>
-      ? unknown
-      : ValidateDeclaration<
-          K extends keyof T ? T[K] : never,
-          AuthoredElementStyle<
+  // One pass over the keys WRITTEN: a part is walked against its authored
+  // shape, a root key that addresses parts against what the root accepts.
+  [K in keyof T]: string extends K
+    ? // A string-keyed record (not a literal) has no names to validate.
+      unknown
+    : K extends Elements
+      ? QueryKey extends keyof NonNullable<T[K]>
+        ? // The constraint itself, which is what `T` becomes when inference
+          // fails a leaf: its pattern keys would read as invalid query keys
+          // and bury the real error at the wrong line.
+          unknown
+        : ValidateDeclaration<
+            T[K],
+            AuthoredElementStyle<
+              S,
+              K extends keyof Kinds
+                ? Kinds[K]
+                : InferElementType<
+                    T,
+                    K,
+                    S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
+                  >
+            >,
             S,
-            K extends keyof Kinds
-              ? Kinds[K]
-              : InferElementType<
-                  T,
-                  K,
-                  S extends { [DEFAULT_KIND]: 'view' } ? 'view' : undefined
-                >
-          >,
-          S,
-          Elements,
-          true,
-          true
-        >
+            Elements,
+            true,
+            true
+          >
+      : RootKeyValidation<S, T, K, Elements, Kinds>
 }
+
+/**
+ * The ROOT keys that address parts: condition blocks (`'@md'`, `'@media md'`,
+ * `'@container …'`, condition expressions, `'@platform web'`) and
+ * cross-element keys (`'Root:hover'`, `'Root~:open'`). The constraint only
+ * relates their values, and a relation does not reject unknown keys, so a
+ * typo'd token inside `'@md': { Root: { … } }` and a cross key naming a part
+ * the sheet does not have were both silently accepted. A cross key that is
+ * not `<part><state>` is rejected outright; a condition block's parts are
+ * walked like the parts themselves (Light: the constraint still checks the
+ * values). A `'@…'` key the root shape does not declare stays open (see
+ * type-constraints.test-d.ts); query keys have their own member in
+ * StylesheetInput.
+ */
+type RootKeyValidation<
+  S extends TokenStyleDeclaration,
+  T,
+  K extends keyof T,
+  Elements extends string,
+  Kinds extends Partial<Record<string, ElementType | undefined>>,
+> = K extends QueryKey
+  ? unknown
+  : QueryKey extends keyof T
+    ? unknown // the constraint itself (inference failed): nothing to walk
+    : K extends `@${string}`
+      ? K extends ShapeKeys<StylesheetInput<S, T, Elements, Kinds>>
+        ? ValidateDeclaration<
+            T[K],
+            NonNullable<StylesheetInput<S, T, Elements, Kinds>[K]>,
+            S,
+            Elements,
+            false,
+            true
+          >
+        : unknown
+      : K extends `${string}:${string}` | `${string}~${string}`
+        ? IsCrossElementKey<K, Elements, S> extends true
+          ? ValidateDeclaration<
+              T[K],
+              ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>,
+              S,
+              Elements,
+              false,
+              true
+            >
+          : never
+        : unknown
 
 // =============================================================================
 // Variant Selector Types
@@ -1132,7 +1186,7 @@ export interface StylesheetWithVariants<
     callback: (
       $: VariantSelector<M>,
       q: QueryBuilder<S, Elements>,
-    ) => (
+    ) => EditorOnly<
       | Rules
       | Record<
           string,
@@ -1142,8 +1196,9 @@ export interface StylesheetWithVariants<
             ExtractNamedStyles<NoInfer<Rules>>,
             Kinds
           >
-        >
-    ) &
+        >,
+      Rules
+    > &
       CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds, M>,
     options?: {
       defaults: D & {

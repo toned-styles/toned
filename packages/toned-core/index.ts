@@ -20,6 +20,11 @@ export type {
 } from './grid/index.ts'
 export { defineGrid, fr } from './grid/index.ts'
 export type { TonedTypeRegistry } from './registry.ts'
+export type {
+  EditorMode,
+  EditorModeProbe,
+  EditorOnly,
+} from './types/editor-mode.ts'
 export {
   type NullableOverride,
   type OverrideRulesContext,
