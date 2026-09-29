@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { useEffect } from 'react'
+import { ShowcaseProvider } from '../components/ShowcaseProvider.tsx'
 import { Sidebar } from '../components/Sidebar.tsx'
 import { layoutStyles } from '../styles/layout.ts'
 
@@ -19,6 +20,13 @@ function RootLayout() {
     const toggle = document.getElementById('menu-toggle') as HTMLInputElement
     if (toggle) toggle.checked = false
   }, [pathname])
+
+  if (pathname === '/' || pathname === '/playground')
+    return (
+      <ShowcaseProvider>
+        <Outlet />
+      </ShowcaseProvider>
+    )
 
   return (
     <div {...s.root}>

@@ -6,8 +6,10 @@ const NAV_SECTIONS = [
   {
     title: 'Overview',
     items: [
-      { to: '/', label: 'Getting Started' },
+      { to: '/getting-started', label: 'Getting Started' },
       { to: '/concepts', label: 'Core Concepts' },
+      { to: '/playground', label: 'Playground' },
+      { to: '/ui', label: 'Component Gallery' },
     ],
   },
   {
@@ -56,7 +58,9 @@ export function Sidebar() {
   })
   return (
     <div>
-      <div {...s.logo}>toned-styles</div>
+      <Link to="/" {...s.logo}>
+        toned.style
+      </Link>
       {NAV_SECTIONS.map((section) => (
         <div key={section.title} {...s.section}>
           <div {...s.sectionTitle}>{section.title}</div>

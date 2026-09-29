@@ -1,0 +1,31 @@
+@layer components {
+  .tnd-home :is(a, button, pre):focus-visible {
+    outline: 3px solid #284bdd;
+    outline-offset: 4px;
+  }
+
+  .tnd-home :is(section, main) {
+    scroll-margin-top: 24px;
+  }
+
+  .tnd-skip-link {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    padding: 12px 20px;
+    background: white;
+    color: #284bdd;
+    transform: translateY(-200%);
+  }
+
+  .tnd-skip-link:focus {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tnd-home .tnd-token-flow {
+    animation: none;
+  }
+}

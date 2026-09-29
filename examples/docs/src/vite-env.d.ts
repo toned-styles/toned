@@ -30,3 +30,8 @@ declare module 'virtual:component-docs/index' {
     () => Promise<{ default: ComponentDoc[] }>
   >
 }
+
+declare module 'virtual:toned.manifest' {
+  const manifest: import('@toned/core/build').BuildManifest
+  export default manifest
+}

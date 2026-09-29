@@ -8,23 +8,35 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root.tsx'
-import { Route as ApiDefineSystemRouteImport } from './routes/api/define-system.tsx'
-import { Route as ApiMediaQueriesRouteImport } from './routes/api/media-queries.tsx'
-import { Route as ApiStylesheetRouteImport } from './routes/api/stylesheet.tsx'
-import { Route as ApiUseStylesRouteImport } from './routes/api/use-styles.tsx'
-import { Route as ApiVariantsRouteImport } from './routes/api/variants.tsx'
-import { Route as ConceptsRouteImport } from './routes/concepts.tsx'
-import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive.tsx'
-import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native.tsx'
-import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web.tsx'
-import { Route as GuidesSsrRouteImport } from './routes/guides/ssr.tsx'
-import { Route as GuidesThemingRouteImport } from './routes/guides/theming.tsx'
-import { Route as IndexRouteImport } from './routes/index.tsx'
-import { Route as UiComponentRouteImport } from './routes/ui/$component.tsx'
-import { Route as UiIndexRouteImport } from './routes/ui/index.tsx'
-import { Route as UiRouteRouteImport } from './routes/ui/route.tsx'
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as PlaygroundRouteImport } from './routes/playground'
+import { Route as GettingStartedRouteImport } from './routes/getting-started'
+import { Route as ConceptsRouteImport } from './routes/concepts'
+import { Route as UiRouteRouteImport } from './routes/ui/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as UiIndexRouteImport } from './routes/ui/index'
+import { Route as UiComponentRouteImport } from './routes/ui/$component'
+import { Route as GuidesThemingRouteImport } from './routes/guides/theming'
+import { Route as GuidesSsrRouteImport } from './routes/guides/ssr'
+import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web'
+import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native'
+import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive'
+import { Route as ApiVariantsRouteImport } from './routes/api/variants'
+import { Route as ApiUseStylesRouteImport } from './routes/api/use-styles'
+import { Route as ApiStylesheetRouteImport } from './routes/api/stylesheet'
+import { Route as ApiMediaQueriesRouteImport } from './routes/api/media-queries'
+import { Route as ApiDefineSystemRouteImport } from './routes/api/define-system'
 
+const PlaygroundRoute = PlaygroundRouteImport.update({
+  id: '/playground',
+  path: '/playground',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GettingStartedRoute = GettingStartedRouteImport.update({
+  id: '/getting-started',
+  path: '/getting-started',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConceptsRoute = ConceptsRouteImport.update({
   id: '/concepts',
   path: '/concepts',
@@ -105,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
   '/concepts': typeof ConceptsRoute
+  '/getting-started': typeof GettingStartedRoute
+  '/playground': typeof PlaygroundRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
@@ -121,6 +135,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/concepts': typeof ConceptsRoute
+  '/getting-started': typeof GettingStartedRoute
+  '/playground': typeof PlaygroundRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
@@ -139,6 +155,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
   '/concepts': typeof ConceptsRoute
+  '/getting-started': typeof GettingStartedRoute
+  '/playground': typeof PlaygroundRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
@@ -158,6 +176,8 @@ export interface FileRouteTypes {
     | '/'
     | '/ui'
     | '/concepts'
+    | '/getting-started'
+    | '/playground'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
@@ -174,6 +194,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/concepts'
+    | '/getting-started'
+    | '/playground'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
@@ -191,6 +213,8 @@ export interface FileRouteTypes {
     | '/'
     | '/ui'
     | '/concepts'
+    | '/getting-started'
+    | '/playground'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
@@ -209,6 +233,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UiRouteRoute: typeof UiRouteRouteWithChildren
   ConceptsRoute: typeof ConceptsRoute
+  GettingStartedRoute: typeof GettingStartedRoute
+  PlaygroundRoute: typeof PlaygroundRoute
   ApiDefineSystemRoute: typeof ApiDefineSystemRoute
   ApiMediaQueriesRoute: typeof ApiMediaQueriesRoute
   ApiStylesheetRoute: typeof ApiStylesheetRoute
@@ -223,6 +249,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/playground': {
+      id: '/playground'
+      path: '/playground'
+      fullPath: '/playground'
+      preLoaderRoute: typeof PlaygroundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/getting-started': {
+      id: '/getting-started'
+      path: '/getting-started'
+      fullPath: '/getting-started'
+      preLoaderRoute: typeof GettingStartedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/concepts': {
       id: '/concepts'
       path: '/concepts'
@@ -348,6 +388,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UiRouteRoute: UiRouteRouteWithChildren,
   ConceptsRoute: ConceptsRoute,
+  GettingStartedRoute: GettingStartedRoute,
+  PlaygroundRoute: PlaygroundRoute,
   ApiDefineSystemRoute: ApiDefineSystemRoute,
   ApiMediaQueriesRoute: ApiMediaQueriesRoute,
   ApiStylesheetRoute: ApiStylesheetRoute,

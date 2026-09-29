@@ -3,6 +3,7 @@ import http from 'node:http'
 import { createServer } from 'vite'
 
 const vite = await createServer({
+  configLoader: 'runner',
   server: { middlewareMode: true },
   appType: 'custom',
 })

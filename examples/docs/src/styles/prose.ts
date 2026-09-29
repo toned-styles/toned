@@ -1,4 +1,4 @@
-import { stylesheet } from '@toned/systems/base'
+import { stylesheet } from './system.ts'
 
 export const proseStyles = stylesheet({
   container: {
