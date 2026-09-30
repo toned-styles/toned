@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/lttb/toned/compare/@toned/core@0.4.0...@toned/core@0.5.0) (2026-09-30)
+
+### Bug Fixes
+
+* **toned-core:** correct the CSS that generate() emits ([555c2cb](https://github.com/lttb/toned/commit/555c2cb69cdafad4565629ac244f16cbcc550848))
+* **toned-core:** flatten React Native array styles when merging ([281e2c0](https://github.com/lttb/toned/commit/281e2c0b688251cbce0f50e85388d7b0ce47984f))
+* **toned-core:** handle custom properties correctly in the style pipeline ([2cbafd3](https://github.com/lttb/toned/commit/2cbafd38778adae2d6831e5cd992d97b72daa2f1))
+* **toned-core:** restore redundant-write skip lost in merge ([119ee6d](https://github.com/lttb/toned/commit/119ee6d1bd9b232524d6c8dcc7c27050629308f8))
+* **toned-core:** skip falsy t() arguments and unwrap nested t() blocks ([1fd88e0](https://github.com/lttb/toned/commit/1fd88e0ded7116641f9cc0862dd561b9df226912))
+
+### Features
+
+* **toned-core:** support breakpoint and pseudo blocks in t() ([08994e8](https://github.com/lttb/toned/commit/08994e81c9d36d72e62ed83ef3df12d3d558cfce))
+
 # [0.4.0](https://github.com/lttb/toned/compare/@toned/core@0.0.9...@toned/core@0.4.0) (2026-08-05)
 
 ### Bug Fixes
