@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/lttb/toned/compare/@toned/systems@0.2.0...@toned/systems@0.3.0) (2026-09-30)
+
+### Features
+
+* publish ([cc32fd9](https://github.com/lttb/toned/commit/cc32fd90b36d5a91fddae73700678e555201ff42))
+
 ## [0.2.1](https://github.com/lttb/toned/compare/@toned/systems@0.2.0...@toned/systems@0.2.1) (2026-09-30)
 
 **Note:** Version bump only for package @toned/systems

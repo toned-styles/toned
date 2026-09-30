@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/lttb/toned/compare/@toned/react@0.3.0...@toned/react@0.4.0) (2026-09-30)
+
+### Features
+
+* publish ([cc32fd9](https://github.com/lttb/toned/commit/cc32fd90b36d5a91fddae73700678e555201ff42))
+
 ## [0.3.1](https://github.com/lttb/toned/compare/@toned/react@0.3.0...@toned/react@0.3.1) (2026-09-30)
 
 **Note:** Version bump only for package @toned/react
