@@ -93,6 +93,7 @@ export type {
   TokenConfig,
   TokenStyle,
   TokenStyleDeclaration,
+  TokenStyleWithSelectors,
   Tokens,
   TokenTypeConfig,
   VariantSelector,

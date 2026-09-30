@@ -10,12 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PlaygroundRouteImport } from './routes/playground'
+import { Route as LabRouteImport } from './routes/lab'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ConceptsRouteImport } from './routes/concepts'
 import { Route as UiRouteRouteImport } from './routes/ui/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UiIndexRouteImport } from './routes/ui/index'
 import { Route as UiComponentRouteImport } from './routes/ui/$component'
+import { Route as LearnTopicRouteImport } from './routes/learn/$topic'
 import { Route as GuidesThemingRouteImport } from './routes/guides/theming'
 import { Route as GuidesSsrRouteImport } from './routes/guides/ssr'
 import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web'
@@ -32,9 +35,19 @@ const PlaygroundRoute = PlaygroundRouteImport.update({
   path: '/playground',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LabRoute = LabRouteImport.update({
+  id: '/lab',
+  path: '/lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GettingStartedRoute = GettingStartedRouteImport.update({
   id: '/getting-started',
   path: '/getting-started',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConceptsRoute = ConceptsRouteImport.update({
@@ -61,6 +74,11 @@ const UiComponentRoute = UiComponentRouteImport.update({
   id: '/$component',
   path: '/$component',
   getParentRoute: () => UiRouteRoute,
+} as any)
+const LearnTopicRoute = LearnTopicRouteImport.update({
+  id: '/learn/$topic',
+  path: '/learn/$topic',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const GuidesThemingRoute = GuidesThemingRouteImport.update({
   id: '/guides/theming',
@@ -117,7 +135,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
   '/concepts': typeof ConceptsRoute
+  '/explore': typeof ExploreRoute
   '/getting-started': typeof GettingStartedRoute
+  '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
@@ -129,13 +149,16 @@ export interface FileRoutesByFullPath {
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
+  '/learn/$topic': typeof LearnTopicRoute
   '/ui/$component': typeof UiComponentRoute
   '/ui/': typeof UiIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/concepts': typeof ConceptsRoute
+  '/explore': typeof ExploreRoute
   '/getting-started': typeof GettingStartedRoute
+  '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
@@ -147,6 +170,7 @@ export interface FileRoutesByTo {
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
+  '/learn/$topic': typeof LearnTopicRoute
   '/ui/$component': typeof UiComponentRoute
   '/ui': typeof UiIndexRoute
 }
@@ -155,7 +179,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
   '/concepts': typeof ConceptsRoute
+  '/explore': typeof ExploreRoute
   '/getting-started': typeof GettingStartedRoute
+  '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
@@ -167,6 +193,7 @@ export interface FileRoutesById {
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
   '/guides/theming': typeof GuidesThemingRoute
+  '/learn/$topic': typeof LearnTopicRoute
   '/ui/$component': typeof UiComponentRoute
   '/ui/': typeof UiIndexRoute
 }
@@ -176,7 +203,9 @@ export interface FileRouteTypes {
     | '/'
     | '/ui'
     | '/concepts'
+    | '/explore'
     | '/getting-started'
+    | '/lab'
     | '/playground'
     | '/api/define-system'
     | '/api/media-queries'
@@ -188,13 +217,16 @@ export interface FileRouteTypes {
     | '/guides/react-web'
     | '/guides/ssr'
     | '/guides/theming'
+    | '/learn/$topic'
     | '/ui/$component'
     | '/ui/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/concepts'
+    | '/explore'
     | '/getting-started'
+    | '/lab'
     | '/playground'
     | '/api/define-system'
     | '/api/media-queries'
@@ -206,6 +238,7 @@ export interface FileRouteTypes {
     | '/guides/react-web'
     | '/guides/ssr'
     | '/guides/theming'
+    | '/learn/$topic'
     | '/ui/$component'
     | '/ui'
   id:
@@ -213,7 +246,9 @@ export interface FileRouteTypes {
     | '/'
     | '/ui'
     | '/concepts'
+    | '/explore'
     | '/getting-started'
+    | '/lab'
     | '/playground'
     | '/api/define-system'
     | '/api/media-queries'
@@ -225,6 +260,7 @@ export interface FileRouteTypes {
     | '/guides/react-web'
     | '/guides/ssr'
     | '/guides/theming'
+    | '/learn/$topic'
     | '/ui/$component'
     | '/ui/'
   fileRoutesById: FileRoutesById
@@ -233,7 +269,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UiRouteRoute: typeof UiRouteRouteWithChildren
   ConceptsRoute: typeof ConceptsRoute
+  ExploreRoute: typeof ExploreRoute
   GettingStartedRoute: typeof GettingStartedRoute
+  LabRoute: typeof LabRoute
   PlaygroundRoute: typeof PlaygroundRoute
   ApiDefineSystemRoute: typeof ApiDefineSystemRoute
   ApiMediaQueriesRoute: typeof ApiMediaQueriesRoute
@@ -245,6 +283,7 @@ export interface RootRouteChildren {
   GuidesReactWebRoute: typeof GuidesReactWebRoute
   GuidesSsrRoute: typeof GuidesSsrRoute
   GuidesThemingRoute: typeof GuidesThemingRoute
+  LearnTopicRoute: typeof LearnTopicRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -256,11 +295,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaygroundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lab': {
+      id: '/lab'
+      path: '/lab'
+      fullPath: '/lab'
+      preLoaderRoute: typeof LabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/getting-started': {
       id: '/getting-started'
       path: '/getting-started'
       fullPath: '/getting-started'
       preLoaderRoute: typeof GettingStartedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/concepts': {
@@ -297,6 +350,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/ui/$component'
       preLoaderRoute: typeof UiComponentRouteImport
       parentRoute: typeof UiRouteRoute
+    }
+    '/learn/$topic': {
+      id: '/learn/$topic'
+      path: '/learn/$topic'
+      fullPath: '/learn/$topic'
+      preLoaderRoute: typeof LearnTopicRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/guides/theming': {
       id: '/guides/theming'
@@ -388,7 +448,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UiRouteRoute: UiRouteRouteWithChildren,
   ConceptsRoute: ConceptsRoute,
+  ExploreRoute: ExploreRoute,
   GettingStartedRoute: GettingStartedRoute,
+  LabRoute: LabRoute,
   PlaygroundRoute: PlaygroundRoute,
   ApiDefineSystemRoute: ApiDefineSystemRoute,
   ApiMediaQueriesRoute: ApiMediaQueriesRoute,
@@ -400,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuidesReactWebRoute: GuidesReactWebRoute,
   GuidesSsrRoute: GuidesSsrRoute,
   GuidesThemingRoute: GuidesThemingRoute,
+  LearnTopicRoute: LearnTopicRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

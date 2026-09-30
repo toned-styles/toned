@@ -133,6 +133,12 @@ importers:
 
   examples/docs:
     dependencies:
+      '@toned/compiler':
+        specifier: workspace:*
+        version: link:../../packages/toned-compiler
+      marked:
+        specifier: 16.4.2
+        version: 16.4.2
       '@examples/toned-ui':
         specifier: workspace:*
         version: link:../ui
@@ -488,6 +494,9 @@ importers:
 
   packages/toned-compiler:
     dependencies:
+      '@noble/hashes':
+        specifier: 2.0.1
+        version: 2.0.1
       '@toned/core':
         specifier: workspace:~
         version: link:../toned-core
@@ -616,6 +625,17 @@ importers:
     publishDirectory: .dist
 
 packages:
+
+  '@noble/hashes@2.0.1':
+    resolution: {integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==}
+    engines: {node: '>= 20.19.0'}
+
+
+  marked@16.4.2:
+    resolution: {integrity: sha512-TI3V8YYWvkVf3KJe1dRkpnjs68JUPyEa5vjKrp1XEEJUAOaQc+Qj+L1qWbPd0SJuAdQkFU0h73sXXqwDYxsiDA==}
+    engines: {node: '>= 20'}
+    hasBin: true
+
 
   '@0no-co/graphql.web@1.2.0':
     resolution: {integrity: sha512-/1iHy9TTr63gE1YcR5idjx8UREz1s0kFhydf3bBLCXyqjhkIc6igAzTOx3zPifCwFR87tsh/4Pa9cNts6d2otw==}
@@ -8634,6 +8654,12 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@noble/hashes@2.0.1': {}
+
+
+  marked@16.4.2: {}
+
 
   '@0no-co/graphql.web@1.2.0': {}
 

@@ -10,6 +10,7 @@ export function SiteHeader() {
         <img src="/brand/toned-logo.svg" width="130" height="32" alt="Toned" />
       </Link>
       <nav {...s.Nav} aria-label="Main navigation">
+        <Link to="/explore">Explore</Link>
         <Link to="/ui">UI library</Link>
         <Link to="/playground">Playground</Link>
         <Link to="/getting-started">Docs</Link>

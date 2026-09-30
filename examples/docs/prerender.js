@@ -11,6 +11,32 @@ const routes = [
   '/getting-started',
   '/playground',
   '/concepts',
+  '/explore',
+  '/lab',
+  ...[
+    'core',
+    'react',
+    'stylesheets',
+    'systems',
+    'themes',
+    'adaptive',
+    'motion',
+    'renderers',
+    'native',
+    'hosts',
+    'backends',
+    'compiler',
+    'source',
+    'inspector',
+    'bridge',
+    'vscode',
+    'lint',
+    'tokens',
+    'contracts',
+    'engine',
+    'benchmarks',
+    'examples',
+  ].map((topic) => `/learn/${topic}`),
   '/api/define-system',
   '/api/stylesheet',
   '/api/variants',
@@ -22,11 +48,10 @@ const routes = [
   '/guides/interactive',
   '/guides/ssr',
   '/ui',
-  '/ui/button',
-  '/ui/card',
-  '/ui/input',
-  '/ui/progress',
-  '/ui/switch',
+  ...fs
+    .readdirSync(resolve('../ui/src/components/ui'))
+    .filter((file) => file.endsWith('.tsx') && !file.endsWith('.doc.tsx'))
+    .map((file) => `/ui/${file.slice(0, -4)}`),
 ]
 
 async function prerender() {
@@ -40,7 +65,21 @@ async function prerender() {
   for (const url of routes) {
     const appHtml = await render(url)
 
-    const html = template.replace('<!--app-html-->', appHtml)
+    const heading = appHtml
+      .match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1]
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    const title = heading
+      ? `Toned — ${heading}`
+      : 'Toned — Design with confidence'
+    const html = template
+      .replace('<!--app-html-->', appHtml)
+      .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+      .replace(
+        '</head>',
+        `<link rel="canonical" href="https://toned.style${url}" /></head>`,
+      )
 
     const filePath =
       url === '/'

@@ -184,12 +184,9 @@ function Beyond() {
             measured contracts, and design-token interchange. Adaptive layout
             and motion have dedicated opt-in APIs.
           </p>
-          <a
-            href="https://github.com/toned-styles/toned/tree/main/packages/toned-compiler"
-            {...s.TextLink}
-          >
-            Explore the tooling
-          </a>
+          <Link to="/explore" {...s.TextLink}>
+            Explore every capability
+          </Link>
         </div>
       </div>
       <div {...s.Banner}>
@@ -200,11 +197,12 @@ function Beyond() {
             More trying things.
           </h3>
           <p {...s.BannerText}>
-            Explore the component gallery and its interactive controls.
+            Try seven working experiments: adaptive layouts, motion, grid,
+            document renderers, token exchange, contracts and source inspection.
           </p>
         </div>
-        <Link to="/ui" {...s.BannerLink}>
-          Explore the component gallery
+        <Link to="/lab" {...s.BannerLink}>
+          Enter the capability lab
         </Link>
       </div>
     </section>

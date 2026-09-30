@@ -1,0 +1,161 @@
+import { useStyles } from '@toned/react'
+import { marked, type Token, type Tokens } from 'marked'
+import { createElement, type ReactNode, useMemo } from 'react'
+import { referenceHref } from '../content/references.ts'
+import { proseStyles } from '../styles/prose.ts'
+import { CodeBlock } from './CodeBlock.tsx'
+
+/** Repository-owned Markdown, rendered as React nodes. HTML is never executed. */
+export function ReferenceMarkdown({
+  source,
+  path,
+}: {
+  source: string
+  path: string
+}) {
+  const s = useStyles(proseStyles)
+  const tokens = useMemo(() => marked.lexer(source), [source])
+  const headings = new Map<string, number>()
+  function render(tokens: Token[]): ReactNode[] {
+    return tokens.map((token, index) => {
+      const children =
+        'tokens' in token && token.tokens ? render(token.tokens) : null
+      const key = `${token.type}-${index}`
+      switch (token.type) {
+        case 'space':
+          return null
+        case 'heading': {
+          const heading = token as Tokens.Heading
+          const base = heading.text
+            .toLowerCase()
+            .replace(/<[^>]*>/g, '')
+            .replace(/[^\p{L}\p{N}_\-\s]/gu, '')
+            .replace(/\s/g, '-')
+          const count = headings.get(base) ?? 0
+          headings.set(base, count + 1)
+          const id = count ? `${base}-${count}` : base
+          return createElement(
+            `h${heading.depth}`,
+            {
+              ...s[
+                heading.depth === 1 ? 'h1' : heading.depth === 2 ? 'h2' : 'h3'
+              ],
+              id,
+              key,
+            },
+            children,
+          )
+        }
+        case 'paragraph':
+          return <p key={key}>{children}</p>
+        case 'text':
+          return <span key={key}>{children ?? token.text}</span>
+        case 'escape':
+          return <span key={key}>{token.text}</span>
+        case 'code':
+          return <CodeBlock key={key}>{token.text}</CodeBlock>
+        case 'codespan':
+          return (
+            <code key={key} {...s.code}>
+              {token.text}
+            </code>
+          )
+        case 'strong':
+          return <strong key={key}>{children}</strong>
+        case 'em':
+          return <em key={key}>{children}</em>
+        case 'del':
+          return <del key={key}>{children}</del>
+        case 'br':
+          return <br key={key} />
+        case 'hr':
+          return <hr key={key} />
+        case 'link':
+          return (
+            <a
+              key={key}
+              href={referenceHref(token.href, path)}
+              title={token.title ?? undefined}
+            >
+              {children}
+            </a>
+          )
+        case 'image':
+          return (
+            <a key={key} href={referenceHref(token.href, path)}>
+              {token.text || 'View image'}
+            </a>
+          )
+        case 'blockquote':
+          return <blockquote key={key}>{children}</blockquote>
+        case 'list': {
+          const list = token as Tokens.List
+          const items = list.items.map((item, i) => (
+            <li key={`${key}-${i}`}>
+              {item.task ? (
+                <input
+                  aria-label={item.text}
+                  type="checkbox"
+                  checked={!!item.checked}
+                  disabled
+                />
+              ) : null}
+              {render(item.tokens)}
+            </li>
+          ))
+          return list.ordered ? (
+            <ol key={key} start={list.start || 1}>
+              {items}
+            </ol>
+          ) : (
+            <ul key={key}>{items}</ul>
+          )
+        }
+        case 'table': {
+          const table = token as Tokens.Table
+          return (
+            <div
+              key={key}
+              {...s.tableScroll}
+              role="region"
+              aria-label="Reference table"
+              // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll wide reference tables.
+              tabIndex={0}
+            >
+              <table {...s.table}>
+                <thead>
+                  <tr>
+                    {table.header.map((cell, i) => (
+                      <th key={i} scope="col">
+                        {render(cell.tokens)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => (
+                        <td key={j}>{render(cell.tokens)}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
+        // Keep unsupported HTML visible as source, rather than injecting markup.
+        case 'html':
+          return <pre key={key}>{token.text}</pre>
+        default:
+          return (
+            <span key={key}>
+              {'text' in token ? String(token.text) : token.raw}
+            </span>
+          )
+      }
+    })
+  }
+  return <div {...s.container}>{render(tokens)}</div>
+}

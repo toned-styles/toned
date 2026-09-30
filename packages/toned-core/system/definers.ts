@@ -28,7 +28,7 @@ import type {
   TokenTypeConfig,
 } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
-import { getConfig } from './config.ts'
+import { getConfig, resolveModes } from './config.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
 import { createQueries } from './queries.ts'
@@ -267,6 +267,8 @@ export function defineSystem<
           tokens: config.getTokens(),
           useClassName: config.useClassName,
           platform: config.platform,
+          ...resolveModes(config),
+          useMedia: config.useMedia,
         }
       },
     ),

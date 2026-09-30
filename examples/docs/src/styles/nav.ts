@@ -35,19 +35,9 @@ export const navStyles = stylesheet({
     opacity: 0.7,
   },
   logo: {
-    fontSize: '15px',
-    fontWeight: 700,
-    paddingY: 1.5,
+    display: 'block',
+    paddingY: 3,
     paddingX: 1.5,
-    marginBottom: 2,
-    letterSpacing: '-0.02em',
-    style: {
-      borderBottom: '1px solid var(--border)',
-      background: 'var(--gradient-brand-text)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
-    },
   },
 }).variants(($: Variants<{ active?: 'true' }>) => ({
   [$.active('true')]: {
@@ -55,11 +45,11 @@ export const navStyles = stylesheet({
       textColor: 'on_action',
       fontWeight: 500,
       style: {
-        background: 'var(--gradient-brand)',
+        backgroundImage: 'var(--gradient-brand)',
       },
       ':hover': {
         style: {
-          background: 'var(--gradient-brand)',
+          backgroundImage: 'var(--gradient-brand)',
         },
       },
     },

@@ -1,4 +1,5 @@
-import { createHash } from 'node:crypto'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { bytesToHex } from '@noble/hashes/utils.js'
 import ts from 'typescript'
 import type {
   DesignDiagnostic,
@@ -13,7 +14,7 @@ import type {
 import { staticModule } from './static-source.ts'
 
 export const sourceRevision = (text: string) =>
-  createHash('sha256').update(text).digest('hex')
+  bytesToHex(sha256(new TextEncoder().encode(text)))
 const span = (node: ts.Node, source: ts.SourceFile): SourceSpan => ({
   start: node.getStart(source),
   end: node.end,

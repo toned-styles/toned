@@ -19,6 +19,12 @@ function GuideTheming() {
         , and a theme provides the concrete values behind those names.
       </p>
 
+      <p>
+        This page covers CSS themes for the optional base system. For typed
+        theme schemas, palettes and provider-scoped values, read the{' '}
+        <a href="/learn/core">system reference</a> and{' '}
+        <a href="/learn/react">React reference</a>.
+      </p>
       <h2 {...s.h2}>How Theming Works</h2>
       <p>
         On the web, themes are implemented as CSS custom properties. The build
@@ -27,14 +33,14 @@ function GuideTheming() {
       </p>
       <CodeBlock>{`/* @toned/themes/shadcn/config.css (simplified) */
 :root {
-  --color-background: 0 0% 100%;
-  --color-foreground: 222.2 84% 4.9%;
-  --color-action: 222.2 47.4% 11.2%;
-  --color-on-action: 210 40% 98%;
-  --color-muted: 210 40% 96.1%;
-  --radius-small: 4px;
-  --radius-medium: 6px;
-  --radius-large: 8px;
+  --colors_bg_default: hsl(0 0% 100%);
+  --colors_text_default: hsl(222.2 84% 4.9%);
+  --colors_bg_action: hsl(222.2 47.4% 11.2%);
+  --colors_text_on_action: hsl(210 40% 98%);
+  --colors_bg_muted: hsl(210 40% 96.1%);
+  --radius_small: 4px;
+  --radius_medium: 6px;
+  --radius_large: 8px;
   /* ... */
 }`}</CodeBlock>
 
@@ -55,10 +61,10 @@ import '@toned/themes/shadcn/config.css'
       </p>
       <CodeBlock>{`/* Dark mode overrides */
 .dark {
-  --color-background: 222.2 84% 4.9%;
-  --color-foreground: 210 40% 98%;
-  --color-action: 210 40% 98%;
-  --color-on-action: 222.2 47.4% 11.2%;
+  --colors_bg_default: hsl(222.2 84% 4.9%);
+  --colors_text_default: hsl(210 40% 98%);
+  --colors_bg_action: hsl(210 40% 98%);
+  --colors_text_on_action: hsl(222.2 47.4% 11.2%);
   /* ... */
 }`}</CodeBlock>
       <p>
@@ -78,29 +84,28 @@ import '@toned/themes/shadcn/config.css'
       <CodeBlock>{`/* my-theme.css */
 :root {
   /* Colour tokens */
-  --color-background: 0 0% 98%;
-  --color-foreground: 240 10% 10%;
-  --color-action: 220 90% 56%;
-  --color-on-action: 0 0% 100%;
-  --color-muted: 220 14% 96%;
-  --color-elevated: 0 0% 100%;
-  --color-subtle: 220 13% 91%;
+  --colors_bg_default: hsl(0 0% 98%);
+  --colors_text_default: hsl(240 10% 10%);
+  --colors_bg_action: hsl(220 90% 56%);
+  --colors_text_on_action: hsl(0 0% 100%);
+  --colors_bg_muted: hsl(220 14% 96%);
+  --colors_bg_elevated: hsl(0 0% 100%);
+  --colors_border_subtle: hsl(220 13% 91%);
 
   /* Border radius tokens */
-  --radius-small: 3px;
-  --radius-medium: 5px;
-  --radius-large: 10px;
-  --radius-full: 9999px;
+  --radius_small: 3px;
+  --radius_medium: 5px;
+  --radius_large: 10px;
+  --radius_full: 9999px;
 
   /* Shadow tokens */
-  --shadow-small: 0 1px 3px rgba(0,0,0,0.1);
-  --shadow-medium: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow_small: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow_medium: 0 4px 12px rgba(0,0,0,0.1);
 }`}</CodeBlock>
       <p>Then import your custom theme instead of the built-in one:</p>
       <CodeBlock>{`// toned.config.ts
 import './my-theme.css'  // your custom theme
-import { defineConfig, setConfig } from '@toned/core'
-// ... rest of config`}</CodeBlock>
+// Configure the explicit renderer/provider as in Getting Started.`}</CodeBlock>
 
       <h2 {...s.h2}>Runtime Theme Switching</h2>
       <p>

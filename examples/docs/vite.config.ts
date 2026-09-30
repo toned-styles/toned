@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { componentDocs } from './src/plugins/component-docs.ts'
 import { choiceStyles, homeStyles } from './src/styles/home.ts'
+import { adaptiveStyles, gridStyles, motionStyles } from './src/styles/lab.ts'
 import { proseStyles } from './src/styles/prose.ts'
 import { showcaseStyles } from './src/styles/showcase.ts'
 import { docsSystem } from './src/styles/system.ts'
@@ -23,6 +24,9 @@ export default defineConfig({
     toned({
       system: docsSystem,
       sheets: [
+        adaptiveStyles,
+        motionStyles,
+        gridStyles,
         homeStyles,
         showcaseStyles,
         choiceStyles,
@@ -34,6 +38,7 @@ export default defineConfig({
         'src/styles/prose.ts',
         'src/styles/system.ts',
         'src/styles/home.ts',
+        'src/styles/lab.ts',
         'src/styles/showcase.ts',
       ],
     }),
