@@ -14,6 +14,39 @@ import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { normalizeDeclarations } from './normalize.ts'
 
+function condition(key: string) {
+  return key.startsWith('@') || key.startsWith(':')
+}
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+function unwrap(
+  input: Record<string | symbol, unknown>,
+): Record<string, unknown> {
+  if (SYMBOL_STYLE in input)
+    return input[SYMBOL_STYLE] as Record<string, unknown>
+  const output = { ...input }
+  for (const [key, value] of Object.entries(input))
+    if (condition(key) && record(value)) output[key] = unwrap(value)
+  return output
+}
+function mergeDeclarations(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+) {
+  for (const symbol of Object.getOwnPropertySymbols(source))
+    Reflect.set(target, symbol, Reflect.get(source, symbol))
+  for (const [key, value] of Object.entries(source)) {
+    if (key === 'style' || key.endsWith('_style')) {
+      target[key] = mergeStyle(target[key], value)
+    } else if (condition(key) && record(value) && record(target[key])) {
+      const nested = { ...target[key] }
+      mergeDeclarations(nested, value)
+      target[key] = nested
+    } else target[key] = value
+  }
+}
+
 /** Shared composition protocol. Only the legacy caller supplies a global context. */
 export function createTokenComposer<S extends TokenStyleDeclaration>(
   reference: () => TokenSystem<S>,
@@ -25,13 +58,9 @@ export function createTokenComposer<S extends TokenStyleDeclaration>(
     const ref = reference()
     const value: Record<string, unknown> & { style?: unknown } = {}
     for (const entry of values) {
-      const source = normalizeDeclarations(
-        SYMBOL_STYLE in entry ? entry[SYMBOL_STYLE] : entry,
-      ) as Record<string, unknown>
-      const previous = value.style
-      Object.assign(value, source)
-      const merged = mergeStyle(previous, source['style'])
-      if (merged !== undefined) value.style = merged
+      if (!entry) continue
+      const source = normalizeDeclarations(unwrap(entry))
+      mergeDeclarations(value, source)
     }
     if (SYMBOL_REF in value) return value
     // Explicit composers own immutable context and declarations. Legacy system.t

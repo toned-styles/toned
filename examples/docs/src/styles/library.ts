@@ -105,6 +105,7 @@ export const libraryStyles = stylesheet({
     lineHeight: 1.7,
     style: { resize: 'vertical', tabSize: 2 },
   },
+  inspector: { maxWidth: '100%', overflowX: 'auto', $style: { minWidth: 0 } },
   source: { maxHeight: '520px', overflow: 'auto', minWidth: '0' },
   label: { fontSize: '14px', fontWeight: 600 },
   input: {

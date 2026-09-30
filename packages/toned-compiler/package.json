@@ -34,6 +34,7 @@
     "@toned/core": "workspace:~",
     "typescript": "5.9.3",
     "vscode-languageserver": "9.0.1",
-    "vscode-languageserver-textdocument": "1.0.12"
+    "vscode-languageserver-textdocument": "1.0.12",
+    "@noble/hashes": "2.0.1"
   }
 }

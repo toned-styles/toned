@@ -18,7 +18,25 @@ function GettingStarted() {
         instance owns its styling state. Web styles are generated before
         rendering.
       </p>
-      <h2 {...s.h2}>Install</h2>
+      <h2 {...s.h2}>Choose a release</h2>
+      <p>
+        This site describes the development branch, including APIs that are not
+        in the latest npm release. To try everything shown here, use the source
+        checkout below. The npm command installs the published packages; use
+        their bundled reference for that release.
+      </p>
+      <pre {...s.codeBlock}>
+        <code>{`git clone --branch feat/toned-style-showcase https://github.com/toned-styles/toned.git
+cd toned
+pnpm install
+pnpm --filter @examples/docs dev`}</code>
+      </pre>
+      <p>
+        The docs application is a complete working Vite example. Its package
+        references and sheet inventory match this checkout. If Toned is embedded
+        in another workspace, install from that workspace root instead.
+      </p>
+      <h2 {...s.h2}>Published packages</h2>
       <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
       <h2 {...s.h2}>Declare a system and stylesheet</h2>
       <p>

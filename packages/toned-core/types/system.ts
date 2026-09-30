@@ -1,3 +1,4 @@
+import type { Config } from './config.ts'
 import type { SystemOptions } from '../system/definition.ts'
 /**
  * Token system type definitions.
@@ -88,14 +89,18 @@ export type TokenSystem<
    * 9,500 keys on the hottest type in the system.
    */
   exec: (
-    config: {
-      tokens: Tokens
-      useClassName?: boolean
-      /** Threaded into each token's `resolve` as `ctx.platform` (see ResolveContext). */
-      platform?: import('./config.ts').Platform
-    },
+    config: ExecConfig,
     tokenStyle: TokenStyle<S> & {
       [K in `:${string}_${string}` | `@${string}_${string}`]?: unknown
     },
   ) => { style: object; className?: string }
 }
+
+export type ExecConfig = {
+  /** Token values for style resolution */
+  platform?: import('./config.ts').Platform
+  tokens: Tokens
+
+  /** Whether to emit class names for static token values */
+  useClassName?: boolean
+} & Partial<Pick<Config, 'mediaMode' | 'pseudoMode' | 'useMedia'>>

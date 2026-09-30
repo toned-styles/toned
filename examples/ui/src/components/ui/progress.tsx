@@ -33,6 +33,7 @@ export const progressStyles = stylesheet({
 
 function Progress({
   className,
+  style,
   value,
   max = 100,
   size = 'md',
@@ -46,12 +47,12 @@ function Progress({
     typeof value === 'number' && Number.isFinite(value)
       ? Math.min(limit, Math.max(0, value))
       : null
-  const percent = amount === null ? 35 : (amount / limit) * 100
+  const percent = amount === null ? 0 : (amount / limit) * 100
 
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
-      {...s.root.with({ className })}
+      {...s.root.with({ className, style })}
       {...props}
       max={limit}
       value={amount}

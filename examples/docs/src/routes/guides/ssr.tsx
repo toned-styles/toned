@@ -39,7 +39,7 @@ export default defineConfig({
       <p>
         Import <code {...s.code}>virtual:toned.css</code> in the application and
         use <code {...s.code}>virtual:toned.manifest</code> to create the
-        renderer. See <a href="/">Getting Started</a> for the complete provider
+        renderer. See <a href="/getting-started">Getting Started</a> for the complete provider
         setup. The production CSS file must be linked from the initial HTML.
       </p>
       <h2 {...s.h2}>Without Vite</h2>

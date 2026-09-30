@@ -1,6 +1,17 @@
 import { stylesheet } from '@toned/systems/base'
 
 export const layoutStyles = stylesheet({
+  skipLink: {
+    position: 'fixed',
+    top: '8px',
+    left: '8px',
+    zIndex: 100,
+    padding: 3,
+    bgColor: 'default',
+    textColor: 'default',
+    style: { transform: 'translateY(-200%)' },
+    ':focus-visible': { style: { transform: 'translateY(0)' } },
+  },
   root: {
     display: 'flex',
     minHeight: '100vh',
@@ -41,6 +52,7 @@ export const layoutStyles = stylesheet({
     },
   },
   content: {
+    $style: { minWidth: 0 },
     flexGrow: '1',
     // Mobile: extra top padding to clear hamburger button
     paddingTop: 14,

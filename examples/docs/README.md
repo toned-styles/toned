@@ -39,3 +39,23 @@ are SVGs, with no external font or image request. The homepage and playground
 are prerendered alongside the guides. The HQ docs runner checks README snippets,
 variant state preservation, resets, container switching, mobile overflow,
 reduced motion, guide navigation, syntax highlighting, and the gallery.
+
+
+`/explore` indexes 22 source-backed references, loaded from the package Markdown
+rather than copied into routes. `/learn/$topic` renders them with semantic React
+markup; relative reference links map to the local directory and remaining source
+links point to the documented branch. Raw HTML is displayed as text, never injected.
+`/lab` contains seven real API experiments. Its source panels load the exact checked
+implementation modules. The source inspector loads the compiler on demand and uses
+one bounded in-memory document with revision-checked edits; it has no filesystem or
+network write transport. Source is never evaluated.
+
+The build prerenders every reference and every UI component page, gives each page
+a title and canonical URL, and retains readable Markdown without client-side code
+highlighting. The browser fixture verifies adaptive layout changes, reduced motion,
+inline/PDF output, token diagnostics, real geometry contract pass/fail, inspector edit
+round trips, search and mobile overflow. Package reference snippets are documentation;
+the curated introductory snippets and actual lab modules receive compilation checks.
+
+This site describes the development branch. Update the reference source revision
+in `src/content/references.ts` and release guidance when publishing these APIs.

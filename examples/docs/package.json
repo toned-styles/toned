@@ -10,15 +10,17 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@examples/toned-ui": "workspace:*",
     "@tanstack/react-router": "^1.160.2",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
     "@toned/systems": "workspace:*",
     "@toned/themes": "workspace:*",
+    "marked": "16.4.2",
     "react": "catalog:",
     "react-dom": "catalog:",
     "shiki": "^3.22.0",
-    "@examples/toned-ui": "workspace:*"
+    "@toned/compiler": "workspace:*"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "^1.160.2",

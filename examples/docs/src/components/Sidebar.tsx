@@ -7,6 +7,8 @@ const NAV_SECTIONS = [
     title: 'Overview',
     items: [
       { to: '/getting-started', label: 'Getting Started' },
+      { to: '/explore', label: 'Explore All Capabilities' },
+      { to: '/lab', label: 'Capability Lab' },
       { to: '/concepts', label: 'Core Concepts' },
       { to: '/playground', label: 'Playground' },
       { to: '/ui', label: 'Component Gallery' },
@@ -59,7 +61,12 @@ export function Sidebar() {
   return (
     <div>
       <Link to="/" {...s.logo}>
-        toned.style
+        <img
+          src="/brand/toned-logo.svg"
+          width="130"
+          height="32"
+          alt="Toned home"
+        />
       </Link>
       {NAV_SECTIONS.map((section) => (
         <div key={section.title} {...s.section}>

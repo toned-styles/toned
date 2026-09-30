@@ -113,6 +113,8 @@ export function createCssExecutor<
       {
         useClassName: execConfig.useClassName,
         namespace: !unnamespaced,
+        mediaMode: execConfig.mediaMode,
+        pseudoMode: execConfig.pseudoMode,
       },
     )['Root']!
   }

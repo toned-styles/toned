@@ -86,6 +86,7 @@ function useCardStyles() {
 
 function Card({
   className,
+  style,
   density = 'comfortable',
   appearance = 'elevated',
   ...props
@@ -97,66 +98,106 @@ function Card({
         data-slot="card"
         data-density={density}
         data-appearance={appearance}
-        {...s.root.with({ className })}
+        {...s.root.with({ className, style })}
         {...props}
       />
     </CardContext.Provider>
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
+function CardHeader({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
   const s = useCardStyles()
 
   return (
-    <div data-slot="card-header" {...s.header.with({ className })} {...props} />
+    <div
+      data-slot="card-header"
+      {...s.header.with({ className, style })}
+      {...props}
+    />
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+function CardTitle({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
   const s = useCardStyles()
 
   return (
-    <div data-slot="card-title" {...s.title.with({ className })} {...props} />
+    <div
+      data-slot="card-title"
+      {...s.title.with({ className, style })}
+      {...props}
+    />
   )
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
+function CardDescription({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
   const s = useCardStyles()
 
   return (
     <div
       data-slot="card-description"
-      {...s.description.with({ className })}
+      {...s.description.with({ className, style })}
       {...props}
     />
   )
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
+function CardAction({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
   const s = useCardStyles()
 
   return (
-    <div data-slot="card-action" {...s.action.with({ className })} {...props} />
+    <div
+      data-slot="card-action"
+      {...s.action.with({ className, style })}
+      {...props}
+    />
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
+function CardContent({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
   const s = useCardStyles()
 
   return (
     <div
       data-slot="card-content"
-      {...s.content.with({ className })}
+      {...s.content.with({ className, style })}
       {...props}
     />
   )
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
+function CardFooter({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
   const s = useCardStyles()
 
   return (
-    <div data-slot="card-footer" {...s.footer.with({ className })} {...props} />
+    <div
+      data-slot="card-footer"
+      {...s.footer.with({ className, style })}
+      {...props}
+    />
   )
 }
 

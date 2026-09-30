@@ -1,3 +1,4 @@
+import { unitlessNumbers } from './unitlessNumbers.ts'
 /**
  * CSS utility functions.
  *
@@ -22,4 +23,33 @@ export function camelToKebab(str: string): string {
 /** The parameter custom property one bridge reads for one CSS property. */
 export function bridgeVarName(bridge: string, cssProp: string): string {
   return `--toned-b-${camelToKebab(bridge)}-${camelToKebab(cssProp)}`
+}
+
+/**
+ * Apply the implicit `px` unit that a bare number carries in a style object.
+ *
+ * Style maps are shared between web and React Native, so a length is written as
+ * a number — `{ padding: 8 }`. On web that only renders because whoever writes
+ * the value appends `px`; `8` on its own is an invalid length. Anything that
+ * turns a style value into CSS text has to apply the same rule, so it lives
+ * here rather than at each of those points.
+ *
+ * Non-numbers pass through untouched, which covers values that already carry a
+ * unit, `var()` chains, and keywords. So do custom properties, whose value is
+ * arbitrary text rather than a typed length.
+ *
+ * @example
+ * ```ts
+ * withCssUnit('padding', 8)    // '8px'
+ * withCssUnit('opacity', 0.5)  // 0.5   — unitless property
+ * withCssUnit('padding', '1em') // '1em' — already has a unit
+ * withCssUnit('--gap', 8)      // 8     — custom property
+ * ```
+ */
+export function withCssUnit(cssProp: string, value: unknown): unknown {
+  return typeof value === 'number' &&
+    !cssProp.startsWith('--') &&
+    !unitlessNumbers.has(cssProp)
+    ? `${value}px`
+    : value
 }

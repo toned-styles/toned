@@ -1,8 +1,32 @@
+import { webRules } from '@toned/core'
 import { stylesheet } from './system.ts'
 
 export const proseStyles = stylesheet({
+  tableScroll: { overflowX: 'auto', maxWidth: '100%' },
+  table: {
+    width: '100%',
+    fontSize: '14px',
+    '@platform web': {
+      $style: {
+        borderCollapse: 'separate',
+        borderSpacing: '12px',
+        textAlign: 'left',
+      },
+    },
+  },
   container: {
     lineHeight: 1.7,
+    '@platform web': {
+      $webRules: webRules({
+        '& a': {
+          color: '#284bdd',
+          textDecoration: 'underline',
+          textUnderlineOffset: '3px',
+        },
+        '& ul': { paddingInlineStart: '24px' },
+        '& ol': { paddingInlineStart: '24px' },
+      }),
+    },
     fontSize: '16px',
     textColor: 'default',
   },
@@ -12,12 +36,7 @@ export const proseStyles = stylesheet({
     marginBottom: 1.5,
     lineHeight: 1.15,
     letterSpacing: '-0.02em',
-    style: {
-      background: 'var(--gradient-brand-text)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
-    },
+    textColor: 'action',
     '@md': {
       fontSize: '36px',
     },

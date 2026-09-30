@@ -49,7 +49,20 @@ export function StylesheetWorkbench({
   )
   const [text, setText] = useState('{}')
   const [rules, setRules] = useState<LiveRules>({})
+  const [announcement, setAnnouncement] = useState('')
   const [error, setError] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(
+      () =>
+        setAnnouncement(
+          error
+            ? `${error} Showing the last valid preview.`
+            : 'Applied to this preview. Component state is preserved.',
+        ),
+      700,
+    )
+    return () => clearTimeout(timer)
+  }, [error, rules])
   const sheet = metadata?.sheets[selected]
   const target = sheet ? mod[sheet.name] : undefined
   const overrides = useMemo<StyleOverrideEntry[]>(
@@ -169,12 +182,15 @@ export function StylesheetWorkbench({
                     aria-describedby={`style-status-${name}`}
                     onChange={(event) => update(event.target.value)}
                   />
-                  <p id={`style-status-${name}`} {...s.muted} role="status">
+                  <p id={`style-status-${name}`} {...s.muted}>
                     {error
                       ? `${error} Showing the last valid preview.`
                       : Object.keys(rules).length
                         ? 'Applied to this preview. Component state is preserved.'
                         : 'Original stylesheet. Add overrides to start experimenting.'}
+                  </p>
+                  <p role="status" {...s.muted}>
+                    {announcement}
                   </p>
                   <details>
                     <summary>Editable tokens and parts</summary>
@@ -195,8 +211,9 @@ export function StylesheetWorkbench({
                 </>
               ) : (
                 <p {...s.muted}>
-                  This component composes other primitives. Open their pages to
-                  edit the styles they own.
+                  {sheet
+                    ? 'This stylesheet is visible in the source but is not exported for live editing.'
+                    : 'This component composes other primitives. Open their pages to edit the styles they own.'}
                 </p>
               )
             ) : (

@@ -32,9 +32,8 @@ declare const CROSS_PART: unique symbol
 declare const CROSS_ELEMENT: unique symbol
 export type DefaultSystemKind = { readonly [DEFAULT_KIND]: 'view' }
 
-import type { Config, Platform } from './config.ts'
-import type { ValidVariantKey } from './variant-keys.ts'
 import type { ComposableParts } from './composition.ts'
+import type { Config, Platform } from './config.ts'
 import type {
   Breakpoints,
   ElementType,
@@ -42,6 +41,7 @@ import type {
   TokenStyle,
   TokenStyleDeclaration,
 } from './tokens.ts'
+import type { ValidVariantKey } from './variant-keys.ts'
 
 /** Extract breakpoint keys from a system configuration */
 type InferBreakpoints<R> = R extends { media: infer M }
@@ -123,11 +123,57 @@ export type PickString<K> = K extends string ? K : never
 /** Brand symbol for internal type discrimination */
 export declare const _internalBrand: unique symbol
 
-/** Merge tuple of objects into intersection type */
+/** A skipped `t()` argument, as produced by `cond && { ... }` */
+type Falsy = false | null | undefined
+
+/** Later keys replace earlier ones, as `Object.assign` does at runtime */
+type Override<L, R> = Omit<L, keyof R> & R
+
+/**
+ * Fold `t()` arguments left to right. Intersecting them instead would reduce
+ * `t({ bgColor: 'a' }, { bgColor: 'b' })` to `never`. An argument that may be
+ * falsy only may apply, so it widens the result instead of replacing it.
+ */
 // biome-ignore lint/suspicious/noExplicitAny: tuple manipulation requires any[]
-type Merge<D extends any[]> = D extends [infer First, ...infer Rest]
-  ? First & Merge<Rest>
-  : Record<string, never>
+type Merge<D extends any[], Acc = object> = D extends [
+  infer First,
+  ...infer Rest,
+]
+  ? Merge<
+      Rest,
+      [Exclude<First, Falsy>] extends [never]
+        ? Acc
+        : [Extract<First, Falsy>] extends [never]
+          ? Override<Acc, First>
+          : Acc | Override<Acc, Exclude<First, Falsy>>
+    >
+  : Acc
+
+/**
+ * A token style plus the nested `':pseudo'` and `'@breakpoint'` blocks that both
+ * `t()` and `stylesheet()` accept.
+ *
+ * Breakpoint keys are derived from the system's `breakpoints` config, so a
+ * system declaring `{ sm, md, lg }` offers exactly `'@sm' | '@md' | '@lg'`.
+ * Uses the same checked element vocabulary as stylesheets, including named
+ * conditions and platform branches. Cross-part ownership still requires a sheet.
+ *
+ * @example
+ * ```ts
+ * const style: TokenStyleWithSelectors<System> = {
+ *   bgColor: 'primary',
+ *   ':hover': { bgColor: 'secondary' },
+ *   '@sm': { padding: 4, style: { gridTemplateColumns: '1fr 1fr' } }
+ * }
+ * ```
+ */
+export type TokenStyleWithSelectors<
+  S extends TokenStyleDeclaration,
+  AvailablePseudo extends string = Pseudo | InferStatePseudos<S>,
+  AvailableBreakpoints extends StringOrNumber =
+    | keyof InferBreakpoints<S>
+    | InferContainerConditions<S>,
+> = ElementStyleNew<S, AvailablePseudo, AvailableBreakpoints>
 
 /**
  * The `t()` function type - creates styled objects from token values.
@@ -140,7 +186,9 @@ type Merge<D extends any[]> = D extends [infer First, ...infer Rest]
  * const style = t({ bgColor: 'primary', padding: 2 })
  * ```
  */
-export type TFun<S extends TokenStyleDeclaration> = <D extends TokenStyle<S>[]>(
+export type TFun<S extends TokenStyleDeclaration> = <
+  D extends (TokenStyleWithSelectors<S> | Falsy)[],
+>(
   ...values: [...D]
 ) => Merge<D> & ResolvedTokenStyle<S>
 

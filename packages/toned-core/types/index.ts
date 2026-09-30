@@ -68,3 +68,6 @@ export type {
 } from './tokens.ts'
 // Token types
 export { isAnimationDefinition } from './tokens.ts'
+
+export type { TokenStyleWithSelectors } from './stylesheet.ts'
+export type { ExecConfig } from './system.ts'

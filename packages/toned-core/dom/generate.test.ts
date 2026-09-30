@@ -559,3 +559,14 @@ describe('condition breakpoints — parenthesised values are raw media condition
     )
   })
 })
+
+
+describe('main CSS numeric emission regressions', () => {
+  test('serializes lengths, unitless values and custom parameters independently', () => {
+    const css = generate({ probe: { values: ['on'], resolve: () => ({ padding: 8, fontWeight: 700, opacity: 0.5, '--gap': 8 }) } })
+    expect(css).toContain('padding:8px')
+    expect(css).toContain('font-weight:700')
+    expect(css).toContain('opacity:0.5')
+    expect(css).toContain('--gap:8')
+  })
+})
