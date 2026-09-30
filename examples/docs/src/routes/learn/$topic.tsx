@@ -1,8 +1,9 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { ReferenceMarkdown } from '../../components/ReferenceMarkdown.tsx'
+import { NotFound } from '../../components/site/NotFound.tsx'
 import { references, sourceBase } from '../../content/references.ts'
-import { libraryStyles } from '../../styles/library.ts'
+import { docsStyles } from '../../styles/site.ts'
 
 export const Route = createFileRoute('/learn/$topic')({
   loader: async ({ params }) => {
@@ -16,30 +17,31 @@ export const Route = createFileRoute('/learn/$topic')({
     }
   },
   component: ReferencePage,
-  notFoundComponent: () => (
-    <p>
-      That reference does not exist.{' '}
-      <Link to="/explore">Explore all capabilities</Link>.
-    </p>
-  ),
+  notFoundComponent: () => <NotFound what="reference" />,
 })
 
 function ReferencePage() {
   const reference = Route.useLoaderData()
-  const s = useStyles(libraryStyles)
+  const s = useStyles(docsStyles)
   return (
-    <article {...s.stack}>
-      <nav {...s.row} aria-label="Reference navigation">
-        <Link to="/explore">← All capabilities</Link>
-        <Link to="/lab">Try the lab</Link>
-      </nav>
-      <p {...s.intro}>{reference.summary}</p>
-      <p {...s.muted}>
-        Development reference · built from this checkout.{' '}
-        <a href={`${sourceBase}${reference.path}`}>Read source on GitHub</a>.
-        See <Link to="/getting-started">release status and setup</Link>.
-      </p>
-      <ReferenceMarkdown source={reference.source} path={reference.path} />
+    <article>
+      <h1 {...s.Title}>{reference.title}</h1>
+      <p {...s.Lead}>{reference.summary}</p>
+      <div {...s.Meta}>
+        <a href={`${sourceBase}${reference.path}`} {...s.MetaLink}>
+          {reference.path} ↗
+        </a>
+        <span>Rendered from this checkout’s Markdown</span>
+        <Link to="/getting-started" {...s.MetaLink}>
+          Release status
+        </Link>
+      </div>
+      <div {...s.HeaderRule} />
+      <ReferenceMarkdown
+        source={reference.source}
+        path={reference.path}
+        skipTitle
+      />
     </article>
   )
 }

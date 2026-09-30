@@ -25,32 +25,6 @@ export const homeStyles = stylesheet({
     paddingX: 5,
     '@md': { paddingX: 10 },
   },
-  Header: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 4,
-    paddingY: 6,
-  },
-  Logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-    fontSize: '27px',
-    fontWeight: 700,
-    letterSpacing: '-0.06em',
-    '@platform web': { $style: { color: blue } },
-  },
-  Nav: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 3,
-    fontSize: '13px',
-    fontWeight: 500,
-    '@md': { gap: 8 },
-  },
-  DesktopLink: { display: 'none', '@md': { display: 'inline' } },
   Hero: {
     display: 'flex',
     flexLayout: 'column',
@@ -199,15 +173,6 @@ export const homeStyles = stylesheet({
       },
     },
   },
-  Selection: {
-    fontSize: '12px',
-    lineHeight: 1.8,
-    padding: 4,
-    overflowX: 'auto',
-    '@platform web': {
-      $style: { backgroundColor: '#f2f5ff', borderRadius: 8, color: blue },
-    },
-  },
   StudioFooter: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -307,6 +272,7 @@ export const homeStyles = stylesheet({
       gap: 16,
     },
   },
+  SourceScroll: { overflow: 'auto', maxHeight: '390px' },
   Source: {
     minWidth: '0',
     '@platform web': {
@@ -316,13 +282,6 @@ export const homeStyles = stylesheet({
         borderRadius: 12,
       },
     },
-  },
-  SourceScroll: {
-    overflow: 'auto',
-    maxHeight: '390px',
-    padding: 5,
-    fontSize: '12px',
-    lineHeight: 1.8,
   },
   Steps: { display: 'flex', flexLayout: 'column', gap: 6 },
   Step: { display: 'flex', gap: 4, alignItems: 'flex-start' },
@@ -381,17 +340,6 @@ export const homeStyles = stylesheet({
       },
     },
   },
-  Footer: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 5,
-    paddingY: 10,
-    fontSize: '13px',
-    '@platform web': { $style: { color: muted } },
-  },
-  FooterLinks: { display: 'flex', flexWrap: 'wrap', gap: 6 },
 })
 
 export const choiceStyles = stylesheet({

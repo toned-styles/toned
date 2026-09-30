@@ -25,6 +25,7 @@ import {
   TabsTrigger,
 } from '../../../../ui/src/components/ui/tabs.tsx'
 import { libraryStyles } from '../../styles/library.ts'
+import { docsStyles } from '../../styles/site.ts'
 
 export const Route = createFileRoute('/ui/')({ component: LibraryShowcase })
 const tasks = [
@@ -36,6 +37,7 @@ const initialMembers = ['Alex Morgan', 'Sam Rivera', 'Jordan Lee']
 
 function LibraryShowcase() {
   const s = useStyles(libraryStyles)
+  const d = useStyles(docsStyles)
   const [density, setDensity] = useState<'comfortable' | 'compact'>(
     'comfortable',
   )
@@ -57,14 +59,10 @@ function LibraryShowcase() {
 
   return (
     <div {...s.stack}>
-      <div {...s.stack}>
-        <p {...s.eyebrow}>The Toned UI collection</p>
-        <h1 {...s.title}>
-          Small details.
-          <br />
-          Whole experiences.
-        </h1>
-        <p {...s.intro}>
+      <div>
+        <p {...d.Breadcrumb}>The Toned UI collection</p>
+        <h1 {...d.Title}>Small details. Whole experiences.</h1>
+        <p {...d.Lead}>
           Real components, working together. Explore a little product built with
           Toned, then open any component to inspect its stylesheet and make it
           your own.

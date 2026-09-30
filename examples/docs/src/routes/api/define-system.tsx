@@ -41,7 +41,9 @@ export const styles = ui.stylesheet(q => ({
     [q.container('field', 'wide')]: { $style: { padding: 16 } },
   },
 }))`}</CodeBlock>
-      <h2 {...s.h2}>Token and condition contracts</h2>
+      <h2 {...s.h2} id="token-and-condition-contracts">
+        Token and condition contracts
+      </h2>
       <p>
         Token properties use camelCase; named values use kebab-case. Resolvers
         translate semantic values into output fields and may read the current
@@ -52,7 +54,9 @@ export const styles = ui.stylesheet(q => ({
         pixels. Query preludes cannot read CSS custom properties. Colocated
         conditions use the same typed builder in base and variant declarations.
       </p>
-      <h2 {...s.h2}>Use the complete system</h2>
+      <h2 {...s.h2} id="use-the-complete-system">
+        Use the complete system
+      </h2>
       <CodeBlock>{`import { buildStyles } from '@toned/core/build'
 import { createWebRenderer } from '@toned/core/server'
 
@@ -65,7 +69,9 @@ const props = renderer.resolve(styles)`}</CodeBlock>
         configuration and identity; pass <code {...s.code}>ui</code> to new
         build/render integrations.
       </p>
-      <h2 {...s.h2}>Compatibility</h2>
+      <h2 {...s.h2} id="compatibility">
+        Compatibility
+      </h2>
       <p>
         The older <code {...s.code}>defineSystem(tokens, config)</code> form and
         <code {...s.code}>t</code> utility remain available for existing

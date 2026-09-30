@@ -22,7 +22,8 @@ async function ssrHandler(req, res) {
 
     const appHtml = await render(url)
 
-    const html = template.replace('<!--app-html-->', appHtml)
+    // A replacer function keeps `$$`/`$&` in rendered code samples literal.
+    const html = template.replace('<!--app-html-->', () => appHtml)
 
     res.writeHead(200, { 'Content-Type': 'text/html' })
     res.end(html)

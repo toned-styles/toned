@@ -2,8 +2,8 @@ import { createElements, useStyles } from '@toned/react'
 import { useState } from 'react'
 import { homeStyles } from '../styles/home.ts'
 import { showcaseStyles } from '../styles/showcase.ts'
-
 import { ChoiceButton } from './ChoiceButton.tsx'
+import { CodeBlock } from './CodeBlock.tsx'
 
 const S = createElements(showcaseStyles)
 
@@ -151,13 +151,9 @@ export function StyleStudio() {
             value={theme}
             onChange={setTheme}
           />
-          <pre
-            {...s.Selection}
-            role="region"
-            aria-label="Current variant selection"
-          >
-            <code>{`<S tone="${tone}" shape="${shape}"\n   density="${density}" theme="${theme}">\n  <PreviewCard />\n</S>`}</code>
-          </pre>
+          <CodeBlock title="Your selection" lang="tsx">
+            {`<S tone="${tone}" shape="${shape}"\n   density="${density}" theme="${theme}">\n  <PreviewCard />\n</S>`}
+          </CodeBlock>
         </div>
       </div>
       <div {...s.StudioFooter}>

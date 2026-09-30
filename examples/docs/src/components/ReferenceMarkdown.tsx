@@ -9,12 +9,22 @@ import { CodeBlock } from './CodeBlock.tsx'
 export function ReferenceMarkdown({
   source,
   path,
+  skipTitle,
 }: {
   source: string
   path: string
+  /** Drop the document's leading h1 when the page renders its own title. */
+  skipTitle?: boolean
 }) {
   const s = useStyles(proseStyles)
-  const tokens = useMemo(() => marked.lexer(source), [source])
+  const tokens = useMemo(() => {
+    const all = marked.lexer(source)
+    const first = all.findIndex((token) => token.type !== 'space')
+    const leading = all[first]
+    return skipTitle && leading?.type === 'heading' && leading.depth === 1
+      ? all.slice(first + 1)
+      : all
+  }, [source, skipTitle])
   const headings = new Map<string, number>()
   function render(tokens: Token[]): ReactNode[] {
     return tokens.map((token, index) => {
@@ -53,7 +63,11 @@ export function ReferenceMarkdown({
         case 'escape':
           return <span key={key}>{token.text}</span>
         case 'code':
-          return <CodeBlock key={key}>{token.text}</CodeBlock>
+          return (
+            <CodeBlock key={key} lang={(token as Tokens.Code).lang}>
+              {token.text}
+            </CodeBlock>
+          )
         case 'codespan':
           return (
             <code key={key} {...s.code}>
@@ -147,7 +161,11 @@ export function ReferenceMarkdown({
         }
         // Keep unsupported HTML visible as source, rather than injecting markup.
         case 'html':
-          return <pre key={key}>{token.text}</pre>
+          return (
+            <CodeBlock key={key} lang="html" title="HTML">
+              {token.text}
+            </CodeBlock>
+          )
         default:
           return (
             <span key={key}>

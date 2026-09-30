@@ -1,0 +1,29 @@
+/* Only what Toned declarations cannot express: selection colour inside the
+ * transparent-text editor and focus rings for native controls. */
+@layer components {
+  .tnd-playground
+    :is(
+      a,
+      button,
+      select,
+      input,
+      [role="separator"],
+      pre[tabindex]
+    ):focus-visible {
+    outline: 2px solid #284bdd;
+    outline-offset: 2px;
+  }
+
+  .tnd-playground-editor:focus-within {
+    box-shadow: inset 0 0 0 2px #284bdd40;
+  }
+
+  .tnd-playground-textarea::selection {
+    background: #284bdd33;
+  }
+
+  .tnd-playground button:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+}

@@ -19,7 +19,9 @@ function GuideReactNative() {
         establish a working or certified React Native integration.
       </p>
 
-      <h2 {...s.h2}>1. Define portable parts</h2>
+      <h2 {...s.h2} id="1-define-portable-parts">
+        1. Define portable parts
+      </h2>
       <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
       <CodeBlock>{`// styles.ts
 import { defineSystem } from '@toned/core'
@@ -37,7 +39,9 @@ export const cardStyles = ui.stylesheet({
         native equivalent. Theme resolvers must supply concrete native values.
       </p>
 
-      <h2 {...s.h2}>2. Declare the application host</h2>
+      <h2 {...s.h2} id="2-declare-the-application-host">
+        2. Declare the application host
+      </h2>
       <CodeBlock>{`// host.ts — integration-owned adapter
 import { Dimensions, Image, Pressable, Text, View } from 'react-native'
 import { defineReactNativeHost } from '@toned/core/stylesheet'
@@ -74,7 +78,9 @@ export const host: ReactHost = {
         interrupted renders in a real native application.
       </p>
 
-      <h2 {...s.h2}>3. Install a renderer and render the parts</h2>
+      <h2 {...s.h2} id="3-install-a-renderer-and-render-the-parts">
+        3. Install a renderer and render the parts
+      </h2>
       <CodeBlock>{`// App.tsx
 import { nativeBackend } from '@toned/core/backends'
 import { createRenderer } from '@toned/core/server'
@@ -104,7 +110,9 @@ export default function App() {
         declarations. Bound refs must reach the real native hosts.
       </p>
 
-      <h2 {...s.h2}>4. Measurements, states and capability limits</h2>
+      <h2 {...s.h2} id="4-measurements-states-and-capability-limits">
+        4. Measurements, states and capability limits
+      </h2>
       <p>
         Viewport queries require the adapter&apos;s{' '}
         <code {...s.code}>getViewportWidth</code> and{' '}

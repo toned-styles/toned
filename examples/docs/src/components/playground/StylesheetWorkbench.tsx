@@ -218,7 +218,7 @@ export function StylesheetWorkbench({
               )
             ) : (
               <div {...s.source}>
-                <CodeBlock>
+                <CodeBlock bare>
                   {tab === 'implementation'
                     ? metadata.source
                     : (sheet?.source ??

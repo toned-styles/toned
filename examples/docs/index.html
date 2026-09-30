@@ -16,11 +16,12 @@
       body { margin: 0; line-height: 1.5; -webkit-font-smoothing: antialiased; }
       img, picture, video, canvas, svg { display: block; max-width: 100%; }
       input, button, textarea, select { font: inherit; color: inherit; }
+      :root { accent-color: #284bdd; }
       button { background: none; border: none; cursor: pointer; }
       p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
       a { color: inherit; text-decoration: inherit; }
       /* A visually hidden native checkbox remains keyboard operable. */
-      .menu-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      .visually-hidden, .menu-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
       #menu-toggle:focus-visible + label { outline: 2px solid currentColor; outline-offset: 2px; }
       /* CSS-only mobile menu toggle (works without JS) */
       @media (max-width: 767px) {

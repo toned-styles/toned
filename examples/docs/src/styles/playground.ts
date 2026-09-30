@@ -1,4 +1,5 @@
 import { stylesheet } from '@toned/systems/base'
+import { brand, fonts } from './brand.ts'
 
 export const playgroundStyles = stylesheet({
   container: {
@@ -6,26 +7,23 @@ export const playgroundStyles = stylesheet({
     gap: 5,
   },
   title: {
-    fontSize: '40px',
-    fontWeight: 700,
-    letterSpacing: '-0.025em',
-    textColor: 'default',
+    fontWeight: 650,
+    lineHeight: 1.1,
+    letterSpacing: '-0.035em',
+    style: { color: brand.ink, fontSize: 'clamp(2.1rem, 4vw, 2.75rem)' },
   },
   description: {
-    fontSize: '15px',
-    textColor: 'subtle',
+    fontSize: '19px',
     lineHeight: 1.6,
-    marginTop: 1,
+    marginTop: 3,
+    style: { color: brand.muted, maxWidth: '760px' },
   },
   exportBadge: {
     fontSize: '12px',
-    textColor: 'muted',
-    fontFamily: 'monospace',
-    marginTop: 1,
+    marginTop: 3,
+    style: { color: brand.faint, fontFamily: fonts.mono },
   },
   preview: {
-    borderColor: 'default',
-    borderWidth: 'thin',
     borderRadius: 'xlarge',
     paddingX: 5,
     paddingY: 5,
@@ -33,11 +31,12 @@ export const playgroundStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '240px',
-    bgColor: 'default',
     style: {
+      borderWidth: 1,
       borderStyle: 'solid',
-      backgroundImage:
-        'radial-gradient(circle, var(--border) 1px, transparent 1px)',
+      borderColor: brand.border,
+      backgroundColor: brand.surface,
+      backgroundImage: `radial-gradient(circle, ${brand.divider} 1px, transparent 1px)`,
       backgroundSize: '20px 20px',
     },
   },
@@ -50,20 +49,21 @@ export const playgroundStyles = stylesheet({
     fontSize: '13px',
   },
   controls: {
-    borderColor: 'subtle',
-    borderWidth: 'thin',
     borderRadius: 'xlarge',
-    paddingX: 4,
-    paddingY: 4,
-    bgColor: 'muted',
+    paddingX: 5,
+    paddingY: 5,
+    style: {
+      borderWidth: 1,
+      borderStyle: 'solid',
+      borderColor: brand.border,
+      backgroundColor: brand.surface,
+    },
   },
   controlsTitle: {
-    fontSize: '11px',
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    textColor: 'muted',
-    marginBottom: 2,
+    fontSize: '12px',
+    fontWeight: 700,
+    marginBottom: 3,
+    style: { color: brand.ink },
   },
   controlGrid: {
     flexLayout: 'column',
@@ -80,8 +80,7 @@ export const playgroundStyles = stylesheet({
   },
   readOnly: {
     fontSize: '12px',
-    textColor: 'muted',
-    fontFamily: 'monospace',
+    style: { color: brand.faint, fontFamily: fonts.mono },
   },
   errorBanner: {
     paddingX: 3,

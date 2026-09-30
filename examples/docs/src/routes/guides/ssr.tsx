@@ -16,7 +16,9 @@ function GuideSsr() {
         the server markup and initial client render. Rendering never injects a
         stylesheet.
       </p>
-      <h2 {...s.h2}>Vite delivery</h2>
+      <h2 {...s.h2} id="vite-delivery">
+        Vite delivery
+      </h2>
       <p>
         Pass the complete system returned by{' '}
         <code {...s.code}>defineSystem</code>
@@ -39,10 +41,13 @@ export default defineConfig({
       <p>
         Import <code {...s.code}>virtual:toned.css</code> in the application and
         use <code {...s.code}>virtual:toned.manifest</code> to create the
-        renderer. See <a href="/getting-started">Getting Started</a> for the complete provider
-        setup. The production CSS file must be linked from the initial HTML.
+        renderer. See <a href="/getting-started">Getting Started</a> for the
+        complete provider setup. The production CSS file must be linked from the
+        initial HTML.
       </p>
-      <h2 {...s.h2}>Without Vite</h2>
+      <h2 {...s.h2} id="without-vite">
+        Without Vite
+      </h2>
       <CodeBlock>{`// build-styles.ts — run during the application build
 import { mkdir, writeFile } from 'node:fs/promises'
 import { buildStyles } from '@toned/core/build'
@@ -58,7 +63,9 @@ await writeFile('public/assets/toned.manifest.json', JSON.stringify(artifact.man
         . Missing or stale build inputs are diagnosed instead of repaired by a
         browser-side injection fallback.
       </p>
-      <h2 {...s.h2}>Render and hydrate</h2>
+      <h2 {...s.h2} id="render-and-hydrate">
+        Render and hydrate
+      </h2>
       <CodeBlock>{`// entry-server.tsx
 import { renderToString } from 'react-dom/server'
 import { App } from './App.tsx'
@@ -77,7 +84,9 @@ hydrateRoot(root, <App />)`}</CodeBlock>
         server output and hydration. Request-specific tokens belong in provider
         inputs, not mutations of a shared global configuration.
       </p>
-      <h2 {...s.h2}>Pure server resolution</h2>
+      <h2 {...s.h2} id="pure-server-resolution">
+        Pure server resolution
+      </h2>
       <p>
         <code {...s.code}>@toned/core/server</code> can resolve part props
         without importing React, reading browser globals or mounting hosts.

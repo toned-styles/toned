@@ -19,7 +19,9 @@ function ApiMediaQueries() {
         automatically.
       </p>
 
-      <h2 {...s.h2}>Breakpoints</h2>
+      <h2 {...s.h2} id="breakpoints">
+        Breakpoints
+      </h2>
       <p>Declare named viewport thresholds in logical pixels:</p>
       <CodeBlock>{`import { defineSystem } from '@toned/core'
 
@@ -37,7 +39,9 @@ export const ui = defineSystem({
   },
 })`}</CodeBlock>
 
-      <h2 {...s.h2}>Using Breakpoints in Stylesheets</h2>
+      <h2 {...s.h2} id="using-breakpoints-in-stylesheets">
+        Using Breakpoints in Stylesheets
+      </h2>
       <p>
         Prefix a breakpoint name with <code {...s.code}>@</code> to create a
         responsive override block inside any element definition:
@@ -64,7 +68,9 @@ export const ui = defineSystem({
         values when the viewport matches.
       </p>
 
-      <h2 {...s.h2}>Using Breakpoints Inline</h2>
+      <h2 {...s.h2} id="using-breakpoints-inline">
+        Using Breakpoints Inline
+      </h2>
       <p>
         The <code {...s.code}>t</code> utility accepts the same{' '}
         <code {...s.code}>@</code> blocks, so a one-off style can be responsive
@@ -87,13 +93,17 @@ function Panel() {
         than to whatever a class or an inherited rule set.
       </p>
 
-      <h2 {...s.h2}>Media Modes</h2>
+      <h2 {...s.h2} id="media-modes">
+        Media Modes
+      </h2>
       <p>
         The <code {...s.code}>mediaMode</code> option in your config controls
         how responsive styles are applied:
       </p>
 
-      <h3 {...s.h3}>CSS Mode</h3>
+      <h3 {...s.h3} id="css-mode">
+        CSS Mode
+      </h3>
       <p>
         When <code {...s.code}>mediaMode: 'css'</code>, breakpoint overrides are
         compiled into real CSS <code {...s.code}>@media</code> rules. This is
@@ -110,7 +120,9 @@ function Panel() {
   }),
 )`}</CodeBlock>
 
-      <h3 {...s.h3}>JavaScript Mode</h3>
+      <h3 {...s.h3} id="javascript-mode">
+        JavaScript Mode
+      </h3>
       <p>
         When <code {...s.code}>mediaMode</code> is not set to{' '}
         <code {...s.code}>'css'</code>, breakpoints in a{' '}
@@ -129,7 +141,9 @@ function Panel() {
         <a href="/api/use-styles">useStyles</a> instead.
       </p>
 
-      <h2 {...s.h2}>Root-Level Breakpoints</h2>
+      <h2 {...s.h2} id="root-level-breakpoints">
+        Root-Level Breakpoints
+      </h2>
       <p>
         Breakpoints can be declared at the root level of a stylesheet to apply
         overrides across multiple elements at once. This is useful when a layout
@@ -164,7 +178,9 @@ function Panel() {
         to several elements under the same breakpoint.
       </p>
 
-      <h2 {...s.h2}>Breakpoints in Variants</h2>
+      <h2 {...s.h2} id="breakpoints-in-variants">
+        Breakpoints in Variants
+      </h2>
       <p>
         Responsive overrides work inside variant blocks too, letting you combine
         conditional and responsive styling. Breakpoints can be set on individual
