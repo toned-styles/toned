@@ -25,7 +25,9 @@ function GuideTheming() {
         <a href="/learn/core">system reference</a> and{' '}
         <a href="/learn/react">React reference</a>.
       </p>
-      <h2 {...s.h2}>How Theming Works</h2>
+      <h2 {...s.h2} id="how-theming-works">
+        How Theming Works
+      </h2>
       <p>
         On the web, themes are implemented as CSS custom properties. The build
         pipeline generates CSS rules that reference these properties. A theme
@@ -44,7 +46,9 @@ function GuideTheming() {
   /* ... */
 }`}</CodeBlock>
 
-      <h2 {...s.h2}>Using a Built-in Theme</h2>
+      <h2 {...s.h2} id="using-a-built-in-theme">
+        Using a Built-in Theme
+      </h2>
       <p>
         The simplest way to theme your app is to import one of the pre-built
         theme CSS files in your config:
@@ -53,7 +57,9 @@ function GuideTheming() {
 import '@toned/themes/shadcn/config.css'
 // ... rest of config`}</CodeBlock>
 
-      <h2 {...s.h2}>Dark Mode</h2>
+      <h2 {...s.h2} id="dark-mode">
+        Dark Mode
+      </h2>
       <p>
         Themes can provide dark mode overrides using a CSS class or media query.
         The shadcn theme supports dark mode via a <code {...s.code}>.dark</code>{' '}
@@ -75,7 +81,9 @@ import '@toned/themes/shadcn/config.css'
         different values automatically.
       </p>
 
-      <h2 {...s.h2}>Custom Themes</h2>
+      <h2 {...s.h2} id="custom-themes">
+        Custom Themes
+      </h2>
       <p>
         To create a custom theme, define a CSS file that sets values for all the
         custom properties your system's tokens reference. The property names
@@ -107,7 +115,9 @@ import '@toned/themes/shadcn/config.css'
 import './my-theme.css'  // your custom theme
 // Configure the explicit renderer/provider as in Getting Started.`}</CodeBlock>
 
-      <h2 {...s.h2}>Runtime Theme Switching</h2>
+      <h2 {...s.h2} id="runtime-theme-switching">
+        Runtime Theme Switching
+      </h2>
       <p>
         Since themes are CSS custom properties, you can switch themes at runtime
         by swapping a class on the document root or by dynamically updating the

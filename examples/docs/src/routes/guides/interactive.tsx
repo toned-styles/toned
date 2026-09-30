@@ -20,7 +20,9 @@ function GuideInteractive() {
         CSS with no JavaScript event listeners.
       </p>
 
-      <h2 {...s.h2}>Element-Level Pseudo-Classes</h2>
+      <h2 {...s.h2} id="element-level-pseudo-classes">
+        Element-Level Pseudo-Classes
+      </h2>
       <p>
         Add <code {...s.code}>:hover</code>, <code {...s.code}>:focus</code>, or{' '}
         <code {...s.code}>:active</code> keys inside an element definition:
@@ -44,7 +46,9 @@ function GuideInteractive() {
   },
 })`}</CodeBlock>
 
-      <h2 {...s.h2}>Cross-Element Selectors</h2>
+      <h2 {...s.h2} id="cross-element-selectors">
+        Cross-Element Selectors
+      </h2>
       <p>
         To change one element's styles when a different element is interacted
         with, use the <code {...s.code}>'element:pseudo'</code> key at the
@@ -75,7 +79,9 @@ function GuideInteractive() {
   icon: { textColor: 'on_action' },
 }`}</CodeBlock>
 
-      <h2 {...s.h2}>Combining with Variants</h2>
+      <h2 {...s.h2} id="combining-with-variants">
+        Combining with Variants
+      </h2>
       <p>
         Pseudo-classes work inside variant blocks, so different variants can
         define different interactive behaviour:
@@ -103,7 +109,9 @@ const buttonStyles = stylesheet({
 }))
 `}</CodeBlock>
 
-      <h2 {...s.h2}>Combining with Breakpoints</h2>
+      <h2 {...s.h2} id="combining-with-breakpoints">
+        Combining with Breakpoints
+      </h2>
       <p>Pseudo-classes and breakpoints compose naturally:</p>
       <CodeBlock>{`const navStyles = stylesheet({
   link: {
@@ -120,7 +128,9 @@ const buttonStyles = stylesheet({
   },
 })`}</CodeBlock>
 
-      <h2 {...s.h2}>Inline Interactive Styles</h2>
+      <h2 {...s.h2} id="inline-interactive-styles">
+        Inline Interactive Styles
+      </h2>
       <p>
         The <code {...s.code}>t</code> utility accepts the same colon-prefixed
         keys, so a one-off element can be interactive without a stylesheet:
@@ -139,16 +149,19 @@ function Tag() {
   )
 }`}</CodeBlock>
       <p>
-        Cross-element relationships and variant selection in the examples
-        above require a stylesheet. This compatibility t helper requires{' '}
+        Cross-element relationships and variant selection in the examples above
+        require a stylesheet. This compatibility t helper requires{' '}
         <code {...s.code}>pseudoMode: 'css'</code> (and{' '}
         <code {...s.code}>mediaMode: 'css'</code> for the{' '}
         <code {...s.code}>@</code> form), because they compile to the custom
         property chains described below. Under any other mode the block is
-        dropped, the base token value still applies, so use the explicit renderer APIs for new integrations.
+        dropped, the base token value still applies, so use the explicit
+        renderer APIs for new integrations.
       </p>
 
-      <h2 {...s.h2}>React Native</h2>
+      <h2 {...s.h2} id="react-native">
+        React Native
+      </h2>
       <p>
         React Native does not have CSS pseudo-classes. On native platforms,
         interactive states are handled through React Native's{' '}
@@ -163,11 +176,13 @@ function Tag() {
         Inline <code {...s.code}>t</code> blocks are the exception. They have no
         native equivalent, since they rely on CSS custom properties, so on React
         Native they are dropped and the style degrades to its non-interactive
-        base. Use a stylesheet with a registered host for anything interactive that has to run on
-        native.
+        base. Use a stylesheet with a registered host for anything interactive
+        that has to run on native.
       </p>
 
-      <h2 {...s.h2}>Advanced: How It Works</h2>
+      <h2 {...s.h2} id="advanced-how-it-works">
+        Advanced: How It Works
+      </h2>
       <p>
         On the web, interactive styles use the CSS "space toggle" technique. The
         system declares a custom property for each pseudo-state:

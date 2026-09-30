@@ -18,27 +18,31 @@ function GettingStarted() {
         instance owns its styling state. Web styles are generated before
         rendering.
       </p>
-      <h2 {...s.h2}>Choose a release</h2>
+      <h2 {...s.h2} id="choose-a-release">
+        Choose a release
+      </h2>
       <p>
         This site describes the development branch, including APIs that are not
         in the latest npm release. To try everything shown here, use the source
         checkout below. The npm command installs the published packages; use
         their bundled reference for that release.
       </p>
-      <pre {...s.codeBlock}>
-        <code>{`git clone --branch feat/toned-style-showcase https://github.com/toned-styles/toned.git
+      <CodeBlock lang="sh">{`git clone --branch feat/toned-style-showcase https://github.com/toned-styles/toned.git
 cd toned
 pnpm install
-pnpm --filter @examples/docs dev`}</code>
-      </pre>
+pnpm --filter @examples/docs dev`}</CodeBlock>
       <p>
         The docs application is a complete working Vite example. Its package
         references and sheet inventory match this checkout. If Toned is embedded
         in another workspace, install from that workspace root instead.
       </p>
-      <h2 {...s.h2}>Published packages</h2>
+      <h2 {...s.h2} id="published-packages">
+        Published packages
+      </h2>
       <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
-      <h2 {...s.h2}>Declare a system and stylesheet</h2>
+      <h2 {...s.h2} id="declare-a-system-and-stylesheet">
+        Declare a system and stylesheet
+      </h2>
       <p>
         Keep declarations in a pure module that both the build and application
         import.
@@ -62,7 +66,9 @@ export const buttonStyles = ui.stylesheet({
   [$.size('s')]: { Root: { $style: { padding: 4 } } },
   [$.size('m')]: { Root: { $style: { padding: 8 } } },
 }), { defaults: { size: 'm' } })`}</CodeBlock>
-      <h2 {...s.h2}>Build every sheet</h2>
+      <h2 {...s.h2} id="build-every-sheet">
+        Build every sheet
+      </h2>
       <p>
         The Vite plugin emits static CSS and a matching manifest. Include
         lazy-route sheets in the inventory too; rendering does not discover
@@ -83,7 +89,9 @@ export default defineConfig({
         <code {...s.code}>@toned/core/build</code> in your build script and
         serve its CSS and manifest together.
       </p>
-      <h2 {...s.h2}>Configure and render</h2>
+      <h2 {...s.h2} id="configure-and-render">
+        Configure and render
+      </h2>
       <CodeBlock>{`// App.tsx
 import 'virtual:toned.css'
 import manifest from 'virtual:toned.manifest'

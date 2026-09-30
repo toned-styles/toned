@@ -19,7 +19,9 @@ function ApiStylesheet() {
         token set.
       </p>
 
-      <h2 {...s.h2}>Signature</h2>
+      <h2 {...s.h2} id="signature">
+        Signature
+      </h2>
       <CodeBlock>{`import { stylesheet } from '@toned/systems/base'
 
 const styles = stylesheet({
@@ -32,7 +34,9 @@ const styles = stylesheet({
   },
 })`}</CodeBlock>
 
-      <h2 {...s.h2}>Element Definition</h2>
+      <h2 {...s.h2} id="element-definition">
+        Element Definition
+      </h2>
       <p>
         Each key in the stylesheet object defines a named element. The value is
         an object with:
@@ -54,7 +58,9 @@ const styles = stylesheet({
         that kind. Legacy style and $$type spellings remain supported.
       </p>
 
-      <h2 {...s.h2}>Multiple Elements</h2>
+      <h2 {...s.h2} id="multiple-elements">
+        Multiple Elements
+      </h2>
       <p>
         Stylesheets commonly define multiple elements that together describe a
         component's visual structure:
@@ -84,7 +90,9 @@ const styles = stylesheet({
         that can be spread onto the corresponding JSX elements.
       </p>
 
-      <h2 {...s.h2}>Chaining with Variants</h2>
+      <h2 {...s.h2} id="chaining-with-variants">
+        Chaining with Variants
+      </h2>
       <p>
         Call <code {...s.code}>.variants()</code> on a stylesheet to add
         conditional styles. See the <a href="/api/variants">Variants</a> page
@@ -99,7 +107,9 @@ const styles = stylesheet({
   [$.size('s')]: { container: { paddingX: 2 } },
 }))`}</CodeBlock>
 
-      <h2 {...s.h2}>Responsive Styles</h2>
+      <h2 {...s.h2} id="responsive-styles">
+        Responsive Styles
+      </h2>
       <p>
         Use breakpoint keys prefixed with <code {...s.code}>@</code> to apply
         different token values at different screen sizes:

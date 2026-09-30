@@ -29,7 +29,9 @@ function ApiVariants() {
         needed. Older signatures remain available for compatibility.
       </p>
 
-      <h2 {...s.h2}>Signature</h2>
+      <h2 {...s.h2} id="signature">
+        Signature
+      </h2>
       <CodeBlock>{`import type { Variants } from '@toned/core'
 
 const styles = stylesheet({ elementName: {} }).variants(($: Variants<{ variantName: 'value' }>) => ({
@@ -38,7 +40,9 @@ const styles = stylesheet({ elementName: {} }).variants(($: Variants<{ variantNa
   },
 }))`}</CodeBlock>
 
-      <h2 {...s.h2}>Defining Variants</h2>
+      <h2 {...s.h2} id="defining-variants">
+        Defining Variants
+      </h2>
       <p>
         Reuse ordinary TypeScript types for variant keys and their allowed
         values. A required axis without a default must be provided by the
@@ -78,7 +82,9 @@ const buttonStyles = stylesheet({
   },
 }))`}</CodeBlock>
 
-      <h2 {...s.h2}>The Dollar-Sign Builder</h2>
+      <h2 {...s.h2} id="the-dollar-sign-builder">
+        The Dollar-Sign Builder
+      </h2>
       <p>
         The callback receives a <code {...s.code}>$</code> builder object with a
         method for each variant key. Calling{' '}
@@ -87,7 +93,9 @@ const buttonStyles = stylesheet({
         <code {...s.code}>useStyles</code>.
       </p>
 
-      <h2 {...s.h2}>Compound Variants</h2>
+      <h2 {...s.h2} id="compound-variants">
+        Compound Variants
+      </h2>
       <p>
         Chain multiple variant calls to create compound conditions that only
         match when all specified variants are active simultaneously:
@@ -108,7 +116,9 @@ const buttonStyles = stylesheet({
         rules it should override.
       </p>
 
-      <h2 {...s.h2}>Pseudo-state Variants</h2>
+      <h2 {...s.h2} id="pseudo-state-variants">
+        Pseudo-state Variants
+      </h2>
       <p>
         Colocate a state rule under the part it styles. Use{' '}
         <code {...s.code}>':hover'</code> or the inferred{' '}
@@ -122,7 +132,9 @@ const buttonStyles = stylesheet({
   label: { textColor: 'on_action' },
 }`}</CodeBlock>
 
-      <h2 {...s.h2}>Responsive Variants</h2>
+      <h2 {...s.h2} id="responsive-variants">
+        Responsive Variants
+      </h2>
       <p>
         Breakpoints work inside variant blocks, so a variant can define
         responsive overrides for its elements:
@@ -141,7 +153,9 @@ const buttonStyles = stylesheet({
   },
 }`}</CodeBlock>
 
-      <h3 {...s.h3}>Compound Queries Inside Variants</h3>
+      <h3 {...s.h3} id="compound-queries-inside-variants">
+        Compound Queries Inside Variants
+      </h3>
       <p>
         The second callback argument uses the same query builders as a base
         stylesheet. Combine media, state and platform conditions where the
@@ -163,14 +177,18 @@ const styles = stylesheet({ container: { opacity: 1 } })
     },
   }))`}</CodeBlock>
 
-      <h2 {...s.h2}>Named Styles ($compose)</h2>
+      <h2 {...s.h2} id="named-styles-compose">
+        Named Styles ($compose)
+      </h2>
       <p>
         When multiple variants share common element overrides, you can extract
         them into a <strong>named style</strong> and compose them into variants.
         This avoids duplicating the same token values across variant rules.
       </p>
 
-      <h3 {...s.h3}>Defining Named Styles</h3>
+      <h3 {...s.h3} id="defining-named-styles">
+        Defining Named Styles
+      </h3>
       <p>
         Use <code {...s.code}>$('name')</code> to define a named style block.
         Named styles are not variant rules — they are reusable fragments that
@@ -212,7 +230,9 @@ const buttonStyles = stylesheet({
         references or cycles throw when the stylesheet is constructed.
       </p>
 
-      <h3 {...s.h3}>Element-Level $compose</h3>
+      <h3 {...s.h3} id="element-level-compose">
+        Element-Level $compose
+      </h3>
       <p>
         Inside a variant rule, you can compose a declared part from another
         element defined in the same block. This is useful when several elements
@@ -239,7 +259,9 @@ const buttonStyles = stylesheet({
         precedence over that part’s base declaration.
       </p>
 
-      <h3 {...s.h3}>Composing Multiple Sources</h3>
+      <h3 {...s.h3} id="composing-multiple-sources">
+        Composing Multiple Sources
+      </h3>
       <p>
         Pass an array to <code {...s.code}>$compose</code> to merge from
         multiple named styles. They are applied in order, and the variant's own
@@ -257,7 +279,9 @@ const buttonStyles = stylesheet({
   container: { bgColor: 'elevated' },  // own props override composed ones
 }`}</CodeBlock>
 
-      <h2 {...s.h2}>Consuming Variants</h2>
+      <h2 {...s.h2} id="consuming-variants">
+        Consuming Variants
+      </h2>
       <p>
         Pass variant values as the second argument to{' '}
         <code {...s.code}>useStyles</code>:

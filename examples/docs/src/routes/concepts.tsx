@@ -18,7 +18,9 @@ function Concepts() {
         cross-platform styling with a single authoring model.
       </p>
 
-      <h2 {...s.h2}>Design Tokens</h2>
+      <h2 {...s.h2} id="design-tokens">
+        Design Tokens
+      </h2>
       <p>
         Tokens are the atomic building blocks of your design system. Each token
         maps a semantic name to one or more platform-specific values. For
@@ -47,7 +49,9 @@ container: {
         <code {...s.code}>width</code>, <code {...s.code}>height</code>).
       </p>
 
-      <h2 {...s.h2}>Systems</h2>
+      <h2 {...s.h2} id="systems">
+        Systems
+      </h2>
       <p>
         A system is a collection of tokens plus configuration (breakpoints,
         selectors, rules). You create one with{' '}
@@ -70,7 +74,9 @@ export const { system, stylesheet, t } = defineSystem({
         checking for every token property.
       </p>
 
-      <h2 {...s.h2}>Stylesheets</h2>
+      <h2 {...s.h2} id="stylesheets">
+        Stylesheets
+      </h2>
       <p>
         A stylesheet defines one or more named elements, each with a set of
         token values and an optional <code {...s.code}>style</code> escape hatch
@@ -92,7 +98,9 @@ export const { system, stylesheet, t } = defineSystem({
         your style definitions platform-agnostic.
       </p>
 
-      <h2 {...s.h2}>Variants</h2>
+      <h2 {...s.h2} id="variants">
+        Variants
+      </h2>
       <p>
         Variants let you conditionally apply different token values based on
         component state. Chain <code {...s.code}>.variants()</code> onto a
@@ -125,7 +133,9 @@ const buttonStyles = stylesheet({
         <code {...s.code}>useStyles</code>.
       </p>
 
-      <h2 {...s.h2}>Media Queries / Breakpoints</h2>
+      <h2 {...s.h2} id="media-queries-breakpoints">
+        Media Queries / Breakpoints
+      </h2>
       <p>
         The base system defines breakpoints (<code {...s.code}>xs</code>,{' '}
         <code {...s.code}>sm</code>, <code {...s.code}>md</code>,{' '}

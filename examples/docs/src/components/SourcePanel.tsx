@@ -50,7 +50,7 @@ export function SourcePanel() {
         role="region"
         aria-label={`${tab} source`}
       >
-        <CodeBlock>{source}</CodeBlock>
+        <CodeBlock bare>{source}</CodeBlock>
       </div>
     </section>
   )

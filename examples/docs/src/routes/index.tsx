@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+import { CodeBlock } from '../components/CodeBlock.tsx'
 import { SiteHeader } from '../components/SiteHeader.tsx'
 import { StyleStudio } from '../components/StyleStudio.tsx'
+import { SiteFooter } from '../components/site/SiteFooter.tsx'
 import { LayoutExplorer, TokenMap } from '../components/Visualisations.tsx'
 import { homeStyles } from '../styles/home.ts'
 import showcaseSource from '../styles/showcase.ts?raw'
@@ -117,23 +119,15 @@ function SourceSection() {
             </Link>
           </div>
           <div {...s.Source}>
-            <div {...s.StudioBar}>
-              <span>showcase.ts</span>
-              <span {...s.Muted}>Live demo source</span>
-            </div>
-            <pre
-              {...s.SourceScroll}
-              // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll the code region.
-              tabIndex={0}
-              role="region"
-              aria-label="Studio variant source"
+            <CodeBlock
+              title="showcase.ts — live demo source"
+              bare
+              maxHeight={420}
             >
-              <code>
-                {showcaseSource.slice(
-                  Math.max(0, showcaseSource.indexOf('.variants(')),
-                )}
-              </code>
-            </pre>
+              {showcaseSource.slice(
+                Math.max(0, showcaseSource.indexOf('.variants(')),
+              )}
+            </CodeBlock>
           </div>
         </div>
       </div>
@@ -216,9 +210,7 @@ function Home() {
       <a className="tnd-skip-link" href="#main">
         Skip to content
       </a>
-      <div {...s.Container}>
-        <SiteHeader />
-      </div>
+      <SiteHeader />
       <main id="main">
         <div {...s.Container}>
           <section {...s.Hero} aria-labelledby="hero-title">
@@ -251,23 +243,7 @@ function Home() {
           <Beyond />
         </div>
       </main>
-      <div {...s.Container}>
-        <footer {...s.Footer}>
-          <Link to="/" {...s.Logo}>
-            <img
-              src="/brand/toned-logo.svg"
-              width="130"
-              height="32"
-              alt="Toned"
-            />
-          </Link>
-          <p>Made for the details. Open source, MIT licensed.</p>
-          <div {...s.FooterLinks}>
-            <Link to="/getting-started">Documentation</Link>
-            <a href="https://github.com/toned-styles/toned">Source code</a>
-          </div>
-        </footer>
-      </div>
+      <SiteFooter />
     </div>
   )
 }

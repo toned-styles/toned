@@ -18,12 +18,16 @@ function GuideReactWeb() {
         supports TypeScript.
       </p>
 
-      <h2 {...s.h2}>1. Install Dependencies</h2>
+      <h2 {...s.h2} id="1-install-dependencies">
+        1. Install Dependencies
+      </h2>
       <CodeBlock>
         {'npm install @toned/core @toned/react @toned/systems @toned/themes'}
       </CodeBlock>
 
-      <h2 {...s.h2}>2. Add the Vite Plugin</h2>
+      <h2 {...s.h2} id="2-add-the-vite-plugin">
+        2. Add the Vite Plugin
+      </h2>
       <p>
         The toned Vite plugin generates all token CSS at build time. Add it to
         your <code {...s.code}>vite.config.ts</code>:
@@ -38,7 +42,9 @@ export default defineConfig({
   plugins: [toned({ system }), react()],
 })`}</CodeBlock>
 
-      <h2 {...s.h2}>3. Create the Config File</h2>
+      <h2 {...s.h2} id="3-create-the-config-file">
+        3. Create the Config File
+      </h2>
       <p>
         Create <code {...s.code}>toned.config.ts</code> at your project root.
         This file must be imported before any component that uses toned styles:
@@ -60,7 +66,9 @@ export default setConfig(
   }),
 )`}</CodeBlock>
 
-      <h2 {...s.h2}>4. Import Config in Your Entry Point</h2>
+      <h2 {...s.h2} id="4-import-config-in-your-entry-point">
+        4. Import Config in Your Entry Point
+      </h2>
       <p>
         Import the config file at the very top of your entry point, before any
         component imports:
@@ -78,7 +86,9 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )`}</CodeBlock>
 
-      <h2 {...s.h2}>5. Define Styles</h2>
+      <h2 {...s.h2} id="5-define-styles">
+        5. Define Styles
+      </h2>
       <p>
         Create a styles file using the <code {...s.code}>stylesheet</code>{' '}
         function from the base system. Keep style definitions separate from
@@ -114,7 +124,9 @@ export const buttonStyles = stylesheet({
   },
 }))`}</CodeBlock>
 
-      <h2 {...s.h2}>6. Use Styles in Components</h2>
+      <h2 {...s.h2} id="6-use-styles-in-components">
+        6. Use Styles in Components
+      </h2>
       <p>
         Import your stylesheet and the <code {...s.code}>useStyles</code> hook.
         Spread the returned element props onto your JSX:
@@ -135,7 +147,9 @@ export function Button({ label, variant = 'primary' }: {
   )
 }`}</CodeBlock>
 
-      <h2 {...s.h2}>Config Options</h2>
+      <h2 {...s.h2} id="config-options">
+        Config Options
+      </h2>
       <p>Key configuration options for web projects:</p>
       <p>
         <strong>useClassName: true</strong> -- Outputs{' '}

@@ -74,8 +74,9 @@ async function prerender() {
       ? `Toned — ${heading}`
       : 'Toned — Design with confidence'
     const html = template
-      .replace('<!--app-html-->', appHtml)
-      .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+      // Replacer functions keep `$$`/`$&` in rendered code samples literal.
+      .replace('<!--app-html-->', () => appHtml)
+      .replace(/<title>[^<]*<\/title>/, () => `<title>${title}</title>`)
       .replace(
         '</head>',
         `<link rel="canonical" href="https://toned.style${url}" /></head>`,

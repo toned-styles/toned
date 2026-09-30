@@ -20,7 +20,9 @@ function ApiUseStyles() {
         based on the state you provide.
       </p>
 
-      <h2 {...s.h2}>Signature</h2>
+      <h2 {...s.h2} id="signature">
+        Signature
+      </h2>
       <CodeBlock>{`import { useStyles } from '@toned/react'
 
 // Without variants
@@ -30,7 +32,9 @@ const base = useStyles(cardStyles)
 // With variants
 const selected = useStyles(buttonStyles, { variant: 'accent', size: 'm' })`}</CodeBlock>
 
-      <h3 {...s.h3}>Parameters</h3>
+      <h3 {...s.h3} id="parameters">
+        Parameters
+      </h3>
       <p>
         <strong>stylesheet</strong> -- A stylesheet created with{' '}
         <code {...s.code}>stylesheet()</code>, optionally with{' '}
@@ -43,7 +47,9 @@ const selected = useStyles(buttonStyles, { variant: 'accent', size: 'm' })`}</Co
         variants. TypeScript enforces correctness here.
       </p>
 
-      <h3 {...s.h3}>Return Value</h3>
+      <h3 {...s.h3} id="return-value">
+        Return Value
+      </h3>
       <p>
         An object with one key per element defined in the stylesheet. Each value
         is a props object that can be spread onto a JSX element:
@@ -59,7 +65,9 @@ return (
   </button>
 )`}</CodeBlock>
 
-      <h2 {...s.h2}>How It Works</h2>
+      <h2 {...s.h2} id="how-it-works">
+        How It Works
+      </h2>
       <p>
         Each render creates a private candidate using the current configuration,
         tokens, overrides and variants. The candidate becomes committed in a
@@ -69,7 +77,9 @@ return (
         reused.
       </p>
 
-      <h2 {...s.h2}>Stable element families</h2>
+      <h2 {...s.h2} id="stable-element-families">
+        Stable element families
+      </h2>
       <CodeBlock>{`import { createElements } from '@toned/react'
 const S = createElements(buttonStyles)
 
@@ -86,9 +96,13 @@ function Button() {
         a host is the better fit.
       </p>
 
-      <h2 {...s.h2}>Usage Patterns</h2>
+      <h2 {...s.h2} id="usage-patterns">
+        Usage Patterns
+      </h2>
 
-      <h3 {...s.h3}>Static Styles (No Variants)</h3>
+      <h3 {...s.h3} id="static-styles-no-variants">
+        Static Styles (No Variants)
+      </h3>
       <p>
         For stylesheets without variants, call useStyles with just the
         stylesheet:
@@ -102,7 +116,9 @@ function Card({ children }: { children: React.ReactNode }) {
   return <div {...s.card}>{children}</div>
 }`}</CodeBlock>
 
-      <h3 {...s.h3}>Dynamic Variants</h3>
+      <h3 {...s.h3} id="dynamic-variants">
+        Dynamic Variants
+      </h3>
       <p>
         For stylesheets with variants, pass the variant state as the second
         argument. The hook will update whenever the state changes:
@@ -116,7 +132,9 @@ function Card({ children }: { children: React.ReactNode }) {
   return <a href={href} {...s.link}>{label}</a>
 }`}</CodeBlock>
 
-      <h3 {...s.h3}>Forwarding Props</h3>
+      <h3 {...s.h3} id="forwarding-props">
+        Forwarding Props
+      </h3>
       <p>
         Since <code {...s.code}>useStyles</code> returns plain props objects,
         you can combine them with additional props:
