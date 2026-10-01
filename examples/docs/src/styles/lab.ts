@@ -22,12 +22,10 @@ export const adaptiveLayout = defineAdaptiveLayout({
   },
 })
 export const adaptiveStyles = stylesheet({
-  Root: {
-    $style: { padding: 20, borderRadius: 16, backgroundColor: '#eef2ff' },
-  },
-  Title: { $kind: 'text', $style: { fontWeight: '700' } },
-  Body: { $kind: 'text', $style: { minWidth: 0 } },
-  Actions: { $kind: 'text', $style: { fontWeight: '700', color: '#284bdd' } },
+  Root: { fill: 'accent-soft', text: 'default', padding: 5, radius: '3xl' },
+  Title: { $kind: 'text', weight: 'heavy' },
+  Body: { $kind: 'text', minWidth: 0 },
+  Actions: { $kind: 'text', weight: 'heavy', text: 'accent' },
 }).variants(
   ($: Variants<{ layout: AdaptiveLayoutName<typeof adaptiveLayout> }>) =>
     adaptiveLayout.rules($),
@@ -36,16 +34,16 @@ export const adaptiveStyles = stylesheet({
 
 export const motionStyles = stylesheet({
   Root: {
-    $style: {
-      width: 72,
-      height: 72,
-      borderRadius: 16,
-      backgroundColor: '#7040cb',
-      opacity: 1,
-    },
+    // The studio palette: `accent` names it, `surface` paints with it.
+    accent: 'violet',
+    surface: 'accent',
+    width: 18,
+    height: 18,
+    radius: '3xl',
+    opacity: 1,
   },
 }).variants(($: Variants<{ expanded: boolean }>) => ({
-  [$.expanded(true)]: { Root: { $style: { width: 240, borderRadius: 36 } } },
+  [$.expanded(true)]: { Root: { width: 60, radius: '5xl' } },
 }))
 
 const grid = defineGrid('lab-message', {
@@ -64,25 +62,27 @@ const stacked = grid.variant({
 export const gridStyles = stylesheet({
   Root: {
     '@platform web': { $grid: grid },
-    $style: { padding: 24, borderRadius: 16, backgroundColor: '#eef2ff' },
+    fill: 'accent-soft',
+    text: 'default',
+    padding: 6,
+    radius: '3xl',
   },
   Avatar: {
     $kind: 'text',
     '@platform web': { $area: grid.area('avatar') },
-    $style: {
-      width: 48,
-      height: 48,
-      borderRadius: 16,
-      backgroundColor: '#284bdd',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+    fill: 'accent',
+    text: 'on-accent',
+    width: 12,
+    height: 12,
+    radius: '3xl',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   Title: {
     $kind: 'text',
     '@platform web': { $area: grid.area('title') },
-    $style: { fontWeight: '700' },
+    weight: 'heavy',
   },
   Body: { $kind: 'text', '@platform web': { $area: grid.area('body') } },
 }).variants(($: Variants<{ stacked: boolean }>) => ({

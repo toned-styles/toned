@@ -2,53 +2,52 @@
   <a href="https://toned.style"><img src="examples/docs/public/brand/toned-logo.svg" width="260" alt="Toned" /></a>
 </p>
 
-<h1 align="center">Make it yours. Keep it together.</h1>
+<h1 align="center">Typed styling for React and React Native</h1>
 
-<p align="center">The typed styling library for React and React Native.<br />Your tokens. Expressive variants. Beautifully connected components.</p>
+<p align="center">Design tokens, named component parts and variants in one typed stylesheet.</p>
 
 <p align="center">
   <a href="https://toned.style/getting-started">Get started</a> ·
-  <a href="https://toned.style/playground">Try the playground</a> ·
-  <a href="https://toned.style/ui">Explore the UI collection</a> ·
+  <a href="https://toned.style/playground">Playground</a> ·
+  <a href="https://toned.style/ui">Components</a> ·
   <a href="https://toned.style/explore">All capabilities</a> ·
   <a href="https://toned.style/lab">Capability lab</a>
 </p>
 
 ---
 
-Toned turns a design vocabulary into a component system. Define the values your
-product uses, name the parts of a component, and describe how they change together.
+Toned is a styling library. You define the values your product uses, name the
+parts of a component, and describe how they change together.
 TypeScript checks the declarations. Toned builds the web CSS ahead of time and
 connects the styles to your mounted components.
 
-## Why Toned?
+## What it provides
 
-- **Your design language, typed.** Define semantic tokens for colour, spacing,
+- **Typed tokens.** Define semantic tokens for colour, spacing,
   typography, or your own concepts. Invalid token values are type errors.
-- **One component, named parts.** Style a card's root, label, and action together.
+- **Named parts.** Style a card's root, label, and action together.
   `createElements` binds those parts to React with stable component identities.
-- **Variants that compose.** Express size, tone, density, and their intersections
+- **Composable variants.** Express size, tone, density, and their intersections
   with typed selector chains. Each mounted family owns its selection.
-- **Conditions in the same language.** Combine media queries, containers,
+- **Typed conditions.** Combine media queries, containers,
   interaction states, and cross-part relationships with the system's query builder.
-- **CSS ready before render.** A deterministic build produces CSS and a matching
+- **Build-time CSS.** A deterministic build produces CSS and a matching
   manifest. Rendering never injects a missing stylesheet.
-- **Platform boundaries you can see.** Share declarations across web and native
+- **Explicit platform boundaries.** Share declarations across web and native
   integrations; use explicit platform blocks for platform-specific behavior.
 
-[Play with a real component](https://toned.style/playground): change its tone,
-shape, density, and theme, then inspect the stylesheet and tokens behind it.
+The [playground](https://toned.style/playground) is an editor: write a
+stylesheet and a component, with type checking and completion, and see it render.
 
-Build more than a button. The [UI collection](https://toned.style/ui) brings
-components together in a working workspace demo. Open any component to inspect
-its actual source, adjust props, and experiment with scoped token overrides live.
+The [component gallery](https://toned.style/ui) has 56 components. Each page
+shows the component's source and props, and lets you try scoped token overrides.
 
-## Pick your starting point
+## Where to start
 
-- **New to Toned?** Follow [Getting Started](https://toned.style/getting-started), then change a real component in the [playground](https://toned.style/playground).
-- **Evaluating it for a product?** Explore the [UI workspace](https://toned.style/ui), inspect each component's source and try scoped live overrides.
-- **Looking beyond web styling?** The [capability lab](https://toned.style/lab) runs adaptive layout, springs, grid, document renderers, DTCG exchange, measured contracts and the source inspector.
-- **Need an exact API or limitation?** The [reference directory](https://toned.style/explore) renders the package documentation from this checkout.
+- **New to Toned:** follow [Getting Started](https://toned.style/getting-started), then try the [playground](https://toned.style/playground).
+- **Evaluating it:** read component sources in the [gallery](https://toned.style/ui) and try scoped overrides.
+- **Beyond web styling:** the [capability lab](https://toned.style/lab) runs adaptive layout, springs, grid, document renderers, DTCG exchange, measured contracts and the source inspector.
+- **An exact API or limitation:** the [reference directory](https://toned.style/explore) renders the package documentation from this checkout.
 
 ## Release status
 
@@ -67,7 +66,7 @@ When embedded in another workspace, install dependencies from that workspace's
 root. The npm command below installs the published packages; consult the reference
 shipped with your chosen version before adopting a development API.
 
-## A small taste
+## Example
 
 A token gives a value meaning. A stylesheet gives it a home.
 
@@ -84,16 +83,28 @@ export const ui = defineSystem({
         backgroundColor: value === 'accent' ? '#284bdd' : '#e8edff',
       }),
     }),
+    ink: defineToken({
+      values: ['on-accent', 'accent'] as const,
+      resolve: value => ({ color: value === 'accent' ? '#284bdd' : '#fff' }),
+    }),
+    padding: defineToken({
+      values: [2, 3] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
+    text: defineToken({
+      values: ['label'] as const,
+      resolve: () => ({ fontSize: 14 }),
+    }),
   },
 })
 
 export const buttonStyles = ui.stylesheet({
-  Root: { $kind: 'pressable', surface: 'accent', $style: { padding: 12 } },
-  Label: { $kind: 'text', $style: { color: '#fff', fontSize: 14 } },
+  Root: { $kind: 'pressable', surface: 'accent', padding: 3 },
+  Label: { $kind: 'text', text: 'label', ink: 'on-accent' },
 }).variants(($: Variants<{ tone: 'accent' | 'quiet' }>) => ({
   [$.tone('quiet')]: {
     Root: { surface: 'quiet' },
-    Label: { $style: { color: '#284bdd' } },
+    Label: { ink: 'accent' },
   },
 }))
 ```
@@ -130,9 +141,9 @@ Start with your own vocabulary, or add the optional `@toned/systems` and
 `@toned/themes` packages. Import the scoped packages: `toned` itself is a private
 workspace placeholder, not an umbrella API.
 
-## Go beyond the first component
+## Further capabilities
 
-| What you want to build | Where to explore |
+| Topic | Reference |
 | --- | --- |
 | A reusable design vocabulary | [Systems and tokens](packages/toned-core/README.md#declare-a-system) |
 | Components with multiple parts and variants | [React element families](packages/toned-react/README.md#element-families) |

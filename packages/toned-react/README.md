@@ -18,6 +18,10 @@ export const system = defineSystem({
       values: ['neutral', 'accent'] as const,
       resolve: value => ({ backgroundColor: value === 'accent' ? '#315bd6' : '#eee' }),
     }),
+    padding: defineToken({
+      values: [1, 2] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
   },
 })
 
@@ -26,9 +30,9 @@ export const buttonStyles = system
     Root: { $kind: 'pressable', tone: 'neutral', [q.state('hover')]: { tone: 'accent' } },
   }))
   .variants(($: Variants<{ size: 's' | 'm' }>) => ({
-  [$.size('s')]: { Root: { $style: { padding: 4 } } },
-  [$.size('m')]: { Root: { $style: { padding: 8 } } },
-}))
+    [$.size('s')]: { Root: { padding: 1 } },
+    [$.size('m')]: { Root: { padding: 2 } },
+  }))
 
 ```
 
@@ -175,7 +179,7 @@ The checked factory accepts defaults as its second argument:
 type ButtonVariants = { size: 's' | 'm'; active: boolean }
 const sheet = system.stylesheet({ Root: { $kind: 'pressable' } })
   .variants(
-    ($: Variants<ButtonVariants>) => ({ [$.size('s')]: { Root: { $style: { padding: 4 } } } }),
+    ($: Variants<ButtonVariants>) => ({ [$.size('s')]: { Root: { padding: 1 } } }),
     { defaults: { size: 'm' } },
   )
 const s = useStyles(sheet, { active: false })

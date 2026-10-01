@@ -43,27 +43,27 @@ export const ui = defineSystem({
         Using Breakpoints in Stylesheets
       </h2>
       <p>
-        Prefix a breakpoint name with <code {...s.code}>@</code> to create a
-        responsive override block inside any element definition:
+        Use an <code {...s.code}>@media</code> key that names a breakpoint to
+        create a responsive override block inside any element definition:
       </p>
       <CodeBlock>{`const layoutStyles = stylesheet({
-  container: {
+  Root: {
     paddingX: 2,
     flexLayout: 'column',
 
-    '@md': {
+    '@media md': {
       paddingX: 4,
       flexLayout: 'row',
     },
 
-    '@lg': {
+    '@media lg': {
       paddingX: 6,
     },
   },
 })`}</CodeBlock>
       <p>
         Breakpoint blocks support the same token properties and{' '}
-        <code {...s.code}>style</code> escape hatch as the base element
+        <code {...s.code}>$style</code> escape hatch as the base element
         definition. Properties set inside a breakpoint block override the base
         values when the viewport matches.
       </p>
@@ -73,13 +73,13 @@ export const ui = defineSystem({
       </h2>
       <p>
         The <code {...s.code}>t</code> utility accepts the same{' '}
-        <code {...s.code}>@</code> blocks, so a one-off style can be responsive
-        without defining a stylesheet:
+        <code {...s.code}>@media</code> blocks, so a one-off style can be
+        responsive without defining a stylesheet:
       </p>
       <CodeBlock>{`import { t } from '@toned/systems/base'
 
 function Panel() {
-  return <div {...t({ paddingX: 2, '@md': { paddingX: 4 } })} />
+  return <div {...t({ paddingX: 2, '@media md': { paddingX: 4 } })} />
 }`}</CodeBlock>
       <p>
         Inline blocks require <code {...s.code}>mediaMode: 'css'</code> -- see
@@ -150,26 +150,27 @@ function Panel() {
         change at a given viewport affects several elements simultaneously:
       </p>
       <CodeBlock>{`const cardStyles = stylesheet({
-  card: {
+  Root: {
     paddingX: 2,
     flexLayout: 'column',
   },
-  title: {
-    typo: 'heading_3',
+  Title: {
+    $kind: 'text',
+    typography: 'heading-3',
   },
-  sidebar: {
+  Sidebar: {
     display: 'none',
   },
 
   // At medium viewports, adjust multiple elements together
-  '@md': {
-    card: { paddingX: 4, flexLayout: 'row' },
-    title: { typo: 'heading_2' },
-    sidebar: { display: 'flex' },
+  '@media md': {
+    Root: { paddingX: 4, flexLayout: 'row' },
+    Title: { typography: 'heading-2' },
+    Sidebar: { display: 'flex' },
   },
 
-  '@lg': {
-    card: { paddingX: 6 },
+  '@media lg': {
+    Root: { paddingX: 6 },
   },
 })`}</CodeBlock>
       <p>
@@ -189,18 +190,16 @@ function Panel() {
       <CodeBlock>{`import type { Variants } from '@toned/core'
 
 const styles = stylesheet({
-  container: { paddingX: 2 },
+  Root: { paddingX: 2, flexLayout: 'column', gap: 2 },
 }).variants(($: Variants<{ layout: 'grid' | 'list' }>) => ({
   [$.layout('grid')]: {
-    container: {
-      '@platform web': {
-        $style: { display: 'grid', gridTemplateColumns: '1fr' },
-        '@md': {
-          $style: { gridTemplateColumns: '1fr 1fr' },
-        },
-        '@lg': {
-          $style: { gridTemplateColumns: '1fr 1fr 1fr' },
-        },
+    Root: {
+      '@media md': {
+        flexLayout: 'row',
+        flexWrap: 'wrap',
+      },
+      '@media lg': {
+        gap: 4,
       },
     },
   },

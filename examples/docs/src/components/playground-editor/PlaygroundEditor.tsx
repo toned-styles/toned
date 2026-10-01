@@ -635,8 +635,8 @@ export function PlaygroundEditor() {
           <button type="button" {...s.Button} onClick={copy}>
             {copied ? 'Copied' : `Copy ${activeFile}`}
           </button>
-          <Link to="/" {...s.StudioLink}>
-            Visual studio →
+          <Link to="/" hash="studio" {...s.StudioLink}>
+            Style studio demo →
           </Link>
         </div>
       </div>

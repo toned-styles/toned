@@ -1,6 +1,9 @@
 import { useStyles } from '@toned/react'
 import { planStyles } from './styles.ts'
 
+// No variants here, and one part is repeated on plain hosts, so this example
+// spreads `useStyles` prop bags. Reach for `createElements` when parts share
+// variants or state.
 // Resize the split, or pick a preview width, to cross the 480px threshold.
 export default function App() {
   const s = useStyles(planStyles)

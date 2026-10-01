@@ -12,6 +12,18 @@ export const documentSystem = defineSystem({
       values: [16, 24] as const,
       resolve: (value) => ({ padding: value }),
     }),
+    surface: defineToken({
+      values: ['tint'] as const,
+      resolve: () => ({ backgroundColor: '#eef2ff' }),
+    }),
+    radius: defineToken({
+      values: [12] as const,
+      resolve: (value) => ({ borderRadius: value }),
+    }),
+    text: defineToken({
+      values: ['body'] as const,
+      resolve: () => ({ color: '#182554', fontSize: 16 }),
+    }),
   },
 })
 export const documentSheet = documentSystem
@@ -19,12 +31,9 @@ export const documentSheet = documentSystem
     Root: {
       $kind: 'text',
       padding: 24,
-      $style: {
-        backgroundColor: '#eef2ff',
-        borderRadius: 12,
-        color: '#182554',
-        fontSize: 16,
-      },
+      surface: 'tint',
+      radius: 12,
+      text: 'body',
     },
   })
   .variants(($: Variants<{ compact: boolean }>) => ({

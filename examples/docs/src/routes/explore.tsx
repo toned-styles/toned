@@ -18,21 +18,21 @@ function Explore() {
   )
   return (
     <article>
-      <h1 {...d.Title}>Everything Toned can do.</h1>
+      <h1 {...d.Title}>Capabilities</h1>
       <p {...d.Lead}>
-        Start with a button. Build a design system. Take it across platforms,
-        inspect its source, and test its promises. Every reference below is
-        rendered from the Markdown maintained beside its implementation.
+        Twenty-two references covering authoring, interaction, platforms,
+        tooling and verification. Each is rendered from the Markdown kept beside
+        its implementation.
       </p>
       <div {...s.Actions}>
         <Link to="/getting-started" {...s.Primary}>
-          Start building →
+          Getting started →
         </Link>
         <Link to="/lab" {...s.Secondary}>
-          Try the capability lab
+          Capability lab
         </Link>
         <Link to="/ui" {...s.Secondary}>
-          Browse 56 components
+          56 components
         </Link>
       </div>
       <label {...s.Search}>

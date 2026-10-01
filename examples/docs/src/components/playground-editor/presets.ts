@@ -4,6 +4,8 @@ import buttonApp from './presets/button/App.tsx?raw'
 import buttonStyles from './presets/button/styles.ts?raw'
 import cardApp from './presets/card/App.tsx?raw'
 import cardStyles from './presets/card/styles.ts?raw'
+import elementsApp from './presets/elements/App.tsx?raw'
+import elementsStyles from './presets/elements/styles.ts?raw'
 import responsiveApp from './presets/responsive/App.tsx?raw'
 import responsiveStyles from './presets/responsive/styles.ts?raw'
 import themeApp from './presets/theme/App.tsx?raw'
@@ -31,9 +33,17 @@ export const presets: readonly Preset[] = [
     files: { 'styles.ts': cardStyles, 'App.tsx': cardApp },
   },
   {
+    id: 'elements',
+    label: 'createElements family',
+    summary:
+      'Stable part components that read variants and shared state from their family.',
+    files: { 'styles.ts': elementsStyles, 'App.tsx': elementsApp },
+  },
+  {
     id: 'theme',
     label: 'Custom system & theme',
-    summary: 'Your own tokens with defineSystem and defineToken, plus themes.',
+    summary:
+      'A custom system: tokens declared with defineSystem and defineToken, plus themes.',
     files: { 'styles.ts': themeStyles, 'App.tsx': themeApp },
   },
   {

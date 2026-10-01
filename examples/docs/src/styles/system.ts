@@ -1,5 +1,6 @@
 import { defineAnimations, defineSystem, defineToken } from '@toned/core'
 import { system as baseTokens } from '@toned/systems/base'
+import * as site from './tokens.ts'
 
 const { breakpoints, ...base } = baseTokens
 
@@ -18,10 +19,15 @@ const tones = {
   coral: { accent: '#b63f31', soft: '#fce8e2' },
 } as const
 
-/** The studio's web theme is local to its root, so sibling instances stay independent. */
+/**
+ * One system for the whole site: the base layout vocabulary, the site's own
+ * roles from `tokens.ts`, and the studio's theme tokens below. The studio's
+ * web theme is local to its root, so sibling instances stay independent.
+ */
 export const docsSystem = defineSystem(
   {
     ...base,
+    ...site,
     container: defineToken({
       values: ['preview'] as const,
       resolve: (value) => ({
@@ -57,6 +63,10 @@ export const docsSystem = defineSystem(
             ? '#fff'
             : `var(--studio-${value === 'default' ? 'ink' : 'accent'})`,
       }),
+    }),
+    depth: defineToken({
+      values: ['raised'] as const,
+      resolve: () => ({ boxShadow: '0 24px 64px #18255418' }),
     }),
     curve: defineToken({
       values: ['sharp', 'soft', 'round', 'pill'] as const,

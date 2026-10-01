@@ -11,7 +11,7 @@ export function SiteFooter() {
           <Link to="/" aria-label="Toned home">
             <img src="/brand/toned-logo.svg" width="96" height="24" alt="" />
           </Link>
-          <p>Made for the details. Open source, MIT licensed.</p>
+          <p>Open source, MIT licensed.</p>
         </div>
         <nav {...s.Links} aria-label="Footer">
           <Link to="/getting-started" {...s.Link}>

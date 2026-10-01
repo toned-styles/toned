@@ -31,7 +31,7 @@ function Concepts() {
         directly.
       </p>
       <CodeBlock>{`// Tokens are used directly inside stylesheet definitions:
-container: {
+Root: {
   bgColor: 'action',       // semantic background colour
   borderRadius: 'medium',  // semantic border radius
   paddingX: 3,             // spacing scale value
@@ -42,7 +42,8 @@ container: {
         <code {...s.code}>borderColor</code>), borders (
         <code {...s.code}>borderRadius</code>,{' '}
         <code {...s.code}>borderWidth</code>), typography (
-        <code {...s.code}>typo</code>), shadows (<code {...s.code}>shadow</code>
+        <code {...s.code}>typography</code>), shadows (
+        <code {...s.code}>shadow</code>
         ), layout (<code {...s.code}>paddingX</code>,{' '}
         <code {...s.code}>paddingY</code>, <code {...s.code}>gap</code>,{' '}
         <code {...s.code}>flexLayout</code>), and sizing (
@@ -59,7 +60,7 @@ container: {
       </p>
       <CodeBlock>{`import { defineSystem, defineToken } from '@toned/core'
 
-export const { system, stylesheet, t } = defineSystem({
+export const ui = defineSystem({
   id: 'example',
   tokens: {
     padding: defineToken({
@@ -69,7 +70,7 @@ export const { system, stylesheet, t } = defineSystem({
   },
 })`}</CodeBlock>
       <p>
-        The returned <code {...s.code}>stylesheet</code> function is bound to
+        The system's <code {...s.code}>ui.stylesheet</code> function is bound to
         that system's token set, giving you full autocompletion and type
         checking for every token property.
       </p>
@@ -79,11 +80,11 @@ export const { system, stylesheet, t } = defineSystem({
       </h2>
       <p>
         A stylesheet defines one or more named elements, each with a set of
-        token values and an optional <code {...s.code}>style</code> escape hatch
-        for raw CSS properties:
+        token values and an optional <code {...s.code}>$style</code> escape
+        hatch for raw CSS properties:
       </p>
       <CodeBlock>{`const cardStyles = stylesheet({
-  card: {
+  Root: {
     bgColor: 'elevated',
     borderRadius: 'large',
     borderColor: 'subtle',
@@ -110,26 +111,26 @@ export const { system, stylesheet, t } = defineSystem({
       <CodeBlock>{`import type { Variants } from '@toned/core'
 
 const buttonStyles = stylesheet({
-  container: { bgColor: 'action', borderRadius: 'medium' },
-  label: { textColor: 'on_action' },
+  Root: { $kind: 'pressable', bgColor: 'action', borderRadius: 'medium' },
+  Label: { $kind: 'text', textColor: 'on_action' },
 }).variants(($: Variants<{
   size: 'm' | 's'
   variant: 'accent' | 'danger'
 }>) => ({
-  [$.variant('accent')]: {
-    container: { bgColor: 'action' },
-    label: { textColor: 'on_action' },
+  [$.variant('danger')]: {
+    Root: { bgColor: 'destructive' },
+    Label: { textColor: 'on_destructive' },
   },
   [$.size('m')]: {
-    container: { paddingX: 3 },
+    Root: { paddingX: 3 },
   },
   [$.size('s')]: {
-    container: { paddingX: 2, paddingY: 1 },
+    Root: { paddingX: 2, paddingY: 1 },
   },
 }))`}</CodeBlock>
       <p>
         Variant keys are fully typed: your component will get compile-time
-        errors if it passes invalid variant values to{' '}
+        errors if it passes invalid variant values to the element family or to{' '}
         <code {...s.code}>useStyles</code>.
       </p>
 
@@ -140,16 +141,16 @@ const buttonStyles = stylesheet({
         The base system defines breakpoints (<code {...s.code}>xs</code>,{' '}
         <code {...s.code}>sm</code>, <code {...s.code}>md</code>,{' '}
         <code {...s.code}>lg</code>, <code {...s.code}>xl</code>). You can apply
-        responsive token values by prefixing a breakpoint name with{' '}
-        <code {...s.code}>@</code>:
+        responsive token values under an <code {...s.code}>@media</code> key
+        that names the breakpoint:
       </p>
       <CodeBlock>{`const responsiveCard = stylesheet({
-  card: {
+  Root: {
     paddingX: 2,
-    '@md': {
+    '@media md': {
       paddingX: 4,
     },
-    '@lg': {
+    '@media lg': {
       paddingX: 6,
     },
   },

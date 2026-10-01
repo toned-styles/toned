@@ -26,7 +26,7 @@ function ApiUseStyles() {
       <CodeBlock>{`import { useStyles } from '@toned/react'
 
 // Without variants
-const cardStyles = stylesheet({ card: { padding: 2 } })
+const cardStyles = stylesheet({ Root: { padding: 2 } })
 const base = useStyles(cardStyles)
 
 // With variants
@@ -56,12 +56,12 @@ const selected = useStyles(buttonStyles, { variant: 'accent', size: 'm' })`}</Co
       </p>
       <CodeBlock>{`const s = useStyles(buttonStyles, { size: 'm', variant: 'accent' })
 
-// s.container => { style: {...}, className: '...' }
-// s.label     => { style: {...}, className: '...' }
+// s.Root  => { style: {...}, className: '...' }
+// s.Label => { style: {...}, className: '...' }
 
 return (
-  <button {...s.container}>
-    <span {...s.label}>Click me</span>
+  <button {...s.Root}>
+    <span {...s.Label}>Click me</span>
   </button>
 )`}</CodeBlock>
 
@@ -85,7 +85,7 @@ const S = createElements(buttonStyles)
 
 function Button() {
   return <S size="m" variant="accent">
-    <S.container as="button"><S.label as="span">Save</S.label></S.container>
+    <S.Root as="button"><S.Label as="span">Save</S.Label></S.Root>
   </S>
 }`}</CodeBlock>
       <p>
@@ -108,12 +108,12 @@ function Button() {
         stylesheet:
       </p>
       <CodeBlock>{`const cardStyles = stylesheet({
-  card: { bgColor: 'elevated', borderRadius: 'large' },
+  Root: { bgColor: 'elevated', borderRadius: 'large' },
 })
 
 function Card({ children }: { children: React.ReactNode }) {
   const s = useStyles(cardStyles)
-  return <div {...s.card}>{children}</div>
+  return <div {...s.Root}>{children}</div>
 }`}</CodeBlock>
 
       <h3 {...s.h3} id="dynamic-variants">
@@ -129,7 +129,7 @@ function Card({ children }: { children: React.ReactNode }) {
   const s = useStyles(navStyles, {
     active: isActive,
   })
-  return <a href={href} {...s.link}>{label}</a>
+  return <a href={href} {...s.Link}>{label}</a>
 }`}</CodeBlock>
 
       <h3 {...s.h3} id="forwarding-props">
@@ -143,7 +143,7 @@ function Card({ children }: { children: React.ReactNode }) {
   React.ComponentProps<'input'> & { error: boolean }
 ) {
   const s = useStyles(inputStyles, { error })
-  return <input {...s.input.withProps<'input'>(rest)} />
+  return <input {...s.Input.withProps<'input'>(rest)} />
 }`}</CodeBlock>
     </article>
   )

@@ -1,5 +1,5 @@
 import { webRules } from '@toned/core'
-import { brand, fonts } from './brand.ts'
+import { brand } from './brand.ts'
 import { stylesheet } from './system.ts'
 
 /** Long-form documentation typography: guides, API pages and references. */
@@ -8,14 +8,19 @@ export const proseStyles = stylesheet({
     overflowX: 'auto',
     maxWidth: '100%',
     marginY: 5,
-    borderRadius: 'large',
-    '@platform web': { $style: { border: `1px solid ${brand.border}` } },
+    radius: 'lg',
+    border: 'all',
+    borderTone: 'default',
   },
   table: {
     width: '100%',
-    fontSize: '14px',
+    textStyle: 'ui',
+    textAlign: 'left',
     '@platform web': {
-      $style: { borderCollapse: 'collapse', textAlign: 'left' },
+      // No token: table layout has no native counterpart.
+      $style: { borderCollapse: 'collapse' },
+      // Selector escape hatch: cells come from rendered Markdown, so they
+      // cannot be named parts. Raw values here mirror the token roles.
       $webRules: webRules({
         '& th': {
           fontWeight: 600,
@@ -38,10 +43,10 @@ export const proseStyles = stylesheet({
     },
   },
   container: {
-    fontSize: '16px',
-    lineHeight: 1.75,
+    textStyle: 'prose',
+    text: 'body',
     '@platform web': {
-      $style: { color: brand.body },
+      // Selector escape hatch: Markdown output is unclassed HTML.
       $webRules: webRules({
         '& > h1 + p': {
           fontSize: '19px',
@@ -83,45 +88,32 @@ export const proseStyles = stylesheet({
     },
   },
   h1: {
-    fontWeight: 650,
-    lineHeight: 1.1,
-    letterSpacing: '-0.035em',
-    '@platform web': {
-      $style: {
-        color: brand.ink,
-        fontSize: 'clamp(2.1rem, 4vw, 2.75rem)',
-        textWrap: 'balance',
-      },
-    },
+    textStyle: 'title',
+    weight: 'bold',
+    text: 'default',
+    wrap: 'balance',
   },
   h2: {
-    fontSize: '24px',
-    fontWeight: 650,
     marginTop: 12,
-    lineHeight: 1.3,
-    letterSpacing: '-0.02em',
-    '@platform web': { $style: { color: brand.ink, scrollMarginTop: 88 } },
+    textStyle: 'heading',
+    weight: 'bold',
+    text: 'default',
+    anchor: 'below-header',
   },
   h3: {
-    fontSize: '18px',
-    fontWeight: 650,
     marginTop: 8,
-    lineHeight: 1.4,
-    letterSpacing: '-0.01em',
-    '@platform web': { $style: { color: brand.ink, scrollMarginTop: 88 } },
+    textStyle: 'subheading',
+    weight: 'bold',
+    text: 'default',
+    anchor: 'below-header',
   },
   code: {
-    borderRadius: 'small',
     paddingY: 0.25,
     paddingX: 1.25,
-    fontSize: '0.85em',
-    fontWeight: 500,
-    '@platform web': {
-      $style: {
-        fontFamily: fonts.mono,
-        color: brand.codeInk,
-        backgroundColor: brand.blueSoft,
-      },
-    },
+    radius: 'sm',
+    textStyle: 'code-inline',
+    weight: 'medium',
+    text: 'code',
+    fill: 'accent-soft',
   },
 })

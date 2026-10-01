@@ -48,7 +48,7 @@ function AdaptivePreview({
       >
         <Adaptive {...variants}>
           <Adaptive.Root>
-            <Adaptive.Title>Built to fit.</Adaptive.Title>
+            <Adaptive.Title>Adaptive card</Adaptive.Title>
             <Adaptive.Body>
               The layout follows this container and the text scale you choose.
             </Adaptive.Body>

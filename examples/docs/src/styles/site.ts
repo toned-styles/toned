@@ -1,32 +1,27 @@
 import { type Variants, webRules } from '@toned/core'
-import { brand, fonts, headerHeight } from './brand.ts'
+import { brand } from './brand.ts'
 import { stylesheet } from './system.ts'
-
-const stickyTop = `${headerHeight}px`
 
 /** The header every page shares. */
 export const headerStyles = stylesheet({
   Bar: {
-    position: 'sticky',
+    pin: 'top',
     zIndex: 50,
-    '@platform web': {
-      $style: {
-        top: 0,
-        backgroundColor: '#fbfcffe6',
-        backdropFilter: 'saturate(1.4) blur(12px)',
-        borderBottom: `1px solid ${brand.divider}`,
-      },
-    },
+    fill: 'page-glass',
+    border: 'bottom',
+    borderTone: 'subtle',
+    // No token: the blur behind the translucent bar exists only on the web.
+    '@platform web': { $style: { backdropFilter: 'saturate(1.4) blur(12px)' } },
   },
   Inner: {
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    height: '64px',
-    maxWidth: '1440px',
+    bar: 'header',
+    measure: 'site',
     marginX: 'auto',
     paddingX: 4,
-    '@md': { paddingX: 8, gap: 8 },
+    '@media md': { paddingX: 8, gap: 8 },
   },
   Logo: { display: 'flex', alignItems: 'center', flexShrink: '0' },
   Nav: {
@@ -34,83 +29,62 @@ export const headerStyles = stylesheet({
     alignItems: 'center',
     gap: 1,
     flexGrow: '1',
-    '@md': { display: 'flex' },
+    '@media md': { display: 'flex' },
   },
-  Spacer: { flexGrow: '1', '@md': { display: 'none' } },
+  Spacer: { flexGrow: '1', '@media md': { display: 'none' } },
   Link: {
     paddingX: 3,
     paddingY: 1.5,
-    borderRadius: 'medium',
-    fontSize: '14px',
-    fontWeight: 500,
-    '@platform web': {
-      $style: {
-        color: brand.muted,
-        transition: 'color .15s, background-color .15s',
-      },
-    },
-    ':hover': {
-      '@platform web': {
-        $style: { color: brand.ink, backgroundColor: brand.blueTint },
-      },
-    },
+    radius: 'md',
+    textStyle: 'ui',
+    weight: 'medium',
+    text: 'muted',
+    motion: 'colors',
+    ':hover': { text: 'default', fill: 'tint' },
   },
   Actions: { display: 'flex', alignItems: 'center', gap: 2 },
   IconLink: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '36px',
-    height: '36px',
-    borderRadius: 'medium',
-    '@platform web': { $style: { color: brand.muted } },
-    ':hover': {
-      '@platform web': {
-        $style: { color: brand.ink, backgroundColor: brand.blueTint },
-      },
-    },
+    width: 9,
+    height: 9,
+    radius: 'md',
+    text: 'muted',
+    ':hover': { text: 'default', fill: 'tint' },
   },
   MenuButton: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '36px',
-    height: '36px',
-    borderRadius: 'medium',
+    width: 9,
+    height: 9,
+    radius: 'md',
     cursor: 'pointer',
-    '@platform web': {
-      $style: {
-        color: brand.ink,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-        backgroundColor: brand.surface,
-      },
-    },
-    '@md': { display: 'none' },
+    text: 'default',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    '@media md': { display: 'none' },
   },
   MobileNav: {
-    display: 'none',
     flexLayout: 'column',
     gap: 1,
     paddingX: 4,
     paddingBottom: 4,
-    '@platform web': { $style: { borderTop: `1px solid ${brand.divider}` } },
+    border: 'top',
+    borderTone: 'subtle',
   },
   MobileLink: {
     paddingY: 2.5,
-    fontSize: '16px',
-    fontWeight: 500,
-    '@platform web': { $style: { color: brand.ink } },
+    textStyle: 'body',
+    weight: 'medium',
+    text: 'default',
   },
 }).variants(($: Variants<{ active?: boolean }>) => ({
   [$.active(true)]: {
-    Link: {
-      '@platform web': {
-        $style: { color: brand.blue, backgroundColor: brand.blueSoft },
-      },
-    },
-    MobileLink: { '@platform web': { $style: { color: brand.blue } } },
+    Link: { text: 'accent', fill: 'accent-soft' },
+    MobileLink: { text: 'accent' },
   },
 }))
 
@@ -118,94 +92,73 @@ export const headerStyles = stylesheet({
 export const docsStyles = stylesheet({
   Page: {
     minHeight: '100vh',
-    fontFamily: fonts.sans,
-    fontSize: '16px',
-    lineHeight: 1.6,
-    '@platform web': {
-      $style: {
-        color: brand.ink,
-        backgroundColor: brand.page,
-        WebkitFontSmoothing: 'antialiased',
-      },
-    },
+    font: 'sans',
+    textStyle: 'body',
+    text: 'default',
+    fill: 'page',
   },
   Shell: {
     display: 'flex',
-    maxWidth: '1440px',
-    marginX: 'auto',
     alignItems: 'flex-start',
-    '@md': { paddingX: 4 },
+    measure: 'site',
+    marginX: 'auto',
+    '@media md': { paddingX: 4 },
   },
   Sidebar: {
     display: 'none',
     flexShrink: '0',
     width: '264px',
-    position: 'sticky',
+    pin: 'below-header',
+    fit: 'below-header',
     overflowY: 'auto',
     paddingY: 8,
     paddingX: 4,
-    '@platform web': {
-      $style: {
-        top: stickyTop,
-        height: `calc(100vh - ${stickyTop})`,
-        overscrollBehavior: 'contain',
-      },
-    },
-    '@md': { display: 'block' },
+    // No token: keeps a finished sidebar scroll from moving the page.
+    '@platform web': { $style: { overscrollBehavior: 'contain' } },
+    '@media md': { display: 'block' },
   },
   Main: {
     flexGrow: '1',
-    $style: { minWidth: 0 },
+    minWidth: 0,
     paddingX: 5,
     paddingTop: 8,
     paddingBottom: 16,
-    '@md': { paddingX: 10, paddingTop: 12 },
+    '@media md': { paddingX: 10, paddingTop: 12 },
   },
-  Article: { maxWidth: '760px', marginX: 'auto', $style: { minWidth: 0 } },
-  Wide: { maxWidth: '1040px', marginX: 'auto', $style: { minWidth: 0 } },
-  Gallery: { maxWidth: '1180px', marginX: 'auto', $style: { minWidth: 0 } },
+  Article: { measure: 'article', marginX: 'auto', minWidth: 0 },
+  Wide: { measure: 'wide', marginX: 'auto', minWidth: 0 },
+  Gallery: { measure: 'gallery', marginX: 'auto', minWidth: 0 },
   Rail: {
     display: 'none',
     flexShrink: '0',
     width: '220px',
-    position: 'sticky',
+    pin: 'below-header',
+    fit: 'below-header-max',
+    overflowY: 'auto',
     paddingY: 12,
     paddingRight: 4,
-    '@platform web': {
-      $style: {
-        top: stickyTop,
-        maxHeight: `calc(100vh - ${stickyTop})`,
-        overflowY: 'auto',
-      },
-    },
-    '@xl': { display: 'block' },
+    '@media xl': { display: 'block' },
   },
   Breadcrumb: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    fontSize: '13px',
-    fontWeight: 600,
     marginBottom: 3,
-    '@platform web': { $style: { color: brand.blue } },
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'accent',
   },
   Title: {
-    fontWeight: 650,
-    lineHeight: 1.1,
-    letterSpacing: '-0.035em',
-    '@platform web': {
-      $style: {
-        color: brand.ink,
-        fontSize: 'clamp(2.1rem, 4vw, 2.75rem)',
-        textWrap: 'balance',
-      },
-    },
+    textStyle: 'title',
+    weight: 'bold',
+    text: 'default',
+    wrap: 'balance',
   },
   Lead: {
     marginTop: 4,
-    fontSize: '19px',
-    lineHeight: 1.6,
-    '@platform web': { $style: { color: brand.muted, textWrap: 'pretty' } },
+    textStyle: 'lead',
+    text: 'muted',
+    wrap: 'pretty',
   },
   Meta: {
     display: 'flex',
@@ -213,81 +166,67 @@ export const docsStyles = stylesheet({
     alignItems: 'center',
     gap: 3,
     marginTop: 5,
-    fontSize: '13px',
-    '@platform web': { $style: { color: brand.faint } },
+    textStyle: 'caption',
+    text: 'faint',
   },
   MetaLink: {
-    fontWeight: 600,
-    '@platform web': { $style: { color: brand.blue } },
-    ':hover': { '@platform web': { $style: { textDecoration: 'underline' } } },
+    weight: 'semibold',
+    text: 'accent',
+    ':hover': { textDecoration: 'underline' },
   },
   HeaderRule: {
     marginTop: 8,
     marginBottom: 2,
-    '@platform web': { $style: { borderBottom: `1px solid ${brand.divider}` } },
+    border: 'bottom',
+    borderTone: 'subtle',
   },
-  // Mobile drawer for the sidebar (CSS-only; see index.html).
+  // Mobile drawer for the sidebar; it opens directly under the header.
   Drawer: {
     display: 'none',
-    position: 'fixed',
+    pin: 'drawer',
     zIndex: 45,
-    left: 0,
-    right: 0,
-    bottom: 0,
     overflowY: 'auto',
     paddingX: 5,
     paddingY: 6,
-    '@platform web': {
-      $style: { top: stickyTop, backgroundColor: brand.page },
-    },
-    '@md': { display: 'none' },
+    fill: 'page',
   },
-})
+}).variants(($: Variants<{ drawer?: 'open' }>) => ({
+  [$.drawer('open')]: {
+    Drawer: { display: 'block', '@media md': { display: 'none' } },
+  },
+}))
 
 export const sidebarStyles = stylesheet({
   Group: { flexLayout: 'column', gap: 0.5, marginBottom: 6 },
   Heading: {
-    fontSize: '12px',
-    fontWeight: 700,
-    letterSpacing: '0.02em',
     paddingX: 3,
     paddingBottom: 1.5,
-    '@platform web': { $style: { color: brand.ink } },
+    textStyle: 'label',
+    weight: 'heavy',
+    letterSpacing: '0.02em',
+    text: 'default',
   },
   Link: {
     display: 'block',
     paddingX: 3,
     paddingY: 1.25,
-    borderRadius: 'medium',
-    fontSize: '14px',
+    textStyle: 'ui',
     lineHeight: 1.45,
-    '@platform web': {
-      $style: {
-        color: brand.muted,
-        borderLeftWidth: 2,
-        borderLeftStyle: 'solid',
-        borderLeftColor: 'transparent',
-        borderRadius: '0 8px 8px 0',
-        transition: 'color .15s, background-color .15s',
-      },
-    },
-    ':hover': {
-      '@platform web': {
-        $style: { color: brand.ink, backgroundColor: brand.blueTint },
-      },
-    },
+    text: 'muted',
+    border: 'marker-left',
+    borderTone: 'none',
+    motion: 'colors',
+    // One-off shape: square against the marker, rounded on the far side.
+    '@platform web': { $style: { borderRadius: '0 8px 8px 0' } },
+    ':hover': { text: 'default', fill: 'tint' },
   },
 }).variants(($: Variants<{ active?: boolean }>) => ({
   [$.active(true)]: {
     Link: {
-      fontWeight: 600,
-      '@platform web': {
-        $style: {
-          color: brand.blue,
-          backgroundColor: brand.blueSoft,
-          borderLeftColor: brand.blue,
-        },
-      },
+      weight: 'semibold',
+      text: 'accent',
+      fill: 'accent-soft',
+      borderTone: 'accent',
     },
   },
 }))
@@ -295,85 +234,56 @@ export const sidebarStyles = stylesheet({
 export const tocStyles = stylesheet({
   Root: { flexLayout: 'column', gap: 1 },
   Heading: {
-    fontSize: '12px',
-    fontWeight: 700,
     marginBottom: 2,
-    '@platform web': { $style: { color: brand.ink } },
+    textStyle: 'label',
+    weight: 'heavy',
+    text: 'default',
   },
   Link: {
     display: 'block',
     paddingY: 1,
-    fontSize: '13px',
+    paddingLeft: 3,
+    textStyle: 'caption',
     lineHeight: 1.45,
-    '@platform web': {
-      $style: {
-        color: brand.muted,
-        borderLeftWidth: 2,
-        borderLeftStyle: 'solid',
-        borderLeftColor: brand.divider,
-        paddingLeft: 12,
-        transition: 'color .15s, border-color .15s',
-      },
-    },
-    ':hover': { '@platform web': { $style: { color: brand.ink } } },
+    text: 'muted',
+    border: 'marker-left',
+    borderTone: 'subtle',
+    motion: 'colors',
+    ':hover': { text: 'default' },
   },
 }).variants(($: Variants<{ active?: boolean; depth?: 3 }>) => ({
-  [$.depth(3)]: { Link: { '@platform web': { $style: { paddingLeft: 24 } } } },
-  [$.active(true)]: {
-    Link: {
-      '@platform web': {
-        $style: { color: brand.blue, borderLeftColor: brand.blue },
-      },
-    },
-  },
+  [$.depth(3)]: { Link: { paddingLeft: 6 } },
+  [$.active(true)]: { Link: { text: 'accent', borderTone: 'accent' } },
 }))
 
 export const pagerStyles = stylesheet({
   Root: {
-    display: 'grid',
+    columns: 'halves',
     gap: 4,
     marginTop: 16,
     paddingTop: 8,
-    '@platform web': {
-      $style: {
-        gridTemplateColumns: '1fr 1fr',
-        borderTop: `1px solid ${brand.divider}`,
-      },
-    },
+    border: 'top',
+    borderTone: 'subtle',
   },
   Card: {
     flexLayout: 'column',
     gap: 1,
     padding: 4,
-    borderRadius: 'large',
-    '@platform web': {
-      $style: {
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-        backgroundColor: brand.surface,
-        transition: 'border-color .15s, box-shadow .15s',
-      },
-    },
-    ':hover': {
-      '@platform web': {
-        $style: { borderColor: brand.blue, boxShadow: '0 6px 24px #284bdd14' },
-      },
-    },
+    radius: 'lg',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    motion: 'lift',
+    ':hover': { borderTone: 'accent', elevation: 'hover' },
   },
-  Label: {
-    fontSize: '12px',
-    '@platform web': { $style: { color: brand.faint } },
-  },
-  Title: {
-    fontSize: '15px',
-    fontWeight: 600,
-    '@platform web': { $style: { color: brand.ink } },
-  },
+  Label: { textStyle: 'label', text: 'faint' },
+  Title: { textStyle: 'body-small', weight: 'semibold', text: 'default' },
 }).variants(($: Variants<{ align?: 'end' }>) => ({
   [$.align('end')]: {
     Card: {
-      '@platform web': { $style: { textAlign: 'right', gridColumn: '2' } },
+      textAlign: 'right',
+      // One-off placement: a lone "next" card keeps the second column.
+      '@platform web': { $style: { gridColumn: '2' } },
     },
   },
 }))
@@ -382,35 +292,27 @@ export const pagerStyles = stylesheet({
 export const codeStyles = stylesheet({
   Frame: {
     marginY: 5,
-    borderRadius: 'large',
+    minWidth: 0,
     overflow: 'hidden',
-    $style: { minWidth: 0 },
-    '@platform web': {
-      $style: {
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-        backgroundColor: brand.codeBg,
-      },
-    },
+    radius: 'lg',
+    fill: 'code',
+    border: 'all',
+    borderTone: 'default',
   },
   Header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 3,
+    bar: 'code',
     paddingLeft: 4,
     paddingRight: 1.5,
-    height: '38px',
-    fontSize: '12px',
-    fontWeight: 600,
-    '@platform web': {
-      $style: {
-        color: brand.faint,
-        borderBottom: `1px solid ${brand.divider}`,
-        backgroundColor: '#f2f4fb',
-      },
-    },
+    textStyle: 'label',
+    weight: 'semibold',
+    text: 'faint',
+    fill: 'code-chrome',
+    border: 'bottom',
+    borderTone: 'subtle',
   },
   Copy: {
     display: 'flex',
@@ -418,37 +320,25 @@ export const codeStyles = stylesheet({
     gap: 1.5,
     paddingX: 2.5,
     paddingY: 1,
-    borderRadius: 'medium',
-    fontSize: '12px',
-    fontWeight: 600,
+    radius: 'md',
     cursor: 'pointer',
-    '@platform web': { $style: { color: brand.muted } },
-    ':hover': {
-      '@platform web': {
-        $style: { color: brand.ink, backgroundColor: brand.surface },
-      },
-    },
+    textStyle: 'label',
+    weight: 'semibold',
+    text: 'muted',
+    ':hover': { text: 'default', fill: 'surface' },
   },
   Pre: {
     overflowX: 'auto',
     paddingX: 4,
     paddingY: 3.5,
-    '@platform web': {
-      $style: {
-        fontFamily: fonts.mono,
-        fontSize: 13,
-        lineHeight: 1.7,
-        color: brand.codeInk,
-        tabSize: 2,
-      },
-    },
+    textStyle: 'code',
+    text: 'code',
+    // No token: tab width matters only where source is printed.
+    '@platform web': { $style: { tabSize: 2 } },
   },
 }).variants(($: Variants<{ bare?: boolean }>) => ({
   [$.bare(true)]: {
-    Frame: {
-      marginY: 0,
-      '@platform web': { $style: { border: 'none', borderRadius: 0 } },
-    },
+    Frame: { marginY: 0, border: 'none', radius: 'none' },
   },
 }))
 
@@ -461,13 +351,12 @@ export const indexStyles = stylesheet({
     gap: 2,
     paddingX: 4,
     paddingY: 2.5,
-    borderRadius: 'medium',
-    fontSize: '14px',
-    fontWeight: 600,
-    '@platform web': { $style: { color: '#fff', backgroundColor: brand.blue } },
-    ':hover': {
-      '@platform web': { $style: { backgroundColor: brand.blueHover } },
-    },
+    radius: 'md',
+    textStyle: 'ui',
+    weight: 'semibold',
+    text: 'on-accent',
+    fill: 'accent',
+    ':hover': { fill: 'accent-strong' },
   },
   Secondary: {
     display: 'inline-flex',
@@ -475,19 +364,14 @@ export const indexStyles = stylesheet({
     gap: 2,
     paddingX: 4,
     paddingY: 2.5,
-    borderRadius: 'medium',
-    fontSize: '14px',
-    fontWeight: 600,
-    '@platform web': {
-      $style: {
-        color: brand.ink,
-        backgroundColor: brand.surface,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-      },
-    },
-    ':hover': { '@platform web': { $style: { borderColor: brand.blue } } },
+    radius: 'md',
+    textStyle: 'ui',
+    weight: 'semibold',
+    text: 'default',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    ':hover': { borderTone: 'accent' },
   },
   Search: {
     position: 'relative',
@@ -497,126 +381,87 @@ export const indexStyles = stylesheet({
   },
   SearchIcon: {
     position: 'absolute',
-    '@platform web': {
-      $style: { left: 16, color: brand.faint, pointerEvents: 'none' },
-    },
+    left: 4,
+    text: 'faint',
+    pointerEvents: 'none',
   },
   Input: {
     width: '100%',
-    height: '48px',
+    height: 12,
     paddingLeft: 12,
     paddingRight: 4,
-    borderRadius: 'large',
-    fontSize: '15px',
-    '@platform web': {
-      $style: {
-        color: brand.ink,
-        backgroundColor: brand.surface,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-        boxShadow: '0 1px 2px #17234b0a',
-        outline: 'none',
-      },
-    },
-    ':focus-visible': {
-      '@platform web': {
-        $style: { borderColor: brand.blue, boxShadow: '0 0 0 4px #284bdd1f' },
-      },
-    },
+    radius: 'lg',
+    textStyle: 'body-small',
+    text: 'default',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    elevation: 'resting',
+    // The focus ring below replaces the browser outline.
+    '@platform web': { $style: { outline: 'none' } },
+    ':focus-visible': { borderTone: 'accent', elevation: 'focus-ring' },
   },
-  Count: {
-    marginTop: 3,
-    fontSize: '13px',
-    '@platform web': { $style: { color: brand.faint } },
-  },
+  Count: { marginTop: 3, textStyle: 'caption', text: 'faint' },
   Group: { flexLayout: 'column', gap: 4, marginTop: 10 },
-  GroupTitle: {
-    fontSize: '13px',
-    fontWeight: 700,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-    '@platform web': { $style: { color: brand.muted } },
-  },
-  Grid: {
-    display: 'grid',
-    gap: 4,
-    '@platform web': {
-      $style: { gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' },
-    },
-  },
+  GroupTitle: { textStyle: 'eyebrow', weight: 'heavy', text: 'muted' },
+  Grid: { columns: 'cards', gap: 4 },
   Card: {
     flexLayout: 'column',
     gap: 2,
     padding: 5,
-    borderRadius: 'large',
-    '@platform web': {
-      $style: {
-        backgroundColor: brand.surface,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-        transition: 'border-color .15s, box-shadow .15s, transform .15s',
-      },
-    },
+    radius: 'lg',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    motion: 'lift',
     ':hover': {
-      '@platform web': {
-        $style: {
-          borderColor: brand.blue,
-          boxShadow: '0 10px 30px #284bdd14',
-          transform: 'translateY(-1px)',
-        },
-      },
+      borderTone: 'accent',
+      elevation: 'hover',
+      // One-off: the card rises a pixel to meet its shadow.
+      '@platform web': { $style: { transform: 'translateY(-1px)' } },
     },
   },
   CardTitle: {
-    fontSize: '16px',
-    fontWeight: 650,
+    textStyle: 'body',
     lineHeight: 1.35,
-    '@platform web': { $style: { color: brand.ink } },
+    weight: 'bold',
+    text: 'default',
   },
-  CardBody: {
-    fontSize: '14px',
-    lineHeight: 1.6,
-    '@platform web': { $style: { color: brand.muted } },
-  },
+  CardBody: { textStyle: 'ui', lineHeight: 1.6, text: 'muted' },
   CardMore: {
     marginTop: 'auto',
     paddingTop: 2,
-    fontSize: '13px',
-    fontWeight: 600,
-    '@platform web': { $style: { color: brand.blue } },
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'accent',
   },
   Empty: {
     marginTop: 8,
     padding: 8,
-    borderRadius: 'large',
-    '@platform web': {
-      $style: {
-        textAlign: 'center',
-        color: brand.muted,
-        border: `1px dashed ${brand.border}`,
-      },
-    },
+    radius: 'lg',
+    textAlign: 'center',
+    text: 'muted',
+    border: 'dashed',
+    borderTone: 'default',
   },
   Note: {
     marginTop: 6,
     paddingX: 4,
     paddingY: 3,
-    borderRadius: 'large',
-    fontSize: '14px',
+    radius: 'lg',
+    textStyle: 'ui',
     lineHeight: 1.6,
-    '@platform web': {
-      $style: {
-        color: brand.body,
-        backgroundColor: brand.blueTint,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-      },
-    },
+    text: 'body',
+    fill: 'tint',
+    border: 'all',
+    borderTone: 'default',
   },
-})
+}).variants(($: Variants<{ density?: 'compact' }>) => ({
+  // The component sidebar's filter: the same field, sized for a rail.
+  [$.density('compact')]: {
+    Input: { height: 9.5, paddingLeft: 3, marginBottom: 2, textStyle: 'ui' },
+  },
+}))
 
 /** Capability lab: each experiment is a titled stage with its source below. */
 export const experimentStyles = stylesheet({
@@ -624,29 +469,20 @@ export const experimentStyles = stylesheet({
   Chip: {
     paddingX: 3,
     paddingY: 1.25,
-    borderRadius: 'full',
-    fontSize: '13px',
-    fontWeight: 600,
-    '@platform web': {
-      $style: {
-        color: brand.body,
-        backgroundColor: brand.surface,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-      },
-    },
-    ':hover': {
-      '@platform web': {
-        $style: { color: brand.blue, borderColor: brand.blue },
-      },
-    },
+    radius: 'full',
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'body',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    ':hover': { text: 'accent', borderTone: 'accent' },
   },
   Section: {
     flexLayout: 'column',
     gap: 5,
     marginTop: 14,
-    '@platform web': { $style: { scrollMarginTop: 88 } },
+    anchor: 'below-header',
   },
   Head: { display: 'flex', gap: 4, alignItems: 'flex-start' },
   Number: {
@@ -654,41 +490,29 @@ export const experimentStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: '0',
-    width: '36px',
-    height: '36px',
-    borderRadius: 'medium',
-    fontSize: '13px',
-    fontWeight: 700,
-    '@platform web': {
-      $style: { color: brand.blue, backgroundColor: brand.blueSoft },
-    },
+    width: 9,
+    height: 9,
+    radius: 'md',
+    textStyle: 'caption',
+    weight: 'heavy',
+    text: 'accent',
+    fill: 'accent-soft',
   },
   Title: {
-    fontSize: '24px',
-    fontWeight: 650,
+    textStyle: 'heading',
     lineHeight: 1.25,
-    letterSpacing: '-0.02em',
-    '@platform web': { $style: { color: brand.ink } },
+    weight: 'bold',
+    text: 'default',
   },
-  Summary: {
-    marginTop: 1,
-    fontSize: '16px',
-    lineHeight: 1.6,
-    '@platform web': { $style: { color: brand.muted } },
-  },
+  Summary: { marginTop: 1, textStyle: 'body', text: 'muted' },
   Stage: {
     padding: 6,
-    borderRadius: 'xlarge',
-    $style: { minWidth: 0 },
-    '@platform web': {
-      $style: {
-        backgroundColor: brand.surface,
-        borderWidth: 1,
-        borderStyle: 'solid',
-        borderColor: brand.border,
-        boxShadow: '0 1px 2px #17234b08, 0 16px 40px #284bdd0a',
-      },
-    },
+    minWidth: 0,
+    radius: '2xl',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    elevation: 'raised',
   },
   Footer: {
     display: 'flex',
@@ -696,15 +520,17 @@ export const experimentStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 3,
-    fontSize: '14px',
+    textStyle: 'ui',
   },
   Link: {
-    fontWeight: 600,
-    '@platform web': { $style: { color: brand.blue } },
-    ':hover': { '@platform web': { $style: { textDecoration: 'underline' } } },
+    weight: 'semibold',
+    text: 'accent',
+    ':hover': { textDecoration: 'underline' },
   },
   Source: {
     '@platform web': {
+      // Selector escape hatch: <summary> is the browser's own child element,
+      // so it cannot be a named part.
       $webRules: webRules({
         '& > summary': {
           cursor: 'pointer',
@@ -721,29 +547,26 @@ export const experimentStyles = stylesheet({
 })
 
 export const footerStyles = stylesheet({
-  Root: {
-    marginTop: 16,
-    '@platform web': { $style: { borderTop: `1px solid ${brand.divider}` } },
-  },
+  Root: { marginTop: 16, border: 'top', borderTone: 'subtle' },
   Inner: {
     display: 'flex',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 6,
-    maxWidth: '1440px',
+    measure: 'site',
     marginX: 'auto',
     paddingX: 5,
     paddingY: 10,
-    fontSize: '14px',
-    '@md': { paddingX: 8 },
-    '@platform web': { $style: { color: brand.muted } },
+    textStyle: 'ui',
+    text: 'muted',
+    '@media md': { paddingX: 8 },
   },
   Brand: { flexLayout: 'column', gap: 2 },
   Links: { display: 'flex', flexWrap: 'wrap', gap: 6 },
   Link: {
-    fontWeight: 500,
-    '@platform web': { $style: { color: brand.muted } },
-    ':hover': { '@platform web': { $style: { color: brand.ink } } },
+    weight: 'medium',
+    text: 'muted',
+    ':hover': { text: 'default' },
   },
 })

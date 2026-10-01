@@ -45,12 +45,12 @@ const githubIcon = (
  */
 export function SiteHeader({ menu }: { menu?: ReactNode }) {
   const s = useStyles(headerStyles)
-  const d = useStyles(docsStyles)
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
   const [open, setOpen] = useState(false)
   const drawerId = useId()
+  const d = useStyles(docsStyles, { drawer: open ? 'open' : undefined })
 
   // Navigating closes the drawer; Escape closes it too.
   useEffect(() => setOpen(false), [pathname])
@@ -117,15 +117,8 @@ export function SiteHeader({ menu }: { menu?: ReactNode }) {
         </div>
       </header>
       {/* Outside the header: its backdrop filter would contain a fixed child. */}
-      <div
-        id={drawerId}
-        {...d.Drawer.with(open && { style: { display: 'block' } })}
-        hidden={!open}
-      >
-        <nav
-          {...s.MobileNav.with({ style: { display: 'flex' } })}
-          aria-label="Main navigation"
-        >
+      <div id={drawerId} {...d.Drawer} hidden={!open}>
+        <nav {...s.MobileNav} aria-label="Main navigation">
           {headerLinks.map((link) => (
             <HeaderLink
               key={link.to}

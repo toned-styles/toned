@@ -24,19 +24,37 @@ function GuideReactNative() {
       </h2>
       <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
       <CodeBlock>{`// styles.ts
-import { defineSystem } from '@toned/core'
+import { defineSystem, defineToken } from '@toned/core'
 
-export const ui = defineSystem({ id: 'native-example', tokens: {} })
+export const ui = defineSystem({
+  id: 'native-example',
+  tokens: {
+    surface: defineToken({
+      values: ['card'] as const,
+      resolve: () => ({ backgroundColor: '#fff' }),
+    }),
+    padding: defineToken({
+      values: [2, 4] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
+    text: defineToken({
+      values: ['title'] as const,
+      resolve: () => ({ color: '#172033', fontSize: 20 }),
+    }),
+  },
+})
 export const cardStyles = ui.stylesheet({
-  Root: { $kind: 'view', $style: { padding: 16, backgroundColor: '#fff' } },
-  Title: { $kind: 'text', $style: { color: '#172033', fontSize: 20 } },
+  Root: { surface: 'card', padding: 4 },
+  Title: { $kind: 'text', text: 'title' },
 })`}</CodeBlock>
       <p>
-        Shared <code {...s.code}>$style</code> declarations use the portable
-        property intersection. Explicit platform blocks can widen styles for
-        that platform. Native rejects unsupported CSS fields and values; a
-        web-only cursor or CSS variable is not automatically translated into a
-        native equivalent. Theme resolvers must supply concrete native values.
+        The token resolvers return concrete values that both platforms accept.
+        If you reach for the <code {...s.code}>$style</code> escape hatch,
+        shared declarations use the portable property intersection. Explicit
+        platform blocks can widen styles for that platform. Native rejects
+        unsupported CSS fields and values; a web-only cursor or CSS variable is
+        not automatically translated into a native equivalent. Theme resolvers
+        must supply concrete native values.
       </p>
 
       <h2 {...s.h2} id="2-declare-the-application-host">

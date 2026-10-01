@@ -14,24 +14,24 @@ export const Route = createFileRoute('/')({ component: Home })
 const features = [
   {
     glyph: '{ }',
-    title: 'A vocabulary that’s yours.',
-    body: 'Define the tokens your product speaks. Colours, spacing, typography, or something entirely your own. TypeScript keeps every value in bounds.',
+    title: 'Typed design tokens',
+    body: 'Define the tokens your product uses: colours, spacing, typography, or your own. TypeScript rejects values that are not in a token.',
     href: '/api/define-system',
-    link: 'Explore design systems',
+    link: 'defineSystem reference',
   },
   {
     glyph: '↳',
-    title: 'Parts that belong together.',
-    body: 'Name the pieces of a component. Style them together, compose them freely, and scope their variants with a provider that adds no wrapper element.',
+    title: 'Named parts',
+    body: 'A stylesheet names the parts of a component and styles them together. Variants are scoped by a provider that adds no wrapper element.',
     href: '/api/use-styles',
-    link: 'Meet element families',
+    link: 'useStyles reference',
   },
   {
     glyph: '⌘',
-    title: 'Every combination, considered.',
-    body: 'Express sizes, tones, states, and their intersections in one stylesheet. Chain variant selectors without assembling class strings.',
+    title: 'Variants',
+    body: 'Declare sizes, tones, states and their combinations in the stylesheet. Selectors chain, so there are no class strings to assemble.',
     href: '/api/variants',
-    link: 'Compose variants',
+    link: 'variants reference',
   },
 ] as const
 
@@ -41,13 +41,11 @@ function Features() {
     <section {...s.Section} id="features" aria-labelledby="features-title">
       <div {...s.SectionIntro}>
         <h2 id="features-title" {...s.Heading}>
-          A system for your style.
-          <br />
-          Room for your ideas.
+          What a stylesheet contains
         </h2>
         <p {...s.Body}>
-          Bring structure to the things you repeat, and freedom to the things
-          that make your interface yours.
+          Three ideas cover most of the library: tokens, named parts and
+          variants.
         </p>
       </div>
       <div {...s.Features}>
@@ -76,21 +74,19 @@ function SourceSection() {
         <div {...s.SourceGrid}>
           <div {...s.SectionIntro}>
             <h2 id="source-title" {...s.Heading}>
-              The design is
-              <br />
-              in the declaration.
+              The studio’s source
             </h2>
             <p {...s.Body}>
-              This is the actual variant definition powering the studio above. A
-              change to one axis can reach every named part.
+              This is the variant definition the studio above runs. One axis can
+              change several named parts.
             </p>
             <div {...s.Steps}>
               <div {...s.Step}>
                 <span {...s.StepNumber}>1</span>
                 <div>
-                  <h3 {...s.FeatureHeading}>Define your vocabulary</h3>
+                  <h3 {...s.FeatureHeading}>Define tokens</h3>
                   <p {...s.FeatureBody}>
-                    Start with your own tokens or the optional base system.
+                    Use your own tokens or the optional base system.
                   </p>
                 </div>
               </div>
@@ -99,23 +95,23 @@ function SourceSection() {
                 <div>
                   <h3 {...s.FeatureHeading}>Declare parts and variants</h3>
                   <p {...s.FeatureBody}>
-                    Keep the visual rules together in a pure module.
+                    Keep a component’s style rules in one pure module.
                   </p>
                 </div>
               </div>
               <div {...s.Step}>
                 <span {...s.StepNumber}>3</span>
                 <div>
-                  <h3 {...s.FeatureHeading}>Build, then render</h3>
+                  <h3 {...s.FeatureHeading}>Build and render</h3>
                   <p {...s.FeatureBody}>
-                    Generate web CSS ahead of time. Bind the parts to your
+                    Web CSS is generated at build time. Bind the parts to your
                     components.
                   </p>
                 </div>
               </div>
             </div>
             <Link to="/getting-started" {...s.TextLink}>
-              Walk through your first component
+              Getting started guide
             </Link>
           </div>
           <div {...s.Source}>
@@ -141,62 +137,57 @@ function Beyond() {
     <section {...s.Section} aria-labelledby="beyond-title">
       <div {...s.SectionIntro}>
         <h2 id="beyond-title" {...s.Heading}>
-          Good style goes further.
+          Beyond the basics
         </h2>
         <p {...s.Body}>
-          From the first button to a whole design system, Toned keeps the rules
-          connected.
+          Conditions, platforms and tooling, each documented with its limits.
         </p>
       </div>
       <div {...s.Features}>
         <div {...s.Feature}>
-          <h3 {...s.FeatureHeading}>Respond to more than width.</h3>
+          <h3 {...s.FeatureHeading}>Conditions</h3>
           <p {...s.FeatureBody}>
-            Media queries, containers, and interaction states share a typed
-            condition model. Build layouts that respond to where a component
-            lives.
+            Media queries, container queries and interaction states share one
+            typed condition model, so a layout can respond to the container a
+            component is in.
           </p>
           <Link to="/api/media-queries" {...s.TextLink}>
-            Explore conditions
+            Media queries reference
           </Link>
         </div>
         <div {...s.Feature}>
-          <h3 {...s.FeatureHeading}>Web today. Native, explicitly.</h3>
+          <h3 {...s.FeatureHeading}>Web and React Native</h3>
           <p {...s.FeatureBody}>
             Share declarations across web and native host integrations, with
             explicit platform boundaries. Native support is verified per host;
             native grid is not supported.
           </p>
           <Link to="/guides/react-native" {...s.TextLink}>
-            Understand native support
+            React Native guide
           </Link>
         </div>
         <div {...s.Feature}>
-          <h3 {...s.FeatureHeading}>A design system you can inspect.</h3>
+          <h3 {...s.FeatureHeading}>Tooling</h3>
           <p {...s.FeatureBody}>
-            Optional tooling connects source navigation, a browser inspector,
-            measured contracts, and design-token interchange. Adaptive layout
-            and motion have dedicated opt-in APIs.
+            Optional tools cover source navigation, a browser inspector,
+            measured contracts and design-token interchange. Adaptive layout and
+            motion are separate opt-in APIs.
           </p>
           <Link to="/explore" {...s.TextLink}>
-            Explore every capability
+            All capabilities
           </Link>
         </div>
       </div>
       <div {...s.Banner}>
         <div {...s.SectionIntro}>
-          <h3 {...s.BannerTitle}>
-            Less imagining.
-            <br />
-            More trying things.
-          </h3>
+          <h3 {...s.BannerTitle}>Capability lab</h3>
           <p {...s.BannerText}>
-            Try seven working experiments: adaptive layouts, motion, grid,
-            document renderers, token exchange, contracts and source inspection.
+            Seven working demos: adaptive layouts, motion, grid, document
+            renderers, token exchange, contracts and source inspection.
           </p>
         </div>
         <Link to="/lab" {...s.BannerLink}>
-          Enter the capability lab
+          Open the lab
         </Link>
       </div>
     </section>
@@ -214,19 +205,17 @@ function Home() {
       <main id="main">
         <div {...s.Container}>
           <section {...s.Hero} aria-labelledby="hero-title">
-            <p {...s.Note}>Open source styling for React & React Native</p>
+            <p {...s.Note}>Open source · MIT licensed</p>
             <h1 id="hero-title" {...s.Title}>
-              Make it yours.
-              <br />
-              Keep it together.
+              Typed styling for React and React Native
             </h1>
             <p {...s.Lead}>
-              The typed styling library for React and React Native. Your tokens,
-              expressive variants, and beautifully connected components.
+              Define design tokens, name the parts of a component and declare
+              its variants in one typed stylesheet.
             </p>
             <div {...s.Actions}>
               <Link to="/getting-started" {...s.Primary}>
-                Start building
+                Get started
               </Link>
               <Link to="/playground" {...s.Secondary}>
                 Open the playground

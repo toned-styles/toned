@@ -99,7 +99,8 @@ import type { Variants } from '@toned/core'
 import { stylesheet } from '@toned/systems/base'
 
 export const buttonStyles = stylesheet({
-  container: {
+  Root: {
+    $kind: 'pressable',
     bgColor: 'action',
     borderRadius: 'medium',
     borderWidth: 'none',
@@ -107,18 +108,19 @@ export const buttonStyles = stylesheet({
     paddingY: 2,
     cursor: 'pointer',
   },
-  label: {
+  Label: {
+    $kind: 'text',
     textColor: 'on_action',
-    typo: 'body_medium',
+    typography: 'label-medium',
   },
 }).variants(($: Variants<{
   variant: 'primary' | 'secondary'
 }>) => ({
   [$.variant('secondary')]: {
-    container: {
+    Root: {
       bgColor: 'action_secondary',
     },
-    label: {
+    Label: {
       textColor: 'on_action_secondary',
     },
   },
@@ -128,22 +130,26 @@ export const buttonStyles = stylesheet({
         6. Use Styles in Components
       </h2>
       <p>
-        Import your stylesheet and the <code {...s.code}>useStyles</code> hook.
-        Spread the returned element props onto your JSX:
+        Bind your stylesheet once, at module scope, with{' '}
+        <code {...s.code}>createElements</code>. Variants go on the family
+        provider; host props go on the parts:
       </p>
       <CodeBlock>{`// Button.tsx
-import { useStyles } from '@toned/react'
+import { createElements } from '@toned/react'
 import { buttonStyles } from './styles/button.ts'
+
+const S = createElements(buttonStyles)
 
 export function Button({ label, variant = 'primary' }: {
   label: string
   variant?: 'primary' | 'secondary'
 }) {
-  const s = useStyles(buttonStyles, { variant })
   return (
-    <button type="button" {...s.container}>
-      <span {...s.label}>{label}</span>
-    </button>
+    <S variant={variant}>
+      <S.Root as="button" type="button">
+        <S.Label as="span">{label}</S.Label>
+      </S.Root>
+    </S>
   )
 }`}</CodeBlock>
 

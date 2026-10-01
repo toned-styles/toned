@@ -40,11 +40,14 @@ render; mutating the article during hydration would cause a mismatch.
 without a mismatch. Pass `lang` (Markdown fence labels such as `ts`, `sh`,
 `json` work) or let it infer one; `bare` drops the frame inside a panel.
 
-Toned's build extracts classes from literal token values. A value computed from
-a variable (for example `top: someConstant`) or a unitless string such as
-`minWidth: '0'` produces no class, so put such values in `$style`. Inside
-`$style`, use longhands (`borderColor`, `backgroundColor`) wherever a hover or
-variant changes them: a shorthand beside its longhand drops the longhand.
+Design values live in the docs system as typed tokens (`src/styles/tokens.ts`,
+spread into `docsSystem`): sheets reference roles such as `text: 'muted'`,
+`fill: 'surface'` and `radius: 'xl'`. `$style` is an escape hatch for the few
+properties no token covers, each with a comment saying why. Where `$style` is
+used, prefer longhands (`borderColor`, `backgroundColor`) when a hover or
+variant changes them: a shorthand beside its longhand drops the longhand. A
+unitless string such as `minWidth: '0'` is read as a spacing alias; use the
+number `0`.
 
 The homepage uses a local web design system, explicit renderer and build
 manifest. The style studio uses real component variants; the token map uses the
