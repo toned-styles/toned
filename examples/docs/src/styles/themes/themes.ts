@@ -273,8 +273,17 @@ const pixel: Theme = {
 // overlays float above it: each catches light on its top edge, casts a soft
 // shadow and is rounded concentrically with the layer that holds it
 // (window 28 → app bar 18 and panel 20 → control 12 → inner 9).
+//
+// No part has a border. A border sits outside the padding box, so a gradient
+// fill repeats under it and a translucent one doubles up there. Each edge is
+// an inset hairline instead, with a second, brighter one along the top.
 const glassShade = (alpha: number) => `rgba(18, 38, 84, ${alpha})`
 const glassLight = (alpha: number) => `rgba(255, 255, 255, ${alpha})`
+/** A hairline of light inside the edge, brighter along the top. */
+const glassEdge = (around: number, top: number) =>
+  `inset 0 0 0 1px ${glassLight(around)}, inset 0 1px 0 ${glassLight(top)}`
+/** The hairline of a recessed part. */
+const glassWell = `inset 0 0 0 1px ${glassShade(0.08)}`
 const glassFont = (cut: string) =>
   `-apple-system, BlinkMacSystemFont, "SF Pro ${cut}", "Helvetica Neue", system-ui, sans-serif`
 
@@ -289,22 +298,22 @@ const glass: Theme = {
   sunken: glassLight(0.58),
   // Nearly opaque: an overlay sits over text, and must stay legible where
   // the browser cannot blur what is behind it.
-  overlay: `linear-gradient(180deg, ${glassLight(0.95)} 0%, rgba(244, 248, 255, 0.9) 100%)`,
+  overlay: `linear-gradient(180deg, ${glassLight(0.97)} 0%, rgba(244, 248, 255, 0.95) 100%)`,
   ink: '#0e1a33',
   inkStrong: '#06102a',
   inkMuted: 'rgba(14, 26, 51, 0.74)',
   accent: '#0453c4',
   accentHover: '#085cd2',
   onAccent: '#ffffff',
-  neutral: `linear-gradient(180deg, ${glassLight(0.92)} 0%, ${glassLight(0.64)} 100%)`,
+  neutral: `linear-gradient(180deg, ${glassLight(0.94)} 0%, ${glassLight(0.74)} 100%)`,
   neutralHover: glassLight(0.96),
   onNeutral: '#0e1a33',
   danger: '#c21d37',
   dangerHover: '#cc2540',
   onDanger: '#ffffff',
-  // Light across the top half of a tinted control, shade along its foot.
+  // Light falling off from the top of a tinted control, shade along its foot.
   sheen:
-    'linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.03) 48%, rgba(255, 255, 255, 0) 52%, rgba(0, 8, 40, 0.08) 100%)',
+    'linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 62%, rgba(0, 8, 40, 0.06) 100%)',
   selected: glassLight(0.74),
   onSelected: '#0a3f96',
   hover: glassLight(0.4),
@@ -318,18 +327,18 @@ const glass: Theme = {
   onWarn: '#6a4200',
   bad: 'rgba(235, 60, 70, 0.18)',
   onBad: '#8a1422',
-  line: glassLight(0.75),
-  lineStrong: glassLight(0.85),
-  lineFilled: glassLight(0.35),
+  line: glassLight(0.5),
+  lineStrong: glassLight(0.5),
+  lineFilled: 'transparent',
   rule: 'rgba(14, 26, 51, 0.1)',
   cutout: glassLight(0.92),
   track: 'rgba(14, 26, 51, 0.13)',
   meter: 'linear-gradient(90deg, #3f8cff 0%, #0453c4 100%)',
-  tray: 'rgba(14, 26, 51, 0.08)',
+  tray: 'rgba(14, 26, 51, 0.07)',
   thumb: glassLight(0.94),
   onThumb: '#06102a',
   knob: '#ffffff',
-  tabTray: 'rgba(14, 26, 51, 0.08)',
+  tabTray: 'rgba(14, 26, 51, 0.07)',
   tabSelected: glassLight(0.94),
   onTabSelected: '#06102a',
   tabIndicator: 'transparent',
@@ -363,12 +372,13 @@ const glass: Theme = {
   radiusBadge: '999px',
   radiusPill: '999px',
   radiusChart: '4px',
-  panelRule: '1px',
-  panelBorder: '1px',
+  // Edges are the inset hairlines in the shadows below, not borders.
+  panelRule: '0',
+  panelBorder: '0',
   panelBorderStyle: 'solid',
-  controlBorder: '1px',
-  fieldRule: '1px',
-  fieldBorder: '1px',
+  controlBorder: '0',
+  fieldRule: '0',
+  fieldBorder: '0',
   controlBorderStyle: 'solid',
   ruleWidth: '1px',
   ruleStyle: 'solid',
@@ -378,17 +388,22 @@ const glass: Theme = {
   focusRing: '3px solid #0453c4',
   focusOffset: '2px',
 
-  shadowPanel: `inset 0 1px 0 ${glassLight(0.7)}, 0 1px 2px ${glassShade(0.05)}, 0 8px 24px -12px ${glassShade(0.18)}`,
-  shadowControl: `inset 0 1px 2px ${glassShade(0.14)}`,
-  shadowButton: `inset 0 1px 0 ${glassLight(0.55)}, inset 0 -1px 0 rgba(8, 20, 60, 0.1), 0 1px 2px ${glassShade(0.14)}, 0 6px 14px -6px ${glassShade(0.32)}`,
-  shadowField: `inset 0 1px 2px ${glassShade(0.12)}`,
-  shadowThumb: `inset 0 1px 0 #ffffff, 0 1px 2px ${glassShade(0.14)}, 0 4px 10px -4px ${glassShade(0.26)}`,
-  shadowKnob: `0 1px 2px ${glassShade(0.2)}, 0 4px 10px -2px ${glassShade(0.28)}`,
-  shadowSelected: `inset 0 1px 0 ${glassLight(0.95)}, 0 1px 2px ${glassShade(0.08)}, 0 6px 14px -8px ${glassShade(0.3)}`,
-  shadowAppBar: `inset 0 0 0 1px ${glassLight(0.7)}, inset 0 1px 0 #ffffff, 0 1px 2px ${glassShade(0.06)}, 0 10px 26px -12px ${glassShade(0.3)}`,
-  shadowTabTray: `inset 0 1px 2px ${glassShade(0.12)}`,
-  shadowOverlay: `inset 0 1px 0 #ffffff, 0 0 0 1px ${glassShade(0.05)}, 0 2px 6px ${glassShade(0.08)}, 0 28px 64px -16px rgba(12, 30, 80, 0.45)`,
-  shadowWindow: `inset 0 1px 0 ${glassLight(0.9)}, inset 0 -1px 0 ${glassLight(0.3)}, 0 2px 4px rgba(12, 30, 80, 0.08), 0 36px 80px -24px rgba(12, 30, 80, 0.5)`,
+  shadowPanel: `${glassEdge(0.5, 0.9)}, 0 1px 2px ${glassShade(0.05)}, 0 8px 24px -12px ${glassShade(0.18)}`,
+  // Wells are recessed: a dark hairline, shade under the top lip.
+  shadowControl: `${glassWell}, inset 0 1px 2px ${glassShade(0.12)}`,
+  // One shadow for every tone: the lit edge reads on a tinted button, the
+  // cast shadow outlines a white one.
+  shadowButton: `${glassEdge(0.2, 0.5)}, 0 1px 2px ${glassShade(0.2)}, 0 6px 14px -6px ${glassShade(0.3)}`,
+  shadowField: `${glassWell}, inset 0 1px 2px ${glassShade(0.08)}`,
+  shadowThumb: `${glassEdge(0.6, 1)}, 0 0 0 0.5px ${glassShade(0.1)}, 0 1px 2px ${glassShade(0.14)}, 0 3px 8px -3px ${glassShade(0.24)}`,
+  shadowKnob: `0 0 0 0.5px ${glassShade(0.16)}, 0 1px 2px ${glassShade(0.2)}, 0 4px 10px -2px ${glassShade(0.28)}`,
+  // Inset only: the lists that hold a selected item scroll, and would clip
+  // a shadow cast outside it.
+  shadowSelected: `${glassEdge(0.6, 1)}, inset 0 -1px 0 ${glassShade(0.06)}`,
+  shadowAppBar: `${glassEdge(0.6, 1)}, 0 1px 2px ${glassShade(0.06)}, 0 10px 26px -12px ${glassShade(0.3)}`,
+  shadowTabTray: `${glassWell}, inset 0 1px 2px ${glassShade(0.08)}`,
+  shadowOverlay: `${glassEdge(0.7, 1)}, 0 0 0 0.5px ${glassShade(0.12)}, 0 2px 6px ${glassShade(0.08)}, 0 28px 64px -16px rgba(12, 30, 80, 0.45)`,
+  shadowWindow: `${glassEdge(0.45, 0.95)}, 0 2px 4px rgba(12, 30, 80, 0.08), 0 36px 80px -24px rgba(12, 30, 80, 0.5)`,
   blur: 'blur(28px) saturate(170%)',
 
   unit: '5px',
