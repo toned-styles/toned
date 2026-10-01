@@ -29,6 +29,16 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * `as="div"` stays a literal type when `JSX.IntrinsicElements` has a pattern key.
 * A stable variants object no longer re-applies unchanged state.
 
+# [0.4.0](https://github.com/lttb/toned/compare/@toned/react@0.3.0...@toned/react@0.4.0) (2026-09-30)
+
+### Features
+
+* publish ([cc32fd9](https://github.com/lttb/toned/commit/cc32fd90b36d5a91fddae73700678e555201ff42))
+
+## [0.3.1](https://github.com/lttb/toned/compare/@toned/react@0.3.0...@toned/react@0.3.1) (2026-09-30)
+
+**Note:** Version bump only for package @toned/react
+
 # [0.3.0](https://github.com/lttb/toned/compare/@toned/react@0.0.8...@toned/react@0.3.0) (2026-08-05)
 
 ### Bug Fixes
