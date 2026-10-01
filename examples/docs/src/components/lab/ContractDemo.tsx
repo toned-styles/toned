@@ -1,17 +1,17 @@
-import {
-  type ContractReport,
-  createScenarios,
-  verifyContracts,
-} from '@toned/compiler/contracts'
-import { createInlineRenderer } from '@toned/core/server'
+import type { ContractReport } from '@toned/compiler/contracts'
 import { useStyles } from '@toned/react'
 import { useRef, useState } from 'react'
 import { libraryStyles } from '../../styles/library.ts'
 import { CodeBlock } from '../CodeBlock.tsx'
-import { documentSheet, documentSystem } from './DocumentDemo.tsx'
+import { inline } from './document.renderers.ts'
+import { documentSheet } from './document.styles.ts'
+import { verifyTouchTarget } from './touch-target.contract.ts'
 
-const renderer = createInlineRenderer(documentSystem, { tokens: {} })
-const suite = createScenarios({ variants: { compact: [false] } })
+// The specimen is the document sheet's Root, resolved to inline styles.
+const specimen = inline.resolve(documentSheet, {
+  variants: { compact: false },
+}).Root
+
 export function ContractDemo() {
   const s = useStyles(libraryStyles)
   const target = useRef<HTMLButtonElement>(null)
@@ -22,26 +22,7 @@ export function ContractDemo() {
     setRunning(true)
     try {
       setReport(
-        await verifyContracts({
-          suite,
-          resolve: (scenario) =>
-            renderer.explain(documentSheet, { variants: scenario.variants }),
-          measure: () => {
-            const rect = target.current?.getBoundingClientRect()
-            return rect
-              ? { Root: { width: rect.width, height: rect.height } }
-              : {}
-          },
-          contracts: [
-            {
-              id: 'touch-target',
-              kind: 'interaction-size',
-              part: 'Root',
-              minWidth: 44,
-              minHeight: 44,
-            },
-          ],
-        }),
+        await verifyTouchTarget(() => target.current?.getBoundingClientRect()),
       )
     } finally {
       setRunning(false)
@@ -65,15 +46,8 @@ export function ContractDemo() {
       </label>
       <button
         ref={target}
-        {...renderer.resolve(documentSheet, { variants: { compact: false } })
-          .Root}
-        style={{
-          ...renderer.resolve(documentSheet, { variants: { compact: false } })
-            .Root.style,
-          padding: 0,
-          width: 160,
-          height,
-        }}
+        {...specimen}
+        style={{ ...specimen.style, padding: 0, width: 160, height }}
         type="button"
       >
         Measured specimen
@@ -87,7 +61,7 @@ export function ContractDemo() {
           : 'Choose a size, then measure the rendered button.'}
       </p>
       {report && (
-        <CodeBlock>
+        <CodeBlock lang="json" title="Contract report">
           {JSON.stringify(
             {
               coverage: report.coverage,

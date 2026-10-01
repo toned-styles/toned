@@ -23,8 +23,14 @@ function GuideReactNative() {
         1. Define portable parts
       </h2>
       <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
-      <CodeBlock>{`// styles.ts
-import { defineSystem, defineToken } from '@toned/core'
+      <CodeBlock title="styles.ts">{`import { stylesheet } from './system'
+
+export const cardStyles = stylesheet({
+  Root: { surface: 'card', padding: 4 },
+  Title: { $kind: 'text', text: 'title' },
+})`}</CodeBlock>
+      <p>The sheet takes its tokens from the application's system:</p>
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'native-example',
@@ -43,10 +49,8 @@ export const ui = defineSystem({
     }),
   },
 })
-export const cardStyles = ui.stylesheet({
-  Root: { surface: 'card', padding: 4 },
-  Title: { $kind: 'text', text: 'title' },
-})`}</CodeBlock>
+
+export const { stylesheet } = ui`}</CodeBlock>
       <p>
         The token resolvers return concrete values that both platforms accept.
         If you reach for the <code {...s.code}>$style</code> escape hatch,
@@ -60,7 +64,7 @@ export const cardStyles = ui.stylesheet({
       <h2 {...s.h2} id="2-declare-the-application-host">
         2. Declare the application host
       </h2>
-      <CodeBlock>{`// host.ts — integration-owned adapter
+      <CodeBlock title="host.ts">{`// Integration-owned adapter.
 import { Dimensions, Image, Pressable, Text, View } from 'react-native'
 import { defineReactNativeHost } from '@toned/core/stylesheet'
 import type { ReactHost } from '@toned/react'
@@ -99,12 +103,12 @@ export const host: ReactHost = {
       <h2 {...s.h2} id="3-install-a-renderer-and-render-the-parts">
         3. Install a renderer and render the parts
       </h2>
-      <CodeBlock>{`// App.tsx
-import { nativeBackend } from '@toned/core/backends'
+      <CodeBlock title="App.tsx">{`import { nativeBackend } from '@toned/core/backends'
 import { createRenderer } from '@toned/core/server'
 import { createElements, TonedProvider } from '@toned/react'
-import { cardStyles, ui } from './styles'
 import { host } from './host'
+import { cardStyles } from './styles'
+import { ui } from './system'
 
 const renderer = createRenderer(ui, { backend: nativeBackend, tokens: {} })
 const Card = createElements(cardStyles)

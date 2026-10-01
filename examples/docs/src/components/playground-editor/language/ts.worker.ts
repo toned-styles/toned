@@ -1,5 +1,5 @@
 /**
- * The playground's language worker. It runs two services over the same two
+ * The playground's language worker. It runs two services over the same three
  * documents, off the main thread:
  *
  * - TypeScript's language service, over an in-memory project that holds the
@@ -17,7 +17,9 @@ import {
   cannotImportMessage,
   type FileName,
   fileNames,
+  fileRecord,
   importableModules,
+  localFile,
   MAX_FILE_CHARS,
 } from '../types.ts'
 import type {
@@ -48,10 +50,7 @@ const TONED_ROOT = 'file:///workspace/'
 const MAX_COMPLETIONS = 1500
 const MAX_PROBLEMS_PER_FILE = 100
 
-const documents: Record<FileName, { text: string; version: number }> = {
-  'styles.ts': { text: '', version: 0 },
-  'App.tsx': { text: '', version: 0 },
-}
+const documents = fileRecord(() => ({ text: '', version: 0 }))
 const tsPath = (file: FileName) => `${PROJECT}${file}`
 const tonedUri = (file: FileName) => `${TONED_ROOT}${file}`
 const playgroundFile = (path: string) =>
@@ -151,8 +150,8 @@ async function start(): Promise<Engine> {
 
   /** The playground's own files see only what its runtime can load. */
   function resolvePlayground(specifier: string, from: string) {
-    const local = /^\.\/(styles|App)(?:\.tsx?)?$/.exec(specifier)
-    if (local) return tsPath(local[1] === 'styles' ? 'styles.ts' : 'App.tsx')
+    const local = localFile(specifier)
+    if (local) return tsPath(local)
     if (
       specifier === 'react/jsx-runtime' ||
       (importableModules as readonly string[]).includes(specifier)
@@ -243,11 +242,11 @@ async function start(): Promise<Engine> {
     ts,
     service: ts.createLanguageService(host, ts.createDocumentRegistry()),
     toned,
-    tonedVersions: { 'styles.ts': 0, 'App.tsx': 0 },
+    tonedVersions: fileRecord(() => 0),
   }
 }
 
-/** Bring Toned's index up to the current text of both documents. */
+/** Bring Toned's index up to the current text of every document. */
 function syncToned(engine: Engine) {
   for (const file of fileNames) {
     const { text, version } = documents[file]

@@ -14,20 +14,42 @@ All constructors are exported from `@toned/core/server`. React integrates throug
 
 ## Concrete document styles
 
-```tsx
-import { defineSystem, defineToken } from '@toned/core'
-import { createInlineRenderer, createPdfRenderer } from '@toned/core/server'
+The sheet is an ordinary stylesheet:
 
-const ui = defineSystem({ id: 'document', tokens: {
-  space: defineToken({ values: [8, 16] as const, resolve: value => ({ padding: value }) }),
-  surface: defineToken({ values: ['tint'] as const, resolve: () => ({ backgroundColor: '#eef2ff' }) }),
-} })
-const card = ui.stylesheet({ Root: { space: 16, surface: 'tint' } })
+```ts
+// styles.ts
+import { stylesheet } from './system'
+
+export const card = stylesheet({ Root: { space: 16, surface: 'tint' } })
+```
+
+Each renderer resolves it to concrete properties for its output:
+
+```ts
+// document.ts
+import { createInlineRenderer, createPdfRenderer } from '@toned/core/server'
+import { card } from './styles'
+import { ui } from './system'
+
 const email = createInlineRenderer(ui, { tokens: {} })
 const pdf = createPdfRenderer(ui, { tokens: {} })
 const emailProps = email.resolve(card).Root
 const pdfProps = pdf.resolve(card).Root
 // Spread emailProps onto an HTML element; give pdfProps.style to your PDF host.
+```
+
+Both renderers are bound to the system the sheet was declared with:
+
+```ts
+// system.ts
+import { defineSystem, defineToken } from '@toned/core'
+
+export const ui = defineSystem({ id: 'document', tokens: {
+  space: defineToken({ values: [8, 16] as const, resolve: value => ({ padding: value }) }),
+  surface: defineToken({ values: ['tint'] as const, resolve: () => ({ backgroundColor: '#eef2ff' }) }),
+} })
+
+export const { stylesheet } = ui
 ```
 
 A renderer produces styles, not an email delivery service or a PDF file. Use your document renderer to produce the final artifact. Test final emails in your target clients; concrete inline output does not imply universal email CSS support. Numeric dimensions in the PDF profile represent document points, not React Native density-independent pixels.

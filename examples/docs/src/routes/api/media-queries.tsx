@@ -19,26 +19,6 @@ function ApiMediaQueries() {
         automatically.
       </p>
 
-      <h2 {...s.h2} id="breakpoints">
-        Breakpoints
-      </h2>
-      <p>Declare named viewport thresholds in logical pixels:</p>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
-
-export const ui = defineSystem({
-  id: 'responsive',
-  tokens: {},
-  conditions: {
-    media: {
-      xs: 0,    // mobile-first default
-      sm: 480,  // small phones landscape
-      md: 768,  // tablets
-      lg: 992,  // small desktops
-      xl: 1200, // large desktops
-    },
-  },
-})`}</CodeBlock>
-
       <h2 {...s.h2} id="using-breakpoints-in-stylesheets">
         Using Breakpoints in Stylesheets
       </h2>
@@ -66,79 +46,6 @@ export const ui = defineSystem({
         <code {...s.code}>$style</code> escape hatch as the base element
         definition. Properties set inside a breakpoint block override the base
         values when the viewport matches.
-      </p>
-
-      <h2 {...s.h2} id="using-breakpoints-inline">
-        Using Breakpoints Inline
-      </h2>
-      <p>
-        The <code {...s.code}>t</code> utility accepts the same{' '}
-        <code {...s.code}>@media</code> blocks, so a one-off style can be
-        responsive without defining a stylesheet:
-      </p>
-      <CodeBlock>{`import { t } from '@toned/systems/base'
-
-function Panel() {
-  return <div {...t({ paddingX: 2, '@media md': { paddingX: 4 } })} />
-}`}</CodeBlock>
-      <p>
-        Inline blocks require <code {...s.code}>mediaMode: 'css'</code> -- see
-        below. They are also one level deep, so the root-level and variant forms
-        further down this page apply to stylesheets only.
-      </p>
-      <p>
-        Give the property a base value, as <code {...s.code}>paddingX: 2</code>{' '}
-        does above. A block with no base compiles to a fallback-less chain, so
-        below the breakpoint the property resolves to its initial value rather
-        than to whatever a class or an inherited rule set.
-      </p>
-
-      <h2 {...s.h2} id="media-modes">
-        Media Modes
-      </h2>
-      <p>
-        The <code {...s.code}>mediaMode</code> option in your config controls
-        how responsive styles are applied:
-      </p>
-
-      <h3 {...s.h3} id="css-mode">
-        CSS Mode
-      </h3>
-      <p>
-        When <code {...s.code}>mediaMode: 'css'</code>, breakpoint overrides are
-        compiled into real CSS <code {...s.code}>@media</code> rules. This is
-        the recommended mode for web projects as it uses native browser
-        capabilities and avoids JavaScript overhead:
-      </p>
-      <CodeBlock>{`setConfig(
-  defineConfig({
-    ...reactConfig,
-    useClassName: true,
-    useMedia: true,
-    mediaMode: 'css',
-    pseudoMode: 'css',
-  }),
-)`}</CodeBlock>
-
-      <h3 {...s.h3} id="javascript-mode">
-        JavaScript Mode
-      </h3>
-      <p>
-        When <code {...s.code}>mediaMode</code> is not set to{' '}
-        <code {...s.code}>'css'</code>, breakpoints in a{' '}
-        <strong>stylesheet</strong> are evaluated at runtime using JavaScript{' '}
-        <code {...s.code}>window.matchMedia</code>. This mode is useful for
-        React Native or environments where CSS media queries are not available.
-      </p>
-      <p>
-        Inline <code {...s.code}>t</code> blocks have no runtime equivalent:
-        they compile to CSS custom properties, which only a browser reads. Under
-        any mode other than <code {...s.code}>'css'</code> an inline{' '}
-        <code {...s.code}>@</code> block is dropped, the base token value still
-        applies, and a development-only warning explains why. Where you need
-        responsive styling on React Native, use{' '}
-        <a href="/api/stylesheet">stylesheet</a> with{' '}
-        <a href="/api/use-styles">useStyles</a> instead.
       </p>
 
       <h2 {...s.h2} id="root-level-breakpoints">
@@ -204,6 +111,102 @@ const styles = stylesheet({
     },
   },
 }))`}</CodeBlock>
+
+      <h2 {...s.h2} id="using-breakpoints-inline">
+        Using Breakpoints Inline
+      </h2>
+      <p>
+        The <code {...s.code}>t</code> utility accepts the same{' '}
+        <code {...s.code}>@media</code> blocks, so a one-off style can be
+        responsive without defining a stylesheet:
+      </p>
+      <CodeBlock>{`import { t } from '@toned/systems/base'
+
+function Panel() {
+  return <div {...t({ paddingX: 2, '@media md': { paddingX: 4 } })} />
+}`}</CodeBlock>
+      <p>
+        Inline blocks require <code {...s.code}>mediaMode: 'css'</code> -- see
+        below. They are also one level deep, so the root-level and variant forms
+        shown above apply to stylesheets only.
+      </p>
+      <p>
+        Give the property a base value, as <code {...s.code}>paddingX: 2</code>{' '}
+        does above. A block with no base compiles to a fallback-less chain, so
+        below the breakpoint the property resolves to its initial value rather
+        than to whatever a class or an inherited rule set.
+      </p>
+
+      <h2 {...s.h2} id="breakpoints">
+        Declaring Breakpoints
+      </h2>
+      <p>
+        The examples above use the base system's breakpoints. In your own
+        system, declare named viewport thresholds in logical pixels:
+      </p>
+      <CodeBlock title="system.ts">{`import { defineSystem } from '@toned/core'
+
+export const ui = defineSystem({
+  id: 'responsive',
+  tokens: {},
+  conditions: {
+    media: {
+      xs: 0,    // mobile-first default
+      sm: 480,  // small phones landscape
+      md: 768,  // tablets
+      lg: 992,  // small desktops
+      xl: 1200, // large desktops
+    },
+  },
+})`}</CodeBlock>
+
+      <h2 {...s.h2} id="media-modes">
+        Media Modes
+      </h2>
+      <p>
+        The <code {...s.code}>mediaMode</code> option in your config controls
+        how responsive styles are applied:
+      </p>
+
+      <h3 {...s.h3} id="css-mode">
+        CSS Mode
+      </h3>
+      <p>
+        When <code {...s.code}>mediaMode: 'css'</code>, breakpoint overrides are
+        compiled into real CSS <code {...s.code}>@media</code> rules. This is
+        the recommended mode for web projects as it uses native browser
+        capabilities and avoids JavaScript overhead:
+      </p>
+      <CodeBlock title="toned.config.ts">{`setConfig(
+  defineConfig({
+    ...reactConfig,
+    useClassName: true,
+    useMedia: true,
+    mediaMode: 'css',
+    pseudoMode: 'css',
+  }),
+)`}</CodeBlock>
+
+      <h3 {...s.h3} id="javascript-mode">
+        JavaScript Mode
+      </h3>
+      <p>
+        When <code {...s.code}>mediaMode</code> is not set to{' '}
+        <code {...s.code}>'css'</code>, breakpoints in a{' '}
+        <strong>stylesheet</strong> are evaluated at runtime using JavaScript{' '}
+        <code {...s.code}>window.matchMedia</code>. This mode is useful for
+        React Native or environments where CSS media queries are not available.
+      </p>
+      <p>
+        Inline <code {...s.code}>t</code> blocks have no runtime equivalent:
+        they compile to CSS custom properties, which only a browser reads. Under
+        any mode other than <code {...s.code}>'css'</code> an inline{' '}
+        <code {...s.code}>@</code> block is dropped, the base token value still
+        applies, and a development-only warning explains why. Where you need
+        responsive styling on React Native, use{' '}
+        <a href="/api/stylesheet">stylesheet</a> with{' '}
+        <a href="/api/use-styles">useStyles</a> instead.
+      </p>
     </article>
   )
 }

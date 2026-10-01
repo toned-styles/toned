@@ -1,4 +1,9 @@
-import { type FileName, fileNames, MAX_FILE_CHARS } from '../types.ts'
+import {
+  type FileName,
+  fileNames,
+  fileRecord,
+  MAX_FILE_CHARS,
+} from '../types.ts'
 import type {
   FromWorker,
   LanguageRequest,
@@ -27,7 +32,7 @@ export class LanguageClient {
   private readonly texts = {} as Record<FileName, string>
   private ids = 0
   private disposed = false
-  readonly versions: Versions = { 'styles.ts': 0, 'App.tsx': 0 }
+  readonly versions: Versions = fileRecord(() => 0)
   status: LanguageStatus = { kind: 'starting' }
 
   constructor(private readonly onStatus: (status: LanguageStatus) => void) {

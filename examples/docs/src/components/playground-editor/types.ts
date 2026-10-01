@@ -1,14 +1,53 @@
 import type { ComponentType } from 'react'
 
-/** The two editable files. `App.tsx` may import `./styles` (or `./styles.ts`). */
-export const fileNames = ['styles.ts', 'App.tsx'] as const
+/**
+ * The three editable files, in tab order: the interesting one first. Each is
+ * one layer, and each imports only the layer below it:
+ * `App.tsx` → `./styles.ts` → `./system.ts`.
+ */
+export const fileNames = ['styles.ts', 'App.tsx', 'system.ts'] as const
 export type FileName = (typeof fileNames)[number]
 export type SourceFiles = Record<FileName, string>
+
+/** Dependencies first: the order files are transpiled and evaluated in. */
+export const buildOrder = [
+  'system.ts',
+  'styles.ts',
+  'App.tsx',
+] as const satisfies readonly FileName[]
+
+/** What each file is for, shown as the caption on its tab. */
+export const fileLayers: Record<FileName, { label: string; hint: string }> = {
+  'styles.ts': {
+    label: 'Styles',
+    hint: 'Style declarations: stylesheets, their parts and variants.',
+  },
+  'App.tsx': {
+    label: 'Component',
+    hint: 'The React component that binds the stylesheet to elements.',
+  },
+  'system.ts': {
+    label: 'System',
+    hint: 'Configuration: the design system the stylesheets are written in.',
+  },
+}
+
+/** The playground file a relative import names, with or without its suffix. */
+export function localFile(specifier: string): FileName | undefined {
+  const stem = /^\.\/(.+?)(?:\.tsx?)?$/.exec(specifier)?.[1]
+  return fileNames.find((file) => file.replace(/\.tsx?$/, '') === stem)
+}
+
+export function fileRecord<T>(value: (file: FileName) => T) {
+  return Object.fromEntries(
+    fileNames.map((file) => [file, value(file)]),
+  ) as Record<FileName, T>
+}
 
 /** Per-file bound: keeps highlighting, transpiling and storage cheap. */
 export const MAX_FILE_CHARS = 20_000
 
-/** Everything user code may import, besides the other playground file. */
+/** Everything user code may import, besides the other playground files. */
 export const importableModules = [
   'react',
   '@toned/core',
@@ -22,7 +61,7 @@ export type ImportableModule = (typeof importableModules)[number]
 export function cannotImportMessage(specifier: string) {
   return `Cannot import "${specifier}". The playground provides ${importableModules
     .map((name) => `"${name}"`)
-    .join(', ')} and "./styles".`
+    .join(', ')}, "./system" and "./styles".`
 }
 
 export type Problem = {

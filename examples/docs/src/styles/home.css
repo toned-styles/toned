@@ -13,6 +13,11 @@
   .tnd-home .tnd-token-flow {
     animation: none;
   }
+
+  /* SVG motion ignores CSS animation rules, so the pulses are removed. */
+  .tnd-home .tnd-token-pulse {
+    display: none;
+  }
 }
 
 .tnd-skip-link {

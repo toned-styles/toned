@@ -25,17 +25,22 @@ function GuideSsr() {
         and every sheet, including lazy routes. The raw token dictionary alone
         does not carry a stylesheet inventory or system namespace.
       </p>
-      <CodeBlock>{`// vite.config.ts
-import toned from '@toned/core/vite'
+      <p>
+        <code {...s.code}>system.ts</code> and{' '}
+        <code {...s.code}>styles.ts</code> are the modules from{' '}
+        <a href="/getting-started">Getting Started</a>.
+      </p>
+      <CodeBlock title="vite.config.ts">{`import toned from '@toned/core/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { ui, buttonStyles } from './styles.ts'
+import { buttonStyles } from './styles.ts'
+import { ui } from './system.ts'
 
 export default defineConfig({
   plugins: [toned({
     system: ui,
     sheets: [buttonStyles],
-    inputs: ['styles.ts'],
+    inputs: ['system.ts', 'styles.ts'],
   }), react()],
 })`}</CodeBlock>
       <p>
@@ -48,10 +53,11 @@ export default defineConfig({
       <h2 {...s.h2} id="without-vite">
         Without Vite
       </h2>
-      <CodeBlock>{`// build-styles.ts — run during the application build
+      <CodeBlock title="build-styles.ts">{`// Run during the application build.
 import { mkdir, writeFile } from 'node:fs/promises'
 import { buildStyles } from '@toned/core/build'
-import { ui, buttonStyles } from './styles.ts'
+import { buttonStyles } from './styles.ts'
+import { ui } from './system.ts'
 
 const artifact = buildStyles(ui, { sheets: [buttonStyles] })
 await mkdir('public/assets', { recursive: true })
@@ -66,14 +72,12 @@ await writeFile('public/assets/toned.manifest.json', JSON.stringify(artifact.man
       <h2 {...s.h2} id="render-and-hydrate">
         Render and hydrate
       </h2>
-      <CodeBlock>{`// entry-server.tsx
-import { renderToString } from 'react-dom/server'
+      <CodeBlock title="entry-server.tsx">{`import { renderToString } from 'react-dom/server'
 import { App } from './App.tsx'
 export function render() {
   return renderToString(<App />)
 }`}</CodeBlock>
-      <CodeBlock>{`// entry-client.tsx
-import { hydrateRoot } from 'react-dom/client'
+      <CodeBlock title="entry-client.tsx">{`import { hydrateRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing application root')

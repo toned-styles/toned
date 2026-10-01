@@ -12,7 +12,7 @@ export type LanguageCheck = {
 }
 
 /**
- * Owns the language worker for the playground: keeps its two documents in
+ * Owns the language worker for the playground: keeps its three documents in
  * step with the editor and re-checks them shortly after each change.
  */
 export function useLanguage(files: SourceFiles, enabled: boolean) {

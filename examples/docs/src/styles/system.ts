@@ -13,7 +13,8 @@ const motion = defineAnimations({
   },
 })
 
-const tones = {
+/** The studio's accent palette; the token diagram shows these resolved values. */
+export const tones = {
   blue: { accent: '#284bdd', soft: '#e8edff' },
   violet: { accent: '#7040cb', soft: '#ede9fc' },
   coral: { accent: '#b63f31', soft: '#fce8e2' },
