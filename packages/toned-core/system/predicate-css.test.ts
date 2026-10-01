@@ -92,6 +92,20 @@ test('namespace leaves caller scope and literal strings and URLs intact', () => 
   expect(result).toContain('url(/asset.name--value.png)')
   expect(result).toContain('var(--one-paint)')
 })
+test('namespace keeps a class scope intact wherever the selector sits', () => {
+  // Rules after the first begin with whitespace; lists repeat the scope; rules
+  // nest in at-rules. The scope class is the caller's and is never renamed.
+  const result = namespaceCss(
+    '.pg .a{color:red}\n.pg .b{color:red} .pg .c, .pg .d{color:red}@media (min-width:1px){ .pg .e{color:red}}.pgx .f{color:red}',
+    'one',
+    { scope: '.pg' },
+  )
+  expect(result).not.toContain('.one--pg ')
+  for (const name of ['a', 'b', 'c', 'd', 'e'])
+    expect(result).toContain(`.pg .one--${name}`)
+  // A class that merely starts with the scope's text is the system's own.
+  expect(result).toContain('.one--pgx .one--f')
+})
 
 for (const strict of [false, true])
   for (const useClassName of [false, true])
