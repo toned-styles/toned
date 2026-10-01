@@ -1,25 +1,30 @@
+import { t } from '@toned/systems/base'
 import { c, doc } from '@/lib/doc.tsx'
 import { Label } from './label.tsx'
 import { RadioGroup, RadioGroupItem } from './radio-group.tsx'
 
+const row = t({ flexLayout: 'row', alignItems: 'center', gap: 2 })
+
 export default doc({
+  description:
+    'A set of options where exactly one is selected. The arrow keys move the selection.',
   components: [
-    c({ RadioGroup }, { defaultValue: 'option-1' }),
-    c({ RadioGroupItem }, { value: 'option-1' }),
+    c({ RadioGroup }, { defaultValue: 'comfortable', 'aria-label': 'Density' }),
+    c({ RadioGroupItem }, { value: 'comfortable' }),
   ],
   preview: (C) => (
     <C.RadioGroup>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <C.RadioGroupItem value="option-1" id="r1" />
-        <Label htmlFor="r1">Default</Label>
+      <div {...row}>
+        <C.RadioGroupItem value="default" id="density-default" />
+        <Label htmlFor="density-default">Default</Label>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <C.RadioGroupItem value="option-2" id="r2" />
-        <Label htmlFor="r2">Comfortable</Label>
+      <div {...row}>
+        <C.RadioGroupItem value="comfortable" id="density-comfortable" />
+        <Label htmlFor="density-comfortable">Comfortable</Label>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <C.RadioGroupItem value="option-3" id="r3" />
-        <Label htmlFor="r3">Compact</Label>
+      <div {...row}>
+        <C.RadioGroupItem value="compact" id="density-compact" />
+        <Label htmlFor="density-compact">Compact</Label>
       </div>
     </C.RadioGroup>
   ),

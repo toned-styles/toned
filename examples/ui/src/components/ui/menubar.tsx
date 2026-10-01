@@ -1,160 +1,140 @@
 'use client'
 
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
 import { Menubar as MenubarPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
+/*
+ * The highlighted, disabled and open states come from Radix data attributes,
+ * and the open and close animations from `data-state`: both are structural
+ * rules in styles.css.
+ */
 export const menubarStyles = stylesheet({
   root: {
-    bgColor: 'default',
     display: 'flex',
     alignItems: 'center',
     gap: 1,
-    borderRadius: 'medium',
-    borderColor: 'default',
-    borderWidth: 'thin',
+    width: 'fit-content',
+    height: '2.5rem',
     padding: 1,
+    bgColor: 'default',
+    borderColor: 'input',
+    borderWidth: 'thin',
+    borderRadius: 'large',
     shadow: 'small',
-    height: '2.25rem',
   },
   trigger: {
     display: 'flex',
     alignItems: 'center',
-    borderRadius: 'small',
-    paddingX: 2,
-    paddingY: 1,
-    typo: 'body_small',
-    fontWeight: 500,
+    height: '100%',
+    paddingX: 3,
+    borderRadius: 'medium',
+    typo: 'label_small',
+    textColor: 'default',
     cursor: 'default',
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-      border: 'none',
-      background: 'none',
-    },
-    ':focus': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-      style: { outline: 'none' },
-    },
+    // No token: menu text is not selectable.
+    style: { userSelect: 'none', transition: 'background-color 0.15s' },
   },
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     zIndex: 50,
-    borderRadius: 'medium',
+    minWidth: '11rem',
+    maxHeight: 'var(--radix-menubar-content-available-height)',
+    padding: 1,
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 1,
-    shadow: 'medium',
-    minWidth: '12rem',
-    overflow: 'hidden',
-    style: {
-      transformOrigin: 'var(--radix-menubar-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    shadow: 'large',
+    overflowX: 'hidden',
+    overflowY: 'auto',
   },
   item: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
+    position: 'relative',
     paddingX: 2,
     paddingY: 1.5,
+    borderRadius: 'medium',
     typo: 'body_small',
-    position: 'relative',
     cursor: 'default',
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
-    ':focus': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-      style: { outline: 'none' },
-    },
-  },
-  itemDisabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
-  },
-  itemInset: {
-    paddingLeft: 8,
-  },
-  itemDestructiveFocus: {
-    ':focus': {
-      bgColor: 'destructive',
-      style: { outline: 'none', color: 'oklch(0.985 0 0)' },
-    },
+    // No token: menu text is not selectable.
+    style: { userSelect: 'none' },
   },
   checkboxItem: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
-    paddingY: 1.5,
-    typo: 'body_small',
     position: 'relative',
-    cursor: 'default',
+    paddingY: 1.5,
     paddingRight: 2,
     paddingLeft: 8,
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
+    borderRadius: 'medium',
+    typo: 'body_small',
+    cursor: 'default',
+    // No token: menu text is not selectable.
+    style: { userSelect: 'none' },
   },
   indicator: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    left: 2,
+    width: '1rem',
+    height: '1rem',
     pointerEvents: 'none',
-    left: '0.5rem',
-    width: '0.875rem',
-    height: '0.875rem',
+  },
+  radioIcon: {
+    width: '0.5rem',
+    height: '0.5rem',
+    svgFill: 'current',
   },
   label: {
     paddingX: 2,
     paddingY: 1.5,
-    typo: 'body_small',
+    typo: 'caption',
+    textColor: 'muted',
     fontWeight: 500,
   },
-  labelInset: {
-    paddingLeft: 8,
-  },
   separator: {
-    bgColor: 'subtle',
-    height: '1px',
+    borderColor: 'default',
     marginY: 1,
     marginX: -1,
+    // No token sets a single edge.
+    style: { borderTopWidth: 1 },
   },
   shortcut: {
+    marginLeft: 'auto',
+    paddingLeft: 4,
     textColor: 'muted',
     typo: 'caption',
-    letterSpacing: '0.1em',
-    style: {
-      marginLeft: 'auto',
-    },
   },
-  subContent: {
-    bgColor: 'elevated',
-    textColor: 'default',
-    zIndex: 50,
-    borderRadius: 'medium',
-    borderColor: 'default',
-    borderWidth: 'thin',
-    padding: 1,
-    shadow: 'large',
-    minWidth: '8rem',
-    overflow: 'hidden',
-    style: {
-      transformOrigin: 'var(--radix-menubar-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+  subIcon: {
+    marginLeft: 'auto',
+    textColor: 'muted',
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      inset: boolean
+      variant: 'default' | 'destructive'
+    }>,
+  ) => ({
+    [$.inset(true)]: {
+      item: { paddingLeft: 8 },
+      label: { paddingLeft: 8 },
+    },
+    [$.variant('destructive')]: {
+      item: { textColor: 'destructive' },
+    },
+  }),
+  { defaults: { inset: false, variant: 'default' } },
+)
 
 function Menubar({
   className,
@@ -245,7 +225,7 @@ function MenubarItem({
   inset?: boolean
   variant?: 'default' | 'destructive'
 }) {
-  const s = useStyles(menubarStyles)
+  const s = useStyles(menubarStyles, { inset: !!inset, variant })
 
   return (
     <MenubarPrimitive.Item
@@ -253,11 +233,7 @@ function MenubarItem({
       data-inset={inset}
       data-variant={variant}
       disabled={disabled}
-      {...s.item
-        .with(inset && s.itemInset)
-        .with(disabled && s.itemDisabled)
-        .with(variant === 'destructive' && s.itemDestructiveFocus)
-        .with({ className })}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -280,7 +256,7 @@ function MenubarCheckboxItem({
     >
       <span {...s.indicator}>
         <MenubarPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <CheckIcon />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -303,7 +279,7 @@ function MenubarRadioItem({
     >
       <span {...s.indicator}>
         <MenubarPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
+          <CircleIcon {...s.radioIcon} />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -318,13 +294,13 @@ function MenubarLabel({
 }: React.ComponentProps<typeof MenubarPrimitive.Label> & {
   inset?: boolean
 }) {
-  const s = useStyles(menubarStyles)
+  const s = useStyles(menubarStyles, { inset: !!inset })
 
   return (
     <MenubarPrimitive.Label
       data-slot="menubar-label"
       data-inset={inset}
-      {...s.label.with(inset && s.labelInset).with({ className })}
+      {...s.label.with({ className })}
       {...props}
     />
   )
@@ -374,17 +350,17 @@ function MenubarSubTrigger({
 }: React.ComponentProps<typeof MenubarPrimitive.SubTrigger> & {
   inset?: boolean
 }) {
-  const s = useStyles(menubarStyles)
+  const s = useStyles(menubarStyles, { inset: !!inset })
 
   return (
     <MenubarPrimitive.SubTrigger
       data-slot="menubar-sub-trigger"
       data-inset={inset}
-      {...s.item.with(inset && s.itemInset).with({ className })}
+      {...s.item.with({ className })}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto h-4 w-4" />
+      <ChevronRightIcon {...s.subIcon} />
     </MenubarPrimitive.SubTrigger>
   )
 }
@@ -398,7 +374,7 @@ function MenubarSubContent({
   return (
     <MenubarPrimitive.SubContent
       data-slot="menubar-sub-content"
-      {...s.subContent.with({ className })}
+      {...s.content.with({ className })}
       {...props}
     />
   )

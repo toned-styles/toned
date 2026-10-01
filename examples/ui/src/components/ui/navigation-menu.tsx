@@ -4,8 +4,10 @@ import { ChevronDownIcon } from 'lucide-react'
 import { NavigationMenu as NavigationMenuPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-import { cn } from '@/lib/utils.ts'
-
+/*
+ * The open trigger, its rotated chevron and the viewport animation are keyed
+ * on Radix data attributes in styles.css.
+ */
 export const navMenuStyles = stylesheet({
   root: {
     position: 'relative',
@@ -13,68 +15,46 @@ export const navMenuStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     maxWidth: 'max-content',
-    style: {
-      flex: 1,
-    },
   },
   list: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 1,
-    style: {
-      flex: 1,
-      listStyle: 'none',
-    },
   },
   item: {
     position: 'relative',
   },
   trigger: {
-    bgColor: 'default',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 'medium',
-    typo: 'body_small',
-    fontWeight: 500,
-    paddingX: 4,
-    paddingY: 2,
-    height: '2.25rem',
-    cursor: 'pointer',
+    gap: 1,
     width: 'max-content',
-    style: {
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
-      border: 'none',
-    },
-    ':hover': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-    },
+    height: '2.25rem',
+    paddingX: 3,
+    borderRadius: 'medium',
+    typo: 'label_small',
+    textColor: 'default',
+    cursor: 'pointer',
+    // No token: the transition list is specific to this part.
+    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    ':hover': { bgColor: 'subtle' },
+    ':focus-visible': { shadow: 'focus' },
   },
   triggerIcon: {
-    position: 'relative',
-    top: '1px',
-    marginLeft: 1,
     width: '0.75rem',
     height: '0.75rem',
-    style: {
-      transition: 'transform 0.3s',
-    },
+    textColor: 'muted',
+    // The open state rotates the icon from styles.css.
+    style: { transition: 'transform 0.2s' },
   },
   content: {
-    padding: 2,
     top: 0,
     left: 0,
     width: '100%',
-    paddingRight: 2.5,
-    '@md': {
-      position: 'absolute',
-      style: {
-        width: 'auto',
-      },
-    },
+    padding: 2,
+    '@md': { position: 'absolute', width: 'auto' },
   },
   viewportWrapper: {
     position: 'absolute',
@@ -83,47 +63,37 @@ export const navMenuStyles = stylesheet({
     justifyContent: 'center',
     top: '100%',
     left: 0,
-    style: {
-      isolation: 'isolate',
-    },
   },
   viewport: {
     bgColor: 'elevated',
     textColor: 'default',
     borderColor: 'default',
     borderWidth: 'thin',
-    borderRadius: 'medium',
-    shadow: 'medium',
+    borderRadius: 'large',
+    shadow: 'large',
     position: 'relative',
     overflow: 'hidden',
     marginTop: 1.5,
     height: 'var(--radix-navigation-menu-viewport-height)',
     width: '100%',
+    // No tokens: the panel grows from the bar and resizes between menus.
     style: {
       transformOrigin: 'top center',
-      animation: 'fade-in 100ms ease-out',
+      transition: 'width 0.2s, height 0.2s',
     },
-    '@md': {
-      style: {
-        width: 'var(--radix-navigation-menu-viewport-width)',
-      },
-    },
+    '@md': { width: 'var(--radix-navigation-menu-viewport-width)' },
   },
   link: {
-    display: 'flex',
     flexLayout: 'column',
-    gap: 1,
-    borderRadius: 'small',
+    gap: 0.5,
     padding: 2,
+    borderRadius: 'medium',
     typo: 'body_small',
-    style: {
-      transition: 'all 0.15s',
-      outline: 'none',
-    },
-    ':hover': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-    },
+    textColor: 'default',
+    // No token: the transition list is specific to this part.
+    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    ':hover': { bgColor: 'subtle' },
+    ':focus-visible': { shadow: 'focus' },
   },
   indicator: {
     display: 'flex',
@@ -135,16 +105,15 @@ export const navMenuStyles = stylesheet({
     height: '0.375rem',
   },
   indicatorArrow: {
-    bgColor: 'subtle',
+    bgColor: 'elevated',
+    borderColor: 'default',
+    borderWidth: 'thin',
     position: 'relative',
-    shadow: 'medium',
-    borderRadius: 'small',
     top: '60%',
     height: '0.5rem',
     width: '0.5rem',
-    style: {
-      transform: 'rotate(45deg)',
-    },
+    // No token for transforms: a rotated square reads as an arrow.
+    style: { transform: 'rotate(45deg)' },
   },
 })
 
@@ -162,7 +131,7 @@ function NavigationMenu({
     <NavigationMenuPrimitive.Root
       data-slot="navigation-menu"
       data-viewport={viewport}
-      {...s.root.with({ className: cn('group/navigation-menu', className) })}
+      {...s.root.with({ className })}
       {...props}
     >
       {children}
@@ -213,10 +182,11 @@ function NavigationMenuTrigger({
   return (
     <NavigationMenuPrimitive.Trigger
       data-slot="navigation-menu-trigger"
-      {...s.trigger.with({ className: cn('group', className) })}
+      {...s.trigger.with({ className })}
       {...props}
     >
-      {children} <ChevronDownIcon {...s.triggerIcon} aria-hidden="true" />
+      {children}
+      <ChevronDownIcon {...s.triggerIcon} aria-hidden="true" />
     </NavigationMenuPrimitive.Trigger>
   )
 }
@@ -243,7 +213,7 @@ function NavigationMenuViewport({
   const s = useStyles(navMenuStyles)
 
   return (
-    <div {...s.viewportWrapper}>
+    <div data-slot="navigation-menu-viewport-wrapper" {...s.viewportWrapper}>
       <NavigationMenuPrimitive.Viewport
         data-slot="navigation-menu-viewport"
         {...s.viewport.with({ className })}
@@ -280,7 +250,7 @@ function NavigationMenuIndicator({
       {...s.indicator.with({ className })}
       {...props}
     >
-      <div {...s.indicatorArrow} />
+      <div data-slot="navigation-menu-indicator-arrow" {...s.indicatorArrow} />
     </NavigationMenuPrimitive.Indicator>
   )
 }

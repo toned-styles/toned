@@ -13,24 +13,18 @@ const toggleStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
+    flexShrink: '0',
     borderRadius: 'medium',
-    typo: 'body_small',
-    fontWeight: 500,
+    typo: 'label_small',
+    textColor: 'default',
     cursor: 'pointer',
+    // No tokens for text wrapping or transitions.
     style: {
       whiteSpace: 'nowrap',
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
-      border: 'none',
+      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
     },
-    ':hover': {
-      bgColor: 'muted',
-      textColor: 'muted',
-    },
-  },
-  disabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
+    ':hover': { bgColor: 'subtle' },
+    ':focus-visible': { shadow: 'focus' },
   },
 }).variants(
   (
@@ -38,49 +32,45 @@ const toggleStyles = stylesheet({
       variant: 'default' | 'outline'
       size: 'default' | 'sm' | 'lg'
       pressed: boolean
+      disabled: boolean
     }>,
   ) => ({
-    [$.variant('default')]: {
-      root: {
-        style: { background: 'transparent' },
-      },
-    },
     [$.variant('outline')]: {
       root: {
-        borderColor: 'default',
+        bgColor: 'default',
+        borderColor: 'input',
         borderWidth: 'thin',
         shadow: 'small',
-        style: { background: 'transparent' },
-        ':hover': { bgColor: 'subtle', textColor: 'subtle' },
       },
     },
     [$.size('default')]: {
-      root: {
-        height: '2.25rem',
-        paddingX: 2,
-        minWidth: '2.25rem',
-      },
+      root: { height: '2.25rem', minWidth: '2.25rem', paddingX: 2.5 },
     },
     [$.size('sm')]: {
-      root: {
-        height: '2rem',
-        minWidth: '2rem',
-        paddingY: 0,
-        paddingX: 1.5,
-      },
+      root: { height: '2rem', minWidth: '2rem', paddingX: 2 },
     },
     [$.size('lg')]: {
-      root: {
-        height: '2.5rem',
-        minWidth: '2.5rem',
-        paddingY: 0,
-        paddingX: 2.5,
-      },
+      root: { height: '2.5rem', minWidth: '2.5rem', paddingX: 3 },
     },
     [$.pressed(true)]: {
-      root: { bgColor: 'subtle', textColor: 'subtle' },
+      root: {
+        bgColor: 'action_secondary',
+        textColor: 'on_action_secondary',
+        ':hover': { bgColor: 'action_secondary' },
+      },
+    },
+    [$.disabled(true)]: {
+      root: { pointerEvents: 'none', opacity: 0.5 },
     },
   }),
+  {
+    defaults: {
+      variant: 'default',
+      size: 'default',
+      pressed: false,
+      disabled: false,
+    },
+  },
 )
 
 function Toggle({
@@ -101,7 +91,12 @@ function Toggle({
   )
   const pressed = pressedProp ?? internal
 
-  const s = useStyles(toggleStyles, { variant, size, pressed })
+  const s = useStyles(toggleStyles, {
+    variant,
+    size,
+    pressed,
+    disabled: !!disabled,
+  })
 
   return (
     <TogglePrimitive.Root
@@ -112,7 +107,7 @@ function Toggle({
         setInternal(val)
         onPressedChange?.(val)
       }}
-      {...s.root.with(disabled && s.disabled).with({ className })}
+      {...s.root.with({ className })}
       disabled={disabled}
       {...props}
     />

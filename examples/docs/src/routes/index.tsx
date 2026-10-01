@@ -143,7 +143,7 @@ function Beyond() {
           Conditions, platforms and tooling, each documented with its limits.
         </p>
       </div>
-      <div {...s.Features}>
+      <div {...s.FeaturePairs}>
         <div {...s.Feature}>
           <h3 {...s.FeatureHeading}>Conditions</h3>
           <p {...s.FeatureBody}>

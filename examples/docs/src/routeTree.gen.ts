@@ -26,10 +26,16 @@ import { Route as IndexRouteImport } from './routes/index.tsx'
 import { Route as LabRouteImport } from './routes/lab.tsx'
 import { Route as LearnTopicRouteImport } from './routes/learn/$topic.tsx'
 import { Route as PlaygroundRouteImport } from './routes/playground.tsx'
+import { Route as ThemesRouteImport } from './routes/themes.tsx'
 import { Route as UiComponentRouteImport } from './routes/ui/$component.tsx'
 import { Route as UiIndexRouteImport } from './routes/ui/index.tsx'
 import { Route as UiRouteRouteImport } from './routes/ui/route.tsx'
 
+const ThemesRoute = ThemesRouteImport.update({
+  id: '/themes',
+  path: '/themes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlaygroundRoute = PlaygroundRouteImport.update({
   id: '/playground',
   path: '/playground',
@@ -139,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/getting-started': typeof GettingStartedRoute
   '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
+  '/themes': typeof ThemesRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/getting-started': typeof GettingStartedRoute
   '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
+  '/themes': typeof ThemesRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/getting-started': typeof GettingStartedRoute
   '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
+  '/themes': typeof ThemesRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
@@ -207,6 +216,7 @@ export interface FileRouteTypes {
     | '/getting-started'
     | '/lab'
     | '/playground'
+    | '/themes'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/getting-started'
     | '/lab'
     | '/playground'
+    | '/themes'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/getting-started'
     | '/lab'
     | '/playground'
+    | '/themes'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   GettingStartedRoute: typeof GettingStartedRoute
   LabRoute: typeof LabRoute
   PlaygroundRoute: typeof PlaygroundRoute
+  ThemesRoute: typeof ThemesRoute
   ApiDefineSystemRoute: typeof ApiDefineSystemRoute
   ApiMediaQueriesRoute: typeof ApiMediaQueriesRoute
   ApiStylesheetRoute: typeof ApiStylesheetRoute
@@ -288,6 +301,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/themes': {
+      id: '/themes'
+      path: '/themes'
+      fullPath: '/themes'
+      preLoaderRoute: typeof ThemesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/playground': {
       id: '/playground'
       path: '/playground'
@@ -452,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   GettingStartedRoute: GettingStartedRoute,
   LabRoute: LabRoute,
   PlaygroundRoute: PlaygroundRoute,
+  ThemesRoute: ThemesRoute,
   ApiDefineSystemRoute: ApiDefineSystemRoute,
   ApiMediaQueriesRoute: ApiMediaQueriesRoute,
   ApiStylesheetRoute: ApiStylesheetRoute,

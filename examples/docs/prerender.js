@@ -10,6 +10,7 @@ const routes = [
   '/',
   '/getting-started',
   '/playground',
+  '/themes',
   '/concepts',
   '/explore',
   '/lab',

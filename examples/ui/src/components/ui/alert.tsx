@@ -3,44 +3,28 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
+/*
+ * The grid template lives in styles.css: an alert with a leading icon gets a
+ * second column, which depends on its children (`:has(> svg)`).
+ */
 export const alertStyles = stylesheet({
   root: {
-    borderRadius: 'large',
-    borderColor: 'default',
-    borderWidth: 'thin',
-    paddingX: 4,
-    paddingY: 3,
-    typo: 'body_small',
+    display: 'grid',
+    rowGap: 1,
     position: 'relative',
     width: '100%',
-    alignItems: 'flex-start',
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '0 1fr',
-      gap: '2px 0',
-    },
+    paddingX: 4,
+    paddingY: 3,
+    borderRadius: 'large',
+    borderWidth: 'thin',
+    typo: 'body_small',
   },
   title: {
-    fontWeight: 500,
-    overflow: 'hidden',
-    minHeight: '1rem',
-    style: {
-      gridColumnStart: 2,
-      letterSpacing: '-0.01em',
-      display: '-webkit-box',
-      WebkitLineClamp: 1,
-      WebkitBoxOrient: 'vertical' as const,
-    },
+    typo: 'label_small',
   },
   description: {
     textColor: 'muted',
     typo: 'body_small',
-    style: {
-      gridColumnStart: 2,
-      display: 'grid',
-      justifyItems: 'start',
-      gap: '4px',
-    },
   },
 }).variants(
   (
@@ -49,19 +33,21 @@ export const alertStyles = stylesheet({
     }>,
   ) => ({
     [$.variant('default')]: {
-      root: { bgColor: 'elevated', textColor: 'default' },
+      root: {
+        bgColor: 'elevated',
+        textColor: 'default',
+        borderColor: 'default',
+      },
     },
     [$.variant('destructive')]: {
       root: {
         bgColor: 'elevated',
         textColor: 'destructive',
-        style: {
-          borderColor:
-            'color-mix(in srgb, var(--destructive) 50%, transparent)',
-        },
+        borderColor: 'destructive',
       },
     },
   }),
+  { defaults: { variant: 'default' } },
 )
 
 type AlertVariant = 'default' | 'destructive'

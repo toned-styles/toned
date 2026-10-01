@@ -9,10 +9,8 @@ export const labelStyles = stylesheet({
     alignItems: 'center',
     gap: 2,
     typo: 'label_small',
-    style: {
-      cursor: 'default',
-      userSelect: 'none',
-    },
+    // No token: double-clicking a label should not select its text.
+    style: { userSelect: 'none' },
   },
 })
 

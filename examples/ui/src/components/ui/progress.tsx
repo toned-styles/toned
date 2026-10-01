@@ -13,23 +13,23 @@ export const progressStyles = stylesheet({
     width: '100%',
     overflow: 'hidden',
     borderRadius: 'full',
-    style: {
-      backgroundColor: 'color-mix(in srgb, var(--primary) 20%, transparent)',
-    },
+    bgColor: 'action_subtle',
   },
   indicator: {
     bgColor: 'action',
     height: '100%',
     width: '100%',
-    style: {
-      flex: '1',
-      transition: 'transform 200ms ease',
-    },
+    borderRadius: 'full',
+    // No token: the fill slides to its new value.
+    style: { transition: 'transform 200ms ease' },
   },
-}).variants(($: Variants<{ size: 'sm' | 'md' | 'lg' }>) => ({
-  [$.size('sm')]: { root: { height: '0.25rem' } },
-  [$.size('lg')]: { root: { height: '0.75rem' } },
-}))
+}).variants(
+  ($: Variants<{ size: 'sm' | 'md' | 'lg' }>) => ({
+    [$.size('sm')]: { root: { height: '0.25rem' } },
+    [$.size('lg')]: { root: { height: '0.75rem' } },
+  }),
+  { defaults: { size: 'md' } },
+)
 
 function Progress({
   className,

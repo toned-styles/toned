@@ -13,24 +13,32 @@ import {
 import { Button } from './button.tsx'
 
 export default doc({
+  description:
+    'A modal that asks for confirmation before a consequential action. It can only be closed by choosing one of its buttons or pressing Escape.',
   components: [
     c({ AlertDialog }, {}),
     c({ AlertDialogTrigger }, { asChild: true }),
-    c({ AlertDialogContent }, {}),
+    c({ AlertDialogContent }, { size: 'default' }),
     c({ AlertDialogHeader }, {}),
     c({ AlertDialogFooter }, {}),
-    c({ AlertDialogTitle }, { children: 'Are you sure?' }),
+    c({ AlertDialogTitle }, { children: 'Delete this project?' }),
     c(
       { AlertDialogDescription },
-      { children: 'This action cannot be undone.' },
+      {
+        children:
+          'The project and its deployments are removed. This cannot be undone.',
+      },
     ),
-    c({ AlertDialogAction }, { children: 'Continue' }),
+    c(
+      { AlertDialogAction },
+      { children: 'Delete project', variant: 'destructive' },
+    ),
     c({ AlertDialogCancel }, { children: 'Cancel' }),
   ],
   preview: (C) => (
     <C.AlertDialog>
       <C.AlertDialogTrigger>
-        <Button variant="outline">Delete Account</Button>
+        <Button variant="outline">Delete project</Button>
       </C.AlertDialogTrigger>
       <C.AlertDialogContent>
         <C.AlertDialogHeader>

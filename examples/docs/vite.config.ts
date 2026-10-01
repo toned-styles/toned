@@ -24,6 +24,8 @@ import {
   tocStyles,
 } from './src/styles/site.ts'
 import { docsSystem } from './src/styles/system.ts'
+import { themesPageStyles } from './src/styles/themes/page.ts'
+import { themeShowcase } from './src/styles/themes/vite.ts'
 import { visualStyles } from './src/styles/visualisations.ts'
 
 const uiRoot = fileURLToPath(new URL('../ui', import.meta.url))
@@ -67,6 +69,7 @@ export default defineConfig({
         playgroundEditorStyles,
         playgroundStyles,
         libraryStyles,
+        themesPageStyles,
         headerStyles,
         docsStyles,
         sidebarStyles,
@@ -93,8 +96,11 @@ export default defineConfig({
         'src/components/lab/motion.styles.ts',
         'src/components/lab/grid.styles.ts',
         'src/styles/showcase.ts',
+        'src/styles/themes/page.ts',
       ],
     }),
+    // The theme showcase's own system: its classes and one palette per theme.
+    themeShowcase(),
     componentDocs({
       componentsDir: path.join(uiRoot, 'src/components/ui'),
       tsconfigPath: path.join(uiRoot, 'tsconfig.json'),

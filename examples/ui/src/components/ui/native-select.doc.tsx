@@ -1,14 +1,26 @@
+import { t } from '@toned/systems/base'
 import { c, doc } from '@/lib/doc.tsx'
-import { NativeSelect } from './native-select.tsx'
+import { Label } from './label.tsx'
+import { NativeSelect, NativeSelectOption } from './native-select.tsx'
 
 export default doc({
-  components: [c({ NativeSelect }, {})],
+  description:
+    'The browser’s own select, styled to match the other fields. It uses the platform picker, which suits phones.',
+  components: [
+    c(
+      { NativeSelect },
+      { size: 'default', disabled: false, defaultValue: 'weekly' },
+    ),
+  ],
   preview: (C) => (
-    <C.NativeSelect style={{ width: '200px' }}>
-      <option value="">Select an option</option>
-      <option value="1">Option 1</option>
-      <option value="2">Option 2</option>
-      <option value="3">Option 3</option>
-    </C.NativeSelect>
+    <div {...t({ flexLayout: 'column', gap: 2 })}>
+      <Label htmlFor="native-select-frequency">Digest frequency</Label>
+      <C.NativeSelect id="native-select-frequency">
+        <NativeSelectOption value="daily">Every day</NativeSelectOption>
+        <NativeSelectOption value="weekly">Every week</NativeSelectOption>
+        <NativeSelectOption value="monthly">Every month</NativeSelectOption>
+        <NativeSelectOption value="never">Never</NativeSelectOption>
+      </C.NativeSelect>
+    </div>
   ),
 })

@@ -3,22 +3,19 @@ import { stylesheet } from '@toned/systems/base'
 import { HoverCard as HoverCardPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
+// The open and close animations are keyed on `data-state` in styles.css.
 export const hoverCardStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     zIndex: 50,
-    borderRadius: 'medium',
+    width: '18rem',
+    padding: 4,
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 4,
-    shadow: 'medium',
-    width: '16rem',
-    style: {
-      outline: 'none',
-      transformOrigin: 'var(--radix-hover-card-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    shadow: 'large',
+    typo: 'body_small',
   },
 })
 
