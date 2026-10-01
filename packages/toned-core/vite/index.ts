@@ -32,6 +32,11 @@ export interface TonedPluginOptions<
   layer?: string
   id?: string
   scope?: string
+  /**
+   * Themes declared by the system are built as CSS custom properties, the
+   * first declared as the default. Name another default, or pass `false`.
+   */
+  themes?: false | { default?: string }
   /** Explicit declaration modules/assets watched by the build. */
   inputs?: readonly string[]
   /** Recollect after a watched declaration changes; include lazy sheets. */
@@ -64,6 +69,7 @@ export default function toned<S extends TokenStyleDeclaration>(
       return buildStyles(options.system as TokenSystem<S>, {
         ...shared,
         sheets,
+        themes: options.themes,
       })
     if (sheets.length)
       throw new Error(

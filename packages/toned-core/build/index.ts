@@ -1,3 +1,4 @@
+import { generateThemes } from '../dom/themes.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -10,6 +11,8 @@ import { collectManifestConditions, fingerprint } from './manifest.ts'
 export { generate } from '../dom/generate.ts'
 export type { GeneratePaletteOptions } from '../dom/palette.ts'
 export { generatePalette } from '../dom/palette.ts'
+export type { GenerateThemesOptions } from '../dom/themes.ts'
+export { generateThemes } from '../dom/themes.ts'
 export type { BuildArtifact, BuildManifest } from './manifest.ts'
 export { assertBuildArtifact, assertManifestConditions } from './manifest.ts'
 
@@ -22,6 +25,12 @@ export function buildStyles<S extends TokenStyleDeclaration>(
     scope?: string
     layer?: string
     systemId?: string
+    /**
+     * Themes declared by the system are written as custom properties, the
+     * first declared as the default. Name another default, or pass `false`
+     * to deliver theme values yourself.
+     */
+    themes?: false | { default?: string }
   },
 ): BuildArtifact {
   const atoms = new Set(options.conditions ?? [])
@@ -53,13 +62,25 @@ export function buildStyles<S extends TokenStyleDeclaration>(
     systemId: system.id,
     conditions,
   })
-  if (!extensions.size) return artifact
-  let extra = [...extensions]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, css]) => css)
+  const extra = [
+    ...[...extensions]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([, css]) => css),
+    ...(options.themes === false
+      ? []
+      : [
+          generateThemes(system, {
+            default: options.themes?.default,
+            scope: options.scope,
+          }),
+        ]),
+  ]
+    .filter(Boolean)
     .join('\n')
-  if (options.layer) extra = `@layer ${options.layer} {\n${extra}\n}`
-  const css = `${artifact.css}\n${extra}\n`
+  if (!extra) return artifact
+  const css = `${artifact.css}\n${
+    options.layer ? `@layer ${options.layer} {\n${extra}\n}` : extra
+  }\n`
   return Object.freeze({
     css,
     manifest: Object.freeze({
