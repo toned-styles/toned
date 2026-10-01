@@ -1,5 +1,5 @@
 import { defineCssToken, defineToken } from '../defineCssToken.ts'
-import { SpaceUnit } from './unit.ts'
+import { isCssDimension, SpaceUnit } from './unit.ts'
 
 export const overflow = defineCssToken('overflow', [
   'hidden',
@@ -288,10 +288,16 @@ export const position = defineCssToken('position', [
 // Insets ride the margin scale (base-relative, negatives, enumerated); a
 // boxed String keeps percentages and calc() available dynamically.
 const offsetValues = [new String(), 0, ...marginValues] as const
-export const top = defineCssToken('top', offsetValues, MarginUnit)
-export const left = defineCssToken('left', offsetValues, MarginUnit)
-export const right = defineCssToken('right', offsetValues, MarginUnit)
-export const bottom = defineCssToken('bottom', offsetValues, MarginUnit)
+// CSS lengths and expressions pass through, as they do for sizes; any other
+// string is a named spacing alias.
+const OffsetUnit = (
+  value: Parameters<typeof SpaceUnit>[0],
+  tokens: Parameters<typeof SpaceUnit>[1],
+) => (isCssDimension(value) ? value : MarginUnit(value, tokens))
+export const top = defineCssToken('top', offsetValues, OffsetUnit)
+export const left = defineCssToken('left', offsetValues, OffsetUnit)
+export const right = defineCssToken('right', offsetValues, OffsetUnit)
+export const bottom = defineCssToken('bottom', offsetValues, OffsetUnit)
 
 // Not base-relative — a stacking index, enumerated for static generation.
 export const zIndex = defineCssToken('zIndex', [
