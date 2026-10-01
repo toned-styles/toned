@@ -1,22 +1,24 @@
-import { useStyles } from '@toned/react'
+import { createElements } from '@toned/react'
 import { type ProfileVariants, profileStyles } from './styles.ts'
 
-export default function App(variants: Partial<ProfileVariants>) {
-  const s = useStyles(profileStyles, variants)
+const Profile = createElements(profileStyles)
 
+export default function App(variants: Partial<ProfileVariants>) {
   return (
-    <section {...s.Root}>
-      <div {...s.Card}>
-        <span {...s.Eyebrow}>DESIGN ENGINEER</span>
-        <h3 {...s.Name}>Ada Lovelace</h3>
-        <p {...s.Bio}>
-          One theme token sets four custom properties. Every other token reads
-          them, so switching the theme recolours the whole card.
-        </p>
-        <button {...s.Follow} type="button">
-          Follow
-        </button>
-      </div>
-    </section>
+    <Profile {...variants}>
+      <Profile.Root as="section">
+        <Profile.Card as="div">
+          <Profile.Eyebrow as="span">DESIGN ENGINEER</Profile.Eyebrow>
+          <Profile.Name as="h3">Ada Lovelace</Profile.Name>
+          <Profile.Bio as="p">
+            One theme token sets four custom properties. Every other token reads
+            them, so switching the theme recolours the whole card.
+          </Profile.Bio>
+          <Profile.Follow as="button" type="button">
+            Follow
+          </Profile.Follow>
+        </Profile.Card>
+      </Profile.Root>
+    </Profile>
   )
 }

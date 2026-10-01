@@ -12,7 +12,7 @@ export const showcaseStyles = stylesheet({
     gap: 6,
     width: '100%',
     padding: 6,
-    '@md': { padding: 10 },
+    '@media md': { padding: 10 },
   },
   Card: {
     surface: 'card',
@@ -21,7 +21,7 @@ export const showcaseStyles = stylesheet({
     gap: 6,
     padding: 6,
     width: '100%',
-    '@platform web': { $style: { boxShadow: '0 24px 64px #18255418' } },
+    depth: 'raised',
   },
   Heading: {
     $kind: 'text',

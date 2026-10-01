@@ -3,7 +3,7 @@ import { Button } from './button.tsx'
 
 export default doc({
   description:
-    'Six appearances and eight sizes, backed by one typed stylesheet. Change the props, inspect the variants, then make it yours.',
+    'Six appearances and eight sizes from one typed stylesheet. Change the props to see each variant.',
   components: [
     c(
       { Button },

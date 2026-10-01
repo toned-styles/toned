@@ -30,7 +30,7 @@ function pageLabel(pathname: string) {
     locate(pathname)?.label ??
     (
       {
-        '/': 'Make it yours. Keep it together.',
+        '/': 'Typed styling for React and React Native',
         '/playground': 'Playground',
         '/ui': 'Components',
       } as Record<string, string>

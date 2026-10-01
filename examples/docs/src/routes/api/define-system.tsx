@@ -26,6 +26,10 @@ export const ui = defineSystem({
       values: [0, 0.5, 1] as const,
       resolve: opacity => ({ opacity }),
     }),
+    padding: defineToken({
+      values: [2, 4] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
   },
   conditions: {
     media: { compact: 640, wide: 1024 },
@@ -35,10 +39,10 @@ export const ui = defineSystem({
 
 export const styles = ui.stylesheet(q => ({
   Root: {
-    $kind: 'view',
     opacity: 0.5,
+    padding: 2,
     [q.media('wide')]: { opacity: 1 },
-    [q.container('field', 'wide')]: { $style: { padding: 16 } },
+    [q.container('field', 'wide')]: { padding: 4 },
   },
 }))`}</CodeBlock>
       <h2 {...s.h2} id="token-and-condition-contracts">

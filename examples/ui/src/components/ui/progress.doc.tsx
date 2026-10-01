@@ -3,7 +3,7 @@ import { Progress } from './progress.tsx'
 
 export default doc({
   description:
-    'A real progress primitive with accessible values, custom ranges and three sizes. Try value 120 with max 200 for a 60% fill.',
+    'A progress bar with accessible values, custom ranges and three sizes. Try value 120 with max 200 for a 60% fill.',
   components: [
     c(
       { Progress },

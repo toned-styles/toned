@@ -25,12 +25,14 @@ function ApiStylesheet() {
       <CodeBlock>{`import { stylesheet } from '@toned/systems/base'
 
 const styles = stylesheet({
-  elementName: {
+  PartName: {
+    $kind: 'pressable',
     // token properties
     bgColor: 'action',
     borderRadius: 'medium',
-    $kind: 'pressable',
-    '@platform web': { $style: { cursor: 'pointer' } },
+    cursor: 'pointer',
+    // escape hatch: a web-only property that no token covers
+    '@platform web': { $style: { userSelect: 'none' } },
   },
 })`}</CodeBlock>
 
@@ -48,8 +50,9 @@ const styles = stylesheet({
         , etc.). Values are type-checked against the token's allowed values.
       </p>
       <p>
-        <strong>$style</strong> -- Portable raw fields not covered by tokens. An
-        explicit platform block widens the allowed fields for that platform.
+        <strong>$style</strong> -- The escape hatch: portable raw fields that no
+        token covers. Reach for a token first. An explicit platform block widens
+        the allowed fields for that platform.
       </p>
       <p>
         <strong>$kind</strong> -- Static semantic part metadata (
@@ -66,7 +69,9 @@ const styles = stylesheet({
         component's visual structure:
       </p>
       <CodeBlock>{`export const cardStyles = stylesheet({
-  card: {
+  Root: {
+    flexLayout: 'column',
+    gap: 1,
     bgColor: 'elevated',
     borderRadius: 'large',
     borderColor: 'subtle',
@@ -74,20 +79,22 @@ const styles = stylesheet({
     shadow: 'small',
     padding: 3,
   },
-  title: {
-    typo: 'heading_3',
-    marginBottom: 1,
+  Title: {
+    $kind: 'text',
+    typography: 'heading-3',
   },
-  body: {
+  Body: {
+    $kind: 'text',
+    typography: 'body-medium',
     textColor: 'subtle',
-    lineHeight: 1.6,
   },
 })`}</CodeBlock>
       <p>
-        When consumed by <code {...s.code}>useStyles</code>, you get back an
-        object with <code {...s.code}>s.card</code>,{' '}
-        <code {...s.code}>s.title</code>, and <code {...s.code}>s.body</code>{' '}
-        that can be spread onto the corresponding JSX elements.
+        Bound with <code {...s.code}>createElements</code>, the sheet becomes{' '}
+        <code {...s.code}>S.Root</code>, <code {...s.code}>S.Title</code> and{' '}
+        <code {...s.code}>S.Body</code> components.{' '}
+        <code {...s.code}>useStyles</code> returns the same parts as prop bags
+        to spread onto your own JSX elements.
       </p>
 
       <h2 {...s.h2} id="chaining-with-variants">
@@ -101,24 +108,24 @@ const styles = stylesheet({
       <CodeBlock>{`import type { Variants } from '@toned/core'
 
 const styles = stylesheet({
-  container: { bgColor: 'action' },
+  Root: { bgColor: 'action' },
 }).variants(($: Variants<{ size: 'm' | 's' }>) => ({
-  [$.size('m')]: { container: { paddingX: 3 } },
-  [$.size('s')]: { container: { paddingX: 2 } },
+  [$.size('m')]: { Root: { paddingX: 3 } },
+  [$.size('s')]: { Root: { paddingX: 2 } },
 }))`}</CodeBlock>
 
       <h2 {...s.h2} id="responsive-styles">
         Responsive Styles
       </h2>
       <p>
-        Use breakpoint keys prefixed with <code {...s.code}>@</code> to apply
+        Use <code {...s.code}>@media</code> keys that name a breakpoint to apply
         different token values at different screen sizes:
       </p>
       <CodeBlock>{`const styles = stylesheet({
-  container: {
+  Root: {
     paddingX: 2,
-    '@md': { paddingX: 4 },
-    '@lg': { paddingX: 6 },
+    '@media md': { paddingX: 4 },
+    '@media lg': { paddingX: 6 },
   },
 })`}</CodeBlock>
       <p>

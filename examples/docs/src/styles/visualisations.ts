@@ -15,17 +15,22 @@ export const visualStyles = stylesheet({
     curve: 'round',
     padding: 4,
     width: '100%',
-    '@md': { padding: 10 },
+    '@media md': { padding: 10 },
   },
   Diagram: {
     display: 'none',
     width: '100%',
     height: 'auto',
-    '@md': { display: 'block' },
+    '@media md': { display: 'block' },
   },
-  MobileDiagram: { width: '100%', height: 'auto', '@md': { display: 'none' } },
+  MobileDiagram: {
+    width: '100%',
+    height: 'auto',
+    '@media md': { display: 'none' },
+  },
   Flow: {
     animation: 'token-flow',
+    // No token: an SVG stroke pattern used by this one diagram.
     '@platform web': { $style: { strokeDasharray: '5 9' } },
   },
   Caption: { $kind: 'text', ink: 'accent', fontSize: '13px', fontWeight: 600 },
@@ -35,14 +40,9 @@ export const visualStyles = stylesheet({
     gap: 5,
     padding: 4,
     curve: 'round',
-    '@platform web': {
-      $style: {
-        backgroundColor: '#edf1ff',
-        backgroundImage: 'radial-gradient(#b8c5ed 1px, transparent 1px)',
-        backgroundSize: '16px 16px',
-      },
-    },
-    '@md': { padding: 10 },
+    fill: 'accent-soft',
+    texture: 'dots-accent',
+    '@media md': { padding: 10 },
   },
   Frame: { container: 'preview', width: '100%', maxWidth: '600px' },
   Card: {
@@ -67,7 +67,7 @@ export const visualStyles = stylesheet({
     height: '140px',
     '@container preview wide': {
       width: '160px',
-      '@platform web': { $style: { flexShrink: 0 } },
+      flexShrink: '0',
     },
   },
   Copy: { flexLayout: 'column', gap: 2 },

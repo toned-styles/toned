@@ -7,6 +7,8 @@ import { defineConfig } from 'vite'
 import { componentDocs } from './src/plugins/component-docs.ts'
 import { choiceStyles, homeStyles } from './src/styles/home.ts'
 import { adaptiveStyles, gridStyles, motionStyles } from './src/styles/lab.ts'
+import { libraryStyles } from './src/styles/library.ts'
+import { playgroundStyles } from './src/styles/playground.ts'
 import { playgroundEditorStyles } from './src/styles/playground-editor.ts'
 import { proseStyles } from './src/styles/prose.ts'
 import { showcaseStyles } from './src/styles/showcase.ts'
@@ -63,6 +65,8 @@ export default defineConfig({
         visualStyles,
         proseStyles,
         playgroundEditorStyles,
+        playgroundStyles,
+        libraryStyles,
         headerStyles,
         docsStyles,
         sidebarStyles,
@@ -79,7 +83,10 @@ export default defineConfig({
         'src/styles/playground-editor.ts',
         'src/styles/site.ts',
         'src/styles/brand.ts',
+        'src/styles/tokens.ts',
         'src/styles/system.ts',
+        'src/styles/library.ts',
+        'src/styles/playground.ts',
         'src/styles/home.ts',
         'src/styles/lab.ts',
         'src/styles/showcase.ts',

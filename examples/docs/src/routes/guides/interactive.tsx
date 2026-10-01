@@ -28,7 +28,8 @@ function GuideInteractive() {
         <code {...s.code}>:active</code> keys inside an element definition:
       </p>
       <CodeBlock>{`const buttonStyles = stylesheet({
-  container: {
+  Root: {
+    $kind: 'pressable',
     bgColor: 'action',
     borderRadius: 'medium',
     cursor: 'pointer',
@@ -41,7 +42,8 @@ function GuideInteractive() {
       bgColor: 'muted',
     },
   },
-  label: {
+  Label: {
+    $kind: 'text',
     textColor: 'on_action',
   },
 })`}</CodeBlock>
@@ -51,32 +53,35 @@ function GuideInteractive() {
       </h2>
       <p>
         To change one element's styles when a different element is interacted
-        with, use the <code {...s.code}>'element:pseudo'</code> key at the
-        stylesheet root level:
+        with, use a <code {...s.code}>'Part:state'</code> key at the stylesheet
+        root level:
       </p>
       <CodeBlock>{`const cardStyles = stylesheet({
-  container: {
+  Root: {
+    $kind: 'pressable',
     bgColor: 'elevated',
     borderRadius: 'large',
     cursor: 'pointer',
   },
-  label: {
+  Label: {
+    $kind: 'text',
     textColor: 'default',
   },
-  icon: {
+  Icon: {
+    $kind: 'text',
     textColor: 'muted',
   },
 
-  // When 'container' is hovered, change styles on multiple elements
-  'container:hover': {
-    container: { shadow: 'medium' },
-    label: { textColor: 'action' },
-    icon: { textColor: 'action' },
+  // When Root is hovered, change styles on multiple parts
+  'Root:hover': {
+    Root: { shadow: 'medium' },
+    Label: { textColor: 'action' },
+    Icon: { textColor: 'action' },
   },
 })`}</CodeBlock>
       <p>You can combine multiple pseudo-states in a cross-element selector:</p>
-      <CodeBlock>{`'container:active:hover': {
-  icon: { textColor: 'on_action' },
+      <CodeBlock>{`'Root:active:hover': {
+  Icon: { textColor: 'on_action' },
 }`}</CodeBlock>
 
       <h2 {...s.h2} id="combining-with-variants">
@@ -89,22 +94,22 @@ function GuideInteractive() {
       <CodeBlock>{`import type { Variants } from '@toned/core'
 
 const buttonStyles = stylesheet({
-  container: { bgColor: 'action', borderRadius: 'medium' },
-  label: { textColor: 'on_action' },
+  Root: { $kind: 'pressable', bgColor: 'action', borderRadius: 'medium' },
+  Label: { $kind: 'text', textColor: 'on_action' },
 }).variants(($: Variants<{
   variant: 'accent' | 'danger'
 }>) => ({
   [$.variant('accent')]: {
-    container: {
-      bgColor: 'action',
+    Root: {
       ':hover': { bgColor: 'action_secondary' },
     },
   },
   [$.variant('danger')]: {
-    container: {
-      bgColor: 'status_error',
-      ':hover': { bgColor: 'status_error', shadow: 'medium' },
+    Root: {
+      bgColor: 'destructive',
+      ':hover': { shadow: 'medium' },
     },
+    Label: { textColor: 'on_destructive' },
   },
 }))
 `}</CodeBlock>
@@ -114,7 +119,8 @@ const buttonStyles = stylesheet({
       </h2>
       <p>Pseudo-classes and breakpoints compose naturally:</p>
       <CodeBlock>{`const navStyles = stylesheet({
-  link: {
+  Link: {
+    $kind: 'text',
     textColor: 'muted',
     paddingX: 2,
 
@@ -122,7 +128,7 @@ const buttonStyles = stylesheet({
       textColor: 'action',
     },
 
-    '@md': {
+    '@media md': {
       paddingX: 4,
     },
   },
@@ -142,8 +148,9 @@ function Tag() {
     <span
       {...t({
         bgColor: 'default',
+        paddingX: 2,
         ':hover': { bgColor: 'action' },
-        '@md': { paddingX: 4 },
+        '@media md': { paddingX: 4 },
       })}
     />
   )

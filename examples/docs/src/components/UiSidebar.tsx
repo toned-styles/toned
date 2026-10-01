@@ -37,7 +37,7 @@ function ComponentLink({
 
 export function UiSidebar() {
   const s = useStyles(sidebarStyles)
-  const i = useStyles(indexStyles)
+  const i = useStyles(indexStyles, { density: 'compact' })
   const pathname = useRouterState({
     select: (state) => state.location.pathname.replace(/\/$/, ''),
   })
@@ -58,14 +58,7 @@ export function UiSidebar() {
         </label>
         <input
           id={searchId}
-          {...i.Input.with({
-            style: {
-              height: 38,
-              paddingLeft: 12,
-              fontSize: 14,
-              marginBottom: 8,
-            },
-          })}
+          {...i.Input}
           type="search"
           placeholder="Filter components…"
           value={query}

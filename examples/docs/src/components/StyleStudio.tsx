@@ -59,12 +59,8 @@ function PreviewCard() {
           <S.Badge as="span">In the making</S.Badge>
         </S.Row>
         <S.Stack as="div">
-          <S.Heading as="h3">
-            Something good
-            <br />
-            is taking shape.
-          </S.Heading>
-          <S.Caption as="p">Your next idea, with a style of its own.</S.Caption>
+          <S.Heading as="h3">Sample card</S.Heading>
+          <S.Caption as="p">Its parts follow the variants you pick.</S.Caption>
         </S.Stack>
         <S.Stack as="div">
           <S.Row as="div">

@@ -60,12 +60,12 @@ function LibraryShowcase() {
   return (
     <div {...s.stack}>
       <div>
-        <p {...d.Breadcrumb}>The Toned UI collection</p>
-        <h1 {...d.Title}>Small details. Whole experiences.</h1>
+        <p {...d.Breadcrumb}>Components</p>
+        <h1 {...d.Title}>Component gallery</h1>
         <p {...d.Lead}>
-          Real components, working together. Explore a little product built with
-          Toned, then open any component to inspect its stylesheet and make it
-          your own.
+          Fifty-six components built with Toned. The demo below uses several of
+          them together; open any component to read its stylesheet and edit it
+          live.
         </p>
       </div>
       <div {...s.spread}>
@@ -99,7 +99,7 @@ function LibraryShowcase() {
           <div {...s.spread}>
             <div {...s.stack}>
               <p {...s.eyebrow}>◒ Orbit / Workspace</p>
-              <h2>Your next great release.</h2>
+              <h2>Release 2.4</h2>
             </div>
             <Badge>
               {completed === tasks.length ? 'Ready to launch' : 'In progress'}
@@ -115,7 +115,7 @@ function LibraryShowcase() {
                 <Card density={density}>
                   <CardHeader>
                     <CardDescription>Weekly momentum</CardDescription>
-                    <CardTitle {...s.metric}>Keep building.</CardTitle>
+                    <CardTitle {...s.metric}>On track</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div {...s.stack}>
@@ -334,23 +334,23 @@ function LibraryShowcase() {
         {[
           [
             'button',
-            'A button with range.',
+            'Button',
             'Appearances, sizes and interaction states in a single stylesheet.',
           ],
           [
             'card',
-            'Parts that stay in sync.',
+            'Card',
             'Switch density and surface treatments across a composed card.',
           ],
           [
             'progress',
-            'Every step accounted for.',
+            'Progress',
             'Custom ranges, accessible values and three track sizes.',
           ],
           [
             'input',
-            'Make the details yours.',
-            'Inspect the source, tune tokens live, and keep typing.',
+            'Input',
+            'Read the source and edit tokens live; the field keeps its value.',
           ],
         ].map(([component, title, body]) => (
           <Link

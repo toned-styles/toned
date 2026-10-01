@@ -20,8 +20,9 @@ import { createInlineRenderer, createPdfRenderer } from '@toned/core/server'
 
 const ui = defineSystem({ id: 'document', tokens: {
   space: defineToken({ values: [8, 16] as const, resolve: value => ({ padding: value }) }),
+  surface: defineToken({ values: ['tint'] as const, resolve: () => ({ backgroundColor: '#eef2ff' }) }),
 } })
-const card = ui.stylesheet({ Root: { space: 16, $style: { backgroundColor: '#eef2ff' } } })
+const card = ui.stylesheet({ Root: { space: 16, surface: 'tint' } })
 const email = createInlineRenderer(ui, { tokens: {} })
 const pdf = createPdfRenderer(ui, { tokens: {} })
 const emailProps = email.resolve(card).Root

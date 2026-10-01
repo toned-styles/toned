@@ -1,15 +1,21 @@
-import { stylesheet } from '@toned/systems/base'
+import { stylesheet } from './system.ts'
 
+/**
+ * Chrome for the component gallery and the lab's demos. These surfaces sit
+ * beside the gallery's own components, so their colours stay on the base
+ * system's roles, which the gallery theme supplies.
+ */
 export const libraryStyles = stylesheet({
   page: {
-    fontFamily: '"Avenir Next", Avenir, "Segoe UI", sans-serif',
-    style: { color: '#17234b', backgroundColor: '#fbfcff' },
+    font: 'sans',
+    text: 'default',
+    fill: 'page',
     flexLayout: 'column',
     gap: 8,
     minHeight: '100vh',
     paddingX: 4,
     paddingY: 6,
-    '@md': { paddingX: 10 },
+    '@media md': { paddingX: 10 },
   },
   header: {
     display: 'flex',
@@ -25,9 +31,9 @@ export const libraryStyles = stylesheet({
     gap: 4,
     fontSize: '14px',
   },
-  shell: { flexLayout: 'column', gap: 8, '@md': { flexLayout: 'row' } },
-  main: { flexGrow: '1', minWidth: '0' },
-  stack: { flexLayout: 'column', gap: 5, minWidth: '0' },
+  shell: { flexLayout: 'column', gap: 8, '@media md': { flexLayout: 'row' } },
+  main: { flexGrow: '1', minWidth: 0 },
+  stack: { flexLayout: 'column', gap: 5, minWidth: 0 },
   row: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 3 },
   spread: {
     display: 'flex',
@@ -48,7 +54,7 @@ export const libraryStyles = stylesheet({
     lineHeight: 1.1,
     fontWeight: 650,
     letterSpacing: '-0.045em',
-    '@md': { fontSize: '56px' },
+    '@media md': { fontSize: '56px' },
   },
   intro: {
     textColor: 'muted',
@@ -57,31 +63,26 @@ export const libraryStyles = stylesheet({
     maxWidth: '680px',
   },
   workbench: {
-    display: 'grid',
+    columns: 'single',
     gap: 5,
-    minWidth: '0',
+    minWidth: 0,
     alignItems: 'flex-start',
-    style: { gridTemplateColumns: 'minmax(0, 1fr)' },
-    '@md': {
-      style: { gridTemplateColumns: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' },
-    },
+    '@media md': { columns: 'source-preview' },
   },
   grid: {
-    display: 'grid',
+    columns: 'single',
     gap: 5,
-    style: { gridTemplateColumns: 'minmax(0, 1fr)' },
-    '@md': { style: { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } },
+    '@media md': { columns: 'even-halves' },
   },
   panel: {
     flexLayout: 'column',
     gap: 4,
     padding: 5,
     bgColor: 'elevated',
-    style: { borderStyle: 'solid' },
+    border: 'all',
     borderColor: 'default',
-    borderWidth: 'thin',
     borderRadius: 'xlarge',
-    minWidth: '0',
+    minWidth: 0,
   },
   metric: {
     fontSize: '40px',
@@ -90,7 +91,7 @@ export const libraryStyles = stylesheet({
     lineHeight: 1.1,
   },
   muted: { textColor: 'muted', fontSize: '13px', lineHeight: 1.6 },
-  divider: { paddingY: 3, style: { borderBottom: '1px solid var(--border)' } },
+  divider: { paddingY: 3, border: 'bottom', borderColor: 'default' },
   editor: {
     width: '100%',
     minHeight: '220px',
@@ -103,17 +104,17 @@ export const libraryStyles = stylesheet({
     fontFamily: 'monospace',
     fontSize: '13px',
     lineHeight: 1.7,
-    style: { resize: 'vertical', tabSize: 2 },
+    // No token: native <textarea> behaviour.
+    '@platform web': { $style: { resize: 'vertical', tabSize: 2 } },
   },
-  inspector: { maxWidth: '100%', overflowX: 'auto', $style: { minWidth: 0 } },
-  source: { maxHeight: '520px', overflow: 'auto', minWidth: '0' },
+  inspector: { maxWidth: '100%', overflowX: 'auto', minWidth: 0 },
+  source: { maxHeight: '520px', overflow: 'auto', minWidth: 0 },
   label: { fontSize: '14px', fontWeight: 600 },
   input: {
     width: '100%',
     padding: 3,
-    style: { borderStyle: 'solid' },
+    border: 'all',
     borderColor: 'default',
-    borderWidth: 'thin',
     borderRadius: 'large',
     bgColor: 'default',
     textColor: 'default',
@@ -122,12 +123,12 @@ export const libraryStyles = stylesheet({
   sidebar: {
     flexLayout: 'column',
     gap: 3,
-    '@md': {
+    '@media md': {
       width: '190px',
       flexShrink: '0',
       alignSelf: 'flex-start',
       position: 'sticky',
-      top: '24px',
+      top: 6,
       maxHeight: 'calc(100vh - 48px)',
       overflowY: 'auto',
     },
@@ -138,7 +139,7 @@ export const libraryStyles = stylesheet({
     display: 'flex',
     flexWrap: 'wrap',
     gap: 1,
-    '@md': {
+    '@media md': {
       flexLayout: 'column',
       maxHeight: 'calc(100vh - 180px)',
       flexWrap: 'nowrap',

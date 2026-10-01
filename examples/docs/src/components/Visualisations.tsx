@@ -13,12 +13,11 @@ export function TokenMap() {
     <section aria-labelledby="token-map-title" {...s.Section}>
       <div {...s.SectionIntro}>
         <h2 id="token-map-title" {...s.Heading}>
-          One decision.
-          <br />A hundred little details.
+          One token, several parts
         </h2>
         <p {...s.Body}>
-          That’s the point of a design token. Change the accent here and follow
-          it through the named parts. Everything stays in tune.
+          Change the accent token and follow the value into each named part that
+          uses it.
         </p>
       </div>
       <div {...s.Choices} role="group" aria-label="Token map accent">
@@ -224,12 +223,11 @@ export function LayoutExplorer() {
     <section {...s.Section} aria-labelledby="layout-title">
       <div {...s.SectionIntro}>
         <h2 id="layout-title" {...s.Heading}>
-          Same component.
-          <br />A different point of view.
+          Container conditions
         </h2>
         <p {...s.Body}>
-          Components live in sidebars, panels, and full pages. Container
-          conditions let their layout follow the space they actually have.
+          The same component is used in sidebars, panels and full pages. A
+          container condition lets its layout depend on the space it has.
         </p>
       </div>
       <div {...s.Choices} role="group" aria-label="Preview container size">
@@ -290,11 +288,7 @@ export function LayoutExplorer() {
                     <V.Wide as="span">Wide condition is active</V.Wide>
                     <V.Narrow as="span">Base layout is active</V.Narrow>
                   </V.Indicator>
-                  <V.Title as="h3">
-                    Give your ideas
-                    <br />
-                    some room.
-                  </V.Title>
+                  <V.Title as="h3">Sample card</V.Title>
                   <V.Text as="p">
                     The browser chooses the layout from the container width.
                   </V.Text>

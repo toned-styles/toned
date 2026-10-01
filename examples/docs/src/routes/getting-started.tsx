@@ -57,14 +57,22 @@ export const ui = defineSystem({
       values: ['neutral', 'accent'] as const,
       resolve: value => ({ backgroundColor: value === 'accent' ? '#315bd6' : '#eee' }),
     }),
+    padding: defineToken({
+      values: [1, 2, 3] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
+    text: defineToken({
+      values: ['label', 'caption'] as const,
+      resolve: value => ({ color: '#fff', fontSize: value === 'label' ? 14 : 12 }),
+    }),
   },
 })
 export const buttonStyles = ui.stylesheet({
   Root: { $kind: 'pressable', background: 'accent' },
-  Label: { $kind: 'text', $style: { fontSize: 14 } },
+  Label: { $kind: 'text', text: 'label' },
 }).variants(($: Variants<{ size: 's' | 'm' }>) => ({
-  [$.size('s')]: { Root: { $style: { padding: 4 } } },
-  [$.size('m')]: { Root: { $style: { padding: 8 } } },
+  [$.size('s')]: { Root: { padding: 1 }, Label: { text: 'caption' } },
+  [$.size('m')]: { Root: { padding: 2 } },
 }), { defaults: { size: 'm' } })`}</CodeBlock>
       <h2 {...s.h2} id="build-every-sheet">
         Build every sheet

@@ -8,10 +8,10 @@ export function NotFound({ what = 'page' }: { what?: string }) {
   return (
     <>
       <p {...s.Breadcrumb}>404</p>
-      <h1 {...s.Title}>This {what} wandered off.</h1>
+      <h1 {...s.Title}>This {what} was not found.</h1>
       <p {...s.Lead}>
-        The address may have changed while the docs were reorganised. Browse the
-        capability index, or start from the beginning.
+        The address may have changed. Browse the capability index, or start from
+        the beginning.
       </p>
       <div {...s.Meta}>
         <Link to="/explore" {...s.MetaLink}>

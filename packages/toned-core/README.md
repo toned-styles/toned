@@ -543,12 +543,16 @@ Fixed query thresholds can also be colocated at the use site:
 
 ```ts
 const layout = defineSystem({
-  id: 'local-queries', tokens: {}, conditions: { containers: { card: {} } },
+  id: 'local-queries',
+  tokens: {
+    opacity: defineToken({ values: [0.8, 1], resolve: value => ({ opacity: value }) }),
+  },
+  conditions: { containers: { card: {} } },
 })
 layout.stylesheet(q => ({
   Root: {
-    [q.media(dp(600))]: { $style: { opacity: 0.8 } },
-    [q.container('card', dp(300))]: { $style: { opacity: 1 } },
+    [q.media(dp(600))]: { opacity: 0.8 },
+    [q.container('card', dp(300))]: { opacity: 1 },
   },
 }))
 ```

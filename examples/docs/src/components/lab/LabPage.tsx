@@ -18,18 +18,18 @@ const demos = [
   {
     id: 'adaptive',
     label: 'Adaptive',
-    title: 'A layout that listens.',
+    title: 'Adaptive layout',
     summary:
-      'Change the available space. Scale the text. Watch the same component choose a better fit.',
+      'Change the available width or the text scale; the component picks the layout variant that fits.',
     Demo: AdaptiveDemo,
     source: `${sheetSource}\n${layoutSource}`,
   },
   {
     id: 'motion',
     label: 'Motion',
-    title: 'Feel the change.',
+    title: 'Motion',
     summary:
-      'Real springs, interruption and retained exits. Controlled by the same host that owns your styles.',
+      'Springs, interruption and retained exits, driven by the host that owns the styles.',
     Demo: MotionDemo,
     source: layoutSource,
   },
@@ -37,45 +37,45 @@ const demos = [
     id: 'core',
     label: 'Grid',
     anchor: 'grid',
-    title: 'Give every part a place.',
+    title: 'Typed grid',
     summary:
-      'Rearrange typed areas while keeping the component’s structure intact.',
+      'Rearrange typed grid areas without changing the component’s structure.',
     Demo: GridDemo,
     source: sheetSource,
   },
   {
     id: 'renderers',
     label: 'Renderers',
-    title: 'Beyond the browser.',
+    title: 'Email and PDF output',
     summary:
-      'One stylesheet. Concrete output for HTML email and a deliberate PDF profile.',
+      'One stylesheet resolved to inline HTML email styles and to a PDF style profile.',
     Demo: DocumentDemo,
     source: documentSource,
   },
   {
     id: 'tokens',
     label: 'Tokens',
-    title: 'Let your tokens travel.',
+    title: 'Token exchange',
     summary:
-      'Resolve a real alias, inspect diagnostics and round-trip your authored token document.',
+      'Resolve an alias, read the diagnostics and round-trip a DTCG token document.',
     Demo: TokenDemo,
     source: tokenSource,
   },
   {
     id: 'contracts',
     label: 'Contracts',
-    title: 'Measure the promise.',
+    title: 'Measured contracts',
     summary:
-      'A declaration is an intention. A measured contract checks what actually rendered.',
+      'A contract measures the rendered element and checks it against the declaration.',
     Demo: ContractDemo,
     source: contractSource,
   },
   {
     id: 'inspector',
     label: 'Inspector',
-    title: 'From pixels to source.',
+    title: 'Source inspector',
     summary:
-      'Inspect a declaration, preview a precise edit and apply it against the current source revision.',
+      'Inspect a declaration, preview an edit and apply it against the current source revision.',
     Demo: InspectorDemo,
     source: inspectorSource,
   },
@@ -85,10 +85,10 @@ export function Lab() {
   const s = useStyles(experimentStyles)
   return (
     <article>
-      <h1 {...d.Title}>Don’t just read it. Try it.</h1>
+      <h1 {...d.Title}>Capability lab</h1>
       <p {...d.Lead}>
-        Seven working experiments, powered by the APIs they demonstrate. Open
-        the exact implementation, then take the idea into your own system.
+        Seven working demos, each running the API it shows. The source under
+        each one is the code that runs.
       </p>
       <nav {...s.Jump} aria-label="Experiments">
         {demos.map((demo, index) => (
@@ -120,11 +120,11 @@ export function Lab() {
           </div>
           <div {...s.Footer}>
             <Link to="/learn/$topic" params={{ topic: id }} {...s.Link}>
-              Read the complete guide →
+              Reference →
             </Link>
           </div>
           <details {...s.Source}>
-            <summary>▸ View this experiment’s actual source</summary>
+            <summary>▸ View source</summary>
             <CodeBlock title="Source">{source}</CodeBlock>
           </details>
         </section>
