@@ -239,10 +239,9 @@ export const references = [
     title: 'Benchmarks & limits',
     group: 'Verification',
     summary:
-      'Reproduce measurements, understand fixtures and compare like-for-like workloads.',
-    path: 'benchmarks/README.md',
-    load: () =>
-      import('../../../../benchmarks/README.md?raw').then((m) => m.default),
+      'What the benchmark runners measure, the latest recorded figures and their limits.',
+    path: 'examples/docs/src/content/benchmarks.md',
+    load: () => import('./benchmarks.md?raw').then((m) => m.default),
   },
   {
     slug: 'examples',

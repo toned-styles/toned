@@ -156,6 +156,17 @@ function Beyond() {
           </Link>
         </div>
         <div {...s.Feature}>
+          <h3 {...s.FeatureHeading}>SSR and Server Components</h3>
+          <p {...s.FeatureBody}>
+            CSS is generated at build time, so server-rendered and static pages
+            need no style injection. A Server Component resolves its styles
+            without hooks or client JavaScript.
+          </p>
+          <Link to="/guides/ssr" {...s.TextLink}>
+            SSR and Server Components guide
+          </Link>
+        </div>
+        <div {...s.Feature}>
           <h3 {...s.FeatureHeading}>Web and React Native</h3>
           <p {...s.FeatureBody}>
             Share declarations across web and native host integrations, with
@@ -205,7 +216,9 @@ function Home() {
       <main id="main">
         <div {...s.Container}>
           <section {...s.Hero} aria-labelledby="hero-title">
-            <p {...s.Note}>Open source · MIT licensed</p>
+            <p {...s.Note}>
+              Works with SSR and React Server Components · Open source
+            </p>
             <h1 id="hero-title" {...s.Title}>
               Typed styling for React and React Native
             </h1>

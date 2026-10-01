@@ -9,13 +9,32 @@ function GuideSsr() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
-      <h1 {...s.h1}>SSR and static generation</h1>
+      <h1 {...s.h1}>Server rendering and Server Components</h1>
       <p>
-        Generate CSS before rendering and deploy it with its validation
-        manifest. The same immutable sheets, renderer inputs and theme produce
-        the server markup and initial client render. Rendering never injects a
-        stylesheet.
+        Toned works with server rendering, static generation and React Server
+        Components. CSS is generated at build time, so the server sends complete
+        markup with nothing to inject, and a Server Component can resolve its
+        styles without hooks or client JavaScript.
       </p>
+      <ul>
+        <li>
+          <strong>SSR and static generation:</strong> the same sheets, renderer
+          inputs and theme produce the server markup and the first client
+          render, so hydration matches.
+        </li>
+        <li>
+          <strong>Server Components:</strong>{' '}
+          <code {...s.code}>renderer.resolve(sheet)</code> returns plain props
+          for each part. No hook, context or <code {...s.code}>'use client'</code>{' '}
+          is needed.
+        </li>
+        <li>
+          <strong>Client Components:</strong>{' '}
+          <code {...s.code}>@toned/react</code> declares its own client
+          boundary, so <code {...s.code}>createElements</code> families can be
+          rendered from a Server Component.
+        </li>
+      </ul>
       <h2 {...s.h2} id="vite-delivery">
         Vite delivery
       </h2>
@@ -88,6 +107,56 @@ hydrateRoot(root, <App />)`}</CodeBlock>
         server output and hydration. Request-specific tokens belong in provider
         inputs, not mutations of a shared global configuration.
       </p>
+      <h2 {...s.h2} id="server-components">
+        React Server Components
+      </h2>
+      <p>
+        A Server Component cannot use hooks or context. Create the renderer in a
+        server module and resolve the sheet directly: the result is plain props
+        for each part. Variants are ordinary arguments. Hover, focus and media
+        conditions are CSS, so they work without any client JavaScript.
+      </p>
+      <CodeBlock title="SaveButton.tsx">{`// A Server Component: no 'use client', no hooks.
+import { renderer } from './renderer.ts'
+import { buttonStyles } from './styles.ts'
+
+export function SaveButton({ size }: { size: 's' | 'm' }) {
+  const s = renderer.resolve(buttonStyles, { variants: { size } })
+  return (
+    <button type="button" {...s.Root}>
+      <span {...s.Label}>Save</span>
+    </button>
+  )
+}`}</CodeBlock>
+      <CodeBlock title="renderer.ts">{`import manifest from 'virtual:toned.manifest'
+import { createWebRenderer } from '@toned/core/server'
+import { ui } from './system.ts'
+
+export const renderer = createWebRenderer(ui, { manifest, tokens: {} })`}</CodeBlock>
+      <p>
+        Use a Client Component when the styles depend on state held in the
+        browser. <code {...s.code}>createElements</code> families are client
+        components and can be imported into a Server Component as they are;
+        they need a <code {...s.code}>TonedProvider</code> above them, as in{' '}
+        <a href="/getting-started">Getting Started</a>.
+      </p>
+      <CodeBlock title="LikeButton.tsx">{`'use client'
+import { createElements } from '@toned/react'
+import { useState } from 'react'
+import { buttonStyles } from './styles.ts'
+
+const S = createElements(buttonStyles)
+
+export function LikeButton() {
+  const [liked, setLiked] = useState(false)
+  return (
+    <S size={liked ? 'm' : 's'}>
+      <S.Root as="button" type="button" onClick={() => setLiked(!liked)}>
+        <S.Label as="span">{liked ? 'Liked' : 'Like'}</S.Label>
+      </S.Root>
+    </S>
+  )
+}`}</CodeBlock>
       <h2 {...s.h2} id="pure-server-resolution">
         Pure server resolution
       </h2>

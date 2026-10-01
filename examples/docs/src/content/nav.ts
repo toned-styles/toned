@@ -46,7 +46,7 @@ export const docsNav: readonly NavSection[] = [
       { to: '/guides/react-native', label: 'React Native' },
       { to: '/guides/theming', label: 'Theming' },
       { to: '/guides/interactive', label: 'Interactive styles' },
-      { to: '/guides/ssr', label: 'SSR & static sites' },
+      { to: '/guides/ssr', label: 'SSR & Server Components' },
     ],
   },
   ...referenceGroups.map((group) => ({

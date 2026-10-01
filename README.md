@@ -33,6 +33,9 @@ connects the styles to your mounted components.
   interaction states, and cross-part relationships with the system's query builder.
 - **Build-time CSS.** A deterministic build produces CSS and a matching
   manifest. Rendering never injects a missing stylesheet.
+- **SSR and React Server Components.** Server-rendered and static pages need no
+  style injection, and a Server Component resolves part props with
+  `renderer.resolve(sheet)`: no hooks, context or client JavaScript.
 - **Explicit platform boundaries.** Share declarations across web and native
   integrations; use explicit platform blocks for platform-specific behavior.
 
