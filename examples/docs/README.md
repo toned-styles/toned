@@ -51,11 +51,35 @@ manifest. The style studio uses real component variants; the token map uses the
 same accent vocabulary; the layout explorer uses a named 480px container
 condition. Its connection animation respects reduced motion. `/playground` is a
 free-form editor: write `styles.ts` and `App.tsx`, and the browser transpiles
-them with TypeScript (loaded on demand; syntax only, not types), evaluates them
+them with TypeScript (loaded on demand), evaluates them
 against a fixed module map, builds the exported sheets with `buildStyles` into a
 scoped `<style>`, and renders through `createWebRenderer` — the same path a real
 app takes, so hover, focus and container queries are real CSS. Only the
 visitor's own draft runs; there are no code-carrying share links.
+
+The playground editor is CodeMirror 6 (`playground-editor/codemirror.ts`),
+created in an effect over the same static Shiki-highlighted code the server
+renders, with the same metrics and colours (`codeColors` in `src/highlight.ts`),
+so nothing moves when it mounts. A Web Worker
+(`playground-editor/language/ts.worker.ts`) runs two services over the two
+files. TypeScript's language service checks them against an in-memory project:
+the ES2022 + DOM libs, React's types and the Toned packages' own source, loaded
+as text in lazy chunks (`types-lib`, `types-react`, `types-toned`) that only
+`/playground` fetches. It is the authority on types, and supplies diagnostics,
+completions and hover types. Toned's `DesignLanguageService`
+(`@toned/compiler/language-service`) indexes the same files plus the base
+system's source. It adds what the type checker does not have as data: a
+stylesheet's type is inferred from its own literal, so TypeScript offers no
+names where a declaration is being written, and Toned supplies the token names
+there; it also supplies a token's values before any quote is typed and for
+numeric scales, ranks a sheet's variant axes first after `$.`, and shows each
+declaration's design path, token, allowed values and defining file on hover.
+It has no token documentation and no resolved CSS values, and its
+`token-value` warning usually repeats a TypeScript error rather than finding a new one.
+Type errors never block the preview. The worker answers one request per task,
+so a newer request of the same kind replaces a queued one; a running
+TypeScript call cannot be interrupted. `vite.config.ts` sets
+`worker.format: 'es'` because only that format can split the worker's chunks.
 Getting Started lives at `/getting-started`, and `/ui` hosts the component
 gallery.
 

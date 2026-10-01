@@ -2,7 +2,7 @@ import type { Variants } from '@toned/core'
 import { brand, fonts } from './brand.ts'
 import { stylesheet } from './system.ts'
 
-/** Editor metrics shared by the textarea, the highlighted layer and the gutter. */
+/** Editor metrics shared by CodeMirror and the static code it replaces. */
 export const editorMetrics = {
   fontSize: 13,
   lineHeight: 20,
@@ -19,6 +19,9 @@ const editorText = {
   letterSpacing: 0,
   fontVariantLigatures: 'none',
 } as const
+
+const warning = '#a04a12'
+const warningSoft = '#fdf1e7'
 
 const control = {
   display: 'inline-flex',
@@ -330,14 +333,19 @@ export const playgroundEditorStyles = stylesheet({
       $style: { backgroundColor: brand.codeBg, color: brand.codeInk },
     },
   },
-  Gutter: {
-    position: 'relative',
+  StaticCode: {
+    display: 'flex',
+    width: '100%',
     overflow: 'hidden',
+  },
+  Gutter: {
     width: '48px',
     '@platform web': {
       $style: {
         ...editorText,
+        boxSizing: 'border-box',
         flexShrink: 0,
+        padding: `${editorMetrics.paddingY}px 10px`,
         color: brand.faint,
         textAlign: 'right',
         userSelect: 'none',
@@ -345,75 +353,177 @@ export const playgroundEditorStyles = stylesheet({
       },
     },
   },
-  GutterLines: {
-    '@platform web': {
-      $style: {
-        padding: `${editorMetrics.paddingY}px 10px`,
-        willChange: 'transform',
-      },
-    },
-  },
-  CodeArea: {
-    position: 'relative',
-    flexGrow: '1',
-    minWidth: '0px',
-    overflow: 'hidden',
-  },
-  Layer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    '@platform web': {
-      $style: {
-        padding: `${editorMetrics.paddingY}px ${editorMetrics.paddingX}px`,
-        minWidth: '100%',
-        pointerEvents: 'none',
-        willChange: 'transform',
-        boxSizing: 'border-box',
-      },
-    },
-  },
   Highlight: {
-    position: 'relative',
-    '@platform web': {
-      $style: { ...editorText, margin: 0, padding: 0, color: brand.codeInk },
-    },
-  },
-  ErrorBand: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    '@platform web': {
-      $style: {
-        height: `${editorMetrics.lineHeight}px`,
-        backgroundColor: brand.dangerSoft,
-        boxShadow: `inset 3px 0 0 ${brand.danger}`,
-        pointerEvents: 'none',
-      },
-    },
-  },
-  Textarea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
     '@platform web': {
       $style: {
         ...editorText,
         margin: 0,
         padding: `${editorMetrics.paddingY}px ${editorMetrics.paddingX}px`,
-        border: 0,
-        outline: 'none',
-        resize: 'none',
-        overflow: 'auto',
-        overflowWrap: 'normal',
-        color: 'transparent',
-        WebkitTextFillColor: 'transparent',
-        caretColor: brand.ink,
-        backgroundColor: 'transparent',
-        boxSizing: 'border-box',
+        color: brand.codeInk,
       },
+    },
+  },
+  EditorHost: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  ProblemsPanel: {
+    display: 'flex',
+    flexLayout: 'column',
+    '@platform web': {
+      $style: {
+        margin: 0,
+        padding: '4px',
+        listStyle: 'none',
+        flexShrink: 0,
+        maxHeight: '148px',
+        overflowY: 'auto',
+        borderTop: `1px solid ${brand.divider}`,
+        backgroundColor: brand.surface,
+      },
+    },
+  },
+  ProblemRow: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: 2,
+    width: '100%',
+    paddingX: 2,
+    paddingY: 1,
+    fontSize: '12px',
+    '@platform web': {
+      $style: {
+        boxSizing: 'border-box',
+        borderWidth: 0,
+        borderRadius: 6,
+        backgroundColor: 'transparent',
+        color: brand.body,
+        fontFamily: fonts.sans,
+        lineHeight: '18px',
+        textAlign: 'left',
+        cursor: 'pointer',
+      },
+    },
+    ':hover': {
+      '@platform web': { $style: { backgroundColor: brand.blueTint } },
+    },
+  },
+  ProblemSource: {
+    $kind: 'text',
+    fontSize: '10px',
+    fontWeight: 700,
+    paddingX: 1,
+    '@platform web': {
+      $style: {
+        flexShrink: 0,
+        minWidth: '38px',
+        textAlign: 'center',
+        borderRadius: 4,
+        lineHeight: '16px',
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+        color: brand.danger,
+        backgroundColor: brand.dangerSoft,
+      },
+    },
+  },
+  ProblemLocation: {
+    $kind: 'text',
+    '@platform web': {
+      $style: {
+        flexShrink: 0,
+        fontFamily: fonts.mono,
+        fontSize: '11.5px',
+        color: brand.blue,
+        whiteSpace: 'nowrap',
+      },
+    },
+  },
+  ProblemText: {
+    $kind: 'text',
+    minWidth: '0px',
+    '@platform web': {
+      $style: { overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' },
+    },
+  },
+  ProblemsButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 2,
+    height: '24px',
+    paddingX: 2,
+    fontSize: '12px',
+    fontWeight: 600,
+    '@platform web': {
+      $style: {
+        flexShrink: 0,
+        borderWidth: 0,
+        borderRadius: 6,
+        backgroundColor: 'transparent',
+        color: brand.muted,
+        fontFamily: fonts.sans,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      },
+    },
+    ':hover': {
+      '@platform web': { $style: { backgroundColor: brand.blueTint } },
+    },
+  },
+  ProblemsDot: {
+    width: '8px',
+    height: '8px',
+    '@platform web': {
+      $style: {
+        borderRadius: 999,
+        backgroundColor: brand.faint,
+        flexShrink: 0,
+      },
+    },
+  },
+  TabBadge: {
+    $kind: 'text',
+    fontSize: '10px',
+    fontWeight: 700,
+    paddingX: 1,
+    '@platform web': {
+      $style: {
+        minWidth: '16px',
+        boxSizing: 'border-box',
+        textAlign: 'center',
+        borderRadius: 999,
+        lineHeight: '16px',
+        color: '#fff',
+        backgroundColor: brand.danger,
+        fontVariantNumeric: 'tabular-nums',
+      },
+    },
+  },
+  SrOnly: {
+    position: 'absolute',
+    width: '1px',
+    height: '1px',
+    overflow: 'hidden',
+    '@platform web': {
+      $style: { clipPath: 'inset(50%)', whiteSpace: 'nowrap' },
+    },
+  },
+  StatusGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    minWidth: '0px',
+    '@platform web': {
+      $style: { overflow: 'hidden', textOverflow: 'ellipsis' },
+    },
+  },
+  Counts: {
+    $kind: 'text',
+    '@platform web': {
+      $style: { flexShrink: 0, fontVariantNumeric: 'tabular-nums' },
     },
   },
   StatusBar: {
@@ -673,8 +783,46 @@ export const playgroundEditorStyles = stylesheet({
     $: Variants<{
       active: boolean
       status: 'loading' | 'ok' | 'error'
+      level: 'none' | 'clean' | 'error' | 'warning' | 'info'
     }>,
   ) => ({
+    [$.level('clean')]: {
+      ProblemsDot: {
+        '@platform web': { $style: { backgroundColor: brand.success } },
+      },
+    },
+    [$.level('error')]: {
+      ProblemsDot: {
+        '@platform web': { $style: { backgroundColor: brand.danger } },
+      },
+      ProblemsButton: { '@platform web': { $style: { color: brand.danger } } },
+      Counts: { '@platform web': { $style: { color: brand.danger } } },
+    },
+    [$.level('warning')]: {
+      ProblemsDot: {
+        '@platform web': { $style: { backgroundColor: warning } },
+      },
+      ProblemsButton: { '@platform web': { $style: { color: warning } } },
+      ProblemSource: {
+        '@platform web': {
+          $style: { color: warning, backgroundColor: warningSoft },
+        },
+      },
+      TabBadge: { '@platform web': { $style: { backgroundColor: warning } } },
+    },
+    [$.level('info')]: {
+      ProblemsDot: {
+        '@platform web': { $style: { backgroundColor: brand.blue } },
+      },
+      ProblemSource: {
+        '@platform web': {
+          $style: { color: brand.blue, backgroundColor: brand.blueSoft },
+        },
+      },
+      TabBadge: {
+        '@platform web': { $style: { backgroundColor: brand.blue } },
+      },
+    },
     [$.active(true)]: {
       Tab: {
         '@platform web': {
@@ -715,5 +863,5 @@ export const playgroundEditorStyles = stylesheet({
       Dot: { '@platform web': { $style: { backgroundColor: brand.danger } } },
     },
   }),
-  { defaults: { active: false, status: 'loading' } },
+  { defaults: { active: false, status: 'loading', level: 'none' } },
 )

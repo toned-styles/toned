@@ -1,188 +1,123 @@
 import { useStyles } from '@toned/react'
 import {
-  type KeyboardEvent,
   type Ref,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from 'react'
 import { highlight } from '../../highlight.ts'
-import {
-  editorMetrics,
-  playgroundEditorStyles,
-} from '../../styles/playground-editor.ts'
-import { MAX_FILE_CHARS } from './types.ts'
+import { playgroundEditorStyles } from '../../styles/playground-editor.ts'
+import type { EditorController } from './codemirror.ts'
+import type { LanguageClient } from './language/client.ts'
+import type { LanguageProblem } from './language/protocol.ts'
+import { type FileName, MAX_FILE_CHARS, type SourceFiles } from './types.ts'
 
 export type CodeEditorHandle = {
   /** Focus the editor with the caret at a 1-based line and column. */
   reveal(line: number, column?: number): void
 }
 
-const INDENT = '  '
-
-/** Insert through the browser's editing pipeline so undo/redo keep working. */
-function insertText(area: HTMLTextAreaElement, text: string) {
-  area.focus()
-  if (!document.execCommand?.('insertText', false, text)) {
-    area.setRangeText(text, area.selectionStart, area.selectionEnd, 'end')
-    area.dispatchEvent(new Event('input', { bubbles: true }))
-  }
-}
-
-function lineStart(value: string, index: number) {
-  return value.lastIndexOf('\n', index - 1) + 1
-}
+const HINT_ID = 'playground-editor-hint'
 
 /**
- * A textarea over a Shiki-highlighted `<pre>`: the textarea owns editing,
- * selection and IME; the `<pre>` only paints. Both share one set of metrics.
+ * The code editor. The server and the first client render paint the code as
+ * static Shiki-highlighted text; CodeMirror then mounts over the same box from
+ * an effect, with the same metrics and colours, so nothing moves and nothing
+ * mismatches during hydration.
  */
 export function CodeEditor({
-  value,
+  file,
+  files,
+  revision,
   onChange,
-  label,
   errorLine,
+  problems,
+  client,
   ref,
 }: {
-  value: string
-  onChange: (value: string) => void
-  label: string
+  file: FileName
+  files: SourceFiles
+  /** Changes whenever `files` is replaced by text the editor did not type. */
+  revision: number
+  onChange: (file: FileName, value: string) => void
+  /** The line the preview's compile failed on, in the visible file. */
   errorLine?: number
+  problems: readonly LanguageProblem[]
+  client: LanguageClient | null
   ref?: Ref<CodeEditorHandle>
 }) {
   const s = useStyles(playgroundEditorStyles)
-  const area = useRef<HTMLTextAreaElement>(null)
-  const layer = useRef<HTMLDivElement>(null)
-  const gutter = useRef<HTMLDivElement>(null)
-  // After Escape, Tab moves focus instead of indenting (no keyboard trap).
-  const escaped = useRef(false)
+  const host = useRef<HTMLDivElement>(null)
+  const controller = useRef<EditorController | null>(null)
+  const [mounted, setMounted] = useState(false)
+  const latest = useRef({ file, files, onChange, client })
+  latest.current = { file, files, onChange, client }
 
   useImperativeHandle(ref, () => ({
-    reveal(line, column = 1) {
-      const node = area.current
-      if (!node) return
-      const lines = node.value.split('\n')
-      let offset = 0
-      for (let index = 0; index < Math.min(line - 1, lines.length); index++)
-        offset += (lines[index]?.length ?? 0) + 1
-      offset += Math.max(0, column - 1)
-      node.focus()
-      node.setSelectionRange(offset, offset)
-      const top = (line - 1) * editorMetrics.lineHeight
-      if (top < node.scrollTop || top > node.scrollTop + node.clientHeight - 60)
-        node.scrollTop = Math.max(0, top - node.clientHeight / 3)
-    },
+    reveal: (line, column) => controller.current?.reveal(line, column),
   }))
 
-  const tooLarge = value.length > MAX_FILE_CHARS
+  useEffect(() => {
+    const parent = host.current
+    if (!parent) return
+    let cancelled = false
+    void import('./codemirror.ts').then(({ createEditor }) => {
+      if (cancelled) return
+      controller.current = createEditor({
+        parent,
+        file: latest.current.file,
+        files: latest.current.files,
+        label: (name) => `${name} source`,
+        describedBy: HINT_ID,
+        onChange: (name, text) => latest.current.onChange(name, text),
+        client: () => latest.current.client,
+      })
+      setMounted(true)
+    })
+    return () => {
+      cancelled = true
+      controller.current?.destroy()
+      controller.current = null
+      setMounted(false)
+    }
+  }, [])
+
+  // `revision` is the trigger: it marks text the editor did not produce.
+  useEffect(() => {
+    if (mounted) controller.current?.load(latest.current.files)
+  }, [revision, mounted])
+  useEffect(() => {
+    if (mounted) controller.current?.show(file)
+  }, [file, mounted])
+  useEffect(() => {
+    if (mounted) controller.current?.setProblems(problems)
+  }, [problems, mounted])
+  useEffect(() => {
+    if (mounted) controller.current?.setErrorLine(errorLine)
+  }, [errorLine, mounted])
+
+  const value = files[file]
   const tokens = useMemo(
-    () => (tooLarge ? undefined : highlight(value, 'tsx').tokens),
-    [value, tooLarge],
+    () =>
+      mounted || value.length > MAX_FILE_CHARS
+        ? undefined
+        : highlight(value, 'tsx').tokens,
+    [value, mounted],
   )
-  const lineCount = value.split('\n').length
-
-  const sync = () => {
-    const node = area.current
-    if (!node) return
-    const transform = `translate(${-node.scrollLeft}px, ${-node.scrollTop}px)`
-    if (layer.current) layer.current.style.transform = transform
-    if (gutter.current)
-      gutter.current.style.transform = `translateY(${-node.scrollTop}px)`
-  }
-
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    const node = event.currentTarget
-    if (event.key === 'Escape') {
-      escaped.current = true
-      return
-    }
-    const wasEscaped = escaped.current
-    escaped.current = false
-    if (event.nativeEvent.isComposing) return
-    const { selectionStart: start, selectionEnd: end, value: text } = node
-
-    if (
-      event.key === 'Tab' &&
-      !wasEscaped &&
-      !event.metaKey &&
-      !event.ctrlKey
-    ) {
-      event.preventDefault()
-      const multiline = text.slice(start, end).includes('\n')
-      if (!event.shiftKey && !multiline) {
-        insertText(node, INDENT)
-        return
-      }
-      // Indent or outdent every line the selection touches.
-      const from = lineStart(text, start)
-      const toBreak = text.indexOf('\n', end - (end > start ? 1 : 0))
-      const to = toBreak === -1 ? text.length : toBreak
-      const lines = text.slice(from, to).split('\n')
-      const next = lines
-        .map((line) =>
-          event.shiftKey
-            ? line.replace(/^( {1,2}|\t)/, '')
-            : line.length
-              ? INDENT + line
-              : line,
-        )
-        .join('\n')
-      if (next === text.slice(from, to)) return
-      const firstDelta =
-        (next.split('\n')[0]?.length ?? 0) - (lines[0]?.length ?? 0)
-      node.setSelectionRange(from, to)
-      insertText(node, next)
-      node.setSelectionRange(
-        Math.max(from, start + firstDelta),
-        end + (next.length - (to - from)),
-      )
-      return
-    }
-
-    if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
-      // Keep the current indentation; step in after an opening bracket.
-      const from = lineStart(text, start)
-      const indent = /^[ \t]*/.exec(text.slice(from, start))?.[0] ?? ''
-      const before = text.slice(from, start).trimEnd()
-      const opens = /[{[(]$/.test(before) || /<[\w.]+[^>]*>$/.test(before)
-      if (!indent && !opens) return
-      event.preventDefault()
-      insertText(node, `\n${indent}${opens ? INDENT : ''}`)
-    }
-  }
+  const lineCount = mounted ? 0 : value.split('\n').length
 
   let offset = 0
   return (
     <div {...s.Editor.withProps({ className: 'tnd-playground-editor' })}>
-      <div {...s.Gutter} aria-hidden="true">
-        <div {...s.GutterLines.withProps({ ref: gutter })}>
-          {Array.from({ length: lineCount }, (_, index) => (
-            <div
-              key={index}
-              style={
-                index + 1 === errorLine
-                  ? { color: '#b3261e', fontWeight: 700 }
-                  : undefined
-              }
-            >
-              {index + 1}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div {...s.CodeArea}>
-        <div aria-hidden="true" {...s.Layer.withProps({ ref: layer })}>
-          {errorLine ? (
-            <div
-              {...s.ErrorBand.withProps({
-                style: {
-                  top:
-                    editorMetrics.paddingY +
-                    (errorLine - 1) * editorMetrics.lineHeight,
-                },
-              })}
-            />
-          ) : null}
+      {mounted ? null : (
+        <div {...s.StaticCode} aria-hidden="true">
+          <div {...s.Gutter}>
+            {Array.from({ length: lineCount }, (_, index) => (
+              <div key={index}>{index + 1}</div>
+            ))}
+          </div>
           <pre {...s.Highlight}>
             {tokens
               ? tokens.map((line, lineIndex) => {
@@ -205,29 +140,10 @@ export function CodeEditor({
                   )
                 })
               : value}
-            {/* Keeps a trailing empty line as tall as the textarea's. */}
-            {'\n '}
           </pre>
         </div>
-        <textarea
-          {...s.Textarea.withProps<'textarea'>({
-            ref: area,
-            className: 'tnd-playground-textarea',
-          })}
-          aria-label={label}
-          aria-describedby="playground-editor-hint"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onScroll={sync}
-          onKeyDown={onKeyDown}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoComplete="off"
-          autoCorrect="off"
-          wrap="off"
-          data-gramm="false"
-        />
-      </div>
+      )}
+      <div {...s.EditorHost.withProps({ ref: host })} />
     </div>
   )
 }
