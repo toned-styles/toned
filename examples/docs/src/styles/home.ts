@@ -22,9 +22,9 @@ export const homeStyles = stylesheet({
     alignItems: 'center',
     gap: 7,
     paddingTop: 12,
-    paddingBottom: 10,
+    paddingBottom: 8,
     textAlign: 'center',
-    '@media md': { gap: 8, paddingTop: 18, paddingBottom: 12 },
+    '@media md': { gap: 7, paddingTop: 18, paddingBottom: 10 },
   },
   Title: {
     measure: 'home',
@@ -34,7 +34,7 @@ export const homeStyles = stylesheet({
     wrap: 'balance',
   },
   Lead: {
-    measure: 'article',
+    measure: 'copy',
     textStyle: 'intro',
     text: 'muted',
     wrap: 'pretty',
@@ -86,6 +86,53 @@ export const homeStyles = stylesheet({
     paddingBottom: 6,
   },
   SupportLabel: { textStyle: 'overline', weight: 'semibold', text: 'faint' },
+  Platforms: {
+    columns: 'even-halves',
+    gap: 3,
+    width: '100%',
+    measure: 'article',
+    '@media md': { columns: 'quarters', gap: 4 },
+  },
+  Platform: {
+    flexLayout: 'column',
+    alignItems: 'center',
+    gap: 1,
+    height: '100%',
+    paddingX: 3,
+    paddingY: 5,
+    radius: '2xl',
+    textAlign: 'center',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    motion: 'lift',
+    ':hover': { borderTone: 'accent', elevation: 'hover' },
+  },
+  PlatformIcon: { display: 'flex', text: 'accent', paddingBottom: 2 },
+  PlatformName: {
+    textStyle: 'subheading',
+    weight: 'semibold',
+    text: 'default',
+  },
+  PlatformNote: { textStyle: 'caption', text: 'muted', wrap: 'balance' },
+  // The qualities the system is built around, as a compact grid.
+  Pillars: {
+    columns: 'single',
+    gap: 6,
+    paddingY: 10,
+    '@media sm40': { columns: 'even-halves' },
+    '@media lg': { columns: 'thirds', gap: 8, paddingY: 12 },
+  },
+  Pillar: {
+    flexLayout: 'column',
+    gap: 1,
+    paddingLeft: 4,
+    border: 'marker-left',
+    borderTone: 'accent',
+  },
+  PillarTitle: { textStyle: 'subheading', weight: 'semibold', text: 'default' },
+  PillarBody: { textStyle: 'body-small', text: 'muted', wrap: 'pretty' },
+  Links: { display: 'flex', flexWrap: 'wrap', columnGap: 6, rowGap: 2 },
   Chip: {
     display: 'flex',
     alignItems: 'center',
@@ -187,7 +234,7 @@ export const homeStyles = stylesheet({
     elevation: 'panel',
     '@media lg': { padding: 6 },
   },
-  // Stays in view on a wide screen while the three files scroll past; the
+  // Stays in view on a wide screen while the steps scroll past; the
   // padding keeps the panel clear of the header it is pinned under.
   ResultPin: {
     minWidth: 0,
@@ -373,3 +420,102 @@ export const choiceStyles = stylesheet({
     },
   },
 }))
+
+/** The mock editor in the tooling section. */
+export const tourStyles = stylesheet({
+  Tour: { flexLayout: 'column', gap: 4, minWidth: 0 },
+  Tabs: { display: 'flex', flexWrap: 'wrap', gap: 2 },
+  Window: {
+    flexLayout: 'column',
+    minWidth: 0,
+    radius: '3xl',
+    overflow: 'hidden',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    elevation: 'panel',
+  },
+  TitleBar: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: 4,
+    rowGap: 1,
+    paddingX: 5,
+    paddingY: 3,
+    fill: 'code-chrome',
+    border: 'bottom',
+    borderTone: 'default',
+  },
+  FileName: { textStyle: 'code', weight: 'semibold', text: 'default' },
+  Summary: { textStyle: 'caption', text: 'muted' },
+  // Tall enough for the longest case, so switching does not move the page.
+  Code: {
+    minHeight: '292px',
+    paddingX: 5,
+    paddingY: 5,
+    textStyle: 'code',
+    text: 'code',
+    fill: 'code',
+    overflowX: 'auto',
+    '@media md': { minHeight: '236px' },
+  },
+  Line: { wrap: 'pre' },
+  Mark: {
+    radius: 'xs',
+    fill: 'accent-soft',
+    // No token: an editor's squiggle has no counterpart off the web.
+    '@platform web': {
+      $style: { boxShadow: '0 0 0 2px #edf1ff' },
+    },
+  },
+  Popup: {
+    flexLayout: 'column',
+    gap: 1,
+    marginY: 2,
+    marginLeft: 4,
+    padding: 3,
+    measure: 'copy',
+    radius: 'lg',
+    font: 'sans',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'strong',
+    elevation: 'raised',
+    wrap: 'normal',
+    '@media md': { marginLeft: 10 },
+  },
+  Rows: { flexLayout: 'column', gap: 1 },
+  Row: { display: 'flex', flexWrap: 'wrap', columnGap: 4, rowGap: 0 },
+  RowLabel: {
+    textStyle: 'code',
+    weight: 'semibold',
+    text: 'default',
+    minWidth: '128px',
+  },
+  RowValue: { textStyle: 'code', text: 'muted' },
+  ProblemSource: { textStyle: 'caption', weight: 'semibold', text: 'danger' },
+  ProblemText: {
+    textStyle: 'caption',
+    font: 'mono',
+    text: 'danger-strong',
+    wrap: 'anywhere',
+  },
+}).variants(
+  ($: Variants<{ tone: 'info' | 'error' }>) => ({
+    [$.tone('error')]: {
+      Mark: {
+        fill: 'danger-soft',
+        '@platform web': {
+          $style: {
+            boxShadow: '0 0 0 2px #fdecea',
+            textDecoration: 'underline wavy #b3261e',
+            textUnderlineOffset: '4px',
+          },
+        },
+      },
+      Popup: { borderTone: 'danger', fill: 'danger-soft' },
+    },
+  }),
+  { defaults: { tone: 'info' } },
+)

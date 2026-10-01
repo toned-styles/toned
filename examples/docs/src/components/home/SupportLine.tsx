@@ -1,19 +1,16 @@
 import { useStyles } from '@toned/react'
 import { homeStyles } from '../../styles/home.ts'
+import { Platforms } from './Platforms.tsx'
 
 /**
- * What exists today, each item labelled by what it is. The only framework
- * binding is `@toned/react`; other frameworks use the core renderer directly,
- * and the line says so rather than naming them as integrations.
+ * What ships beyond the four platforms, each item labelled by what it is. The
+ * only framework binding is `@toned/react`; other frameworks use the core
+ * renderer directly, and the line says so rather than naming them.
  */
 const supported = [
-  { kind: 'Binding', name: 'React' },
-  { kind: 'Binding', name: 'React Native' },
-  { kind: 'Binding', name: 'React Server Components' },
   { kind: 'Output', name: 'Web CSS, built ahead of time' },
   { kind: 'Output', name: 'SSR and static HTML' },
-  { kind: 'Output', name: 'Inline styles for HTML email' },
-  { kind: 'Output', name: 'PDF style profile' },
+  { kind: 'Binding', name: 'React Server Components' },
   { kind: 'Backend', name: 'Tailwind' },
   { kind: 'Build', name: 'Vite plugin' },
   { kind: 'Tokens', name: 'DTCG import and export' },
@@ -49,6 +46,7 @@ export function SupportLine() {
       <p id="support-label" {...s.SupportLabel}>
         Available today
       </p>
+      <Platforms />
       <section
         className="tnd-marquee"
         aria-labelledby="support-label"

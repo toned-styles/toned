@@ -69,7 +69,7 @@ function Step({
   )
 }
 
-/** One component followed through its three files, beside the result. */
+/** One component followed from tokens to output, beside the live result. */
 export function HowItWorks() {
   const s = useStyles(homeStyles)
   const [tone, setTone] = useState<Tone>('info')
@@ -86,11 +86,11 @@ export function HowItWorks() {
         <div {...s.SectionIntro}>
           <p {...s.Eyebrow}>How it works</p>
           <h2 id="how-title" {...s.Heading}>
-            One component, three files
+            Tokens in, components out
           </h2>
           <p {...s.Body}>
-            A notice with a badge, a title and a body. The three files below are
-            the ones this page runs; change the variant and the result follows.
+            Follow one small component from design tokens to the screen. This is
+            the code the page runs: change the variant and the result follows.
           </p>
         </div>
         <div {...s.Story}>
@@ -150,29 +150,28 @@ export function HowItWorks() {
           </div>
 
           <div {...s.Steps}>
-            <Step number={1} title="The system: tokens">
+            <Step number={1} title="Define your tokens">
               <p {...s.StepBody}>
-                A system defines the tokens a product uses. Each token lists its
-                allowed values and what they resolve to. These are the only
-                values a stylesheet can use.
+                A token is a design decision with a name: which tints exist,
+                which shapes, which text styles. Together they are the
+                vocabulary your components are written in.
               </p>
               <CodeBlock title="system.ts" lang="ts" maxHeight={380}>
                 {systemSource}
               </CodeBlock>
             </Step>
 
-            <Step number={2} title="The stylesheet: parts and variants">
+            <Step number={2} title="Style the parts">
               <p {...s.StepBody}>
-                The stylesheet names the component’s parts and gives each one
-                token values. Variants are declared here too: one tone changes
-                the root and the badge together.
+                Name the component’s parts and give each one token values.
+                Variants sit beside them: a tone changes the root and the badge
+                together.
               </p>
               <CodeBlock title="styles.ts" lang="ts" maxHeight={380}>
                 {stylesSource}
               </CodeBlock>
               <p {...s.StepBody}>
-                The values are typed. A value the token does not list is a
-                compile error:
+                Your editor completes the values, and a typo does not compile:
               </p>
               <figure {...s.Diagnostic} aria-label="A type error">
                 <pre
@@ -180,24 +179,23 @@ export function HowItWorks() {
                   // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll wide code.
                   tabIndex={0}
                 >
-                  {'Root: { surface: '}
+                  {'Root: { tint: '}
                   <span {...s.DiagnosticMark}>{"'sucess'"}</span>
-                  {' },'}
+                  {", shape: 'card', stack: 8 },"}
                 </pre>
                 <figcaption {...s.DiagnosticMessage}>
                   error TS2820: Type '"sucess"' is not assignable to type
-                  '"danger" | "success" | "info" | "info-solid" |
-                  "success-solid" | "danger-solid" | undefined'. Did you mean
+                  '"danger" | "success" | "info" | undefined'. Did you mean
                   '"success"'?
                 </figcaption>
               </figure>
             </Step>
 
-            <Step number={3} title="The component">
+            <Step number={3} title="Use it in a component">
               <p {...s.StepBody}>
                 <InlineCode>createElements</InlineCode> binds the parts to
-                elements. The component passes the variant values and holds no
-                class names or style logic.
+                elements. The component passes the variants as props and holds
+                no class names or style logic.
               </p>
               <CodeBlock title="Notice.tsx" lang="tsx" maxHeight={380}>
                 {componentSource}
@@ -206,11 +204,10 @@ export function HowItWorks() {
 
             <Step number="→" title="What comes out">
               <p {...s.StepBody}>
-                For the web, the CSS is generated at build time and the parts
-                receive class names; nothing is injected at render. The core
-                needs no framework, so the same sheet also resolves to inline
-                styles for HTML email. These are the root part’s props for the
-                selected variant.
+                On the web the CSS is built ahead of time and each part gets
+                class names. The same stylesheet also resolves to inline styles
+                for HTML email. These are the root’s props for the variant you
+                picked.
               </p>
               <CodeBlock title="email.ts" lang="ts">
                 {emailSource}

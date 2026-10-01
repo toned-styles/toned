@@ -247,7 +247,9 @@ export const textAlign = defineToken({
 })
 
 const wrapping = {
+  normal: { whiteSpace: 'normal' },
   nowrap: { whiteSpace: 'nowrap' },
+  pre: { whiteSpace: 'pre' },
   'pre-wrap': { whiteSpace: 'pre-wrap' },
   // Even line lengths for headings; no orphans for paragraphs.
   balance: { textWrap: 'balance' },
@@ -363,6 +365,7 @@ const tracks = {
   halves: '1fr 1fr',
   'even-halves': 'repeat(2, minmax(0, 1fr))',
   thirds: 'repeat(3, minmax(0, 1fr))',
+  quarters: 'repeat(4, minmax(0, 1fr))',
   cards: 'repeat(auto-fill, minmax(260px, 1fr))',
   'preview-controls': 'minmax(0, 1fr) minmax(240px, 0.65fr)',
   'steps-source': '0.85fr minmax(0, 1.15fr)',

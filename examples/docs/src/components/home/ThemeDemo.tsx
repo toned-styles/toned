@@ -34,12 +34,11 @@ export function ThemeDemo() {
       <div {...s.SectionIntro}>
         <p {...s.Eyebrow}>Themes</p>
         <h2 id="themes-title" {...s.Heading}>
-          One interface, {themeList.length} themes
+          One implementation, infinite customisation
         </h2>
         <p {...s.Body}>
-          This release dashboard is one set of components and stylesheets. Pick
-          a theme: colour, type, borders, corners, shadows and window chrome all
-          change, and the code does not.
+          One set of components, {themeList.length} themes. Pick one: colour,
+          type, borders, corners and shadows all change, and the code does not.
         </p>
       </div>
       <div {...s.ThemeDemo}>

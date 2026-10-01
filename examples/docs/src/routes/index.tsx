@@ -3,6 +3,7 @@ import { useStyles } from '@toned/react'
 import { HowItWorks } from '../components/home/HowItWorks.tsx'
 import { SupportLine } from '../components/home/SupportLine.tsx'
 import { ThemeDemo } from '../components/home/ThemeDemo.tsx'
+import { Tooling } from '../components/home/Tooling.tsx'
 import { SiteHeader } from '../components/SiteHeader.tsx'
 import { SiteFooter } from '../components/site/SiteFooter.tsx'
 import { ThemeScope } from '../components/themes/ThemeScope.tsx'
@@ -17,25 +18,12 @@ type Capability = {
   link: string
 } & (
   | {
-      to:
-        | '/api/define-system'
-        | '/api/stylesheet'
-        | '/api/variants'
-        | '/api/conditions'
-        | '/guides/theming'
-        | '/guides/ssr'
-        | '/guides/react-native'
+      to: '/api/stylesheet' | '/api/variants' | '/api/conditions'
     }
   | { topic: string }
 )
 
 const capabilities: readonly Capability[] = [
-  {
-    title: 'Typed tokens',
-    body: 'Colour, spacing, type or your own concepts. A value that is not in a token is a type error.',
-    to: '/api/define-system',
-    link: 'defineSystem',
-  },
   {
     title: 'Named parts',
     body: 'A stylesheet styles a component’s root, label and action together, and binds them to elements.',
@@ -55,40 +43,10 @@ const capabilities: readonly Capability[] = [
     link: 'Conditions',
   },
   {
-    title: 'Theming',
-    body: 'Themes are typed objects. On the web they become custom properties, so a switch is CSS only.',
-    to: '/guides/theming',
-    link: 'Theming guide',
-  },
-  {
-    title: 'SSR and Server Components',
-    body: 'CSS is built ahead of time, so server and static pages need no style injection. A Server Component resolves props without hooks.',
-    to: '/guides/ssr',
-    link: 'SSR guide',
-  },
-  {
-    title: 'React Native',
-    body: 'The same declarations resolve to native values through a host adapter. Native support is verified per host; native grid is not supported.',
-    to: '/guides/react-native',
-    link: 'React Native guide',
-  },
-  {
-    title: 'Email and PDF output',
-    body: 'Renderers resolve a sheet to inline styles for HTML email or to a PDF style profile. Unsupported declarations fail explicitly.',
-    topic: 'renderers',
-    link: 'Web, email and PDF',
-  },
-  {
     title: 'Tailwind backend',
     body: 'Resolve fields to utilities from your own Tailwind build, validated against the declarations they emit.',
     topic: 'backends',
     link: 'Backend integrations',
-  },
-  {
-    title: 'Editor and lint tooling',
-    body: 'A language server and VS Code extension add token completion and source navigation. Lint rules run in ESLint and Oxlint.',
-    topic: 'compiler',
-    link: 'Compiler and language server',
   },
   {
     title: 'Design-token exchange',
@@ -104,18 +62,56 @@ const capabilities: readonly Capability[] = [
   },
 ]
 
+const pillars = [
+  {
+    title: 'Build time',
+    body: 'CSS is generated when you build. Nothing is injected at render.',
+  },
+  {
+    title: 'SSR and Server Components',
+    body: 'Server and static pages need no style runtime, and Server Components resolve styles without hooks.',
+  },
+  {
+    title: 'Cross-platform',
+    body: 'One stylesheet resolves for the web, React Native, email and PDF.',
+  },
+  {
+    title: 'Design system first',
+    body: 'You define the system. Components can only use what it defines.',
+  },
+  {
+    title: 'Token first',
+    body: 'Every value is a named token, from colour and type to layout.',
+  },
+  {
+    title: 'Type safe',
+    body: 'Tokens, parts and variants are typed. A wrong value does not compile.',
+  },
+] as const
+
+function Pillars() {
+  const s = useStyles(homeStyles)
+  return (
+    <div {...s.Pillars} role="list" aria-label="What Toned is built around">
+      {pillars.map((item) => (
+        <div key={item.title} role="listitem" {...s.Pillar}>
+          <h2 {...s.PillarTitle}>{item.title}</h2>
+          <p {...s.PillarBody}>{item.body}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Capabilities() {
   const s = useStyles(homeStyles)
   return (
     <section {...s.Section} id="capabilities" aria-labelledby="caps-title">
       <div {...s.SectionIntro}>
-        <p {...s.Eyebrow}>What it gives you</p>
+        <p {...s.Eyebrow}>Also included</p>
         <h2 id="caps-title" {...s.Heading}>
-          Capabilities
+          More in the box
         </h2>
-        <p {...s.Body}>
-          Each one links to its documentation, which also states its limits.
-        </p>
       </div>
       <div {...s.Cards}>
         {capabilities.map((item) => (
@@ -159,7 +155,7 @@ const next = [
   {
     to: '/playground',
     title: 'Playground',
-    body: 'Edit a system, a stylesheet and a component in the browser, with type checking.',
+    body: 'Edit a system, a stylesheet and a component in the browser, with type checking and completion.',
   },
   {
     to: '/examples',
@@ -221,14 +217,12 @@ function Home() {
                 alt="Toned"
               />
               <h1 id="hero-title" {...s.Title}>
-                Typed styling, independent of platform and framework
+                Typed styling for design systems
               </h1>
               <p {...s.Lead}>
-                Toned is a styling system. You define a typed vocabulary of
-                design tokens, name the parts of a component and declare its
-                variants. The core has no framework dependency and compiles
-                those declarations for each target: web CSS, React Native, HTML
-                email and PDF. The React binding ships today.
+                Define your tokens once. Toned builds them into styles for the
+                web, React Native, email and PDF, and TypeScript checks every
+                value.
               </p>
               <div {...s.Actions}>
                 <Link to="/getting-started" {...s.Primary}>
@@ -240,6 +234,7 @@ function Home() {
               </div>
             </section>
             <SupportLine />
+            <Pillars />
             <ThemeDemo />
           </div>
           <div {...s.Band}>
@@ -248,6 +243,7 @@ function Home() {
             </div>
           </div>
           <div {...s.Container}>
+            <Tooling />
             <Capabilities />
             <WhereNext />
           </div>

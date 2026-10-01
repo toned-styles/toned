@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import {
   type KeyboardEvent,
@@ -660,9 +659,6 @@ export function PlaygroundEditor() {
           <button type="button" {...s.Button} onClick={copy}>
             {copied ? 'Copied' : `Copy ${activeFile}`}
           </button>
-          <Link to="/" hash="studio" {...s.StudioLink}>
-            Style studio demo →
-          </Link>
         </div>
       </div>
 
