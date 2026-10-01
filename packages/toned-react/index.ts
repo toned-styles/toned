@@ -301,7 +301,8 @@ export type ElementsOf<T> = ((
 
 type ReservedElementName =
   | keyof Function
-  | keyof object
+  // oxlint-disable-next-line typescript/no-wrapper-object-types -- the Object interface lists the prototype members a part name would shadow; `keyof object` is never.
+  | keyof Object
   // Legacy Object.prototype members also satisfy the runtime `part in Elements`
   // check, although modern TypeScript's Object interface omits them.
   | '__proto__'
@@ -402,18 +403,24 @@ export const overrideStyles = _overrideStyles as <
    * Contextually typed by OverrideRulesContext (shared element shapes);
    * validated by ValidateDeclaration against the full rules type. The rules
    * type as the constraint re-derived itself against each call's literal.
+   * The callback is validated through a separate `NoInfer` signature so that
+   * TypeScript before 7 still infers `Rules` from its return value.
    */
   rules:
-    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
-        ValidateDeclaration<
-          Rules,
-          StyleOverrideRules<T>,
-          OverrideSystem<T>,
-          OverrideParts<T>
-        >)
-    | ((
+    | (((
         q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-      ) => EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
+      ) => EditorOnly<Rules | NoInfer<OverrideRulesContext<T>>, Rules>) &
+        NoInfer<
+          (
+            q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
+          ) => ValidateDeclaration<
+            Rules,
+            StyleOverrideRules<T>,
+            OverrideSystem<T>,
+            OverrideParts<T>
+          >
+        >)
+    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,

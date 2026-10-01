@@ -1410,9 +1410,13 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   // string during inference and the token constraint silently never applies.
   const T extends StylesheetInput<S, T>,
 >(
+  // The callback returns a naked `T` and is validated through a separate
+  // `NoInfer` signature: validating its return inline stops TypeScript
+  // before 7 from inferring any parts from a query-builder callback.
   style:
-    | (T & NoInfer<StylesheetValidation<S, T>>)
-    | ((q: QueryBuilder<S>) => T & NoInfer<StylesheetValidation<S, T>>),
+    | (((q: QueryBuilder<S>) => T) &
+        NoInfer<(q: QueryBuilder<S>) => StylesheetValidation<S, T>>)
+    | (T & NoInfer<StylesheetValidation<S, T>>),
 ) => PreVariantsStylesheet<
   S,
   /*

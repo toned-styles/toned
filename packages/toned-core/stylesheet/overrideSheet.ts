@@ -132,12 +132,23 @@ export function overrideSheet<
   const Variants extends Record<string, unknown> = {},
 >(
   sheet: T,
+  // The callback is validated through a separate `NoInfer` signature so that
+  // TypeScript before 7 still infers `Rules` from its return value.
   rules:
-    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
-        ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>)
-    | ((
+    | (((
         q: QueryBuilder<System<T>, Parts<T>>,
-      ) => EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
+      ) => EditorOnly<Rules | NoInfer<OverrideRulesContext<T>>, Rules>) &
+        NoInfer<
+          (
+            q: QueryBuilder<System<T>, Parts<T>>,
+          ) => ValidateDeclaration<
+            Rules,
+            OverrideSheetRules<T>,
+            System<T>,
+            Parts<T>
+          >
+        >)
+    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>),
   variants?: (
     $: VariantSelector<Mods<T>>,
