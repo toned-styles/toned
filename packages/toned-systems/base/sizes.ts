@@ -1,5 +1,5 @@
 import { defineCssToken } from '../defineCssToken.ts'
-import { SpaceUnit } from './unit.ts'
+import { isCssDimension, SpaceUnit } from './unit.ts'
 
 /*
  * Dimensions are base-relative like every numeric sizing value in the system:
@@ -50,13 +50,6 @@ const sizeValues = [
   96,
 ] as const
 
-// Dimension literals are CSS values, not names in the spacing dictionary.
-// Leave them intact so the web serializer can emit them and the native
-// backend can reject web-only units/expressions rather than silently omit them.
-const cssLength =
-  /^-?(?:\d+\.?\d*|\.\d+)(?:%|px|em|rem|ex|rex|cap|rcap|ch|rch|ic|ric|lh|rlh|cm|mm|q|in|pt|pc|[sld]?(?:vw|vh|vi|vb|vmin|vmax)|cq(?:w|h|i|b|min|max))$/i
-const cssDimensionExpression = /^(?:calc|min|max|clamp|var|env|fit-content)\(/
-
 const SizeUnit = (
   value: Parameters<typeof SpaceUnit>[0],
   tokens: Parameters<typeof SpaceUnit>[1],
@@ -65,8 +58,7 @@ const SizeUnit = (
   value === '100%' ||
   value === 'fit-content' ||
   value === 'max-content' ||
-  (typeof value === 'string' &&
-    (cssLength.test(value) || cssDimensionExpression.test(value)))
+  isCssDimension(value)
     ? String(value)
     : SpaceUnit(value, tokens)
 
