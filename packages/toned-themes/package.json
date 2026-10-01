@@ -24,8 +24,6 @@
   },
   "devDependencies": {
     "@toned-config/build": "workspace:*",
-    "@toned-config/typescript": "workspace:*",
-    "rollup-copy-transform-css": "^2.2.0",
-    "rollup-plugin-copy": "^3.5.0"
+    "@toned-config/typescript": "workspace:*"
   }
 }

@@ -103,7 +103,9 @@ async function removeTestArtifacts(directory: string): Promise<void> {
 
 await $`rm -rf ${dist}`
 
-await $`tsc -b --emitDeclarationOnly false`
+// The workspace TypeScript, not whichever `tsc` happens to be on PATH.
+const tsc = path.join(monorepoRoot, 'node_modules/.bin/tsc')
+await $`${tsc} -b --emitDeclarationOnly false`
 await removeTestArtifacts(dist)
 
 await $`cp README.md ${dist}`

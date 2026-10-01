@@ -39,11 +39,5 @@
     "incremental": true
   },
   "include": ["${configDir}/**/*", "./**/*"],
-  "exclude": [
-    "**/node_modules/**",
-    "**/.build/**",
-    "**/.dist/**",
-    "**/.tsc/**",
-    ".config.*.ts"
-  ]
+  "exclude": ["**/node_modules/**", "**/.build/**", "**/.dist/**", "**/.tsc/**"]
 }
