@@ -41,19 +41,50 @@ export function namespaceCss(
     animations(part, id),
   ).replace(/([^{}]+)\{/g, (block, selector: string) => {
     if (selector.trimStart().startsWith('@')) return block
-    const prefix =
-      options?.scope && selector.startsWith(`${options.scope} `)
-        ? `${options.scope} `
-        : ''
-    const owned = selector.slice(prefix.length)
-    return `${prefix}${outsideStrings(owned, (part) =>
-      part.replace(
-        /\.((?:\\.|[-_a-zA-Z])(?:\\.|[-_a-zA-Z0-9])*)/g,
-        (_match, name: string) =>
-          name === '_' || name === '_s' ? `.${name}` : `.${id}--${name}`,
-      ),
-    )}{`
+    // The caller's scope prefixes every selector in the list, each possibly
+    // after whitespace (a later rule, a list item, a rule inside an at-rule).
+    return `${selectorList(selector)
+      .map((item) => {
+        const lead = item.length - item.trimStart().length
+        const scoped =
+          options?.scope && item.startsWith(`${options.scope} `, lead)
+            ? lead + options.scope.length + 1
+            : lead
+        return (
+          item.slice(0, scoped) +
+          outsideStrings(item.slice(scoped), (part) =>
+            part.replace(
+              /\.((?:\\.|[-_a-zA-Z])(?:\\.|[-_a-zA-Z0-9])*)/g,
+              (_match, name: string) =>
+                name === '_' || name === '_s' ? `.${name}` : `.${id}--${name}`,
+            ),
+          )
+        )
+      })
+      .join(',')}{`
   })
+}
+/** Splits a selector list on its top-level commas, keeping each item's spacing. */
+function selectorList(selector: string): string[] {
+  const items: string[] = []
+  let depth = 0
+  let quote = ''
+  let start = 0
+  for (let i = 0; i < selector.length; i++) {
+    const char = selector[i]
+    if (quote) {
+      if (char === '\\') i++
+      else if (char === quote) quote = ''
+    } else if (char === '"' || char === "'") quote = char
+    else if (char === '(' || char === '[') depth++
+    else if (char === ')' || char === ']') depth--
+    else if (char === ',' && depth === 0) {
+      items.push(selector.slice(start, i))
+      start = i + 1
+    }
+  }
+  items.push(selector.slice(start))
+  return items
 }
 export function namespaceOutput<
   T extends { style: object; className?: string },
