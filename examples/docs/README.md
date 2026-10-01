@@ -40,9 +40,28 @@ Every page shares one header (`SiteHeader`), footer and palette
 (`src/styles/brand.ts`); the shell stylesheets live in `src/styles/site.ts`.
 Documentation pages render inside one layout (`src/routes/__root.tsx`): the
 sidebar, breadcrumb and previous/next links all come from `src/content/nav.ts`,
-so adding a page there places it everywhere. The "On this page" rail only
-reads headings that already carry an `id` — give new `h2`/`h3` headings one in
-render; mutating the article during hydration would cause a mismatch.
+so adding a page there places it everywhere; add its path to `routes` in
+`prerender.js` as well. The header has four destinations (Docs, Components,
+Themes, Playground); everything in the documentation layout belongs to Docs.
+
+The "On this page" rail only reads headings that already carry an `id` — give
+new `h2`/`h3` headings one in render; mutating the article during hydration
+would cause a mismatch. It watches the article with a mutation observer rather
+than the URL: the router changes the location before the next page is on
+screen, and a reference page renders after its Markdown has loaded.
+
+Scrolling on navigation is the router's (`scrollRestoration: true` in
+`src/main.tsx` and `src/entry-server.tsx`): a new page starts at the top, back
+and forward restore the position, and a hash scrolls to its heading, which
+clears the sticky header through the `anchor` token. The sidebar is a named
+scroll region (`data-scroll-restoration-id`) and keeps its position; it scrolls
+only to bring the current page's link into view. After a navigation the layout
+moves focus to `#docs-main`. Link to other pages with the router's `Link`, not
+`<a href>`, so a navigation does not reload the document; Markdown links are
+handled by `ReferenceMarkdown`.
+
+Installation commands use `InstallCommand`, which shows the npm, pnpm, yarn and
+bun forms.
 
 `CodeBlock` highlights synchronously with Shiki's core and a brand theme
 (`src/highlight.ts`), so prerendered HTML ships already coloured and hydrates
@@ -58,10 +77,12 @@ variant changes them: a shorthand beside its longhand drops the longhand. A
 unitless string such as `minWidth: '0'` is read as a spacing alias; use the
 number `0`.
 
-The homepage uses a local web design system, explicit renderer and build
-manifest. The style studio uses real component variants; the token map uses the
-same accent vocabulary; the layout explorer uses a named 480px container
-condition. Its connection animation respects reduced motion. `/playground` is a
+The homepage (`src/routes/index.tsx`, `src/components/home/`) embeds the theme
+showcase and follows one small component, `Notice`, through three real modules
+in `src/components/home/story/` (system, styles, component). The code shown is
+imported with `?raw`, so it is the code that runs; that example has its own
+system, built by the `homeStory()` plugin. The supported-systems line lists
+only what exists and stops moving under reduced motion. `/playground` is a
 free-form editor with one file per layer: `styles.ts` (style declarations),
 `App.tsx` (the component) and `system.ts` (the design system the sheets import
 `stylesheet` from). The browser transpiles
@@ -100,15 +121,26 @@ gallery.
 Brand assets live in `public/brand`: the folded-T symbol and outlined wordmark
 are SVGs, with no external font or image request. The homepage and playground
 are prerendered alongside the guides. The HQ docs runner checks README snippets,
-variant state preservation, resets, container switching, mobile overflow,
-reduced motion, guide navigation, syntax highlighting, and the gallery.
+the homepage's theme switch and variant controls, global search, mobile
+overflow, reduced motion, guide navigation, syntax highlighting, theme switching
+and the gallery.
 
 
 `/explore` indexes 22 source-backed references, loaded from the package Markdown
 rather than copied into routes. `/learn/$topic` renders them with semantic React
-markup; relative reference links map to the local directory and remaining source
-links point to the documented branch. Raw HTML is displayed as text, never injected.
-`/lab` contains seven real API experiments. Each experiment is split into the
+markup; relative reference links map to the local directory, links to
+`https://toned.style` stay inside the site, and remaining source links point to
+`main` (`sourceRef` in `src/content/references.ts`). Raw HTML is displayed as
+text, never injected.
+
+`/changelog` is generated from each package's `CHANGELOG.md`
+(`src/content/changelog.ts`); nothing about a release is written in the site.
+A section headed `# Next release`, or a version heading without a date, is
+listed as the next release. Conventional-commit headings map onto Added,
+Changed and Fixed. To record a change, edit the package's `CHANGELOG.md`.
+
+`/examples` contains seven interactive examples (`src/components/lab`); `/lab`,
+its former address, forwards there and keeps the hash. Each example is split into the
 modules a project would have — `*.styles.ts` (declarations), the component, and a
 system or configuration module — and its source panel shows those files as they
 run (`?raw`), one tab per layer, styles first. Where the declaration is the
@@ -121,10 +153,8 @@ The build prerenders every reference and every UI component page, and gives each
 page a title and canonical URL. Code in references is highlighted at render time. The browser fixture verifies adaptive layout changes, reduced motion,
 inline/PDF output, token diagnostics, real geometry contract pass/fail, inspector edit
 round trips, search and mobile overflow. Package reference snippets are documentation;
-the curated introductory snippets and actual lab modules receive compilation checks.
-
-This site describes the development branch. Update the reference source revision
-in `src/content/references.ts` and release guidance when publishing these APIs.
+the curated introductory snippets and the interactive examples' modules receive
+compilation checks.
 
 ## Theme showcase
 

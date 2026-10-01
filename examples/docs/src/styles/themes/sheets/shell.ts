@@ -10,6 +10,7 @@ export const shellStyles = stylesheet({
     fill: 'stage',
     ink: 'default',
     type: 'body',
+    icons: 'themed',
     native: 'selection',
     '@media md': { pad: 8 },
     '@platform web': {
@@ -33,7 +34,7 @@ export const shellStyles = stylesheet({
     place: 'origin',
     fill: 'surface',
     edge: 'panel',
-    corner: 'panel',
+    corner: 'window',
     depth: 'window',
     frost: 'surface',
     overflow: 'clip',
@@ -63,11 +64,15 @@ export const shellStyles = stylesheet({
     padY: 2,
     fill: 'bar',
     ink: 'on-bar',
-    edge: 'rule',
+    edge: 'bar',
+    // A theme may float the bar inside the window instead of ruling it off.
+    inset: 'app-bar',
+    corner: 'app-bar',
+    depth: 'app-bar',
     place: 'origin',
     '@media md': { gap: 4, padX: 4 },
   },
-  Brand: { flow: 'row', align: 'center', gap: 2 },
+  Brand: { flow: 'row', align: 'center', gap: 2, padX: 1 },
   BrandMark: { size: 'swatch', fill: 'accent', corner: 'control' },
   BrandName: { $kind: 'text', type: 'title' },
   Nav: { flow: 'row', gap: 1, flex: 'fill', overflow: 'scroll-x' },
@@ -77,7 +82,7 @@ export const shellStyles = stylesheet({
     gap: 2,
     pad: 3,
     edge: 'rule',
-    '@media md': { measure: 'sidebar', edge: 'side' },
+    '@media md': { measure: 'sidebar', edge: 'side', padY: 4 },
   },
   SideLabel: { $kind: 'text', type: 'label', ink: 'muted', padX: 2 },
   SideList: {
@@ -97,10 +102,19 @@ export const shellStyles = stylesheet({
     '@media md': { pad: 5, gap: 5 },
   },
   PageHead: { flow: 'wrap', align: 'center', justify: 'between', gap: 3 },
-  PageTitle: { $kind: 'text', type: 'display', ink: 'strong' },
+  // A text-mode theme puts its cursor after the title.
+  PageTitle: {
+    $kind: 'text',
+    type: 'display',
+    ink: 'strong',
+    affix: 'cursor',
+  },
   PageNote: { $kind: 'text', type: 'small', ink: 'muted' },
   Group: { flow: 'wrap', align: 'center', gap: 3 },
+  // Shown where there is room for it.
+  Wide: { flow: 'hidden', '@media md': { flow: 'row' } },
   Stack: { flow: 'column', gap: 1 },
+  Options: { flow: 'column', align: 'start', gap: 3 },
   Stats: { tracks: 'stats', gap: 3 },
 })
 
@@ -123,7 +137,9 @@ export const navStyles = stylesheet({
     ':focus-visible': { focus: 'ring' },
   },
 }).variants(($: Variants<{ current: boolean }>) => ({
-  [$.current(true)]: { Link: { fill: 'selected', ink: 'on-selected' } },
+  [$.current(true)]: {
+    Link: { fill: 'selected', ink: 'on-selected', depth: 'selected' },
+  },
 }))
 
 /** One project in the sidebar. */
@@ -158,6 +174,7 @@ export const sideItemStyles = stylesheet({
       fill: 'selected',
       ink: 'on-selected',
       weight: 'strong',
+      depth: 'selected',
       ':hover': { fill: 'selected' },
     },
     Name: { affix: 'bullet' },

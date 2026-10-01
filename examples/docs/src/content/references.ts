@@ -1,4 +1,5 @@
-export const sourceRef = 'feat/toned-style-showcase'
+/** The branch that source links point at. */
+export const sourceRef = 'main'
 export const sourceBase = `https://github.com/toned-styles/toned/blob/${sourceRef}/`
 
 export const references = [
@@ -254,7 +255,12 @@ export const references = [
   },
 ] as const
 
+/** The published site: links to it in package Markdown stay inside the site. */
+const siteOrigin = 'https://toned.style'
+
 export function referenceHref(href: string, from: string): string {
+  if (href === siteOrigin) return '/'
+  if (href.startsWith(`${siteOrigin}/`)) return href.slice(siteOrigin.length)
   if (/^(?:https?:|mailto:|#|\/)/.test(href)) return href
   if (/^[a-z][a-z\d+.-]*:/i.test(href)) return '#'
   const url = new URL(href, `https://source.invalid/${from}`)

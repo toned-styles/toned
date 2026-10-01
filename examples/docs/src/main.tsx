@@ -17,6 +17,12 @@ if (import.meta.env.DEV)
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
+  // The router's own scroll restoration: a new page starts at the top, back
+  // and forward return to where the reader was, and a hash scrolls to its
+  // heading. Scrollable regions (the docs sidebar) keep their position across
+  // pages; the "On this page" rail starts again at its top.
+  scrollRestoration: true,
+  scrollToTopSelectors: ['#docs-rail'],
 })
 
 declare module '@tanstack/react-router' {

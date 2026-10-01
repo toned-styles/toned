@@ -1,6 +1,6 @@
 # One system, deliberate rendering
 
-Use the renderer that matches the output you need. The capability lab resolves a real shared sheet with both document renderers, showing the exact styles they produce.
+Use the renderer that matches the output you need. The [interactive example](https://toned.style/examples#renderers) resolves one shared sheet with both document renderers and shows the exact styles they produce.
 
 | Output | Entry point | What it delivers |
 | --- | --- | --- |

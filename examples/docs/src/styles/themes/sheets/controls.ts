@@ -18,6 +18,8 @@ export const fieldStyles = stylesheet({
     ink: 'strong',
     edge: 'field',
     corner: 'control',
+    depth: 'field',
+    caret: 'themed',
     motion: 'themed',
     ':focus-visible': { focus: 'ring' },
   },
@@ -89,24 +91,26 @@ export const switchStyles = stylesheet({
   Thumb: {
     size: 'thumb',
     slide: 'off',
-    fill: 'neutral',
+    fill: 'knob',
     edge: 'control',
     corner: 'pill',
+    depth: 'knob',
     motion: 'themed',
   },
 }).variants(($: Variants<{ on: boolean }>) => ({
   [$.on(true)]: { Track: { fill: 'accent' }, Thumb: { slide: 'on' } },
 }))
 
-/** A radio group drawn as one segmented control. */
+/** A radio group drawn as one segmented control: a tray and a thumb. */
 export const segmentStyles = stylesheet({
   Root: {
     flow: 'inline',
     gap: 0.5,
     pad: 0.5,
-    fill: 'sunken',
+    fill: 'tray',
     edge: 'field',
     corner: 'control',
+    depth: 'field',
   },
   Option: {
     $kind: 'pressable',
@@ -122,17 +126,19 @@ export const segmentStyles = stylesheet({
     fill: 'none',
     ink: 'muted',
     edge: 'none',
-    corner: 'control',
+    corner: 'inner',
     motion: 'themed',
     ':hover': { ink: 'strong' },
     ':focus-visible': { focus: 'ring' },
+    ':active': { press: 'down' },
   },
 }).variants(($: Variants<{ selected: boolean }>) => ({
   [$.selected(true)]: {
     Option: {
-      fill: 'selected',
-      ink: 'on-selected',
-      ':hover': { ink: 'on-selected' },
+      fill: 'thumb',
+      ink: 'on-thumb',
+      depth: 'thumb',
+      ':hover': { ink: 'on-thumb' },
     },
   },
 }))
@@ -151,8 +157,21 @@ export const sliderStyles = stylesheet({
   Value: { $kind: 'text', type: 'data', ink: 'strong', textAlign: 'right' },
 })
 
+/**
+ * Tabs. The theme decides the idiom: an underline on a rule, a filled block,
+ * or a thumb in a well. The sheet declares the well, the line and the fill,
+ * and a theme leaves out what it does not draw.
+ */
 export const tabStyles = stylesheet({
-  List: { flow: 'row', gap: 1, padY: 1, overflow: 'scroll-x', edge: 'rule' },
+  List: {
+    flow: 'row',
+    gap: 1,
+    inset: 'tab-tray',
+    fill: 'tab-tray',
+    corner: 'tab-tray',
+    depth: 'tab-tray',
+    overflow: 'scroll-x',
+  },
   Tab: {
     $kind: 'pressable',
     reset: 'control',
@@ -164,11 +183,11 @@ export const tabStyles = stylesheet({
     type: 'control',
     fill: 'none',
     ink: 'muted',
-    edge: 'none',
-    corner: 'control',
+    edge: 'tab',
+    corner: 'tab',
     motion: 'themed',
     ':hover': { ink: 'strong' },
-    ':focus-visible': { focus: 'ring' },
+    ':focus-visible': { focus: 'inside' },
   },
   Panel: {
     flow: 'column',
@@ -179,9 +198,11 @@ export const tabStyles = stylesheet({
 }).variants(($: Variants<{ selected: boolean }>) => ({
   [$.selected(true)]: {
     Tab: {
-      fill: 'selected',
-      ink: 'on-selected',
-      ':hover': { ink: 'on-selected' },
+      fill: 'tab-selected',
+      ink: 'on-tab-selected',
+      edge: 'tab-selected',
+      depth: 'selected',
+      ':hover': { ink: 'on-tab-selected' },
     },
   },
 }))

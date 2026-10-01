@@ -4,14 +4,16 @@ import tanstackRouter from '@tanstack/router-plugin/vite'
 import toned from '@toned/core/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { homeStory } from './src/components/home/story/vite.ts'
 import { componentDocs } from './src/plugins/component-docs.ts'
+import { searchIndex } from './src/plugins/search-index.js'
 import { choiceStyles, homeStyles } from './src/styles/home.ts'
 import { adaptiveStyles, gridStyles, motionStyles } from './src/styles/lab.ts'
 import { libraryStyles } from './src/styles/library.ts'
 import { playgroundStyles } from './src/styles/playground.ts'
 import { playgroundEditorStyles } from './src/styles/playground-editor.ts'
 import { proseStyles } from './src/styles/prose.ts'
-import { showcaseStyles } from './src/styles/showcase.ts'
+import { searchStyles } from './src/styles/search.ts'
 import {
   codeStyles,
   docsStyles,
@@ -26,7 +28,6 @@ import {
 import { docsSystem } from './src/styles/system.ts'
 import { themesPageStyles } from './src/styles/themes/page.ts'
 import { themeShowcase } from './src/styles/themes/vite.ts'
-import { visualStyles } from './src/styles/visualisations.ts'
 
 const uiRoot = fileURLToPath(new URL('../ui', import.meta.url))
 
@@ -62,9 +63,7 @@ export default defineConfig({
         motionStyles,
         gridStyles,
         homeStyles,
-        showcaseStyles,
         choiceStyles,
-        visualStyles,
         proseStyles,
         playgroundEditorStyles,
         playgroundStyles,
@@ -79,9 +78,9 @@ export default defineConfig({
         indexStyles,
         experimentStyles,
         footerStyles,
+        searchStyles,
       ],
       inputs: [
-        'src/styles/visualisations.ts',
         'src/styles/prose.ts',
         'src/styles/playground-editor.ts',
         'src/styles/site.ts',
@@ -95,16 +94,21 @@ export default defineConfig({
         'src/components/lab/adaptive.styles.ts',
         'src/components/lab/motion.styles.ts',
         'src/components/lab/grid.styles.ts',
-        'src/styles/showcase.ts',
         'src/styles/themes/page.ts',
+        'src/styles/search.ts',
       ],
     }),
     // The theme showcase's own system: its classes and one palette per theme.
     themeShowcase(),
+    // The homepage's worked example: one small system of its own.
+    homeStory(),
     componentDocs({
       componentsDir: path.join(uiRoot, 'src/components/ui'),
       tsconfigPath: path.join(uiRoot, 'tsconfig.json'),
     }),
+    // Site search: serves /search-index.json in development (the build writes
+    // it from the prerendered pages, see prerender.js).
+    searchIndex({ componentsDir: path.join(uiRoot, 'src/components/ui') }),
     tanstackRouter({ target: 'react', autoCodeSplitting: false }),
     react(),
   ],

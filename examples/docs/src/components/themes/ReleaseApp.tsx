@@ -8,7 +8,6 @@ import {
   useState,
 } from 'react'
 import {
-  chartStyles,
   feedStyles,
   panelStyles,
   statStyles,
@@ -29,7 +28,9 @@ import {
   Avatar,
   AvatarGroup,
   Badge,
+  Bars,
   Button,
+  ChartAxis,
   Checkbox,
   FieldGrid,
   Meter,
@@ -46,6 +47,7 @@ import {
   channels,
   initialReleases,
   type ProjectId,
+  people,
   projects,
   type Release,
   regions,
@@ -61,7 +63,6 @@ const SideItem = createElements(sideItemStyles)
 const Panel = createElements(panelStyles)
 const Stat = createElements(statStyles)
 const Table = createElements(tableStyles)
-const Chart = createElements(chartStyles)
 const Feed = createElements(feedStyles)
 const Dialog = createElements(dialogStyles)
 const Menu = createElements(menuStyles)
@@ -92,11 +93,23 @@ const settingsFor = (project: ProjectId): Settings => ({
   rollout: initialReleases[project][0]?.rollout ?? 0,
 })
 
+const sameSettings = (a: Settings, b: Settings) =>
+  (Object.keys(a) as (keyof Settings)[]).every((key) => a[key] === b[key])
+
 /**
  * A release workspace. It has no notion of a theme: it renders parts, and the
  * `data-theme` attribute on its root decides what they look like.
+ *
+ * `compact` leaves out the sidebar, the people and the tabs, and shows the
+ * heading, the figures and the releases table: enough for a preview.
  */
-export function ReleaseApp({ theme }: { theme: ThemeName }) {
+export function ReleaseApp({
+  theme,
+  compact = false,
+}: {
+  theme: ThemeName
+  compact?: boolean
+}) {
   const [area, setArea] = useState<(typeof areas)[number]>('Projects')
   const [project, setProject] = useState<ProjectId>('web')
   const [tab, setTab] = useState<(typeof tabs)[number]['id']>('releases')
@@ -151,28 +164,30 @@ export function ReleaseApp({ theme }: { theme: ThemeName }) {
         </Shell.AppBar>
 
         <Shell.Body>
-          <Shell.Sidebar as="aside" aria-label="Projects">
-            <Shell.SideLabel as="span">Projects</Shell.SideLabel>
-            <Shell.SideList as="ul">
-              {projects.map((item) => (
-                <li key={item.id}>
-                  <SideItem selected={item.id === project}>
-                    <SideItem.Root
-                      as="button"
-                      type="button"
-                      aria-current={item.id === project ? 'true' : undefined}
-                      onClick={() => choose(item.id)}
-                    >
-                      <SideItem.Name as="span">{item.name}</SideItem.Name>
-                      <SideItem.Count as="span">
-                        {releases[item.id].length}
-                      </SideItem.Count>
-                    </SideItem.Root>
-                  </SideItem>
-                </li>
-              ))}
-            </Shell.SideList>
-          </Shell.Sidebar>
+          {!compact && (
+            <Shell.Sidebar as="aside" aria-label="Projects">
+              <Shell.SideLabel as="span">Projects</Shell.SideLabel>
+              <Shell.SideList as="ul">
+                {projects.map((item) => (
+                  <li key={item.id}>
+                    <SideItem selected={item.id === project}>
+                      <SideItem.Root
+                        as="button"
+                        type="button"
+                        aria-current={item.id === project ? 'true' : undefined}
+                        onClick={() => choose(item.id)}
+                      >
+                        <SideItem.Name as="span">{item.name}</SideItem.Name>
+                        <SideItem.Count as="span">
+                          {releases[item.id].length}
+                        </SideItem.Count>
+                      </SideItem.Root>
+                    </SideItem>
+                  </li>
+                ))}
+              </Shell.SideList>
+            </Shell.Sidebar>
+          )}
 
           <Shell.Main as="section" aria-label={`${settings.name} releases`}>
             {area === 'Projects' ? (
@@ -190,10 +205,14 @@ export function ReleaseApp({ theme }: { theme: ThemeName }) {
                     </Shell.PageNote>
                   </Shell.Stack>
                   <Shell.Group>
-                    <AvatarGroup
-                      names={['AK', 'MR', 'JL', '+3']}
-                      label="Six people work on this project"
-                    />
+                    {!compact && (
+                      <Shell.Wide>
+                        <AvatarGroup
+                          names={['AK', 'MR', 'JL', '+3']}
+                          label="Six people work on this project"
+                        />
+                      </Shell.Wide>
+                    )}
                     <Button
                       tone="secondary"
                       onClick={() => setToast('Export queued')}
@@ -212,35 +231,41 @@ export function ReleaseApp({ theme }: { theme: ThemeName }) {
                       <Stat.Label as="span">{stat.label}</Stat.Label>
                       <Stat.Row>
                         <Stat.Value as="span">{stat.value}</Stat.Value>
-                        <Badge tone={stat.tone}>{stat.change}</Badge>
+                        <Bars values={stat.trend} size="spark" />
                       </Stat.Row>
-                      <Stat.Trend>
-                        <Sparkline values={stat.trend} />
-                      </Stat.Trend>
+                      <Stat.Change>
+                        <Badge tone={stat.tone}>{stat.change}</Badge>
+                        <Stat.Note as="span">{stat.note}</Stat.Note>
+                      </Stat.Change>
                     </Stat.Root>
                   ))}
                 </Shell.Stats>
 
-                <Tabs
-                  label="Project sections"
-                  tabs={tabs}
-                  value={tab}
-                  onChange={setTab}
-                >
-                  {tab === 'releases' && <Releases rows={rows} />}
-                  {tab === 'activity' && <Activity />}
-                  {tab === 'settings' && (
-                    <SettingsForm
-                      settings={settings}
-                      set={set}
-                      onSave={() => setToast('Settings saved')}
-                      onReset={() => setSettings(settingsFor(project))}
-                      onDelete={() =>
-                        setToast('Deleting is turned off in this demo')
-                      }
-                    />
-                  )}
-                </Tabs>
+                {compact ? (
+                  <Releases rows={rows} />
+                ) : (
+                  <Tabs
+                    label="Project sections"
+                    tabs={tabs}
+                    value={tab}
+                    onChange={setTab}
+                  >
+                    {tab === 'releases' && <Releases rows={rows} />}
+                    {tab === 'activity' && <Activity />}
+                    {tab === 'settings' && (
+                      <SettingsForm
+                        settings={settings}
+                        set={set}
+                        changed={!sameSettings(settings, settingsFor(project))}
+                        onSave={() => setToast('Settings saved')}
+                        onReset={() => setSettings(settingsFor(project))}
+                        onDelete={() =>
+                          setToast('Deleting is turned off in this demo')
+                        }
+                      />
+                    )}
+                  </Tabs>
+                )}
               </>
             ) : (
               <Panel.Root>
@@ -253,9 +278,10 @@ export function ReleaseApp({ theme }: { theme: ThemeName }) {
               </Panel.Root>
             )}
 
-            <div role="status" aria-live="polite">
+            <Toast.Dock role="status" aria-live="polite">
               {toast && (
                 <Toast.Root data-testid="theme-toast">
+                  <Toast.Mark aria-hidden="true" />
                   <Toast.Text as="span">{toast}</Toast.Text>
                   <Button
                     tone="quiet"
@@ -267,7 +293,7 @@ export function ReleaseApp({ theme }: { theme: ThemeName }) {
                   </Button>
                 </Toast.Root>
               )}
-            </div>
+            </Toast.Dock>
           </Shell.Main>
         </Shell.Body>
 
@@ -316,30 +342,6 @@ function CloseIcon() {
   )
 }
 
-function Sparkline({ values }: { values: readonly number[] }) {
-  const max = Math.max(...values)
-  const points = values
-    .map((value, index) => `${index * 10},${28 - (value / max) * 24}`)
-    .join(' ')
-  return (
-    <svg
-      viewBox={`0 0 ${(values.length - 1) * 10} 30`}
-      width="100%"
-      height="30"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <polyline
-        points={points}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  )
-}
-
 function Releases({ rows }: { rows: Release[] }) {
   return (
     <Panel.Root>
@@ -376,7 +378,9 @@ function Releases({ rows }: { rows: Release[] }) {
                   <Table.Version as="span">{release.version}</Table.Version>
                 </Table.Cell>
                 <Table column="wide">
-                  <Table.Cell as="td">{release.branch}</Table.Cell>
+                  <Table.Cell as="td">
+                    <Table.Branch as="span">{release.branch}</Table.Branch>
+                  </Table.Cell>
                 </Table>
                 <Table.Cell as="td">
                   <Badge tone={statusTone[release.status]}>
@@ -387,6 +391,7 @@ function Releases({ rows }: { rows: Release[] }) {
                   <Table.Cell as="td">
                     <Table.Owner>
                       <Avatar name={release.owner} />
+                      {people[release.owner]}
                     </Table.Owner>
                   </Table.Cell>
                 </Table>
@@ -411,7 +416,6 @@ function Releases({ rows }: { rows: Release[] }) {
 }
 
 function Activity() {
-  const max = Math.max(...weeklyDeploys)
   return (
     <>
       <Panel.Root>
@@ -420,51 +424,35 @@ function Activity() {
           <Badge tone="ok">12 weeks</Badge>
         </Panel.Head>
         <Panel.Body>
-          <Chart.Root>
-            <svg
-              viewBox={`0 0 ${weeklyDeploys.length * 10} ${max}`}
-              width="100%"
-              height="100%"
-              preserveAspectRatio="none"
-              shapeRendering="crispEdges"
-              role="img"
-              aria-label={`Deploys per week over twelve weeks, rising from ${weeklyDeploys[0]} to ${weeklyDeploys.at(-1)}`}
-            >
-              {weeklyDeploys.map((count, index) => (
-                <rect
-                  key={index}
-                  x={index * 10 + 1}
-                  y={max - count}
-                  width={8}
-                  height={count}
-                  fill="currentColor"
-                />
-              ))}
-            </svg>
-          </Chart.Root>
-          <Chart.Axis aria-hidden="true">
-            <span>12 weeks ago</span>
-            <span>This week</span>
-          </Chart.Axis>
+          <Shell.Stack>
+            <Bars
+              values={weeklyDeploys}
+              label={`Deploys per week over twelve weeks, rising from ${weeklyDeploys[0]} to ${weeklyDeploys.at(-1)}`}
+            />
+            <ChartAxis aria-hidden="true">
+              <span>12 weeks ago</span>
+              <span>This week</span>
+            </ChartAxis>
+          </Shell.Stack>
         </Panel.Body>
       </Panel.Root>
       <Panel.Root>
         <Panel.Head>
           <Panel.Title as="h3">Recent activity</Panel.Title>
         </Panel.Head>
-        <Panel.Body>
-          <Feed.List as="ul">
-            {activity.map((item) => (
-              <Feed.Item as="li" key={item.text}>
+        <Feed.List as="ul">
+          {activity.map((item, index) => (
+            <Feed key={item.text} first={index === 0}>
+              <Feed.Item as="li">
                 <Feed.Entry>
                   <Avatar name={item.who} />
                   <span>{item.text}</span>
                 </Feed.Entry>
                 <Feed.Time as="span">{item.when}</Feed.Time>
               </Feed.Item>
-            ))}
-          </Feed.List>
-        </Panel.Body>
+            </Feed>
+          ))}
+        </Feed.List>
       </Panel.Root>
     </>
   )
@@ -473,11 +461,14 @@ function Activity() {
 function SettingsForm({
   settings,
   set,
+  changed,
   onSave,
   onReset,
   onDelete,
 }: {
   settings: Settings
+  /** Whether anything differs from the project's saved settings. */
+  changed: boolean
   set: <Key extends keyof Settings>(key: Key, value: Settings[Key]) => void
   onSave: () => void
   onReset: () => void
@@ -520,7 +511,7 @@ function SettingsForm({
               onChange={(value) => set('rollout', value)}
             />
           </FieldGrid>
-          <Shell.Group>
+          <Shell.Options>
             <Checkbox
               checked={settings.notify}
               onChange={(value) => set('notify', value)}
@@ -533,17 +524,19 @@ function SettingsForm({
             >
               Deploy on merge
             </Switch>
-          </Shell.Group>
+          </Shell.Options>
+        </Panel.Body>
+        <Panel.Foot>
+          <Button tone="danger" onClick={onDelete}>
+            Delete project
+          </Button>
           <Shell.Group>
-            <Button type="submit">Save changes</Button>
-            <Button tone="secondary" onClick={onReset}>
+            <Button tone="secondary" disabled={!changed} onClick={onReset}>
               Reset
             </Button>
-            <Button tone="danger" onClick={onDelete}>
-              Delete project
-            </Button>
+            <Button type="submit">Save changes</Button>
           </Shell.Group>
-        </Panel.Body>
+        </Panel.Foot>
       </form>
     </Panel.Root>
   )
@@ -606,6 +599,10 @@ function UserMenu({ onAction }: { onAction: (message: string) => void }) {
       </Menu.Trigger>
       {open && (
         <Menu.Menu role="menu" id={id} aria-label="Account">
+          <Menu.Label role="presentation">
+            <Menu.Name as="span">Ada King</Menu.Name>
+            <Menu.Detail as="span">Owner of 3 projects</Menu.Detail>
+          </Menu.Label>
           {items.map((item) => (
             <Menu.Item
               as="button"
@@ -642,7 +639,7 @@ function NewRelease({
     event.preventDefault()
     const rollout = start === 'Queued' ? 0 : Number.parseInt(start, 10)
     onCreate({
-      version: version.trim() || '0.0.0',
+      version: version.trim(),
       branch: 'main',
       status: rollout ? 'rolling' : 'queued',
       owner: 'AK',
@@ -686,7 +683,9 @@ function NewRelease({
           <Button tone="secondary" onClick={() => dialog.current?.close()}>
             Cancel
           </Button>
-          <Button type="submit">Create release</Button>
+          <Button type="submit" disabled={!version.trim()}>
+            Create release
+          </Button>
         </Dialog.Foot>
       </Dialog.Form>
     </Dialog.Root>

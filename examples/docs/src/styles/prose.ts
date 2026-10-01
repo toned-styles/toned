@@ -115,5 +115,8 @@ export const proseStyles = stylesheet({
     weight: 'medium',
     text: 'code',
     fill: 'accent-soft',
+    // No token: a key such as '@>=600px' or '=>' must show the characters to
+    // type, not the code font's ligature for them.
+    '@platform web': { $style: { fontVariantLigatures: 'none' } },
   },
 })

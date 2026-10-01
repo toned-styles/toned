@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
@@ -83,6 +83,28 @@ const buttonStyles = stylesheet({
   },
 }))`}</CodeBlock>
 
+      <h2 {...s.h2} id="defaults">
+        Defaults
+      </h2>
+      <p>
+        Pass <code {...s.code}>defaults</code> as the second argument to give an
+        axis the value it has when the component does not set one. An axis with
+        a default becomes optional for the component; passing{' '}
+        <code {...s.code}>undefined</code> selects the default too.
+      </p>
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const tagStyles = stylesheet({
+  Root: { borderRadius: 'medium' },
+}).variants(($: Variants<{ size: 'm' | 's'; variant: 'accent' | 'danger' }>) => ({
+  [$.size('m')]: { Root: { paddingX: 3 } },
+  [$.size('s')]: { Root: { paddingX: 2 } },
+  [$.variant('accent')]: { Root: { bgColor: 'action' } },
+  [$.variant('danger')]: { Root: { bgColor: 'destructive' } },
+}), { defaults: { size: 'm' } })
+
+// size is optional and is 'm' when omitted; variant is still required.`}</CodeBlock>
+
       <h2 {...s.h2} id="the-dollar-sign-builder">
         The Dollar-Sign Builder
       </h2>
@@ -91,6 +113,11 @@ const buttonStyles = stylesheet({
         method for each variant key. Calling{' '}
         <code {...s.code}>$.size('m')</code> produces a computed key that the
         runtime uses to match against the variant values a component selects.
+        The keys it returns, and every other key a rule accepts, are listed in{' '}
+        <Link to="/api/conditions" hash="variant-selectors">
+          Conditions and selectors
+        </Link>
+        .
       </p>
 
       <h2 {...s.h2} id="compound-variants">

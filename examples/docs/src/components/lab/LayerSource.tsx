@@ -3,12 +3,14 @@ import { useState } from 'react'
 import { experimentStyles } from '../../styles/site.ts'
 import { CodeBlock } from '../CodeBlock.tsx'
 
-/** One layer of an experiment: the text of the module that runs. */
+/** One layer of an example: the text of the module that runs. */
 export interface LayerFile {
   /** The layer this file belongs to, e.g. "Styles". */
   layer: string
   file: string
   source: string
+  /** The language, when the file name and content do not settle it. */
+  lang?: string
 }
 
 function Tab({
@@ -66,7 +68,7 @@ export function LayerSource({
       >
         {files.map(({ layer, file }, position) => (
           <Tab
-            key={file}
+            key={`${layer}:${file}`}
             id={`${id}-tab-${position}`}
             aria-controls={`${id}-panel`}
             selected={position === index}
@@ -81,7 +83,12 @@ export function LayerSource({
         role="tabpanel"
         aria-labelledby={`${id}-tab-${index}`}
       >
-        <CodeBlock bare title={current.file} maxHeight={maxHeight}>
+        <CodeBlock
+          bare
+          title={current.file}
+          lang={current.lang}
+          maxHeight={maxHeight}
+        >
           {current.source}
         </CodeBlock>
       </div>

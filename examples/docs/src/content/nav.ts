@@ -3,15 +3,26 @@ import { references } from './references.ts'
 export type NavItem = { to: string; label: string }
 export type NavSection = { title: string; items: readonly NavItem[] }
 
-/** Top-level destinations in the site header. */
+/**
+ * Top-level destinations in the site header. Everything inside the
+ * documentation layout (guides, API pages, references, examples, changelog)
+ * belongs to "Docs" and is reached from its sidebar.
+ */
 export const headerLinks = [
   {
     to: '/getting-started',
     label: 'Docs',
-    match: ['/getting-started', '/concepts', '/api', '/guides'],
+    match: [
+      '/getting-started',
+      '/concepts',
+      '/examples',
+      '/api',
+      '/guides',
+      '/explore',
+      '/learn',
+      '/changelog',
+    ],
   },
-  { to: '/explore', label: 'Capabilities', match: ['/explore', '/learn'] },
-  { to: '/lab', label: 'Lab', match: ['/lab'] },
   { to: '/ui', label: 'Components', match: ['/ui'] },
   { to: '/themes', label: 'Themes', match: ['/themes'] },
   { to: '/playground', label: 'Playground', match: ['/playground'] },
@@ -26,8 +37,7 @@ export const docsNav: readonly NavSection[] = [
     items: [
       { to: '/getting-started', label: 'Installation' },
       { to: '/concepts', label: 'Core concepts' },
-      { to: '/explore', label: 'All capabilities' },
-      { to: '/lab', label: 'Capability lab' },
+      { to: '/examples', label: 'Interactive examples' },
     ],
   },
   {
@@ -35,6 +45,7 @@ export const docsNav: readonly NavSection[] = [
     items: [
       { to: '/api/define-system', label: 'defineSystem' },
       { to: '/api/stylesheet', label: 'stylesheet' },
+      { to: '/api/conditions', label: 'Conditions and selectors' },
       { to: '/api/variants', label: 'variants' },
       { to: '/api/use-styles', label: 'useStyles' },
       { to: '/api/media-queries', label: 'Media queries' },
@@ -47,8 +58,13 @@ export const docsNav: readonly NavSection[] = [
       { to: '/guides/react-native', label: 'React Native' },
       { to: '/guides/theming', label: 'Theming' },
       { to: '/guides/interactive', label: 'Interactive styles' },
+      { to: '/guides/overrides', label: 'Extending and overriding' },
       { to: '/guides/ssr', label: 'SSR & Server Components' },
     ],
+  },
+  {
+    title: 'Reference',
+    items: [{ to: '/explore', label: 'All references' }],
   },
   ...referenceGroups.map((group) => ({
     title: group,
@@ -56,6 +72,10 @@ export const docsNav: readonly NavSection[] = [
       .filter((item) => item.group === group)
       .map((item) => ({ to: `/learn/${item.slug}`, label: item.title })),
   })),
+  {
+    title: 'Project',
+    items: [{ to: '/changelog', label: 'Changelog' }],
+  },
 ]
 
 const flat = docsNav.flatMap((section) =>

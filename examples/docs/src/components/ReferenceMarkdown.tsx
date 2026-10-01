@@ -1,9 +1,54 @@
+import { useRouter } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { marked, type Token, type Tokens } from 'marked'
 import { createElement, type ReactNode, useMemo } from 'react'
 import { referenceHref } from '../content/references.ts'
 import { proseStyles } from '../styles/prose.ts'
 import { CodeBlock } from './CodeBlock.tsx'
+
+/**
+ * A link written in Markdown. A link to a page of this site is followed by
+ * the router, like every other link in the documentation; the address comes
+ * from the document, so it is passed as a built `href` rather than a typed
+ * route. Other links, and modified clicks, are left to the browser.
+ */
+function SiteLink({
+  href,
+  title,
+  children,
+}: {
+  href: string
+  title?: string
+  children: ReactNode
+}) {
+  const router = useRouter()
+  const internal = href.startsWith('/') && !href.startsWith('//')
+  return (
+    <a
+      href={href}
+      title={title}
+      onClick={
+        internal
+          ? (event) => {
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return
+              event.preventDefault()
+              void router.navigate({ href })
+            }
+          : undefined
+      }
+    >
+      {children}
+    </a>
+  )
+}
 
 /** Repository-owned Markdown, rendered as React nodes. HTML is never executed. */
 export function ReferenceMarkdown({
@@ -86,13 +131,13 @@ export function ReferenceMarkdown({
           return <hr key={key} />
         case 'link':
           return (
-            <a
+            <SiteLink
               key={key}
               href={referenceHref(token.href, path)}
               title={token.title ?? undefined}
             >
               {children}
-            </a>
+            </SiteLink>
           )
         case 'image':
           return (

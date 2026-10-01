@@ -6,10 +6,10 @@ is not a certification of its renderer.
 
 | Directory | Status |
 | --- | --- |
-| `docs` | Maintained Vite website, playground, capability lab and source-backed reference directory. Marketing/lab demos use explicit renderers and sheet inventories; the existing component collection uses the compatibility base system. |
+| `docs` | Maintained Vite website, playground, interactive examples and source-backed reference directory. Homepage and example demos use explicit renderers and sheet inventories; the existing component collection uses the compatibility base system. |
 | `ui` | Shared gallery components, consumed by `docs`; not a standalone application. Legacy token spellings remain to match the base system. |
 | `shared` | Historical stylesheet examples shared by the email/PDF/native sketches. |
-| `email`, `pdf` | Explicit `createInlineRenderer` and `createPdfRenderer` integration examples with concrete tokens. Their supported renderer profiles are documented in core; final email-client compatibility and document layout still require application testing. The website lab demonstrates actual resolved output for both. |
+| `email`, `pdf` | Explicit `createInlineRenderer` and `createPdfRenderer` integration examples with concrete tokens. Their supported renderer profiles are documented in core; final email-client compatibility and document layout still require application testing. The website's interactive examples show actual resolved output for both. |
 | `fabric-acceptance` | Pinned offline Android Fabric app, with native measurements/paint readback and real touch acceptance. Installed in an isolated temporary consumer; see its README. |
 | `expo-app` | Native integration sketch. A configured native host adapter and concrete renderer conformance are required; this directory alone does not establish them. |
 

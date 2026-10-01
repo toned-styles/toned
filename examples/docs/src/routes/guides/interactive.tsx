@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
@@ -13,9 +13,9 @@ function GuideInteractive() {
     <article {...s.container}>
       <h1 {...s.h1}>Interactive Styles</h1>
       <p>
-        toned-styles supports hover, focus, and active states using
-        colon-prefixed keys -- inside a stylesheet element definition, or inline
-        with <code {...s.code}>t</code>. On the web with{' '}
+        Toned supports hover, focus, and active states using colon-prefixed keys
+        -- inside a stylesheet element definition, or inline with{' '}
+        <code {...s.code}>t</code>. On the web with{' '}
         <code {...s.code}>pseudoMode: 'css'</code>, these work entirely through
         CSS with no JavaScript event listeners.
       </p>
@@ -47,6 +47,17 @@ function GuideInteractive() {
     textColor: 'on_action',
   },
 })`}</CodeBlock>
+
+      <p>
+        <code {...s.code}>':focus-visible'</code> and{' '}
+        <code {...s.code}>':focus-within'</code> are written the same way, as
+        are states the system declares itself, such as{' '}
+        <code {...s.code}>':open'</code>.{' '}
+        <Link to="/api/conditions" hash="states">
+          Conditions and selectors
+        </Link>{' '}
+        lists them with their builder forms.
+      </p>
 
       <h2 {...s.h2} id="cross-element-selectors">
         Cross-Element Selectors
@@ -175,9 +186,9 @@ function Tag() {
         <code {...s.code}>Pressable</code> component. The same{' '}
         <code {...s.code}>:hover</code> and <code {...s.code}>:active</code>{' '}
         keys work in both environments when they are declared in a{' '}
-        <a href="/api/stylesheet">stylesheet</a> and read with{' '}
-        <a href="/api/use-styles">useStyles</a> -- the runtime behaviour adapts
-        to each platform's capabilities.
+        <Link to="/api/stylesheet">stylesheet</Link> and read with{' '}
+        <Link to="/api/use-styles">useStyles</Link> -- the runtime behaviour
+        adapts to each platform's capabilities.
       </p>
       <p>
         Inline <code {...s.code}>t</code> blocks are the exception. They have no

@@ -49,7 +49,7 @@ export function DocPreview({ doc, propStates }: DocPreviewProps) {
   }, [doc.entries])
 
   return (
-    <div {...s.preview} data-preview-stage>
+    <div {...s.preview} data-preview-stage data-gallery-themed>
       <PreviewBoundary>
         <DocPropsContext.Provider value={propStates}>
           {doc.preview ? (

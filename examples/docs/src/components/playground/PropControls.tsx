@@ -4,12 +4,9 @@ import { useId } from 'react'
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select.tsx'
+  NativeSelect,
+  NativeSelectOption,
+} from '@/components/ui/native-select.tsx'
 import { Switch } from '@/components/ui/switch.tsx'
 import { playgroundStyles } from '../../styles/playground.ts'
 
@@ -73,7 +70,7 @@ export function PropControls({ groups }: { groups: PropGroup[] }) {
     .filter((group) => group.entries.length > 0)
 
   return (
-    <section {...s.controls} aria-label="Props">
+    <section {...s.controls} aria-label="Props" data-gallery-chrome>
       {visible.length === 0 && (
         <>
           <div {...s.controlsTitle}>Props</div>
@@ -136,21 +133,21 @@ function PropControl({
           />
         )}
         {controlType === 'select' && (
-          <Select
+          // A native control: its list is drawn by the browser, so it stays in
+          // the site's look whichever theme the preview is in.
+          <NativeSelect
+            id={id}
+            size="sm"
             value={value == null ? '' : String(value)}
-            onValueChange={(val) => onChange(val)}
+            onChange={(event) => onChange(event.target.value)}
           >
-            <SelectTrigger id={id} size="sm">
-              <SelectValue placeholder="Not set" />
-            </SelectTrigger>
-            <SelectContent>
-              {prop.type.value?.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.value}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <NativeSelectOption value="">Not set</NativeSelectOption>
+            {prop.type.value?.map((opt) => (
+              <NativeSelectOption key={opt.value} value={opt.value}>
+                {opt.value}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
         )}
         {controlType === 'text' && (
           <Input

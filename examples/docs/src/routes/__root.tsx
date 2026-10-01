@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { ShowcaseProvider } from '../components/ShowcaseProvider.tsx'
 import { Sidebar } from '../components/Sidebar.tsx'
 import { SiteHeader } from '../components/SiteHeader.tsx'
@@ -18,7 +18,7 @@ export const Route = createRootRoute({
 })
 
 /** Pages that lay out a wider canvas than a reading column. */
-const widePages = new Set(['/explore', '/lab'])
+const widePages = new Set(['/explore', '/examples'])
 
 function pageLabel(pathname: string) {
   const topic = pathname.split('/')[2]
@@ -71,9 +71,33 @@ function RootLayout() {
   return <DocsLayout pathname={pathname} />
 }
 
+/**
+ * After a client navigation to another page, focus moves to the main region,
+ * so a keyboard or screen-reader user continues from the new page's content
+ * rather than from the link they followed. The path is that of the rendered
+ * route match, not of the location: the location changes when a navigation
+ * starts, the match when the new page is on screen. The first page load and a
+ * change of hash within a page leave focus alone.
+ */
+function useFocusMainOnNavigation() {
+  const rendered = useRouterState({
+    select: (state) => state.matches.at(-1)?.pathname,
+  })
+  const previous = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const from = previous.current
+    previous.current = rendered
+    if (from === undefined || rendered === undefined || from === rendered)
+      return
+    // The router owns scrolling; focusing must not move the page.
+    document.getElementById('docs-main')?.focus({ preventScroll: true })
+  }, [rendered])
+}
+
 function DocsLayout({ pathname }: { pathname: string }) {
   const s = useStyles(docsStyles)
   const place = locate(pathname)
+  useFocusMainOnNavigation()
   return (
     <div {...s.Page}>
       <a href="#docs-main" className="tnd-skip-link">
@@ -81,7 +105,12 @@ function DocsLayout({ pathname }: { pathname: string }) {
       </a>
       <SiteHeader menu={<Sidebar />} />
       <div {...s.Shell}>
-        <aside {...s.Sidebar} aria-label="Documentation">
+        <aside
+          {...s.Sidebar}
+          aria-label="Documentation"
+          // Names this scroll region for the router's scroll restoration.
+          data-scroll-restoration-id="docs-sidebar"
+        >
           <Sidebar />
         </aside>
         <main id="docs-main" tabIndex={-1} {...s.Main}>
@@ -93,7 +122,7 @@ function DocsLayout({ pathname }: { pathname: string }) {
             <Pager prev={place?.prev} next={place?.next} />
           </div>
         </main>
-        <aside {...s.Rail}>
+        <aside id="docs-rail" {...s.Rail}>
           <Toc containerId="docs-article" />
         </aside>
       </div>

@@ -17,14 +17,17 @@ export function SiteFooter() {
           <Link to="/getting-started" {...s.Link}>
             Documentation
           </Link>
-          <Link to="/explore" {...s.Link}>
-            Capabilities
-          </Link>
           <Link to="/ui" {...s.Link}>
             Components
           </Link>
+          <Link to="/themes" {...s.Link}>
+            Themes
+          </Link>
           <Link to="/playground" {...s.Link}>
             Playground
+          </Link>
+          <Link to="/changelog" {...s.Link}>
+            Changelog
           </Link>
           <a href="https://github.com/toned-styles/toned" {...s.Link}>
             GitHub

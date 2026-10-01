@@ -51,7 +51,7 @@ inventing a token vocabulary. HTTP transport errors include the response status;
 HTML or malformed JSON responses point to the development bridge endpoint.
 
 
-The public [capability lab](https://toned.style/lab#inspector) connects this same
+The public [interactive example](https://toned.style/examples#inspector) connects this same
 panel to one bounded in-memory `DesignProject`. Its compiler chunk loads only
 when opened; the example never writes files or evaluates source. Production
 applications can keep the compiler on their server and use the lightweight

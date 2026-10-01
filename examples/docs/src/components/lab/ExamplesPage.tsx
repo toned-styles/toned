@@ -28,7 +28,7 @@ import tokenDemoSource from './TokenDemo.tsx?raw'
 import tokenExchangeSource from './token-exchange.ts?raw'
 import contractSource from './touch-target.contract.ts?raw'
 
-interface Experiment {
+interface Example {
   id: string
   /** The section's anchor when it differs from the reference topic `id`. */
   anchor?: string
@@ -46,7 +46,7 @@ interface Experiment {
   files: LayerFile[]
 }
 
-// The site's own system: the lab's web sheets import `stylesheet` from it.
+// The site's own system: the web examples' sheets import `stylesheet` from it.
 const siteSystem: LayerFile = {
   layer: 'System',
   file: 'system.ts',
@@ -68,7 +68,7 @@ const documentRenderers: LayerFile = {
   source: documentRenderersSource,
 }
 
-const demos: Experiment[] = [
+const demos: Example[] = [
   {
     id: 'adaptive',
     label: 'Adaptive',
@@ -200,18 +200,18 @@ const demos: Experiment[] = [
   },
 ]
 
-export function Lab() {
+export function Examples() {
   const d = useStyles(docsStyles)
   const s = useStyles(experimentStyles)
   return (
     <article>
-      <h1 {...d.Title}>Capability lab</h1>
+      <h1 {...d.Title}>Interactive examples</h1>
       <p {...d.Lead}>
-        Seven working demos, each running the API it shows. The source beside
-        each one is the code that runs, split by layer: styles, component, and
-        system or configuration.
+        Seven examples you can operate, each running the API it shows. The
+        source beside each one is the code that runs, split by layer: styles,
+        component, and system or configuration.
       </p>
-      <nav {...s.Jump} aria-label="Experiments">
+      <nav {...s.Jump} aria-label="Examples">
         {demos.map((demo, index) => (
           <a key={demo.id} href={`#${demo.anchor ?? demo.id}`} {...s.Chip}>
             {String(index + 1).padStart(2, '0')} · {demo.label}

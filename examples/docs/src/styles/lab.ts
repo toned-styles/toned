@@ -1,5 +1,5 @@
 /**
- * The lab's sheets, gathered for the CSS build. Each experiment keeps its own
+ * The interactive examples' sheets, gathered for the CSS build. Each example keeps its own
  * declarations beside its component, in `components/lab/*.styles.ts`.
  */
 export { adaptiveStyles } from '../components/lab/adaptive.styles.ts'

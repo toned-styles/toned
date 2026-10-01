@@ -2,24 +2,27 @@
   <a href="https://toned.style"><img src="examples/docs/public/brand/toned-logo.svg" width="260" alt="Toned" /></a>
 </p>
 
-<h1 align="center">Typed styling for React and React Native</h1>
+<h1 align="center">Typed styling, independent of platform and framework</h1>
 
-<p align="center">Design tokens, named component parts and variants in one typed stylesheet.</p>
+<p align="center">A typed vocabulary of design tokens, named component parts and variants, compiled for each target.</p>
 
 <p align="center">
   <a href="https://toned.style/getting-started">Get started</a> ·
   <a href="https://toned.style/playground">Playground</a> ·
   <a href="https://toned.style/ui">Components</a> ·
   <a href="https://toned.style/explore">All capabilities</a> ·
-  <a href="https://toned.style/lab">Capability lab</a>
+  <a href="https://toned.style/examples">Interactive examples</a>
 </p>
 
 ---
 
-Toned is a styling library. You define the values your product uses, name the
+Toned is a styling system. You define the values your product uses, name the
 parts of a component, and describe how they change together.
-TypeScript checks the declarations. Toned builds the web CSS ahead of time and
-connects the styles to your mounted components.
+TypeScript checks the declarations. The core (`@toned/core`) has no framework
+dependency: its renderers resolve a stylesheet to plain props for web CSS built
+ahead of time, React Native, inline styles for HTML email, or a PDF style
+profile. `@toned/react` is the framework binding that exists today, for React on
+the web, React Native and Server Components.
 
 ## What it provides
 
@@ -49,25 +52,22 @@ shows the component's source and props, and lets you try scoped token overrides.
 
 - **New to Toned:** follow [Getting Started](https://toned.style/getting-started), then try the [playground](https://toned.style/playground).
 - **Evaluating it:** read component sources in the [gallery](https://toned.style/ui) and try scoped overrides.
-- **Beyond web styling:** the [capability lab](https://toned.style/lab) runs adaptive layout, springs, grid, document renderers, DTCG exchange, measured contracts and the source inspector.
-- **An exact API or limitation:** the [reference directory](https://toned.style/explore) renders the package documentation from this checkout.
+- **Beyond web styling:** the [interactive examples](https://toned.style/examples) run adaptive layout, springs, grid, document renderers, DTCG exchange, measured contracts and the source inspector.
+- **An exact API or limitation:** the [reference directory](https://toned.style/explore) renders each package's documentation.
+- **What changed:** the [changelog](https://toned.style/changelog) lists each release, per package.
 
-## Release status
-
-This README and site describe the **development branch**, including APIs added
-since `main`. They are not a promise that the latest npm packages contain every
-feature shown here. To run this exact experience from a standalone checkout:
+## Install
 
 ```sh
-git clone --branch feat/toned-style-showcase https://github.com/toned-styles/toned.git
-cd toned
-pnpm install
-pnpm --filter @examples/docs dev
+npm install @toned/core @toned/react
+# or: pnpm add, yarn add, bun add
 ```
 
-When embedded in another workspace, install dependencies from that workspace's
-root. The npm command below installs the published packages; consult the reference
-shipped with your chosen version before adopting a development API.
+`@toned/core` holds the system, stylesheets and the CSS build; `@toned/react`
+binds them to React 18 or 19. `@toned/systems` and `@toned/themes` are an
+optional ready-made vocabulary and its theme values. `@toned/eslint-plugin` and
+`@toned/compiler` are optional development tools. Import the scoped packages:
+`toned` itself is a private workspace placeholder, not an umbrella API.
 
 ## Example
 
@@ -148,13 +148,8 @@ mount the component under `TonedProvider`. The [getting-started guide](https://t
 walks through the complete Vite setup; the [React guide](packages/toned-react/README.md)
 shows the explicit build and renderer APIs.
 
-```sh
-npm install @toned/core @toned/react
-```
-
 Start with your own vocabulary, or add the optional `@toned/systems` and
-`@toned/themes` packages. Import the scoped packages: `toned` itself is a private
-workspace placeholder, not an umbrella API.
+`@toned/themes` packages.
 
 ## Further capabilities
 
@@ -167,14 +162,14 @@ workspace placeholder, not an umbrella API.
 | Native host integrations | [Native support and acceptance scope](packages/toned-react/NATIVE-HOSTS.md) |
 | Layouts that adapt to content | [Adaptive layout](packages/toned-core/adaptive/README.md) |
 | Timing, springs, interruption, and reduced motion | [Portable motion](packages/toned-core/motion/README.md) |
-| Email and PDF output | [Renderer guide](examples/docs/src/content/renderers.md) · [live output](https://toned.style/lab#renderers) |
-| Typed grid and named areas | [Grid reference](packages/toned-core/README.md#typed-web-grid) · [grid demo](https://toned.style/lab#grid) |
+| Email and PDF output | [Renderer guide](examples/docs/src/content/renderers.md) · [live output](https://toned.style/examples#renderers) |
+| Typed grid and named areas | [Grid reference](packages/toned-core/README.md#typed-web-grid) · [grid demo](https://toned.style/examples#grid) |
 | Typed themes, palettes and named fragments | [Core authoring reference](packages/toned-core/README.md) |
 | Scoped overrides and multiple systems | [React reference](packages/toned-react/README.md) |
 | Source navigation, completions and rename | [Compiler and language server](packages/toned-compiler/README.md) · [VS Code](editors/vscode/README.md) |
-| Source inspection and checked edits | [Inspector](packages/toned-compiler/inspector/README.md) · [development bridge](packages/toned-compiler/bridge/README.md) · [live inspector](https://toned.style/lab#inspector) |
-| Portable design-token interchange | [DTCG subset and mapping](packages/toned-compiler/tokens/README.md) · [live exchange](https://toned.style/lab#tokens) |
-| Measured design policies | [Contracts and scenario coverage](packages/toned-compiler/contracts/README.md) · [measure a target](https://toned.style/lab#contracts) |
+| Source inspection and checked edits | [Inspector](packages/toned-compiler/inspector/README.md) · [development bridge](packages/toned-compiler/bridge/README.md) · [live inspector](https://toned.style/examples#inspector) |
+| Portable design-token interchange | [DTCG subset and mapping](packages/toned-compiler/tokens/README.md) · [live exchange](https://toned.style/examples#tokens) |
+| Measured design policies | [Contracts and scenario coverage](packages/toned-compiler/contracts/README.md) · [measure a target](https://toned.style/examples#contracts) |
 | Safer authoring in CI | [ESLint and Oxlint rules](packages/toned-eslint-plugin/README.md) |
 | Custom hosts and backends | [Host adapters](packages/toned-core/hosts/README.md) · [backend boundaries](packages/toned-core/backends/README.md) |
 

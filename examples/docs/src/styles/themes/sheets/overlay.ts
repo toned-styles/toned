@@ -29,7 +29,14 @@ export const dialogStyles = stylesheet({
   },
   Title: { $kind: 'text', type: 'title' },
   Body: { flow: 'column', gap: 4, pad: 4 },
-  Foot: { flow: 'wrap', justify: 'end', gap: 3, padX: 4, padY: 4 },
+  Foot: {
+    flow: 'wrap',
+    justify: 'end',
+    gap: 3,
+    padX: 4,
+    padY: 3,
+    edge: 'rule-top',
+  },
 })
 
 export const menuStyles = stylesheet({
@@ -61,6 +68,10 @@ export const menuStyles = stylesheet({
     depth: 'overlay',
     frost: 'surface',
   },
+  // Who is signed in, above the actions.
+  Label: { flow: 'column', padX: 3, padY: 2, edge: 'rule' },
+  Name: { $kind: 'text', weight: 'strong', ink: 'strong' },
+  Detail: { $kind: 'text', type: 'small', ink: 'muted' },
   Item: {
     $kind: 'pressable',
     reset: 'control',
@@ -73,16 +84,16 @@ export const menuStyles = stylesheet({
     fill: 'none',
     ink: 'default',
     edge: 'none',
-    corner: 'control',
+    corner: 'inner',
     ':hover': { fill: 'selected', ink: 'on-selected' },
     ':focus-visible': { fill: 'selected', ink: 'on-selected' },
   },
 })
 
 export const toastStyles = stylesheet({
+  // In the flow, after the content, so it never covers a control.
+  Dock: { flow: 'row', justify: 'end' },
   Root: {
-    // In the flow on a narrow screen, so it never covers a control.
-    '@media md': { place: 'toast' },
     flow: 'row',
     align: 'center',
     gap: 3,
@@ -95,5 +106,6 @@ export const toastStyles = stylesheet({
     depth: 'overlay',
     frost: 'surface',
   },
-  Text: { $kind: 'text', weight: 'strong', flex: 'fill' },
+  Mark: { size: 'swatch', fill: 'accent', corner: 'pill' },
+  Text: { $kind: 'text', weight: 'strong' },
 })
