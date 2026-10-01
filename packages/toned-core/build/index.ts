@@ -1,4 +1,4 @@
-import { generateThemes } from '../dom/themes.ts'
+import { assertThemeSides, generateThemes } from '../dom/themes.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -62,6 +62,7 @@ export function buildStyles<S extends TokenStyleDeclaration>(
     systemId: system.id,
     conditions,
   })
+  if (options.themes !== false) assertThemeSides(artifact.css, system)
   const extra = [
     ...[...extensions]
       .sort(([a], [b]) => a.localeCompare(b))

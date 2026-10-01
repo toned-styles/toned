@@ -93,3 +93,40 @@ test('only values CSS variables can carry are emitted; unsafe ones are refused',
   expect(generateThemes(quoted)).toContain('--quoted-before: "[ ; { ";')
   expect(generateThemes(defineSystem({ id: 'plain', tokens: {} }))).toBe('')
 })
+
+test('a theme value used for a four-sided property must be a single value', () => {
+  type Edges = { rule: string; pad: string }
+  const edge = defineTokenFor<Edges, import('../index.ts').WebInlineStyle>()
+  const tokens = {
+    edge: edge({
+      values: ['rule'],
+      resolve: (_value, theme) => ({ borderWidth: theme.rule }),
+    }),
+    inset: edge({
+      values: ['pad'],
+      resolve: (_value, theme) => ({ padding: theme.pad }),
+    }),
+  }
+  const sheetFor = (themes: Record<string, Edges>) => {
+    const system = defineSystem({ id: 'edges', tokens, themes })
+    return [
+      system,
+      system.stylesheet({ Root: { edge: 'rule', inset: 'pad' } }),
+    ] as const
+  }
+  // One value per field: each side reads the same variable, which is valid.
+  const [ok, okSheet] = sheetFor({ day: { rule: '1px', pad: '8px' } })
+  expect(() => buildStyles(ok, { sheets: [okSheet] })).not.toThrow()
+  // Several values cannot be split across the four sides a class writes.
+  const [bad, badSheet] = sheetFor({
+    day: { rule: '1px', pad: '8px' },
+    paper: { rule: '3px 0 0 0', pad: '8px' },
+  })
+  expect(() => buildStyles(bad, { sheets: [badSheet] })).toThrow(
+    /theme 'paper' field 'rule' is '3px 0 0 0'.*border-top-width.*single value/s,
+  )
+  // Delivering themes yourself skips the check with the emission.
+  expect(() =>
+    buildStyles(bad, { sheets: [badSheet], themes: false }),
+  ).not.toThrow()
+})
