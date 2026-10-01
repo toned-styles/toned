@@ -27,6 +27,24 @@ import { visualStyles } from './src/styles/visualisations.ts'
 const uiRoot = fileURLToPath(new URL('../ui', import.meta.url))
 
 export default defineConfig({
+  // The playground's language worker loads TypeScript and its type payload as
+  // separate lazy chunks, which only the ES worker format can split.
+  worker: { format: 'es' },
+  // Loaded only from effects, so the dev server would otherwise discover them
+  // on first visit and reload the page mid-session.
+  optimizeDeps: {
+    include: [
+      '@codemirror/autocomplete',
+      '@codemirror/commands',
+      '@codemirror/lang-javascript',
+      '@codemirror/language',
+      '@codemirror/lint',
+      '@codemirror/state',
+      '@codemirror/view',
+      '@lezer/highlight',
+      '@toned/compiler > vscode-languageserver-textdocument',
+    ],
+  },
   resolve: {
     alias: {
       '@/': `${path.join(uiRoot, 'src')}/`,

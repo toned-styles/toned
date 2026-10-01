@@ -8,6 +8,23 @@ export type SourceFiles = Record<FileName, string>
 /** Per-file bound: keeps highlighting, transpiling and storage cheap. */
 export const MAX_FILE_CHARS = 20_000
 
+/** Everything user code may import, besides the other playground file. */
+export const importableModules = [
+  'react',
+  '@toned/core',
+  '@toned/core/server',
+  '@toned/react',
+  '@toned/systems/base',
+] as const
+export type ImportableModule = (typeof importableModules)[number]
+
+/** One wording for the preview's import error and the editor's diagnostic. */
+export function cannotImportMessage(specifier: string) {
+  return `Cannot import "${specifier}". The playground provides ${importableModules
+    .map((name) => `"${name}"`)
+    .join(', ')} and "./styles".`
+}
+
 export type Problem = {
   kind: 'syntax' | 'import' | 'module' | 'runtime' | 'render' | 'limit'
   message: string

@@ -10,8 +10,17 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
     "@examples/toned-ui": "workspace:*",
+    "@lezer/highlight": "^1.2.4",
     "@tanstack/react-router": "^1.160.2",
+    "@toned/compiler": "workspace:*",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
     "@toned/systems": "workspace:*",
@@ -19,8 +28,7 @@
     "marked": "16.4.2",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "shiki": "^3.22.0",
-    "@toned/compiler": "workspace:*"
+    "shiki": "^3.22.0"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "^1.160.2",

@@ -8,6 +8,22 @@ import { brand } from './styles/brand.ts'
 
 export type CodeLanguage = 'bash' | 'css' | 'json' | 'tsx'
 
+/**
+ * Syntax colours shared by every code surface: the Shiki theme below and the
+ * playground's CodeMirror highlight style read the same values.
+ */
+export const codeColors = {
+  comment: '#8a93ad',
+  keyword: '#7a3fc4',
+  string: '#0f7a62',
+  constant: '#b4531c',
+  function: brand.blue,
+  type: '#a1336f',
+  tag: '#1f6fb2',
+  attribute: '#3d4fb8',
+  punctuation: '#5d6784',
+} as const
+
 /** The site's own code theme, drawn from the brand palette. */
 const tonedLight: ThemeRegistration = {
   name: 'toned-light',
@@ -17,7 +33,7 @@ const tonedLight: ThemeRegistration = {
   tokenColors: [
     {
       scope: ['comment', 'punctuation.definition.comment'],
-      settings: { foreground: '#8a93ad', fontStyle: 'italic' },
+      settings: { foreground: codeColors.comment, fontStyle: 'italic' },
     },
     {
       scope: [
@@ -29,11 +45,11 @@ const tonedLight: ThemeRegistration = {
         'keyword.operator.expression',
         'keyword.control',
       ],
-      settings: { foreground: '#7a3fc4' },
+      settings: { foreground: codeColors.keyword },
     },
     {
       scope: ['string', 'string.template', 'punctuation.definition.string'],
-      settings: { foreground: '#0f7a62' },
+      settings: { foreground: codeColors.string },
     },
     {
       scope: [
@@ -42,11 +58,11 @@ const tonedLight: ThemeRegistration = {
         'support.constant',
         'constant.other',
       ],
-      settings: { foreground: '#b4531c' },
+      settings: { foreground: codeColors.constant },
     },
     {
       scope: ['entity.name.function', 'support.function', 'meta.function-call'],
-      settings: { foreground: brand.blue },
+      settings: { foreground: codeColors.function },
     },
     {
       scope: [
@@ -56,15 +72,15 @@ const tonedLight: ThemeRegistration = {
         'support.class',
         'entity.other.inherited-class',
       ],
-      settings: { foreground: '#a1336f' },
+      settings: { foreground: codeColors.type },
     },
     {
       scope: ['entity.name.tag', 'support.class.component'],
-      settings: { foreground: '#1f6fb2' },
+      settings: { foreground: codeColors.tag },
     },
     {
       scope: ['entity.other.attribute-name', 'support.type.property-name'],
-      settings: { foreground: '#3d4fb8' },
+      settings: { foreground: codeColors.attribute },
     },
     {
       scope: ['variable.parameter', 'variable.other.constant'],
@@ -72,7 +88,7 @@ const tonedLight: ThemeRegistration = {
     },
     {
       scope: ['keyword.operator', 'punctuation', 'meta.brace'],
-      settings: { foreground: '#5d6784' },
+      settings: { foreground: codeColors.punctuation },
     },
     {
       scope: ['variable.other.readwrite.alias', 'variable.other.object'],
@@ -81,7 +97,7 @@ const tonedLight: ThemeRegistration = {
     // Shell: the command itself reads as a function, flags as parameters.
     {
       scope: ['entity.name.command', 'support.function.builtin.shell'],
-      settings: { foreground: brand.blue },
+      settings: { foreground: codeColors.function },
     },
   ],
 }

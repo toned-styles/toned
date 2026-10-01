@@ -26,12 +26,18 @@ import type {
   SourceFiles,
   VariantValue,
 } from './types.ts'
-import { fileNames, MAX_FILE_CHARS } from './types.ts'
+import {
+  cannotImportMessage,
+  fileNames,
+  type ImportableModule,
+  importableModules,
+  MAX_FILE_CHARS,
+} from './types.ts'
 
 type TypeScript = typeof import('typescript')
 
 /** Everything user code may import. Anything else is a friendly error. */
-const modules: Record<string, unknown> = {
+const modules: Record<ImportableModule | 'react/jsx-runtime', unknown> = {
   react: React,
   'react/jsx-runtime': jsxRuntime,
   '@toned/core': tonedCore,
@@ -39,9 +45,7 @@ const modules: Record<string, unknown> = {
   '@toned/react': tonedReact,
   '@toned/systems/base': tonedBase,
 }
-export const availableModules = Object.keys(modules).filter(
-  (name) => name !== 'react/jsx-runtime',
-)
+export const availableModules: readonly string[] = importableModules
 
 const SYMBOL_DEFAULTS = Symbol.for('@toned/core/SYMBOL_DEFAULTS')
 
@@ -109,7 +113,8 @@ function evaluate(output: SourceFiles) {
     loading.add(file)
     const record: ModuleRecord = { exports: {} }
     const require = (specifier: string) => {
-      if (Object.hasOwn(modules, specifier)) return modules[specifier]
+      if (Object.hasOwn(modules, specifier))
+        return modules[specifier as keyof typeof modules]
       const local = specifier.replace(/^\.\//, '').replace(/\.(ts|tsx)$/, '')
       if (specifier.startsWith('./') && local === 'styles')
         return load('styles.ts').exports
@@ -118,9 +123,7 @@ function evaluate(output: SourceFiles) {
       throw new ProblemError({
         kind: 'import',
         file,
-        message: `Cannot import "${specifier}". The playground provides ${availableModules
-          .map((name) => `"${name}"`)
-          .join(', ')} and "./styles".`,
+        message: cannotImportMessage(specifier),
       })
     }
     try {

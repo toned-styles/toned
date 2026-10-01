@@ -1,12 +1,17 @@
+import { readFileSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
 import { describe, expect, it } from 'vitest'
 import {
+  CompletionItemKind,
   createConnection,
   createProtocolConnection,
+  DiagnosticSeverity,
   ProposedFeatures,
   StreamMessageReader,
   StreamMessageWriter,
+  SymbolKind,
 } from 'vscode-languageserver/node.js'
+import * as browserEntry from '../language-service.ts'
 import { registerLanguageServer } from './server.ts'
 import { DesignLanguageService } from './service.ts'
 
@@ -46,6 +51,40 @@ describe('design language service', () => {
     })
     for (let n = 0; n < 100; n++) service.completions(uri, position)
     expect(service.project.statistics.parses).toBe(1)
+    service.dispose()
+  })
+  it('stays loadable in a browser: protocol constants without the Node transport', () => {
+    // The browser entry re-exports this module, so a runtime import of the
+    // protocol library (whose only entry here is Node's) would break bundles.
+    const runtimeImports = [
+      ...readFileSync(
+        new URL('./service.ts', import.meta.url),
+        'utf8',
+      ).matchAll(/^import (?!type\b)[^;]*?from '([^']+)'/gm),
+    ].map((match) => match[1])
+    expect(runtimeImports).not.toContain('vscode-languageserver/node.js')
+    expect(browserEntry.DesignLanguageService).toBe(DesignLanguageService)
+
+    const service = new browserEntry.DesignLanguageService(
+      new browserEntry.DesignProject({ maxFiles: 2 }),
+    )
+    const invalid = source.replace('gap:2', 'gap:3')
+    service.project.update(uri, invalid, 1)
+    const document = service.document(uri)!
+    const value = document.positionAt(invalid.lastIndexOf('gap:3') + 4)
+    const name = document.positionAt(invalid.lastIndexOf('gap:3') + 1)
+    expect(service.completions(uri, value).items[0]?.kind).toBe(
+      CompletionItemKind.EnumMember,
+    )
+    expect(service.completions(uri, name).items[0]?.kind).toBe(
+      CompletionItemKind.Property,
+    )
+    expect(service.diagnostics(uri)).toMatchObject([
+      { code: 'token-value', severity: DiagnosticSeverity.Warning },
+    ])
+    expect(service.symbols(uri).map((symbol) => symbol.kind)).toEqual(
+      expect.arrayContaining([SymbolKind.Namespace, SymbolKind.Property]),
+    )
     service.dispose()
   })
   it('resolves references from an imported stylesheet use outside a declaration', () => {

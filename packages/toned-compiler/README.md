@@ -81,6 +81,12 @@ apply that edit. Open documents carry their editor version; closed documents use
 `version: null` as required by LSP, while the proposal still validates the indexed
 source revision. The editor controls applying closed-file edits. For embedding, `@toned/compiler/lsp` exports
 `startLanguageServer({ input, output })`, returning an idempotent `dispose()`.
+Without a transport, `@toned/compiler/language-service` exports
+`DesignLanguageService` and `DesignProject` alone. That entry imports no Node
+built-in and no LSP transport, so it bundles for a browser or a Web Worker: feed
+it documents with `project.update(uri, text, version)` and call `hover`,
+`completions`, `diagnostics`, `definition`, `references` and `symbols` directly.
+The docs playground runs it this way beside TypeScript's own language service.
 The server accepts up to 16 file workspace roots. Initial indexing yields between
 files, skips generated/dependency directories and reports budget failures.
 No whole-project typecheck runs on a completion request.

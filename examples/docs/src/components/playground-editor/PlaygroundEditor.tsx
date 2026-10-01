@@ -11,6 +11,8 @@ import {
 } from 'react'
 import { playgroundEditorStyles } from '../../styles/playground-editor.ts'
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor.tsx'
+import type { LanguageProblem } from './language/protocol.ts'
+import { useLanguage } from './language/useLanguage.ts'
 import { CompiledOutput, GeneratedCss, ResolvedStyles } from './Outputs.tsx'
 import { PreviewStage } from './Preview.tsx'
 import { defaultPreset, findPreset, presets } from './presets.ts'
@@ -26,6 +28,7 @@ import {
 } from './types.ts'
 
 const STORAGE_KEY = 'toned-playground:draft:v1'
+const noProblems: readonly LanguageProblem[] = []
 const DEBOUNCE_MS = 300
 
 type InspectorTab = 'preview' | 'resolved' | 'compiled' | 'css'
@@ -99,6 +102,117 @@ function reconcile(
     else if (axis.fallback !== undefined) next[axis.name] = axis.fallback
   }
   return next
+}
+
+type Level = LanguageProblem['severity']
+
+/** The most serious severity present, or undefined for none. */
+function worst(problems: readonly LanguageProblem[]): Level | undefined {
+  if (problems.some((problem) => problem.severity === 'error')) return 'error'
+  if (problems.some((problem) => problem.severity === 'warning'))
+    return 'warning'
+  return problems.length ? 'info' : undefined
+}
+
+function countLabel(count: number) {
+  return count === 1 ? '1 problem' : `${count} problems`
+}
+
+function TabBadge({ problems }: { problems: readonly LanguageProblem[] }) {
+  const s = useStyles(playgroundEditorStyles, {
+    level: worst(problems) ?? 'none',
+  })
+  if (!problems.length) return null
+  return (
+    <span {...s.TabBadge} title={countLabel(problems.length)}>
+      {problems.length}
+      <span {...s.SrOnly}>
+        {problems.length === 1 ? ' problem' : ' problems'}
+      </span>
+    </span>
+  )
+}
+
+function ProblemRow({
+  problem,
+  onReveal,
+}: {
+  problem: LanguageProblem
+  onReveal: (problem: LanguageProblem) => void
+}) {
+  const s = useStyles(playgroundEditorStyles, { level: problem.severity })
+  return (
+    <li>
+      <button
+        type="button"
+        {...s.ProblemRow}
+        title={problem.message}
+        onClick={() => onReveal(problem)}
+      >
+        <span {...s.ProblemSource}>{problem.source}</span>
+        <span {...s.ProblemLocation}>
+          {problem.file}:{problem.line}:{problem.column}
+        </span>
+        <span {...s.ProblemText}>
+          <span {...s.SrOnly}>{problem.severity}: </span>
+          {problem.message.split('\n')[0]}
+        </span>
+      </button>
+    </li>
+  )
+}
+
+function ProblemsButton({
+  label,
+  level,
+  expanded,
+  disabled,
+  title,
+  checkMs,
+  readyMs,
+  onToggle,
+}: {
+  label: string
+  level: Level | 'clean' | 'none'
+  expanded: boolean
+  disabled: boolean
+  title: string
+  checkMs?: number
+  readyMs?: number
+  onToggle: () => void
+}) {
+  const s = useStyles(playgroundEditorStyles, { level })
+  return (
+    <button
+      type="button"
+      {...s.ProblemsButton}
+      id="playground-problems-toggle"
+      aria-expanded={expanded}
+      aria-controls="playground-problems"
+      aria-disabled={disabled}
+      title={title}
+      data-check-ms={checkMs === undefined ? undefined : Math.round(checkMs)}
+      data-ready-ms={readyMs === undefined ? undefined : Math.round(readyMs)}
+      onClick={disabled ? undefined : onToggle}
+    >
+      <span {...s.ProblemsDot} aria-hidden="true" />
+      {label}
+    </button>
+  )
+}
+
+function Counts({ text }: { text: string }) {
+  const over = text.length > MAX_FILE_CHARS
+  const s = useStyles(playgroundEditorStyles, {
+    level: over ? 'error' : 'none',
+  })
+  return (
+    <span {...s.Counts}>
+      {text.split('\n').length} lines · {text.length.toLocaleString('en-GB')} /{' '}
+      {MAX_FILE_CHARS.toLocaleString('en-GB')}
+      {over ? ' · over the limit' : ''}
+    </span>
+  )
 }
 
 function TabButton({
@@ -269,6 +383,10 @@ export function PlaygroundEditor() {
   const [selection, setSelection] = useState<Record<string, VariantValue>>({})
   const [copied, setCopied] = useState(false)
   const [restored, setRestored] = useState(false)
+  // Bumped whenever `files` is replaced by text the editor did not type.
+  const [revision, setRevision] = useState(0)
+  const [problemsOpen, setProblemsOpen] = useState(false)
+  const language = useLanguage(files, restored)
   const editor = useRef<CodeEditorHandle>(null)
   const workspace = useRef<HTMLDivElement>(null)
   const builds = useRef(0)
@@ -283,6 +401,7 @@ export function PlaygroundEditor() {
     if (draft) {
       setPresetId(draft.preset)
       setFiles(draft.files)
+      setRevision((current) => current + 1)
     }
     setRestored(true)
   }, [])
@@ -364,7 +483,11 @@ export function PlaygroundEditor() {
     editor.current?.reveal(line, column)
   }, [activeFile])
 
-  const reveal = (target: Problem) => {
+  const reveal = (target: {
+    file?: FileName
+    line?: number
+    column?: number
+  }) => {
     if (!target.file || !target.line) return
     if (target.file === activeFile)
       editor.current?.reveal(target.line, target.column)
@@ -379,9 +502,23 @@ export function PlaygroundEditor() {
     if (!next) return
     setPresetId(next.id)
     setFiles(next.files)
+    setRevision((current) => current + 1)
     setSelection({})
     setActiveFile('styles.ts')
   }
+
+  const reset = () => {
+    setFiles(preset.files)
+    setRevision((current) => current + 1)
+  }
+
+  const onEdit = useCallback(
+    (file: FileName, value: string) =>
+      setFiles((current) =>
+        current[file] === value ? current : { ...current, [file]: value },
+      ),
+    [],
+  )
 
   const copy = async () => {
     try {
@@ -439,6 +576,25 @@ export function PlaygroundEditor() {
       ? problem.line
       : undefined
 
+  const problems = language.check?.problems ?? noProblems
+  const level = worst(problems)
+  const checking = language.status.kind !== 'failed' && !language.check
+  const problemsLabel =
+    language.status.kind === 'failed'
+      ? 'Type checking unavailable'
+      : checking
+        ? 'Starting type checker…'
+        : problems.length
+          ? countLabel(problems.length)
+          : 'No problems'
+  const problemsTitle =
+    language.status.kind === 'failed'
+      ? `The language worker failed: ${language.status.message}. The preview still compiles.`
+      : language.status.kind === 'ready'
+        ? `TypeScript ${language.status.typescript} and the Toned language service check both files as you type.`
+        : 'Loading TypeScript and the Toned language service…'
+  const showProblems = problemsOpen && problems.length > 0
+
   return (
     <main id="main" {...s.Main}>
       <div {...s.Toolbar}>
@@ -469,7 +625,7 @@ export function PlaygroundEditor() {
           <button
             type="button"
             {...s.Button}
-            onClick={() => setFiles(preset.files)}
+            onClick={reset}
             disabled={!modified}
             aria-disabled={!modified}
             title="Restore this example's original code"
@@ -509,6 +665,9 @@ export function PlaygroundEditor() {
                 >
                   <FileBadge file={file} active={file === activeFile} />
                   {file}
+                  <TabBadge
+                    problems={problems.filter((item) => item.file === file)}
+                  />
                 </TabButton>
               ))}
             </div>
@@ -522,26 +681,55 @@ export function PlaygroundEditor() {
           >
             <CodeEditor
               ref={editor}
-              label={`${activeFile} source`}
-              value={text}
+              file={activeFile}
+              files={files}
+              revision={revision}
               errorLine={errorLine}
-              onChange={(value) =>
-                setFiles((current) => ({ ...current, [activeFile]: value }))
-              }
+              problems={problems}
+              client={language.client}
+              onChange={onEdit}
             />
           </div>
+          {showProblems ? (
+            <ul
+              id="playground-problems"
+              aria-label="Problems"
+              {...s.ProblemsPanel}
+            >
+              {problems.map((item) => (
+                <ProblemRow
+                  key={`${item.file}:${item.from}:${item.source}:${item.code}`}
+                  problem={item}
+                  onReveal={reveal}
+                />
+              ))}
+            </ul>
+          ) : null}
           <div {...s.StatusBar}>
-            <span id="playground-editor-hint">
-              <span {...s.Hint}>
-                Tab indents · Esc, then Tab, leaves the editor ·{' '}
+            <div {...s.StatusGroup}>
+              <ProblemsButton
+                label={problemsLabel}
+                level={checking ? 'none' : (level ?? 'clean')}
+                expanded={showProblems}
+                disabled={!problems.length}
+                title={problemsTitle}
+                checkMs={language.check?.ms}
+                readyMs={
+                  language.status.kind === 'ready'
+                    ? language.status.ms
+                    : undefined
+                }
+                onToggle={() => setProblemsOpen((open) => !open)}
+              />
+              <span id="playground-editor-hint" {...s.Hint}>
+                {language.skipped.length
+                  ? `${language.skipped.join(', ')} is too large to check · `
+                  : ''}
+                Tab indents · Esc, then Tab, leaves the editor · Ctrl-Space
+                completes
               </span>
-              Syntax is checked; types are not
-            </span>
-            <span>
-              {text.split('\n').length} lines ·{' '}
-              {text.length.toLocaleString('en-GB')} /{' '}
-              {MAX_FILE_CHARS.toLocaleString('en-GB')}
-            </span>
+            </div>
+            <Counts text={text} />
           </div>
         </section>
 
