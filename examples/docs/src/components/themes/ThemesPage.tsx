@@ -76,8 +76,9 @@ export function ThemesPage() {
             <p {...s.Lead}>
               One interface, written once against a typed token vocabulary, and{' '}
               {themeList.length} themes that supply different values for it.
-              Switching theme changes one attribute on the root element; no
-              stylesheet or component is swapped.
+              Switching theme changes one attribute on the root element. It is
+              CSS only: no component rerenders for it, and no class or inline
+              style changes.
             </p>
           </div>
 
