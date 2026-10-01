@@ -196,8 +196,9 @@ const { css, manifest } = buildStyles(ui, { sheets: [button, emphasis], layer: '
 
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
 condition variables and keyframes with their ID. Theme variables consumed by such
-a system must use the same namespace; `namespaceCss` in the system subpath can
-namespace a generated palette. A system consuming an existing application palette can
+a system must use the same namespace. Declared `themes` are namespaced by the
+build; for a separately generated palette, `namespaceCss` from
+`@toned/core/system` applies the same prefix. A system consuming an existing application palette can
 declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
 `tokens`. These exact custom-property names remain unchanged in generated CSS and
 runtime output; classes, condition toggles and undeclared variables remain isolated.
@@ -539,12 +540,18 @@ On the web the build delivers declared themes. A resolver's `theme.field` become
 `var(--<system id>-field)` in the generated class, and `buildStyles` (and the Vite
 plugin) writes the values: the first declared theme on `:root`, and every theme
 under `[data-theme='<name>']`, so a subtree can select any theme by attribute.
+Switching is CSS only: changing the attribute rerenders nothing, and classes and
+inline styles stay as they were.
 
 ```ts
 const artifact = buildStyles(ui, { sheets })            // themes included
 buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
 buildStyles(ui, { sheets, themes: false })                // deliver them yourself
 ```
+
+A class sets each side of a box separately, so a field read by a four-sided
+property (`borderWidth`, `padding`, `margin`, `inset`) must hold a single value;
+the build refuses a value such as `3px 0 0 0` there. Use one field per side.
 
 Only top-level string and number fields are written. A nested group, such as
 `colors` above, cannot be read through one CSS variable; give those values to a

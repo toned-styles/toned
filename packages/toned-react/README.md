@@ -285,6 +285,31 @@ resolved sheet against the renderer; components do not choose implementation
 switch combinations. `theme` explicitly replaces the renderer's token snapshot
 for that tree. Native hosts require a registered `nativeHost` adapter.
 
+On the web, switch themes with CSS, not with React. A web renderer's default
+tokens are custom-property references, so generated classes read
+`var(--<system id>-field)` and the build writes each declared theme under
+`[data-theme='<name>']`. Setting that attribute on any element restyles its
+subtree: no component rerenders, and no class or inline style changes.
+
+```tsx
+<div data-theme={theme}>{children}</div>
+```
+
+The `theme` prop is for values that are not CSS variables: explicit tokens for
+a native renderer, or a web renderer created with concrete `tokens`. On a web
+renderer using the default custom properties it does not change what generated
+classes read, because a class is shared by every provider.
+
+Two parts of one family can be merged onto a single element, for example
+`{...s.Root.with(disabled && s.Disabled)}`. Each part owns its own styles on
+that element, and removing one leaves the other intact. For a state that has a
+fixed set of values, a variant is still the simpler declaration.
+
+A bag must be spread whole and last: `{...s.Root}` carries the `ref` that
+attaches the part, so a `ref`, `style` or `className` written before the spread
+is replaced by it. Pass those through `s.Root.withProps({ ref, style })`
+instead, which merges them.
+
 `ConfigProvider` and `setConfig` remain compatibility paths for existing host
 integrations. Their low-level flags are legacy tuning, not the new configuration
 contract. Legacy React configurations now carry a context identity; `useStyles`
