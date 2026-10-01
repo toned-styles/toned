@@ -19,6 +19,22 @@ export class MountedFamily {
   >()
   readonly hostConditions = new Map<object, HostConditionRegistration>()
   readonly pendingHostValidation = new Set<object>()
+  private readonly partOwners = new Map<string, object>()
+
+  /**
+   * The identity under which one part of this family owns host styles. Two
+   * parts of a family can be merged onto one element (`Root.with(Disabled)`);
+   * each needs its own entry in the host's ownership registry, or the second
+   * to commit would replace the first's styles.
+   */
+  partOwner(part: string): object {
+    let owner = this.partOwners.get(part)
+    if (!owner) {
+      owner = {}
+      this.partOwners.set(part, owner)
+    }
+    return owner
+  }
   private readonly hostValidationListeners = new Set<() => void>()
   hostValidationRevision = 0
   stopRelations: (() => void)[] = []
