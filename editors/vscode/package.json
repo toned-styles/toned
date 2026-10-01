@@ -21,14 +21,14 @@
   },
   "dependencies": {
     "@toned/compiler": "workspace:*",
-    "vscode-languageclient": "9.0.1"
+    "vscode-languageclient": "10.1.2"
   },
   "devDependencies": {
-    "@types/bun": "1.2.20",
+    "@types/bun": "1.4.2",
     "@types/node": "catalog:",
     "@types/vscode": "1.100.0",
-    "@vscode/vsce": "3.9.2",
-    "typescript": "5.9.3"
+    "@vscode/vsce": "4.0.0",
+    "typescript": "6.0.3"
   },
   "contributes": {
     "commands": [

@@ -8,16 +8,17 @@
   },
   "dependencies": {
     "@examples/shared": "workspace:*",
-    "@react-email/components": "^0.0.35",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
     "@toned/systems": "workspace:*",
     "@toned/themes": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "react-email": "^6.11.0"
   },
   "devDependencies": {
     "@toned-config/typescript": "workspace:*",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "react-native": "catalog:",

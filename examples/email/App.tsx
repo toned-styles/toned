@@ -1,4 +1,4 @@
-import { Body, Html } from '@react-email/components'
+import { Body, Html } from 'react-email'
 
 import Card from './Card.tsx'
 import { props } from './styles.ts'

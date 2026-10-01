@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { CompletionList, Connection } from 'vscode-languageserver/node.js'
+import type { CompletionList, Connection } from 'vscode-languageserver/node'
 
 import { registerLanguageServer } from './server.ts'
 import { DesignLanguageService } from './service.ts'

@@ -12,7 +12,7 @@ import {
   type PublishDiagnosticsParams,
   StreamMessageReader,
   StreamMessageWriter,
-} from 'vscode-languageserver/node.js'
+} from 'vscode-languageserver/node'
 
 import { registerLanguageServer } from './server.ts'
 
@@ -43,7 +43,9 @@ async function harness() {
   const diagnostics: PublishDiagnosticsParams[] = []
   client.onNotification(
     'textDocument/publishDiagnostics',
-    (params: PublishDiagnosticsParams) => diagnostics.push(params),
+    (params: PublishDiagnosticsParams) => {
+      diagnostics.push(params)
+    },
   )
   server.listen()
   client.listen()

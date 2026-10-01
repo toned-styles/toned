@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Connection } from 'vscode-languageserver/node.js'
+import type { Connection } from 'vscode-languageserver/node'
 
 import { loadWorkspace, readWorkspaceFile } from '../workspace.ts'
 import { WorkspaceDiskQueue } from './disk-queue.ts'

@@ -16,5 +16,10 @@
     {
       "path": "../shared"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  }
 }

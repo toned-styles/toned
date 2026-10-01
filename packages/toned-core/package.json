@@ -46,7 +46,7 @@
   "devDependencies": {
     "@toned-config/build": "workspace:*",
     "@toned-config/typescript": "workspace:*",
-    "vite": "^6.3.5"
+    "vite": "^8.3.1"
   },
   "peerDependencies": {
     "vite": ">=5"

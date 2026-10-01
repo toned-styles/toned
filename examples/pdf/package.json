@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@examples/shared": "workspace:*",
-    "@react-pdf/renderer": "4.3.0",
+    "@react-pdf/renderer": "4.9.0",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
     "@toned/systems": "workspace:*",
@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@toned-config/typescript": "workspace:*",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "typescript": "catalog:"

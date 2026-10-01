@@ -357,7 +357,9 @@ function diagnostics(engine: Engine) {
       for (const item of toned.diagnostics(uri)) {
         const from = document.offsetAt(item.range.start)
         const to = document.offsetAt(item.range.end)
-        let message = item.message
+        // LSP 3.18 diagnostics may carry Markdown content instead of text.
+        let message =
+          typeof item.message === 'string' ? item.message : item.message.value
         if (item.code === 'token-value') {
           const token = tokenAt(engine, uri, from)?.token
           const allowed = token?.values

@@ -12,24 +12,24 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.29.7",
-    "@lerna-lite/changed": "^4.9.1",
-    "@lerna-lite/cli": "^4.9.1",
-    "@lerna-lite/diff": "^4.9.1",
-    "@lerna-lite/list": "^4.9.1",
-    "@lerna-lite/publish": "^4.9.1",
-    "@lerna-lite/version": "^4.9.1",
-    "@types/bun": "1.2.20",
+    "@lerna-lite/changed": "^5.6.2",
+    "@lerna-lite/cli": "^5.6.2",
+    "@lerna-lite/diff": "^5.6.2",
+    "@lerna-lite/list": "^5.6.2",
+    "@lerna-lite/publish": "^5.6.2",
+    "@lerna-lite/version": "^5.6.2",
+    "@types/bun": "1.4.2",
     "oxfmt": "0.71.0",
     "oxlint": "1.86.0",
     "typescript": "catalog:",
-    "update-ts-references": "^3.6.2",
-    "vitest": "^3.2.4"
+    "update-ts-references": "^6.1.0",
+    "vitest": "^5.0.3"
   },
   "resolutions": {
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "react": "catalog:",
     "react-native": "catalog:"
-  }
+  },
+  "packageManager": "pnpm@12.8.1"
 }

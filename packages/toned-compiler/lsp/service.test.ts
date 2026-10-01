@@ -11,7 +11,7 @@ import {
   StreamMessageReader,
   StreamMessageWriter,
   SymbolKind,
-} from 'vscode-languageserver/node.js'
+} from 'vscode-languageserver/node'
 
 import * as browserEntry from '../language-service.ts'
 import { registerLanguageServer } from './server.ts'
@@ -64,7 +64,7 @@ describe('design language service', () => {
         'utf8',
       ).matchAll(/^import (?!type\b)[^;]*?from '([^']+)'/gm),
     ].map((match) => match[1])
-    expect(runtimeImports).not.toContain('vscode-languageserver/node.js')
+    expect(runtimeImports).not.toContain('vscode-languageserver/node')
     expect(browserEntry.DesignLanguageService).toBe(DesignLanguageService)
 
     const service = new browserEntry.DesignLanguageService(

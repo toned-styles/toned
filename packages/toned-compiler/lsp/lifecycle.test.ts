@@ -11,7 +11,7 @@ import {
   ProposedFeatures,
   StreamMessageReader,
   StreamMessageWriter,
-} from 'vscode-languageserver/node.js'
+} from 'vscode-languageserver/node'
 
 import { DesignProject } from '../project.ts'
 import { registerLanguageServer } from './server.ts'

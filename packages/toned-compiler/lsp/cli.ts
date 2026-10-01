@@ -2,7 +2,7 @@
 import {
   createConnection,
   ProposedFeatures,
-} from 'vscode-languageserver/node.js'
+} from 'vscode-languageserver/node'
 
 import { registerLanguageServer } from './server.ts'
 

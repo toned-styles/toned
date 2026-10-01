@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 
-import { render } from '@react-email/components'
+import { render } from 'react-email'
 import { createElement } from 'react'
 
 import App from './App.tsx'

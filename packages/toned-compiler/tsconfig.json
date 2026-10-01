@@ -7,5 +7,10 @@
     {
       "path": "../toned-core"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  }
 }

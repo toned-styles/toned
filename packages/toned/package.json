@@ -8,6 +8,7 @@
   "devDependencies": {
     "@toned-config/build": "workspace:*",
     "@toned-config/typescript": "workspace:*",
-    "@toned/core": "workspace:*"
+    "@toned/core": "workspace:*",
+    "@types/node": "catalog:"
   }
 }

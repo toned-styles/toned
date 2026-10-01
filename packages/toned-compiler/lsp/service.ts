@@ -10,7 +10,7 @@ import type {
   Position,
   SymbolKind as SymbolKindValue,
   WorkspaceEdit,
-} from 'vscode-languageserver/node.js'
+} from 'vscode-languageserver/node'
 
 import { proposeValueEdit } from '../edits.ts'
 import type {
