@@ -4,7 +4,6 @@ import { createCssExecutor } from '../backends/css/execute.ts'
  *
  * @module system/definers
  */
-
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import type { DefaultSystemKind } from '../types/stylesheet.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
@@ -65,7 +64,7 @@ export function defineToken<
   } & Extra,
 ): TokenConfig<Values, Result> & Extra & { dynamic: Dynamic }
 export function defineToken<
-  // biome-ignore lint/suspicious/noExplicitAny: Values must accept any const array for token definitions
+  // oxlint-disable-next-line typescript/no-explicit-any -- Values must accept any const array for token definitions
   const Values extends readonly any[],
   // Result type is intentionally loose - could be CSSProperties but allows custom token styles
   Result extends {},
@@ -275,7 +274,7 @@ export function defineSystem<
     stylesheet: (<T extends StylesheetInput<S & C, T>>(
       rules: T | ((q: TokenSystem<S & C, C>['q']) => T),
     ) => {
-      // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
+      // oxlint-disable-next-line typescript/no-explicit-any -- complex type intersection requires cast
       const declaration = normalizeDeclarations(
         typeof rules === 'function' ? rules(ref.q) : rules,
       )

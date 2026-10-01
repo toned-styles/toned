@@ -1,4 +1,5 @@
 import { createElements } from '@toned/react'
+
 import { type ProfileVariants, profileStyles } from './styles.ts'
 
 const Profile = createElements(profileStyles)

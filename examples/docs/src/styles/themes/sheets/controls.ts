@@ -1,4 +1,5 @@
 import type { Variants } from '@toned/core'
+
 import { stylesheet } from '../system.ts'
 
 /** A labelled text input or select. */

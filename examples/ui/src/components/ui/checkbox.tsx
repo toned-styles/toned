@@ -1,7 +1,6 @@
 'use client'
 
 import type { Variants } from '@toned/core'
-
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { CheckIcon, MinusIcon } from 'lucide-react'

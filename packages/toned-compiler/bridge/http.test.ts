@@ -9,7 +9,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
+
 import { afterEach, expect, test } from 'vitest'
+
 import type { DesignNode, DesignPage } from '../model.ts'
 import {
   createSourceBridge,

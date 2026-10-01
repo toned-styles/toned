@@ -1,4 +1,5 @@
 import { expectTypeOf } from 'vitest'
+
 import { defineSystem } from '../system/definers.ts'
 import type { Variants } from '../types/stylesheet.ts'
 import {

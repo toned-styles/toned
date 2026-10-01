@@ -1,5 +1,4 @@
 import { defineConfig, setConfig } from '@toned/core'
-
 import reactConfig from '@toned/react/react-native'
 
 // should be preset for the framework?

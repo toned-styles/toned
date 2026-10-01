@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { createElement } from 'react'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
+
 import { useStyles } from './index.ts'
 import reactWebConfig from './react-web.ts'
 

@@ -27,7 +27,7 @@
    ================================================================ */
 
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-gallery-themed], body > :not([id="root"])) {
+  :is([data-gallery-themed], body > :not([id="root"])) {
   color: var(--foreground);
   font-family: var(--typo_font_sans);
   -webkit-font-smoothing: var(--g-smoothing);
@@ -210,7 +210,7 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
    A sixteen-colour console palette, square corners, stepped outlines drawn
    with offset shadows, a bold monospace face and two-step motion. */
 html[data-gallery-theme-scope][data-theme="pixel"]
-:is([data-gallery-themed], body > :not([id="root"])) {
+  :is([data-gallery-themed], body > :not([id="root"])) {
   --g-stage:
     conic-gradient(#232a4d 25%, transparent 0) 0 0 / 16px 16px, #1a1c2c;
   --g-stage-line: #f4f4f4;
@@ -310,13 +310,13 @@ html[data-gallery-theme-scope][data-theme="pixel"]
   --g-overlay-bg: #29366f;
   /* A stepped outline with a bevel: light on the top left, dark below. */
   --g-control-shadow:
-    0 -4px 0 0 #0d0e17, 0 4px 0 0 #0d0e17, -4px 0 0 0 #0d0e17, 4px 0 0 0
-    #0d0e17, inset -4px -4px 0 0 rgb(0 0 0 / 0.28), inset 4px 4px 0 0
-    rgb(255 255 255 / 0.4);
+    0 -4px 0 0 #0d0e17, 0 4px 0 0 #0d0e17, -4px 0 0 0 #0d0e17,
+    4px 0 0 0 #0d0e17, inset -4px -4px 0 0 rgb(0 0 0 / 0.28),
+    inset 4px 4px 0 0 rgb(255 255 255 / 0.4);
   --g-press: translateY(2px);
   --g-press-shadow:
-    0 -4px 0 0 #0d0e17, 0 4px 0 0 #0d0e17, -4px 0 0 0 #0d0e17, 4px 0 0 0 #0d0e17,
-    inset 4px 4px 0 0 rgb(0 0 0 / 0.28);
+    0 -4px 0 0 #0d0e17, 0 4px 0 0 #0d0e17, -4px 0 0 0 #0d0e17,
+    4px 0 0 0 #0d0e17, inset 4px 4px 0 0 rgb(0 0 0 / 0.28);
   --g-field-bg: #10121c;
   --g-thumb: #f4f4f4;
   --g-radio-radius: 0px;
@@ -335,7 +335,7 @@ html[data-gallery-theme-scope][data-theme="pixel"]
    behind each pane, a bright hairline where its top edge catches the light,
    and wide soft shadows. Text stays dark and solid. */
 html[data-gallery-theme-scope][data-theme="glass"]
-:is([data-gallery-themed], body > :not([id="root"])) {
+  :is([data-gallery-themed], body > :not([id="root"])) {
   /* One blue hue with a single warm glow, as in the theme showcase: enough for
      the glass to refract without turning into a rainbow. Kept light so dark
      text on the translucent panes stays well above its contrast floor. */
@@ -404,19 +404,21 @@ html[data-gallery-theme-scope][data-theme="glass"]
   /* Each level: a bright top edge, a faint inner rim, then the cast shadow. */
   --shadow_none: none;
   --shadow_small:
-    inset 0 1px 0 rgb(255 255 255 / 0.85), inset 0 0 0 1px
-    rgb(255 255 255 / 0.28), 0 1px 2px rgb(24 30 66 / 0.06), 0 6px 18px
-    rgb(24 30 66 / 0.07);
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 0 0 1px rgb(255 255 255 / 0.28), 0 1px 2px rgb(24 30 66 / 0.06),
+    0 6px 18px rgb(24 30 66 / 0.07);
   --shadow_medium:
-    inset 0 1px 0 rgb(255 255 255 / 0.85), inset 0 0 0 1px
-    rgb(255 255 255 / 0.28), 0 2px 4px rgb(24 30 66 / 0.06), 0 12px 28px
-    rgb(24 30 66 / 0.1);
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 0 0 1px rgb(255 255 255 / 0.28), 0 2px 4px rgb(24 30 66 / 0.06),
+    0 12px 28px rgb(24 30 66 / 0.1);
   --shadow_large:
-    inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.3),
-    0 2px 6px rgb(24 30 66 / 0.08), 0 18px 44px rgb(24 30 66 / 0.16);
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.3), 0 2px 6px rgb(24 30 66 / 0.08),
+    0 18px 44px rgb(24 30 66 / 0.16);
   --shadow_xlarge:
-    inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.3),
-    0 4px 10px rgb(24 30 66 / 0.08), 0 32px 72px rgb(24 30 66 / 0.22);
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.3), 0 4px 10px rgb(24 30 66 / 0.08),
+    0 32px 72px rgb(24 30 66 / 0.22);
   --shadow_focus: 0 0 0 2px rgb(255 255 255 / 0.95), 0 0 0 4.5px #0b5bd3;
 
   --typo_font_sans:
@@ -448,8 +450,8 @@ html[data-gallery-theme-scope][data-theme="glass"]
     rgb(255 255 255 / 0) 58%
   );
   --g-control-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.45), 0 1px 2px rgb(24 30 66 / 0.14), 0 4px
-    12px rgb(24 30 66 / 0.1);
+    inset 0 1px 0 rgb(255 255 255 / 0.45), 0 1px 2px rgb(24 30 66 / 0.14),
+    0 4px 12px rgb(24 30 66 / 0.1);
   --g-press: scale(0.97);
   --g-field-bg: rgb(255 255 255 / 0.58);
   --g-thumb: #ffffff;
@@ -461,7 +463,7 @@ html[data-gallery-theme-scope][data-theme="glass"]
    Text mode: the sixteen CGA colours, one monospace size, double-line panel
    borders, bracketed buttons, block shadows and no motion. */
 html[data-gallery-theme-scope][data-theme="dos"]
-:is([data-gallery-themed], body > :not([id="root"])) {
+  :is([data-gallery-themed], body > :not([id="root"])) {
   --g-stage: #0000aa;
   --g-stage-line: #aaaaaa;
 
@@ -581,12 +583,13 @@ html[data-gallery-theme-scope][data-theme="dos"]
    A printed form: warm paper, ink rules, a book serif with italic titles and
    letterspaced small labels. Fields are ruled on one edge only. */
 html[data-gallery-theme-scope][data-theme="paper"]
-:is([data-gallery-themed], body > :not([id="root"])) {
+  :is([data-gallery-themed], body > :not([id="root"])) {
   --g-stage:
     repeating-linear-gradient(
       transparent 0 31px,
       rgb(31 27 22 / 0.06) 31px 32px
-    ), #ece3cd;
+    ),
+    #ece3cd;
   --g-stage-line: #1f1b16;
 
   --base: 4.5px;
@@ -687,7 +690,7 @@ html[data-gallery-theme-scope][data-theme="paper"]
    Black rules, hard offset shadows, square corners, primary colours and heavy
    uppercase grotesque. Nothing eases: states change at once. */
 html[data-gallery-theme-scope][data-theme="brutalist"]
-:is([data-gallery-themed], body > :not([id="root"])) {
+  :is([data-gallery-themed], body > :not([id="root"])) {
   --g-stage: #ffe600;
   --g-stage-line: #000000;
 
@@ -793,7 +796,7 @@ html[data-gallery-theme-scope][data-theme="brutalist"]
 
 /* The stage behind a preview. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-preview-stage], [data-gallery-stage]) {
+  :is([data-preview-stage], [data-gallery-stage]) {
   background: var(--g-stage);
   border-color: var(--g-stage-line);
   border-radius: var(--g-stage-radius);
@@ -813,19 +816,19 @@ html[data-gallery-theme-scope]:not([data-theme="modern"]) [data-gallery-stage] {
 
 /* Border style: tokens set a border's width and colour only. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-[data-slot]:where(:not([data-gallery-chrome] *)) {
+  [data-slot]:where(:not([data-gallery-chrome] *)) {
   border-style: var(--g-border-style);
 }
 
 /* Panels: surfaces that frame content. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is(
-  [data-slot="card"],
-  [data-slot="alert"],
-  [data-slot="command"],
-  [data-slot="item"][data-variant="outline"],
-  [data-gallery-panel]
-):not([data-gallery-chrome] *) {
+  :is(
+    [data-slot="card"],
+    [data-slot="alert"],
+    [data-slot="command"],
+    [data-slot="item"][data-variant="outline"],
+    [data-gallery-panel]
+  ):not([data-gallery-chrome] *) {
   border-style: var(--g-panel-border-style);
   border-width: var(--g-panel-border-width);
   background-image: var(--g-panel-image);
@@ -835,23 +838,23 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Overlays: surfaces that float above the page. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is(
-  [data-slot="dialog-content"],
-  [data-slot="alert-dialog-content"],
-  [data-slot="popover-content"],
-  [data-slot="hover-card-content"],
-  [data-slot="select-content"],
-  [data-slot="combobox-content"],
-  [data-slot="dropdown-menu-content"],
-  [data-slot="dropdown-menu-sub-content"],
-  [data-slot="context-menu-content"],
-  [data-slot="context-menu-sub-content"],
-  [data-slot="menubar-content"],
-  [data-slot="menubar-sub-content"],
-  [data-slot="navigation-menu-viewport"],
-  [data-slot="sheet-content"],
-  [data-slot="drawer-content"]
-) {
+  :is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="select-content"],
+    [data-slot="combobox-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"],
+    [data-slot="menubar-content"],
+    [data-slot="menubar-sub-content"],
+    [data-slot="navigation-menu-viewport"],
+    [data-slot="sheet-content"],
+    [data-slot="drawer-content"]
+  ) {
   background-color: var(--g-overlay-bg);
   border-style: var(--g-panel-border-style);
   -webkit-backdrop-filter: var(--g-overlay-backdrop);
@@ -909,11 +912,14 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Filled controls: an edge, a sheen, a shadow and a press movement. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-slot="button"], [data-slot$="-trigger"][data-size])[data-variant]:is(
-  [data-variant="default"],
-  [data-variant="destructive"],
-  [data-variant="secondary"]
-):not([data-gallery-chrome] *) {
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-size]
+  )[data-variant]:is(
+    [data-variant="default"],
+    [data-variant="destructive"],
+    [data-variant="secondary"]
+  ):not([data-gallery-chrome] *) {
   border: var(--g-control-border-width) solid var(--g-control-border-color);
   background-image: var(--g-control-image);
 }
@@ -963,9 +969,12 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Bracketed labels, for a theme that draws its buttons in text. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-slot="button"], [data-slot$="-trigger"][data-variant])[data-size]:not(
-  [data-size^="icon"]
-):not([data-variant="link"]):not([data-gallery-chrome] *)::before {
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-variant]
+  )[data-size]:not([data-size^="icon"]):not([data-variant="link"]):not(
+    [data-gallery-chrome] *
+  )::before {
   content: var(--g-button-open);
 }
 
@@ -981,32 +990,32 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Fields: their own surface, and which edges are ruled. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is(
-  [data-slot="input"],
-  [data-slot="textarea"],
-  [data-slot="select-trigger"],
-  [data-slot="native-select"],
-  [data-slot="input-group"],
-  [data-slot="input-otp-slot"],
-  [data-slot="combobox-chips"]
-):not([data-gallery-chrome] *) {
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="native-select"],
+    [data-slot="input-group"],
+    [data-slot="input-otp-slot"],
+    [data-slot="combobox-chips"]
+  ):not([data-gallery-chrome] *) {
   background-color: var(--g-field-bg);
   border-width: var(--g-field-border-width);
 }
 
 /* Knobs stay opaque when the surface colour is translucent. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-slot="switch-thumb"], [data-slot="slider-thumb"]):not(
-  [data-gallery-chrome] *
-) {
+  :is([data-slot="switch-thumb"], [data-slot="slider-thumb"]):not(
+    [data-gallery-chrome] *
+  ) {
   background-color: var(--g-thumb);
 }
 
 /* A radio keeps a shape of its own when every radius is square. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-slot="radio-group-item"], [data-slot="radio-group-indicator"]):not(
-  [data-gallery-chrome] *
-) {
+  :is([data-slot="radio-group-item"], [data-slot="radio-group-indicator"]):not(
+    [data-gallery-chrome] *
+  ) {
   border-radius: var(--g-radio-radius);
 }
 
@@ -1017,9 +1026,9 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Gauges: a patterned track or fill. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is([data-slot="progress"], [data-slot="slider-track"]):not(
-  [data-gallery-chrome] *
-) {
+  :is([data-slot="progress"], [data-slot="slider-track"]):not(
+    [data-gallery-chrome] *
+  ) {
   background-image: var(--g-track-image);
   background-size: 4px 4px;
 }
@@ -1033,21 +1042,21 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Text case and title style: no variable carries them. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-:is(
-  [data-slot="button"],
-  [data-slot$="-trigger"][data-variant][data-size],
-  [data-slot="badge"],
-  [data-slot="tabs-trigger"],
-  [data-slot="table-head"],
-  [data-slot="toggle"],
-  [data-slot="toggle-group-item"],
-  [data-slot="dropdown-menu-label"],
-  [data-slot="context-menu-label"],
-  [data-slot="menubar-label"],
-  [data-slot="select-label"],
-  [data-slot="sidebar-group-label"],
-  [data-slot="command-group"] [cmdk-group-heading]
-):not([data-gallery-chrome] *) {
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-variant][data-size],
+    [data-slot="badge"],
+    [data-slot="tabs-trigger"],
+    [data-slot="table-head"],
+    [data-slot="toggle"],
+    [data-slot="toggle-group-item"],
+    [data-slot="dropdown-menu-label"],
+    [data-slot="context-menu-label"],
+    [data-slot="menubar-label"],
+    [data-slot="select-label"],
+    [data-slot="sidebar-group-label"],
+    [data-slot="command-group"] [cmdk-group-heading]
+  ):not([data-gallery-chrome] *) {
   text-transform: var(--g-label-case);
 }
 
@@ -1062,29 +1071,24 @@ html[data-gallery-theme-scope]:not([data-theme="modern"])
 
 /* Motion: each theme's easing replaces the components' own. */
 html[data-gallery-theme-scope]:not([data-theme="modern"])
-[data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *) {
-  /* biome-ignore lint/complexity/noImportantStyles: overrides inline transitions. */
+  [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *) {
   transition-timing-function: var(--g-easing) !important;
-  /* biome-ignore lint/complexity/noImportantStyles: overrides inline animations. */
   animation-timing-function: var(--g-easing) !important;
 }
 
 html[data-gallery-theme-scope]:not([data-theme="modern"])
   [data-slot="spinner"]:not([data-gallery-chrome] *) {
-  /* biome-ignore lint/complexity/noImportantStyles: overrides the inline animation. */
   animation-timing-function: var(--g-spin-easing) !important;
 }
 
 /* Text mode and brutalism have no transitions: a state changes at once. */
 html[data-gallery-theme-scope]:is([data-theme="dos"], [data-theme="brutalist"])
-[data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *),
+  [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *),
 html[data-gallery-theme-scope]:is([data-theme="dos"], [data-theme="brutalist"])
   [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *)::before,
 html[data-gallery-theme-scope]:is([data-theme="dos"], [data-theme="brutalist"])
   [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *)::after {
-  /* biome-ignore lint/complexity/noImportantStyles: overrides inline transitions. */
   transition-duration: 0.01ms !important;
-  /* biome-ignore lint/complexity/noImportantStyles: overrides inline animations. */
   animation-duration: 0.01ms !important;
 }
 

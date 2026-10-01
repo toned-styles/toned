@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { getConfig } from '../system/config.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'

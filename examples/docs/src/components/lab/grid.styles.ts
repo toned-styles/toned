@@ -1,4 +1,5 @@
 import { defineGrid, dp, fr, type Variants } from '@toned/core'
+
 import { stylesheet } from '../../styles/system.ts'
 
 const grid = defineGrid('lab-message', {

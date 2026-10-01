@@ -1,6 +1,7 @@
 import { defineSystem } from '@toned/core'
 import { createNativeRenderer } from '@toned/core/server'
 import { describe, expect, test } from 'vitest'
+
 import { bottom, left, right, top } from './layout.ts'
 
 const system = defineSystem({ top, left, right, bottom })

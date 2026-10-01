@@ -1,5 +1,7 @@
 import { t } from '@toned/systems/base'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { Kbd, KbdGroup } from './kbd.tsx'
 
 export default doc({

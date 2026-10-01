@@ -1,7 +1,8 @@
-import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
+
 import type { DocDescriptor } from '../../../../ui/src/lib/doc.tsx'
 import { ComponentPreview } from '../../components/playground/ComponentPreview.tsx'
 import { DocPreview } from '../../components/playground/DocPreview.tsx'

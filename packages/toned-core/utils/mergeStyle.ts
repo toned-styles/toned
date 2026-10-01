@@ -4,7 +4,7 @@
  * @module utils/mergeStyle
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: style objects hold dynamic CSS values
+// oxlint-disable-next-line typescript/no-explicit-any -- style objects hold dynamic CSS values
 type AnyValue = any
 
 /**

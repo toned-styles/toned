@@ -1,5 +1,6 @@
 import React from 'react'
 import { AppRegistry, NativeModules, PixelRatio, Platform } from 'react-native'
+
 import { Harness } from './src/Harness.tsx'
 import { nativeHost } from './src/host.ts'
 

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
+
 import { defineSystem, getConfig } from '../index.ts'
 import { createHostIntegration } from './index.ts'
 

@@ -1,5 +1,7 @@
 import * as React from 'react'
+
 import { c, type DocParts, doc } from '@/lib/doc.tsx'
+
 import { Calendar } from './calendar.tsx'
 
 // A fixed month keeps the server render and the first client render equal.

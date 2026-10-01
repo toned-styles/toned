@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert'
+
 import * as vscode from 'vscode'
 
 /** Runs in an isolated real VS Code extension host; changes stay unsaved. */

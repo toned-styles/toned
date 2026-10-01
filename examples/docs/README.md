@@ -33,7 +33,6 @@ for actual mounted native behavior. The native TypeScript 7 process used by
 HQ is outside JavaScript I/O guards, while guarded child runners still prove
 their JavaScript guard installation.
 
-
 ## Site structure
 
 Every page shares one header (`SiteHeader`), footer and palette
@@ -125,7 +124,6 @@ the homepage's theme switch and variant controls, global search, mobile
 overflow, reduced motion, guide navigation, syntax highlighting, theme switching
 and the gallery.
 
-
 `/explore` indexes 22 source-backed references, loaded from the package Markdown
 rather than copied into routes. `/learn/$topic` renders them with semantic React
 markup; relative reference links map to the local directory, links to
@@ -176,4 +174,3 @@ the site's look does not change with the demo.
 
 To add a theme, add an object to `themes` and an entry to `themeList`. The
 type checker lists any field that is missing.
-

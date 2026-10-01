@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+
 import { describe, expect, it } from 'vitest'
 import {
   createConnection,
@@ -12,6 +13,7 @@ import {
   StreamMessageReader,
   StreamMessageWriter,
 } from 'vscode-languageserver/node.js'
+
 import { registerLanguageServer } from './server.ts'
 
 const delay = () => new Promise((resolve) => setTimeout(resolve, 5))

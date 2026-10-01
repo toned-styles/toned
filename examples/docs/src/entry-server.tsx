@@ -1,7 +1,6 @@
 import '../toned.config.ts'
 import '../../ui/src/styles.css'
 import './docs-theme.css'
-
 import {
   createMemoryHistory,
   createRouter,
@@ -9,6 +8,7 @@ import {
 } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { prerenderToNodeStream } from 'react-dom/static'
+
 import { routeTree } from './routeTree.gen.ts'
 
 export async function render(url: string) {

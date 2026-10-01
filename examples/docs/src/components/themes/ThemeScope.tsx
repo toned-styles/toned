@@ -1,9 +1,10 @@
 import 'virtual:toned-themes.css'
-import manifest from 'virtual:toned-themes.manifest'
 import { createWebRenderer } from '@toned/core/server'
 import { TonedProvider } from '@toned/react'
 import { webHost } from '@toned/react/hosts/web'
 import type { ReactNode } from 'react'
+import manifest from 'virtual:toned-themes.manifest'
+
 import { themeSystem } from '../../styles/themes/system.ts'
 
 const renderer = createWebRenderer(themeSystem, { manifest })

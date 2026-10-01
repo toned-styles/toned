@@ -34,11 +34,13 @@ type OverrideDeclaration<
     ? T | null
     : T extends object
       ? {
-          [K in keyof T as Local extends true
-            ? K extends '$kind' | '$$type'
-              ? never
+          [
+            K in keyof T as Local extends true
+              ? K extends '$kind' | '$$type'
+                ? never
+                : K
               : K
-            : K]: K extends '$compose'
+          ]: K extends '$compose'
             ? T[K]
             : Local extends true
               ? K extends
@@ -58,29 +60,32 @@ type OverrideDeclaration<
       : T | null
 
 type Meta<T> = T extends { readonly __toned__?: infer M } ? M : never
-type System<T> = Meta<T> extends {
-  system: infer S extends TokenStyleDeclaration
-}
-  ? S
-  : TokenStyleDeclaration
-type Kinds<T> = Meta<T> extends {
-  elements: infer E extends Record<string, ElementType | undefined>
-}
-  ? E
-  : Record<string, undefined>
+type System<T> =
+  Meta<T> extends {
+    system: infer S extends TokenStyleDeclaration
+  }
+    ? S
+    : TokenStyleDeclaration
+type Kinds<T> =
+  Meta<T> extends {
+    elements: infer E extends Record<string, ElementType | undefined>
+  }
+    ? E
+    : Record<string, undefined>
 type Mods<T> = Meta<T> extends { mods: infer M extends ModType } ? M : never
 type Parts<T> = keyof Kinds<T> & string
 
 /** The authored sheet vocabulary, with nullable inherited style leaves. */
-export type OverrideSheetRules<T> = Meta<T> extends {
-  system: TokenStyleDeclaration
-  elements: Record<string, ElementType | undefined>
-}
-  ? OverrideDeclaration<
-      StylesheetInput<System<T>, Record<string, unknown>, Parts<T>, Kinds<T>>,
-      Parts<T>
-    >
-  : Record<string, unknown>
+export type OverrideSheetRules<T> =
+  Meta<T> extends {
+    system: TokenStyleDeclaration
+    elements: Record<string, ElementType | undefined>
+  }
+    ? OverrideDeclaration<
+        StylesheetInput<System<T>, Record<string, unknown>, Parts<T>, Kinds<T>>,
+        Parts<T>
+      >
+    : Record<string, unknown>
 
 /**
  * What an override's rules are CONTEXTUALLY typed by (completions, literal
@@ -90,37 +95,34 @@ export type OverrideSheetRules<T> = Meta<T> extends {
  * constraint) re-derived the whole nullable rules tree against each call's
  * literal: ~10k instantiations per `overrideStyles` call on a dialog sheet.
  */
-export type OverrideRulesContext<T> = Meta<T> extends {
-  system: TokenStyleDeclaration
-  elements: Record<string, ElementType | undefined>
-}
-  ? VariantEditorDef<System<T>, Parts<T>, never, Kinds<T>>
-  : Record<string, unknown>
+export type OverrideRulesContext<T> =
+  Meta<T> extends {
+    system: TokenStyleDeclaration
+    elements: Record<string, ElementType | undefined>
+  }
+    ? VariantEditorDef<System<T>, Parts<T>, never, Kinds<T>>
+    : Record<string, unknown>
 
 /** The contextual vocabulary of one override variant rule; see OverrideRulesContext. */
-export type OverrideVariantContext<
-  T,
-  Named extends string = never,
-> = Meta<T> extends {
-  system: TokenStyleDeclaration
-  elements: Record<string, ElementType | undefined>
-}
-  ? VariantEditorDef<System<T>, Parts<T>, Named, Kinds<T>>
-  : Record<string, unknown>
+export type OverrideVariantContext<T, Named extends string = never> =
+  Meta<T> extends {
+    system: TokenStyleDeclaration
+    elements: Record<string, ElementType | undefined>
+  }
+    ? VariantEditorDef<System<T>, Parts<T>, Named, Kinds<T>>
+    : Record<string, unknown>
 
 /** Shared by pure override sheets and React's ambient override entries. */
-export type OverrideSheetVariantRules<
-  T,
-  Named extends string = never,
-> = Meta<T> extends {
-  system: TokenStyleDeclaration
-  elements: Record<string, ElementType | undefined>
-}
-  ? OverrideDeclaration<
-      VariantStyleDef<System<T>, Parts<T>, Named, Kinds<T>>,
-      Parts<T>
-    >
-  : Record<string, unknown>
+export type OverrideSheetVariantRules<T, Named extends string = never> =
+  Meta<T> extends {
+    system: TokenStyleDeclaration
+    elements: Record<string, ElementType | undefined>
+  }
+    ? OverrideDeclaration<
+        VariantStyleDef<System<T>, Parts<T>, Named, Kinds<T>>,
+        Parts<T>
+      >
+    : Record<string, unknown>
 
 /** Pure authoritative composition, shared by server resolution and React scopes.
  * Construct the derived sheet before build collection when it adds CSS structure. */

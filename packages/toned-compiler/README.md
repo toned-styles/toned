@@ -8,13 +8,21 @@ editor code. Install it as a development dependency alongside Toned.
 ## Source intelligence
 
 ```ts
-import { DesignProject, proposeValueEdit, applyDesignEdit } from '@toned/compiler'
+import {
+  DesignProject,
+  proposeValueEdit,
+  applyDesignEdit,
+} from '@toned/compiler'
 
 const project = new DesignProject()
 project.update('file:///app/button.ts', sourceText, 1)
 const page = project.query({ kind: 'sheet', limit: 50 })
 // Follow page.next using query({ ...filter, offset: page.next }).
-const declarations = project.query({ owner: 'buttonStyles', kind: 'declaration', limit: 50 })
+const declarations = project.query({
+  owner: 'buttonStyles',
+  kind: 'declaration',
+  limit: 50,
+})
 ```
 
 The graph includes systems, finite token vocabularies, sheets, parts, literal
@@ -70,11 +78,11 @@ Workspace roots are fixed at initialization (restart after changing roots).
 
 Custom JSON-RPC requests:
 
-| Request | Input | Result |
-| --- | --- | --- |
-| `toned/inspect` | query filters, offset, limit | bounded design page |
-| `toned/statistics` | none | work counts and workspace indexing status |
-| `toned/proposeEdit` | scoped edit request | change report + versioned WorkspaceEdit |
+| Request             | Input                        | Result                                    |
+| ------------------- | ---------------------------- | ----------------------------------------- |
+| `toned/inspect`     | query filters, offset, limit | bounded design page                       |
+| `toned/statistics`  | none                         | work counts and workspace indexing status |
+| `toned/proposeEdit` | scoped edit request          | change report + versioned WorkspaceEdit   |
 
 `toned.setValue` is an explicit execute-command operation that asks the editor to
 apply that edit. Open documents carry their editor version; closed documents use

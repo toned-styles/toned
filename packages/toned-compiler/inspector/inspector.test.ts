@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, test, vi } from 'vitest'
+
 import { applyDesignEdit, proposeValueEdit } from '../edits.ts'
 import { DesignProject } from '../project.ts'
 import {

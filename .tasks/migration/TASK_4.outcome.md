@@ -43,15 +43,18 @@ const baseButton = stylesheet({
   label: { fontWeight: 'medium' },
 })
 
-const primaryButton = baseButton.extend({
-  container: { bgColor: 'primary' },
-  label: { textColor: 'on_primary' },
-}).variants<{ size: 'sm' | 'md' }>({
-  '[size=sm]': { container: { paddingX: 2 } },
-})
+const primaryButton = baseButton
+  .extend({
+    container: { bgColor: 'primary' },
+    label: { textColor: 'on_primary' },
+  })
+  .variants<{ size: 'sm' | 'md' }>({
+    '[size=sm]': { container: { paddingX: 2 } },
+  })
 ```
 
 **Benefits:**
+
 - Enables style composition and reuse
 - Reduces duplication across similar components
 - Maintains type safety through the chain
@@ -110,6 +113,7 @@ Add support for specifying default variant values:
 ```
 
 **Benefits:**
+
 - Clearer component API
 - Type-safe default values
 - Better DX when using components
@@ -178,12 +182,14 @@ const { stylesheet } = defineSystem(tokens, {
 ## Implementation Notes
 
 The current implementation is solid and provides:
+
 - Full type safety for the new API
 - Efficient bitwise matching for variants
 - Clean separation between API surface and internal format
 - Good test coverage (27 tests)
 
 The suggested improvements would enhance:
+
 - Developer experience (composition, defaults, debug)
 - Flexibility (responsive variants, boolean variants)
 - Integration options (CSS variables, Tailwind)

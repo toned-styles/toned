@@ -1,4 +1,5 @@
 import type { Variants } from '@toned/core'
+
 import { stylesheet } from './document.system.ts'
 
 export const documentSheet = stylesheet({

@@ -1,4 +1,5 @@
 import { bench, describe } from 'vitest'
+
 import { defineSystem, defineToken, setConfig } from '../system/index.ts'
 import type { Config } from '../types/index.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'

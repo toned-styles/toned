@@ -16,7 +16,7 @@
  * }
  * ```
  */
-// biome-ignore lint/suspicious/noExplicitAny: tokens are dynamically typed based on user configuration
+// oxlint-disable-next-line typescript/no-explicit-any -- tokens are dynamically typed based on user configuration
 export type Tokens = Record<string, any>
 
 /**
@@ -51,7 +51,7 @@ export type ResolveContext = {
   canonicalFields?: boolean
 } & import('../core/values.ts').LayoutContext
 
-// biome-ignore lint/suspicious/noExplicitAny: const generic requires any[] for tuple inference
+// oxlint-disable-next-line typescript/no-explicit-any -- const generic requires any[] for tuple inference
 export type TokenConfig<Values extends readonly any[], Result> = {
   /** Exact emitted field footprint when it is independent of the value. */
   properties?: readonly string[]
@@ -223,7 +223,7 @@ export const isAnimationDefinition = (
 export type TokenStyleDeclaration = {
   layoutContext?: import('../core/values.ts').LayoutContext
   externalCssVariables?: readonly string[]
-  // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
+  // oxlint-disable-next-line typescript/no-explicit-any -- index signature must accept all TokenConfig variants
   [key: string]:
     | TokenConfig<any, any>
     | Breakpoints<any>
@@ -235,7 +235,7 @@ export type TokenStyleDeclaration = {
     | readonly string[]
     | number
     | undefined
-  // biome-ignore lint/suspicious/noExplicitAny: breakpoints use generic parameter
+  // oxlint-disable-next-line typescript/no-explicit-any -- breakpoints use generic parameter
   breakpoints?: Breakpoints<any>
   media?: Record<string, number | import('../core/values.ts').LogicalLength>
   /** Named animations compiled with the system css — see `defineAnimations`. */
@@ -298,7 +298,7 @@ import type { PlatformStyle } from './style.ts'
  */
 export type InlineStyle = TonedTypeRegistry extends { inlineStyle: infer T }
   ? T
-  : // biome-ignore lint/suspicious/noExplicitAny: the unaugmented default is permissive
+  : // oxlint-disable-next-line typescript/no-explicit-any -- the unaugmented default is permissive
     any
 
 /**
@@ -384,11 +384,11 @@ type TokenStyleAllowed<
   //
   // The `as` clause drops tokens whose `$types` excludes this element's
   // declared `$$type` — they are not offered, and using one is an error.
-  [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true
-    ? key
-    : never]: Extract<
+  [
+    key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true ? key : never
+  ]: Extract<
     S[key],
-    // biome-ignore lint/suspicious/noExplicitAny: matching all TokenConfig variants
+    // oxlint-disable-next-line typescript/no-explicit-any -- matching all TokenConfig variants
     TokenConfig<any, unknown>
   > extends TokenConfig<infer V, unknown>
     ? // A token that declared an alphaChannel also accepts `'value/alpha'`.
@@ -415,8 +415,10 @@ type TokenStyleForbidden<
   ET extends ElementType | undefined,
 > = ET extends ElementType
   ? {
-      [key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false
-        ? key
-        : never]?: never
+      [
+        key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends false
+          ? key
+          : never
+      ]?: never
     }
   : {}

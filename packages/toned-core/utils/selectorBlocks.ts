@@ -11,7 +11,7 @@
 
 import { SYMBOL_STYLE } from './symbols.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: token style values are dynamic
+// oxlint-disable-next-line typescript/no-explicit-any -- token style values are dynamic
 type AnyValue = any
 
 function isBlock(value: unknown): value is Record<string, AnyValue> {

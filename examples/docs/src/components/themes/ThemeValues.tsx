@@ -1,4 +1,5 @@
 import { useStyles } from '@toned/react'
+
 import { themesPageStyles } from '../../styles/themes/page.ts'
 import type { Theme } from '../../styles/themes/theme.ts'
 import {
@@ -30,7 +31,7 @@ export function ThemeValues({ theme }: { theme: ThemeName }) {
       </p>
       <div
         {...s.TableScroll}
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll the table.
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll the table.
         tabIndex={0}
         role="region"
         aria-label={`${label(theme)} theme values`}

@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { createQueries } from './queries.ts'
 import { queryExpression } from './query-key.ts'
 

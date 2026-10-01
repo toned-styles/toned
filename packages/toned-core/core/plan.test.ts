@@ -1,12 +1,13 @@
-import type { Variants } from '../types/index.ts'
 import { describe, expect, it, vi } from 'vitest'
+
 import { cssVariablesBackend } from '../backends/index.ts'
 import { buildStyles } from '../build/index.ts'
-import { resolvePlatformKeys } from '../utils/platform.ts'
 import { createNativeRenderer, createRenderer } from '../server/index.ts'
 import { RULE_LAYERS } from '../stylesheet/rule-protocol.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
+import type { Variants } from '../types/index.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 import {
   compilePlan,
   compileRules,

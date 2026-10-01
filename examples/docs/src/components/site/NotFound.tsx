@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { docsStyles } from '../../styles/site.ts'
 
 /** Shown inside the docs layout when a page or reference does not exist. */

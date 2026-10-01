@@ -11,6 +11,7 @@ Simplified the public API by hiding internal symbols and reducing the exported A
 ### 1. Hidden Internal Symbols
 
 **Before**: All symbols were exported
+
 ```typescript
 export {
   SYMBOL_INIT,
@@ -23,24 +24,26 @@ export {
 ```
 
 **After**: Only SYMBOL_INIT exported (used by toned-react)
+
 ```typescript
 export { SYMBOL_INIT } from './types/index.ts'
 ```
 
 ### 2. Symbol Usage Analysis
 
-| Symbol | External Usage | Decision |
-|--------|---------------|----------|
-| SYMBOL_INIT | toned-react (useStyles) | **Keep public** |
-| SYMBOL_REF | None | Hidden |
-| SYMBOL_VARIANTS | None | Hidden |
-| SYMBOL_STYLE | None | Hidden |
-| SYMBOL_ACCESS | None | Hidden |
-| sym | None | Hidden |
+| Symbol          | External Usage          | Decision        |
+| --------------- | ----------------------- | --------------- |
+| SYMBOL_INIT     | toned-react (useStyles) | **Keep public** |
+| SYMBOL_REF      | None                    | Hidden          |
+| SYMBOL_VARIANTS | None                    | Hidden          |
+| SYMBOL_STYLE    | None                    | Hidden          |
+| SYMBOL_ACCESS   | None                    | Hidden          |
+| sym             | None                    | Hidden          |
 
 ### 3. Updated Internal Imports
 
 `stylesheet/StyleSheet.ts` now imports symbols from `utils/symbols.ts` directly:
+
 ```typescript
 import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 ```
@@ -48,26 +51,46 @@ import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
 ## Current Public API
 
 ### Exports from `@toned/core`
+
 ```typescript
 // Functions
-export { defineConfig, defineSystem, defineToken, defineUnit, getConfig, setConfig }
+export {
+  defineConfig,
+  defineSystem,
+  defineToken,
+  defineUnit,
+  getConfig,
+  setConfig,
+}
 
 // Symbols (minimal)
 export { SYMBOL_INIT }
 
 // Types
 export type {
-  Breakpoints, Config, ModType, Pseudo, Stylesheet, StylesheetInput,
-  StylesheetType, TokenConfig, TokenStyle, TokenStyleDeclaration, Tokens, TokenSystem
+  Breakpoints,
+  Config,
+  ModType,
+  Pseudo,
+  Stylesheet,
+  StylesheetInput,
+  StylesheetType,
+  TokenConfig,
+  TokenStyle,
+  TokenStyleDeclaration,
+  Tokens,
+  TokenSystem,
 }
 ```
 
 ### Exports from `@toned/core/dom`
+
 ```typescript
 export { generate, inject, getStyleNodeById }
 ```
 
 ### Exports from `@toned/core/stylesheet`
+
 ```typescript
 export { Base, createStylesheet, StyleMatcher, initMedia, unitlessNumbers }
 ```

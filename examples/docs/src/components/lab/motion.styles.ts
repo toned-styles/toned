@@ -1,4 +1,5 @@
 import type { Variants } from '@toned/core'
+
 import { stylesheet } from '../../styles/system.ts'
 
 export const motionStyles = stylesheet({

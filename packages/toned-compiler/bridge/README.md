@@ -71,7 +71,10 @@ host/access middleware and exposes a development virtual module:
 ```ts
 // Development entry only; do not import the virtual module in production builds.
 import { endpoint, token } from 'virtual:toned-source-bridge'
-import { createHttpInspectorTransport, mountDesignInspector } from '@toned/compiler/inspector'
+import {
+  createHttpInspectorTransport,
+  mountDesignInspector,
+} from '@toned/compiler/inspector'
 mountDesignInspector(panel, {
   transport: createHttpInspectorTransport({ endpoint, token }),
 })

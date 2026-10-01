@@ -10,16 +10,16 @@ Created StyleSheet benchmark suite and applied targeted optimizations to hot pat
 
 ### Benchmark Metrics
 
-| Metric | Ops/sec | Notes |
-|--------|---------|-------|
-| matchStyles | 11.8M | Very fast (cached) |
-| applyState | 4.8-5.4M | Fast state updates |
-| getCurrentStyle | 3.4M | Token resolution |
-| element access | 3.1-3.3M | Getter-based |
-| createStylesheet | 304k | One-time cost |
-| extend() | 226k | Creates new stylesheet |
-| variants() | 156k | Chain method |
-| SYMBOL_INIT | 98k | Base creation (bottleneck) |
+| Metric           | Ops/sec  | Notes                      |
+| ---------------- | -------- | -------------------------- |
+| matchStyles      | 11.8M    | Very fast (cached)         |
+| applyState       | 4.8-5.4M | Fast state updates         |
+| getCurrentStyle  | 3.4M     | Token resolution           |
+| element access   | 3.1-3.3M | Getter-based               |
+| createStylesheet | 304k     | One-time cost              |
+| extend()         | 226k     | Creates new stylesheet     |
+| variants()       | 156k     | Chain method               |
+| SYMBOL_INIT      | 98k      | Base creation (bottleneck) |
 
 ### Key Observations
 
@@ -32,6 +32,7 @@ Created StyleSheet benchmark suite and applied targeted optimizations to hot pat
 ### 1. `createStylesheet()` - Inline Filter
 
 **Before:**
+
 ```typescript
 const elementKeys = Object.keys(rules as object).filter(
   (k) =>
@@ -45,6 +46,7 @@ for (const elementKey of elementKeys) {
 ```
 
 **After:**
+
 ```typescript
 const variantSymbolStr = SYMBOL_VARIANTS.toString()
 for (const elementKey in rules as object) {
@@ -62,6 +64,7 @@ Eliminates intermediate array allocation from `Object.keys().filter()`.
 ### 2. `applyElementStyles()` - forEach → for...of
 
 **Before:**
+
 ```typescript
 this.matcher.elementSet.forEach((elementKey) => {
   if (this.matcher.isEqual(...)) return
@@ -70,6 +73,7 @@ this.matcher.elementSet.forEach((elementKey) => {
 ```
 
 **After:**
+
 ```typescript
 for (const elementKey of this.matcher.elementSet) {
   if (this.matcher.isEqual(...)) continue
@@ -82,6 +86,7 @@ Eliminates callback overhead.
 ## Benchmark Suite Created
 
 Added `StyleSheet.bench.ts` with comprehensive benchmarks:
+
 - createStylesheet construction
 - SYMBOL_INIT (Base creation)
 - Element access (container, label)
@@ -101,6 +106,7 @@ Added `StyleSheet.bench.ts` with comprehensive benchmarks:
 ### Why Base Creation is the Bottleneck
 
 The `SYMBOL_INIT` function creates a new `Base` instance which:
+
 1. Creates a new `StyleMatcher` (optimized in TASK_5)
 2. Initializes media query listeners
 3. Matches initial styles
@@ -124,6 +130,7 @@ This avoids Proxy overhead while still providing dynamic property access.
 ### StyleMatcher Caching Benefits
 
 The `match()` function caches results by `propsBits`:
+
 - First call: computes and caches
 - Subsequent calls with same props: O(1) cache hit
 - This is why `matchStyles` is so fast (11.8M ops/sec)

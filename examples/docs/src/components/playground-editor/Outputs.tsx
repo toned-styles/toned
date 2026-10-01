@@ -1,5 +1,6 @@
 import { useStyles } from '@toned/react'
 import { useMemo } from 'react'
+
 import { type CodeLanguage, highlight } from '../../highlight.ts'
 import { playgroundEditorStyles } from '../../styles/playground-editor.ts'
 import type { Compiled, SourceFiles, VariantValue } from './types.ts'
@@ -34,7 +35,7 @@ function Code({
       {...s.OutputCode}
       role="region"
       aria-label={label}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll the code region.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll the code region.
       tabIndex={0}
     >
       <code>

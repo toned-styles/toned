@@ -4,12 +4,14 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "ci:lint": "biome ci --error-on-warnings .",
+    "lint": "oxlint --deny-warnings --report-unused-disable-directives",
+    "format": "oxfmt",
+    "ci:lint": "oxlint --deny-warnings --report-unused-disable-directives",
+    "ci:format": "oxfmt --check",
     "ci:typecheck": "update-ts-references --check && tsc -b",
-    "ci:prettier": "prettier -c ."
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.1",
     "@changesets/cli": "^2.29.7",
     "@lerna-lite/changed": "^4.9.1",
     "@lerna-lite/cli": "^4.9.1",
@@ -18,15 +20,16 @@
     "@lerna-lite/publish": "^4.9.1",
     "@lerna-lite/version": "^4.9.1",
     "@types/bun": "1.2.20",
-    "prettier": "^3.6.2",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
     "typescript": "catalog:",
     "update-ts-references": "^3.6.2",
     "vitest": "^3.2.4"
   },
   "resolutions": {
-    "react": "catalog:",
-    "react-native": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:"
+    "@types/react-dom": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:"
   }
 }

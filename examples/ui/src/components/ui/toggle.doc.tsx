@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { BoldIcon, ItalicIcon, UnderlineIcon } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { Toggle } from './toggle.tsx'
 
 export default doc({

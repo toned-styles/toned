@@ -8,6 +8,7 @@
  */
 import type { Variants } from '@toned/core'
 import { alpha, defineSystem, defineToken, overrideSheet } from '@toned/core'
+
 import { bind, overrideStyles, useBind, useStyles } from './index.ts'
 
 const bgColor = defineToken({

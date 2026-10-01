@@ -14,11 +14,10 @@ const rules = {
   [selector.size('s')]: { $compose: 'interactive' },
 }
 type Expect<T extends true> = T
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false
 export type _Names = Expect<
   Equal<ExtractNamedStyles<typeof rules>, 'interactive' | 'spacing'>
 >

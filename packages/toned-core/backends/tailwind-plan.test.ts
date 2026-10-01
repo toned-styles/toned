@@ -1,11 +1,12 @@
-import type { Variants } from '../types/index.ts'
 import { expect, it } from 'vitest'
+
 import { buildTailwind, compileTailwindProfile } from '../build/tailwind.ts'
 import { compilePlan, resolvePlan } from '../core/plan.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
-import { createTailwindBackend } from './tailwind.ts'
+import type { Variants } from '../types/index.ts'
 import { compileTailwindPlan } from './tailwind-plan.ts'
 import { createTailwindRuntime } from './tailwind-runtime.ts'
+import { createTailwindBackend } from './tailwind.ts'
 
 const ui = defineSystem({
   id: 'utility-test',

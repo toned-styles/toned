@@ -49,6 +49,7 @@ import {
   lineNumbers,
 } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
+
 import { codeColors } from '../../highlight.ts'
 import { brand, fonts } from '../../styles/brand.ts'
 import { editorMetrics } from '../../styles/playground-editor.ts'

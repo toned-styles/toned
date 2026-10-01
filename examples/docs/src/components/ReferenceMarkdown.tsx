@@ -2,6 +2,7 @@ import { useRouter } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { marked, type Token, type Tokens } from 'marked'
 import { createElement, type ReactNode, useMemo } from 'react'
+
 import { referenceHref } from '../content/references.ts'
 import { proseStyles } from '../styles/prose.ts'
 import { CodeBlock } from './CodeBlock.tsx'
@@ -178,7 +179,7 @@ export function ReferenceMarkdown({
               {...s.tableScroll}
               role="region"
               aria-label="Reference table"
-              // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll wide reference tables.
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll wide reference tables.
               tabIndex={0}
             >
               <table {...s.table}>

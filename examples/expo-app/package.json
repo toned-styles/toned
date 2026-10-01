@@ -1,6 +1,7 @@
 {
   "name": "@examples/expo-app",
   "version": "1.0.0",
+  "private": true,
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -25,10 +26,9 @@
     "react-native-web": "catalog:"
   },
   "devDependencies": {
-    "@toned-config/typescript": "workspace:*",
     "@babel/core": "^7.25.2",
+    "@toned-config/typescript": "workspace:*",
     "@types/react": "catalog:",
     "typescript": "catalog:"
-  },
-  "private": true
+  }
 }

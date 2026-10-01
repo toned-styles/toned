@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { connectNativeMedia } from './media.native.ts'
 import type { NativeHostAdapter } from './native-host.ts'
 

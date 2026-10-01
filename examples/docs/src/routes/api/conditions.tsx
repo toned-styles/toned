@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
@@ -26,7 +27,7 @@ function KeyTable({
       {...s.tableScroll}
       role="region"
       aria-label={label}
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll a wide table.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll a wide table.
       tabIndex={0}
     >
       <table {...s.table}>

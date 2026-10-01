@@ -2,7 +2,9 @@ import * as fs from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+
 import { afterEach, expect, test, vi } from 'vitest'
+
 import type { DesignChange } from '../model.ts'
 import { createSourceBridge, type SourceBridge } from './index.ts'
 

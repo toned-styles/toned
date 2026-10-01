@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, test, vi } from 'vitest'
+
 import { getConfig } from '../system/config.ts'
 import { defineSystem } from '../system/definers.ts'
 import { Base } from './StyleSheet.ts'

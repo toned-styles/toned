@@ -12,6 +12,7 @@
  *   (no-platform) config.
  */
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+
 import { getConfig } from '../system/config.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'
@@ -41,7 +42,6 @@ const baseConfig = {
   initInteraction: () => {},
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
 const init = (sheet: any, config: any, state = {}) =>
   sheet[SYMBOL_INIT](config, state)
 
@@ -51,7 +51,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
-  // biome-ignore lint/suspicious/noExplicitAny: test global cleanup
   ;(globalThis as any).window = undefined
 })
 
@@ -90,7 +89,6 @@ describe('shared media emitter', () => {
       addListener,
       removeListener,
     }))
-    // biome-ignore lint/suspicious/noExplicitAny: test window stub
     ;(globalThis as any).window = { matchMedia }
 
     const sheet = system.stylesheet({ root: { bgColor: 'base' } })

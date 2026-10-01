@@ -1,24 +1,24 @@
 {
   "name": "@toned/eslint-plugin",
   "version": "0.1.0",
-  "type": "module",
-  "license": "MIT",
   "description": "Optional import-aware Toned and React rules for ESLint and Oxlint.",
-  "exports": {
-    ".": "./index.js"
-  },
+  "license": "MIT",
   "files": [
     "analysis.js",
     "rules.js",
     "index.js",
     "README.md"
   ],
+  "type": "module",
   "sideEffects": false,
+  "exports": {
+    ".": "./index.js"
+  },
   "scripts": {
     "test": "vitest run"
   },
   "devDependencies": {
-    "vitest": "^3.2.4",
-    "oxlint": "1.69.0"
+    "oxlint": "1.69.0",
+    "vitest": "^3.2.4"
   }
 }

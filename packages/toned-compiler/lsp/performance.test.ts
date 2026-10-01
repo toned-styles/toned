@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { DesignProject } from '../project.ts'
 import { DesignLanguageService } from './service.ts'
 

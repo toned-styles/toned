@@ -1,3 +1,8 @@
+import type { LogicalLength } from '../core/values.ts'
+import type { Relation } from '../stylesheet/relations.ts'
+import type { BuiltVariantKey } from '../stylesheet/variantSelector.ts'
+import type { Platform } from '../types/config.ts'
+import type { Pseudo } from '../types/stylesheet.ts'
 import {
   booleanQuery,
   notQuery,
@@ -7,11 +12,6 @@ import {
   type QueryKey,
   type RelationQuery,
 } from './query-key.ts'
-import type { BuiltVariantKey } from '../stylesheet/variantSelector.ts'
-import type { LogicalLength } from '../core/values.ts'
-import type { Relation } from '../stylesheet/relations.ts'
-import type { Platform } from '../types/config.ts'
-import type { Pseudo } from '../types/stylesheet.ts'
 
 type FixedLength<N extends number = number> = LogicalLength & {
   unit: 'dp'
@@ -34,8 +34,9 @@ export type QueryPredicate = Readonly<
   | { op: 'not'; operand: QueryPredicate }
 >
 type ContainerAtoms<C> = {
-  [N in keyof Containers<C> &
-    string]: `@${N}/${keyof Containers<C>[N] & string}`
+  [
+    N in keyof Containers<C> & string
+  ]: `@${N}/${keyof Containers<C>[N] & string}`
 }[keyof Containers<C> & string]
 export type QueryAtom<C, Parts extends string = string> =
   | `:${State<C>}`
@@ -57,7 +58,10 @@ export type QueryBuilder<C, Parts extends string = string> = {
   container<
     N extends keyof Containers<C> & string,
     Step extends keyof Containers<C>[N] & string,
-  >(name: N, step: Step): `@${N}/${Step}`
+  >(
+    name: N,
+    step: Step,
+  ): `@${N}/${Step}`
   container<N extends keyof Containers<C> & string, const Width extends number>(
     name: N,
     minimum: FixedLength<Width>,

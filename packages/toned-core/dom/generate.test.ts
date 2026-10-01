@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { defineToken } from '../system/definers.ts'
 import { generate } from './generate.ts'
 
@@ -367,8 +368,6 @@ describe('generate', () => {
         spacing: {
           values: [
             'sm',
-            // biome-ignore lint/complexity/useArrowFunction: testing boxed primitive
-            // biome-ignore lint/suspicious/noExplicitAny: testing boxed primitive
             new Number(999) as any,
           ],
           resolve: (value: string | number) => ({
@@ -386,8 +385,6 @@ describe('generate', () => {
         color: {
           values: [
             'red',
-            // biome-ignore lint/complexity/useArrowFunction: testing boxed primitive
-            // biome-ignore lint/suspicious/noExplicitAny: testing boxed primitive
             new String('dynamic') as any,
           ],
           resolve: (value: string) => ({
@@ -560,10 +557,19 @@ describe('condition breakpoints — parenthesised values are raw media condition
   })
 })
 
-
 describe('main CSS numeric emission regressions', () => {
   test('serializes lengths, unitless values and custom parameters independently', () => {
-    const css = generate({ probe: { values: ['on'], resolve: () => ({ padding: 8, fontWeight: 700, opacity: 0.5, '--gap': 8 }) } })
+    const css = generate({
+      probe: {
+        values: ['on'],
+        resolve: () => ({
+          padding: 8,
+          fontWeight: 700,
+          opacity: 0.5,
+          '--gap': 8,
+        }),
+      },
+    })
     expect(css).toContain('padding:8px')
     expect(css).toContain('font-weight:700')
     expect(css).toContain('opacity:0.5')

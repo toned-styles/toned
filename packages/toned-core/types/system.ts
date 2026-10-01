@@ -1,12 +1,11 @@
-import type { Config } from './config.ts'
 import type { SystemOptions } from '../system/definition.ts'
+import type { QueryBuilder } from '../system/queries.ts'
 /**
  * Token system type definitions.
  *
  * @module types/system
  */
-
-import type { QueryBuilder } from '../system/queries.ts'
+import type { Config } from './config.ts'
 import type {
   AuthoredElementStyle,
   StylesheetType,

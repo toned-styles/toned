@@ -178,11 +178,9 @@ export type VariantBuilder<
   Key extends string = '',
   Selections extends readonly Selection[] = [],
 > = Key & { readonly [SELECTOR_TEXT]: Key } & {
-  [K in Exclude<keyof Mods, keyof Acc> as K extends string
-    ? K
-    : never]-?: K extends string
-    ? AxisSelector<Mods, Acc, Selections, K>
-    : never
+  [
+    K in Exclude<keyof Mods, keyof Acc> as K extends string ? K : never
+  ]-?: K extends string ? AxisSelector<Mods, Acc, Selections, K> : never
 }
 
 export type VariantSelector<Mods extends ModType> = (<Name extends string>(

@@ -3,6 +3,7 @@
 ## Status: COMPLETED
 
 All success criteria met:
+
 - `pnpm ci:typecheck` passes
 - `pnpm ci:lint` passes
 - `pnpm test` passes (32 tests)
@@ -12,11 +13,13 @@ All success criteria met:
 ### 1. Module Path Errors in Examples (Fixed)
 
 Changed imports from deprecated paths:
+
 - `@toned/react/new/react-web` → `@toned/react/react-web`
 - `@toned/react/new/react-native` → `@toned/react/react-native`
 - `@toned/react/new/ctx.native` → `@toned/react/ctx.native`
 
 Files fixed:
+
 - `examples/email/toned.config.ts`
 - `examples/email/App.tsx`
 - `examples/expo-app/toned.config.ts`
@@ -24,12 +27,14 @@ Files fixed:
 ### 2. Type Incompatibility with Breakpoints (Fixed)
 
 Updated `TokenStyleDeclaration` in `packages/toned-core/types.ts`:
+
 - Modified index signature to accept `TokenConfig<any, any> | Breakpoints<any> | undefined`
 - Added explicit `breakpoints?: Breakpoints<any>` property
 - Created `TokenKeys<S>` helper to exclude 'breakpoints' from token style keys
 - Updated `TokenStyle<S>` to properly filter out breakpoints
 
 Added property existence check in `packages/toned-core/dom.ts`:
+
 ```typescript
 if (!token || !('values' in token) || !('resolve' in token)) continue
 ```
@@ -37,6 +42,7 @@ if (!token || !('values' in token) || !('resolve' in token)) continue
 ### 3. UseStyles Return Type (Fixed)
 
 Simplified `useStyles` function in `packages/toned-react/index.ts`:
+
 - Replaced complex `PreVariantsStylesheet` type with simpler `StylesheetLike` using structural typing
 - Made `UseStylesResult<T>` return proper element props for all element keys
 - Uses `SYMBOL_INIT` for structural type matching
@@ -44,6 +50,7 @@ Simplified `useStyles` function in `packages/toned-react/index.ts`:
 ### 4. Lint Warnings (Fixed)
 
 Added biome-ignore comments with explanations for necessary `any` usages:
+
 - `StyleMatcher.ts:540` - isEqual function dynamic style objects
 - `initMedia.ts:35` - Emitter class generic value types
 - `definers.ts:79-82` - TokenConfig and breakpoints generics
@@ -53,6 +60,7 @@ Added biome-ignore comments with explanations for necessary `any` usages:
 - `toned-systems/defineCssToken.ts` - Generic token values
 
 Changed reduce accumulator to for loop in `definers.ts` to avoid `noAccumulatingSpread`:
+
 ```typescript
 const value: Record<string, unknown> = {}
 for (const v of values) {
@@ -61,6 +69,7 @@ for (const v of values) {
 ```
 
 Added type assertion for exec() calls to satisfy TypeScript:
+
 ```typescript
 value as TokenStyle<S & C>
 ```
@@ -70,6 +79,7 @@ Removed unused biome-ignore comments that weren't suppressing actual warnings.
 ### 5. Import Extension Errors (Fixed)
 
 Added biome override in `biome.json` to disable `useImportExtensions` for expo-app:
+
 ```json
 "overrides": [
   {
@@ -86,6 +96,7 @@ Added biome override in `biome.json` to disable `useImportExtensions` for expo-a
 ```
 
 This is necessary because:
+
 - Metro bundler (used by Expo) handles imports without extensions
 - TypeScript doesn't allow `.tsx` extensions in imports without `allowImportingTsExtensions`
 - Enabling `allowImportingTsExtensions` requires `noEmit: true` which may conflict with Expo builds
@@ -98,6 +109,7 @@ This is necessary because:
 ### 6. ElementProps Type Fix (Fixed)
 
 Updated `ElementProps` in `packages/toned-react/index.ts` to declare known properties explicitly:
+
 ```typescript
 type ElementProps = {
   style?: Record<string, any>

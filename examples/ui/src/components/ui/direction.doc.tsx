@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import type { ComponentProps } from 'react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { DirectionProvider as Provider } from './direction.tsx'
 import { Label } from './label.tsx'
 import { Slider } from './slider.tsx'

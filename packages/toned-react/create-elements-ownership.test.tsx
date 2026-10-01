@@ -1,12 +1,13 @@
+import { cleanup, fireEvent, render } from '@testing-library/react'
 // @vitest-environment happy-dom
 import type { Variants } from '@toned/core'
-import { cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem } from '@toned/core'
 import { defineGrid, fr } from '@toned/core/grid'
 import { Base } from '@toned/core/stylesheet'
 import type { Window } from 'happy-dom'
 import * as React from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
+
 import {
   ConfigProvider,
   createElements,

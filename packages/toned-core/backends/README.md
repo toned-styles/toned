@@ -45,7 +45,10 @@ its compiled utility output with the descriptor CSS adapter.
 ```ts
 // Build entry only. `compile` belongs to the application's installed Tailwind.
 import { compile } from 'tailwindcss'
-import { createTailwindBackend, createTailwindRuntime } from '@toned/core/backends'
+import {
+  createTailwindBackend,
+  createTailwindRuntime,
+} from '@toned/core/backends'
 import { buildTailwind } from '@toned/core/build'
 const profile = createTailwindBackend({
   id: 'app-utilities',
@@ -53,14 +56,20 @@ const profile = createTailwindBackend({
     { field: 'display', value: 'flex', utility: 'flex' },
     { field: 'gap', value: 12, utility: 'gap-[12px]' },
   ],
-  parameters: [{
-    field: 'gap', utility: 'gap-[var(--app-gap)]', variable: '--app-gap',
-    serialize: value => `${value}px`,
-  }],
+  parameters: [
+    {
+      field: 'gap',
+      utility: 'gap-[var(--app-gap)]',
+      variable: '--app-gap',
+      serialize: (value) => `${value}px`,
+    },
+  ],
 })
 const artifact = await buildTailwind(ui, profile, {
-  sheets: [button, lazyDialog], tokens: daylight,
-  source: '@tailwind utilities;', compile,
+  sheets: [button, lazyDialog],
+  tokens: daylight,
+  source: '@tailwind utilities;',
+  compile,
 })
 // Publish artifact.css and JSON.stringify(artifact.manifest).
 // Runtime entry: import the JSON manifest and the shared system/profile definitions.
@@ -119,17 +128,17 @@ browser-evaluated. Cross-part states and explicit relations require the mounted 
 registry, because named parts alone establish no DOM ancestry; those facts update
 the same controller without an additional React render.
 
-| Capability | Built Tailwind profile |
-| --- | --- |
-| Exact finite field values | Validated complete utilities |
-| Dynamic fields/theme values | Declared fixed parameter utility and serializer |
-| Local state/media/container algebra | Precompiled helper gates and parameter utility |
-| Overlapping rule precedence | Shared plan order, independent of class order |
-| Cross-part/relation facts | Supplied by the mounted host registry |
-| Classes-only browser conditions | Rejected: arbitrary overlap needs a conditional parameter channel |
-| General utility/shorthand inference | Rejected: utility names do not establish field equivalence |
-| Native host | Rejected: this output requires CSS utility classes |
-| Arbitrary web selector/grid extension | Requires an adapter for that extension; no silent fallback |
+| Capability                            | Built Tailwind profile                                            |
+| ------------------------------------- | ----------------------------------------------------------------- |
+| Exact finite field values             | Validated complete utilities                                      |
+| Dynamic fields/theme values           | Declared fixed parameter utility and serializer                   |
+| Local state/media/container algebra   | Precompiled helper gates and parameter utility                    |
+| Overlapping rule precedence           | Shared plan order, independent of class order                     |
+| Cross-part/relation facts             | Supplied by the mounted host registry                             |
+| Classes-only browser conditions       | Rejected: arbitrary overlap needs a conditional parameter channel |
+| General utility/shorthand inference   | Rejected: utility names do not establish field equivalence        |
+| Native host                           | Rejected: this output requires CSS utility classes                |
+| Arbitrary web selector/grid extension | Requires an adapter for that extension; no silent fallback        |
 
 Caller `className` ownership is preserved during patches and cleanup. That does not
 promise an arbitrary caller utility wins a CSS conflict; applications own their CSS

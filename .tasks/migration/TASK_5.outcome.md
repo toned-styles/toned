@@ -11,16 +11,19 @@ Implemented several key improvements to toned-core including refactoring the rul
 The transformation logic was moved directly into `StyleMatcher.ts`, eliminating a redundant processing step. StyleMatcher now handles both the new flat API format and internal format directly.
 
 **Before:**
+
 ```
 StyleSheet.ts → transformRulesToInternal() → StyleMatcher
 ```
 
 **After:**
+
 ```
 StyleSheet.ts → StyleMatcher (handles format directly)
 ```
 
 Key changes in `StyleMatcher.ts`:
+
 - Added `isElementKey()` helper to identify element names
 - Added `isCrossElementSelector()` helper to identify cross-element selectors like `'container:hover'`
 - Updated `flattenRules()` to handle:
@@ -47,6 +50,7 @@ stylesheet({
 ```
 
 Implementation:
+
 - Updated `parseSelector()` to return `'true'` for boolean variants
 - Updated `parseCombinedSelector()` to handle both `[key=value]` and `[key]` formats
 
@@ -60,15 +64,18 @@ const baseButton = stylesheet({
   label: { fontWeight: 'medium' },
 })
 
-const primaryButton = baseButton.extend({
-  container: { bgColor: 'primary' },
-  label: { textColor: 'on_primary' },
-}).variants<{ size: 'sm' | 'md' }>({
-  '[size=sm]': { container: { paddingX: 2 } },
-})
+const primaryButton = baseButton
+  .extend({
+    container: { bgColor: 'primary' },
+    label: { textColor: 'on_primary' },
+  })
+  .variants<{ size: 'sm' | 'md' }>({
+    '[size=sm]': { container: { paddingX: 2 } },
+  })
 ```
 
 Implementation:
+
 - Added `deepMerge()` helper for recursive object merging
 - Added `extend()` method to stylesheet that deep merges rules
 
@@ -83,6 +90,7 @@ setConfig({
 ```
 
 When enabled, logs:
+
 - `[toned:debug] matchStyles` - Shows modsState and computed styles
 - `[toned:debug] applyState` - Shows state changes
 
@@ -97,6 +105,7 @@ When enabled, logs:
 ## Test Coverage
 
 Added new tests for:
+
 - Boolean variants: 2 tests
 - `.extend()` method: 3 tests
 
@@ -114,6 +123,7 @@ Total: 32 tests passing
 ## Remaining Items
 
 The following items from TASK_5.md were not implemented in this pass:
+
 - Breakpoints/media matching optimization for native
 - CSS media vars technique for precompiled styles
 - Adapter support (tailwind, react-native-unistyles)

@@ -93,11 +93,12 @@ type InferStatePseudos<R> = R extends { states?: infer States }
     : never
   : never
 
-type InferStateChannels<S> = InferStatePseudos<S> extends infer P extends string
-  ? P extends `:${infer Name}`
-    ? `:src-${Name}` | `:sib-${Name}`
+type InferStateChannels<S> =
+  InferStatePseudos<S> extends infer P extends string
+    ? P extends `:${infer Name}`
+      ? `:src-${Name}` | `:sib-${Name}`
+      : never
     : never
-  : never
 
 /** String, number, or symbol (for object keys) */
 type StringOrNumber = string | number | symbol
@@ -134,7 +135,7 @@ type Override<L, R> = Omit<L, keyof R> & R
  * `t({ bgColor: 'a' }, { bgColor: 'b' })` to `never`. An argument that may be
  * falsy only may apply, so it widens the result instead of replacing it.
  */
-// biome-ignore lint/suspicious/noExplicitAny: tuple manipulation requires any[]
+// oxlint-disable-next-line typescript/no-explicit-any -- tuple manipulation requires any[]
 type Merge<D extends any[], Acc = object> = D extends [
   infer First,
   ...infer Rest,
@@ -237,10 +238,9 @@ export type ElementStyleNew<
   /** @deprecated Use $kind. */
   $$type?: Static extends true ? ET : never
 } & {
-  [P in
-    | AvailablePseudo
-    | InferStateChannels<S>
-    | `:${string}:${string}`]?: ElementStyleNew<
+  [
+    P in AvailablePseudo | InferStateChannels<S> | `:${string}:${string}`
+  ]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
@@ -250,9 +250,9 @@ export type ElementStyleNew<
     false
   >
 } & {
-  [B in AvailableBreakpoints as
-    | `@${B & string}`
-    | `@media ${B & string}`]?: ElementStyleNew<
+  [
+    B in AvailableBreakpoints as `@${B & string}` | `@media ${B & string}`
+  ]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
@@ -262,10 +262,9 @@ export type ElementStyleNew<
     false
   >
 } & {
-  [K in
-    | InferContainerAliases<S>
-    | ConditionExprKeys<S>
-    | QueryKey]?: ElementStyleNew<
+  [
+    K in InferContainerAliases<S> | ConditionExprKeys<S> | QueryKey
+  ]?: ElementStyleNew<
     S,
     AvailablePseudo,
     AvailableBreakpoints,
@@ -689,11 +688,13 @@ export type StylesheetInput<
 } & {
   // Pre-filtered by shape: the `infer … extends Elements` match is the costly
   // part, and a plain part name can never be a cross-element key.
-  [K in keyof T as K extends `${string}:${string}` | `${string}~${string}`
-    ? IsCrossElementKey<K, Elements, S> extends true
-      ? K
+  [
+    K in keyof T as K extends `${string}:${string}` | `${string}~${string}`
+      ? IsCrossElementKey<K, Elements, S> extends true
+        ? K
+        : never
       : never
-    : never]?: ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>
+  ]?: ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>
 } & {
   /** Target of a written cross-element key when the rules type is generic
    *  (override rules): ValidateDeclaration resolves it by key shape. */
@@ -703,13 +704,11 @@ export type StylesheetInput<
     DeclarationKinds<S, T, Elements, Kinds>
   >
 } & {
-  [B in (keyof InferBreakpoints<S> & string) | InferContainerConditions<S> as
-    | `@${B}`
-    | `@media ${B}`]?: ElementMap<
-    S,
-    Elements,
-    DeclarationKinds<S, T, Elements, Kinds>
-  >
+  [
+    B in (keyof InferBreakpoints<S> & string) | InferContainerConditions<S> as
+      | `@${B}`
+      | `@media ${B}`
+  ]?: ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>
 } & {
   /**
    * Condition-EXPRESSION blocks — see ConditionExprKeys for why these are
@@ -1048,9 +1047,9 @@ type VariantEditorShape<T> = T extends readonly unknown[]
   ? T
   : T extends object
     ? {
-        [K in keyof T as [NonNullable<T[K]>] extends [never]
-          ? never
-          : K]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
+        [
+          K in keyof T as [NonNullable<T[K]>] extends [never] ? never : K
+        ]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
       }
     : T extends null | undefined
       ? T
@@ -1078,11 +1077,13 @@ type VariantEditorElement<
 > = VariantEditorTop<AuthoredElementStyle<S, Kind, never, Host>>
 
 type VariantEditorTop<T> = {
-  [K in keyof T as K extends '$kind' | '$$type'
-    ? never
-    : [NonNullable<T[K]>] extends [never]
+  [
+    K in keyof T as K extends '$kind' | '$$type'
       ? never
-      : K]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
+      : [NonNullable<T[K]>] extends [never]
+        ? never
+        : K
+  ]: K extends QueryKey ? T[K] : VariantEditorShape<T[K]>
 }
 
 /**
@@ -1114,17 +1115,13 @@ export type VariantEditorDef<
     Host
   >
 } & {
-  [P in Platform as Host extends Platform
-    ? P extends Host
-      ? `@platform.${P}` | `@platform ${P}`
-      : never
-    : `@platform.${P}` | `@platform ${P}`]?: VariantEditorDef<
-    S,
-    Elements,
-    Named,
-    Kinds,
-    P
-  >
+  [
+    P in Platform as Host extends Platform
+      ? P extends Host
+        ? `@platform.${P}` | `@platform ${P}`
+        : never
+      : `@platform.${P}` | `@platform ${P}`
+  ]?: VariantEditorDef<S, Elements, Named, Kinds, P>
 }
 
 /** Explicit constructor for excess-key checking inside callback return values. */
@@ -1193,10 +1190,9 @@ export type VariantsCallback<
  * Stylesheet with variants() method for adding conditional styles.
  */
 type ExtendKinds<Existing, Extension> = {
-  [E in (keyof Existing | PickString<ExtractElements<Extension>>) &
-    string]: E extends keyof Existing
-    ? Existing[E]
-    : InferElementType<Extension, E>
+  [
+    E in (keyof Existing | PickString<ExtractElements<Extension>>) & string
+  ]: E extends keyof Existing ? Existing[E] : InferElementType<Extension, E>
 }
 
 export interface StylesheetWithVariants<

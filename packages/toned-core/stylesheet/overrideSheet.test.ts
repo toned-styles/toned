@@ -1,10 +1,11 @@
-import type { Variants } from '../types/index.ts'
 import { expect, test, vi } from 'vitest'
-import * as variantProcessing from './variantProcessing.ts'
+
 import { buildStyles } from '../build/index.ts'
 import { createNativeRenderer, createWebRenderer } from '../server/index.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
+import type { Variants } from '../types/index.ts'
 import { overrideSheet } from './overrideSheet.ts'
+import * as variantProcessing from './variantProcessing.ts'
 
 const ui = defineSystem({
   id: 'pure-overrides',

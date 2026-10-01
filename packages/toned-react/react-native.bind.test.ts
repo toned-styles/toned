@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import nativeConfig from './react-native.ts'
 
 /**

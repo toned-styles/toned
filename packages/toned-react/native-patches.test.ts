@@ -15,6 +15,7 @@ const fixtureNativeHost: NativeHostAdapter = {
 import { defineSystem } from '@toned/core'
 import { Base } from '@toned/core/stylesheet'
 import { describe, expect, test } from 'vitest'
+
 import native from './react-native.ts'
 
 function setup() {

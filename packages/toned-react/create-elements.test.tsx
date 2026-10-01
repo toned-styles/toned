@@ -1,11 +1,12 @@
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 // @vitest-environment happy-dom
 import type { Variants } from '@toned/core'
-import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import * as React from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, expect, test } from 'vitest'
+
 import { createElements as runtimeCreateElements } from './create-elements.tsx'
 import {
   ConfigProvider,

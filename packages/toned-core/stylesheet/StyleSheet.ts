@@ -62,7 +62,7 @@ import {
 } from './variantProcessing.ts'
 import { createVariantSelector } from './variantSelector.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
+// oxlint-disable-next-line typescript/no-explicit-any -- internal type alias for dynamic stylesheet values
 type AnyValue = any
 
 function sameBridgeProps(
@@ -399,7 +399,7 @@ export function createStylesheet<
  * TokenSystem<TokenStyleDeclaration> and pinning it to the open declaration
  * rejects every real system.
  */
-// biome-ignore lint/suspicious/noExplicitAny: the runtime engine is system-agnostic
+// oxlint-disable-next-line typescript/no-explicit-any -- the runtime engine is system-agnostic
 type BaseRef = TokenSystem<any>
 type BaseRules = AnyValue
 
@@ -1027,7 +1027,7 @@ export class Base {
     return this.applyTokens(this.matcher.match(facts)[key], key, facts)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
+  // oxlint-disable-next-line typescript/no-explicit-any -- return type is dynamic based on token system
   private tokenOutputs?: Map<
     string | undefined,
     WeakMap<object, { tokens: Tokens; output: AnyValue }>

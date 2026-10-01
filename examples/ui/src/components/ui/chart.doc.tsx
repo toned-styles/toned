@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import {
   type ChartConfig,
   ChartContainer,

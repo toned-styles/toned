@@ -1,5 +1,5 @@
-import { normalizeRules } from './normalizeRules.ts'
 import type { RuleObject } from '../rule-protocol.ts'
+import { normalizeRules } from './normalizeRules.ts'
 
 type Normalization = ReturnType<typeof normalizeRules>
 

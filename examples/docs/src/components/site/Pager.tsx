@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import type { NavItem } from '../../content/nav.ts'
 import { pagerStyles } from '../../styles/site.ts'
 

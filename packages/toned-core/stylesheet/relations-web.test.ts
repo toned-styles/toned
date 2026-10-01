@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { expect, test } from 'vitest'
+
 import { subscribeWebRelations } from './relations-web.ts'
 
 const mutations = () => new Promise((resolve) => setTimeout(resolve, 0))

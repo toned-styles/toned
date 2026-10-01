@@ -1,5 +1,5 @@
-import type { Variants } from './index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
+import type { Variants } from './index.ts'
 
 const ui = defineSystem(
   {

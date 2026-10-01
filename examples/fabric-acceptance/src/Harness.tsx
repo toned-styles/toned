@@ -11,6 +11,7 @@ import {
   View,
   type ViewProps,
 } from 'react-native'
+
 import { AdaptiveScenario } from './AdaptiveScenario.tsx'
 import { config } from './host.ts'
 import { MotionScenario } from './MotionScenario.tsx'

@@ -25,17 +25,14 @@ type Unescape<S extends string> = Replace<
   '%25',
   '%'
 >
-type ValueMatches<
-  Mods,
-  Axis extends string,
-  Value extends string,
-> = Unescape<Axis> extends keyof Mods
-  ? Value extends '*'
-    ? true
-    : Unescape<Value> extends `${Exclude<Mods[Unescape<Axis>], undefined> & (string | number | boolean)}`
+type ValueMatches<Mods, Axis extends string, Value extends string> =
+  Unescape<Axis> extends keyof Mods
+    ? Value extends '*'
       ? true
-      : false
-  : false
+      : Unescape<Value> extends `${Exclude<Mods[Unescape<Axis>], undefined> & (string | number | boolean)}`
+        ? true
+        : false
+    : false
 
 type AttributeMatches<
   Attribute extends string,

@@ -1,4 +1,5 @@
 import { expect, test, vi } from 'vitest'
+
 import { createAdaptiveStore, defineAdaptiveLayout } from './index.ts'
 import { nativeAdaptiveLayout } from './native.ts'
 import { observeAdaptiveContainer, observeAdaptiveViewport } from './web.ts'

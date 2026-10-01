@@ -6,12 +6,12 @@ This is a microbenchmark, not a performance gate. It measures seven rounds after
 
 Measured on macOS arm64 with Bun 1.3.14. Other implementation work was running on the machine, so these figures should be repeated on an idle machine before treating differences as release targets. This benchmark does not measure React render counts, host writes, layout, or mobile-device behavior.
 
-| Fixture | Version | Incorrect states | Compile µs | Cache hit µs | Uncached match µs | Equality µs | Reference evaluator µs |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| small-16-facts | checkpoint | 0 | 52.721 | 0.264 | 0.308 | 0.014 | 2.771 |
-| small-16-facts | current | 0 | 88.43 | 0.197 | 0.699 | 0.011 | 1.326 |
-| large-80-facts | checkpoint | 512 | 358.225 | 0.271 | 0.437 | 0.014 | 6.325 |
-| large-80-facts | current | 0 | 438.41 | 0.835 | 8.981 | 0.046 | 6.868 |
+| Fixture        | Version    | Incorrect states | Compile µs | Cache hit µs | Uncached match µs | Equality µs | Reference evaluator µs |
+| -------------- | ---------- | ---------------: | ---------: | -----------: | ----------------: | ----------: | ---------------------: |
+| small-16-facts | checkpoint |                0 |     52.721 |        0.264 |             0.308 |       0.014 |                  2.771 |
+| small-16-facts | current    |                0 |      88.43 |        0.197 |             0.699 |       0.011 |                  1.326 |
+| large-80-facts | checkpoint |              512 |    358.225 |        0.271 |             0.437 |       0.014 |                  6.325 |
+| large-80-facts | current    |                0 |     438.41 |        0.835 |             8.981 |       0.046 |                  6.868 |
 
 Rule parts and operation arrays are pre-indexed during compilation, and exact result metadata is held in a WeakMap. Updates do not enumerate rule objects or create metadata properties on every result. The current small-plan cache-hit path remains comparable in this run. Construction and uncached matching are slower: ordered operation provenance and exact membership add work that the checkpoint omitted. Keep compilation shared by stylesheet and use the bounded state cache; do not move declaration construction into update paths. The large checkpoint produced the wrong result for every sampled state because its fact bits wrap after 32, so its lower match time is not a valid performance target. The current implementation matched the reference for every state in both fixtures.
 
@@ -31,16 +31,16 @@ not with the original checkpoint. Both versions produce correct results in all
 and detects its available host/build APIs, so a recent comparison cannot borrow
 current helper modules or accidentally use the original checkpoint's host protocol.
 
-| Measurement | `1733fea` | Follow-up |
-| --- | ---: | ---: |
-| Small matcher compilation, µs | 43.874 | 47.686 |
-| Small uncached match, µs | 0.447 | 0.423 |
-| Large matcher compilation, µs | 221.951 | 230.587 |
-| Large uncached match, µs | 5.022 | 2.319 |
-| Large cache hit, µs | 0.455 | 0.330 |
-| Shared controller construction, µs | 0.618 | 0.406 |
-| Cold 43-part compilation, µs | 276.168 | 295.213 |
-| Warm React mount, ms | 1.848 | 2.004 |
+| Measurement                          |     `1733fea` |     Follow-up |
+| ------------------------------------ | ------------: | ------------: |
+| Small matcher compilation, µs        |        43.874 |        47.686 |
+| Small uncached match, µs             |         0.447 |         0.423 |
+| Large matcher compilation, µs        |       221.951 |       230.587 |
+| Large uncached match, µs             |         5.022 |         2.319 |
+| Large cache hit, µs                  |         0.455 |         0.330 |
+| Shared controller construction, µs   |         0.618 |         0.406 |
+| Cold 43-part compilation, µs         |       276.168 |       295.213 |
+| Warm React mount, ms                 |         1.848 |         2.004 |
 | Distinct override mount / update, ms | 6.440 / 2.315 | 7.294 / 2.934 |
 
 Candidate indexing approximately halves this large fixture's uncached matching;
@@ -94,11 +94,11 @@ height: 32 }` as raw style on each of the 42 cold-sheet day parts and each of th
 are unchanged; the report names its workload `raw-style` or `scalar-tokens`.
 Before adding the switch, two guarded runs of that exact source variant measured:
 
-| Raw-style workload | `768182d`, run 1 / run 2 | Follow-up, run 1 / run 2 |
-| --- | ---: | ---: |
-| Cold 43-part compilation, µs | 463.4 / 475.3 | 407.2 / 417.7 |
-| Distinct override mount, ms | 7.566 / 8.015 | 7.658 / 8.473 |
-| Distinct override update, ms | 3.078 / 3.472 | 3.460 / 3.359 |
+| Raw-style workload           | `768182d`, run 1 / run 2 | Follow-up, run 1 / run 2 |
+| ---------------------------- | -----------------------: | -----------------------: |
+| Cold 43-part compilation, µs |            463.4 / 475.3 |            407.2 / 417.7 |
+| Distinct override mount, ms  |            7.566 / 8.015 |            7.658 / 8.473 |
+| Distinct override update, ms |            3.078 / 3.472 |            3.460 / 3.359 |
 
 Cold compilation improved about 12% in both raw-style runs. Override results are
 mixed or slower. These are macOS arm64/Bun 1.3.14 measurements on a shared machine,
@@ -136,18 +136,18 @@ fixture against `2fb925e` used identical guarded fixtures. All effective overrid
 null, kind and static-metadata checks remained enabled. Parent validation work
 was paused during these two pairs, though this remains a shared host:
 
-| Workload and measurement | `2fb925e` | Delivered follow-up |
-| --- | ---: | ---: |
-| Scalar shared construction, µs | 0.376 | 0.413 |
-| Scalar cold compilation, µs | 273.395 | 249.935 |
-| Scalar ordinary React mount, ms | 1.872 | 2.854 |
-| Scalar override mount, ms | 5.760 | 5.319 |
-| Scalar override update, ms | 2.215 | 2.107 |
-| Platform-style shared construction, µs | 0.384 | 0.395 |
-| Platform-style cold compilation, µs | 487.569 | 456.995 |
-| Platform-style ordinary React mount, ms | 1.831 | 1.819 |
-| Platform-style override mount, ms | 9.093 | 7.522 |
-| Platform-style override update, ms | 3.467 | 2.971 |
+| Workload and measurement                | `2fb925e` | Delivered follow-up |
+| --------------------------------------- | --------: | ------------------: |
+| Scalar shared construction, µs          |     0.376 |               0.413 |
+| Scalar cold compilation, µs             |   273.395 |             249.935 |
+| Scalar ordinary React mount, ms         |     1.872 |               2.854 |
+| Scalar override mount, ms               |     5.760 |               5.319 |
+| Scalar override update, ms              |     2.215 |               2.107 |
+| Platform-style shared construction, µs  |     0.384 |               0.395 |
+| Platform-style cold compilation, µs     |   487.569 |             456.995 |
+| Platform-style ordinary React mount, ms |     1.831 |               1.819 |
+| Platform-style override mount, ms       |     9.093 |               7.522 |
+| Platform-style override update, ms      |     3.467 |               2.971 |
 
 Cold compilation and override mounting/updates are lower in these final pairs.
 Shared construction is slower in both, and ordinary scalar React mounting is
@@ -228,26 +228,26 @@ On macOS arm64/Bun 1.3.14, the 2026-09-16 run before round-three review
 fixes reported the following. These timing rows describe that measured revision;
 the current-only gate below is rerun separately after review fixes.
 
-| Measurement | Checkpoint | Current |
-| --- | ---: | ---: |
-| Shared controller construction, µs | 0.269 | 0.581 |
-| Cold 43-part stylesheet compilation, µs | 44.412 | 289.73 |
-| Shared matcher instances for 42 controllers | 1 | 1 |
-| Shared portable plan instances for 42 controllers | — | 1 |
-| Changed transition / repeated state / reset writes | 42 / 0 / 42 | 42 / 0 / 42 |
-| Token resolver calls across transitions | 84 | 84 |
-| Warm React mount, ms | 1.276 | 2.467 |
-| Distinct per-child override mount / update, ms | 3.8 / 1.576 | 5.999 / 2.699 |
-| Override entry creations, mount / update | 42 / 2 | 42 / 2 |
-| Override variant-factory calls, mount / update | 84 / 84 | 42 / 2 |
-| Styling interaction React renders | 0 | 0 |
-| SSR HTML bytes, inline / CSS modes | 3,273 / 6,535 | 3,273 / 6,535 |
-| Generated CSS bytes | 1,196 | 2,959 |
-| Representative consumer typecheck, ms | 495.25 | 594.8 |
-| Plain inferred exported sheet declaration emit | TS4023 | Pass |
-| Consumer declaration bytes | 129,460* | 48,602 |
-| Emitted declaration closure bytes / files | 215,917 / 30* | 205,772 / 71 |
-| Retained disposed controllers / WeakRef samples | 0 / 5,000 | 0 / 5,000 |
+| Measurement                                        |    Checkpoint |       Current |
+| -------------------------------------------------- | ------------: | ------------: |
+| Shared controller construction, µs                 |         0.269 |         0.581 |
+| Cold 43-part stylesheet compilation, µs            |        44.412 |        289.73 |
+| Shared matcher instances for 42 controllers        |             1 |             1 |
+| Shared portable plan instances for 42 controllers  |             — |             1 |
+| Changed transition / repeated state / reset writes |   42 / 0 / 42 |   42 / 0 / 42 |
+| Token resolver calls across transitions            |            84 |            84 |
+| Warm React mount, ms                               |         1.276 |         2.467 |
+| Distinct per-child override mount / update, ms     |   3.8 / 1.576 | 5.999 / 2.699 |
+| Override entry creations, mount / update           |        42 / 2 |        42 / 2 |
+| Override variant-factory calls, mount / update     |       84 / 84 |        42 / 2 |
+| Styling interaction React renders                  |             0 |             0 |
+| SSR HTML bytes, inline / CSS modes                 | 3,273 / 6,535 | 3,273 / 6,535 |
+| Generated CSS bytes                                |         1,196 |         2,959 |
+| Representative consumer typecheck, ms              |        495.25 |         594.8 |
+| Plain inferred exported sheet declaration emit     |        TS4023 |          Pass |
+| Consumer declaration bytes                         |      129,460* |        48,602 |
+| Emitted declaration closure bytes / files          | 215,917 / 30* |  205,772 / 71 |
+| Retained disposed controllers / WeakRef samples    |     0 / 5,000 |     0 / 5,000 |
 
 *The checkpoint cannot emit the plain inferred export: it requires the documented
 `SYMBOL_INIT`, `SYMBOL_REF` and `_internalBrand` type imports. Its byte measurements
@@ -304,7 +304,6 @@ if a 42-child selection move derives more than the two changed override entries,
 or if the exported consumer fails declaration emission or exceeds 64 KiB. No
 absolute wall-clock or heap threshold is enforced.
 
-
 ## Explicit-provider runtime follow-up against `7e3944c`
 
 Run from the HQ checkout with its installed dependencies:
@@ -332,16 +331,16 @@ precommit `7e3944c`; `sourceDigest` identifies the optimized working-tree source
 The checkpoint was extracted from Git, so this is not a same-source comparison.
 Each row below is the median of the five worker medians.
 
-| Measurement | `7e3944c` | Follow-up |
-| --- | ---: | ---: |
-| 42-cell mount / same-children provider update, ms | 3.640 / 3.213 | 2.869 / 0.071 |
-| 42-cell forced rerender / variant move / theme, ms | 2.961 / 2.792 / 3.143 | 2.114 / 2.289 / 3.131 |
-| 42-cell SSR, ms | 1.598 | 1.332 |
-| 250-cell mount / same-children provider update, ms | 10.739 / 14.774 | 11.506 / 0.099 |
-| 250-cell forced rerender / variant move / theme, ms | 13.084 / 14.073 / 18.306 | 11.169 / 11.739 / 15.320 |
-| 250-cell SSR, ms | 5.281 | 5.273 |
-| Explicit token-prop spread, µs | 25.103 | 15.642 |
-| Native JS-host mount/change/repeat/reset/dispose cycle, µs | 29.763 | 31.627 |
+| Measurement                                                |                `7e3944c` |                Follow-up |
+| ---------------------------------------------------------- | -----------------------: | -----------------------: |
+| 42-cell mount / same-children provider update, ms          |            3.640 / 3.213 |            2.869 / 0.071 |
+| 42-cell forced rerender / variant move / theme, ms         |    2.961 / 2.792 / 3.143 |    2.114 / 2.289 / 3.131 |
+| 42-cell SSR, ms                                            |                    1.598 |                    1.332 |
+| 250-cell mount / same-children provider update, ms         |          10.739 / 14.774 |           11.506 / 0.099 |
+| 250-cell forced rerender / variant move / theme, ms        | 13.084 / 14.073 / 18.306 | 11.169 / 11.739 / 15.320 |
+| 250-cell SSR, ms                                           |                    5.281 |                    5.273 |
+| Explicit token-prop spread, µs                             |                   25.103 |                   15.642 |
+| Native JS-host mount/change/repeat/reset/dispose cycle, µs |                   29.763 |                   31.627 |
 
 Work counts are the stronger evidence. An unchanged provider update drops from
 42/250 host-prop reads and 43/251 token resolver calls to zero. Forced child

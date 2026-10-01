@@ -1,8 +1,10 @@
 import { t } from '@toned/systems/base'
 import { ChevronDownIcon } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
-import { Button } from './button.tsx'
+
 import { ButtonGroup } from './button-group.tsx'
+import { Button } from './button.tsx'
 
 export default doc({
   description:

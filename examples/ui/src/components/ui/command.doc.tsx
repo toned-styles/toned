@@ -5,7 +5,9 @@ import {
   SettingsIcon,
   UserIcon,
 } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import {
   Command,
   CommandEmpty,

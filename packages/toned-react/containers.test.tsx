@@ -1,6 +1,3 @@
-// @vitest-environment happy-dom
-import type { Variants } from '@toned/core'
-
 /**
  * The RUNTIME half of container queries: an element declaring
  * `container: '<name>'` measures itself through the config's
@@ -10,6 +7,8 @@ import type { Variants } from '@toned/core'
  * toned-core (dom/generate.test.ts, system/definers.test.ts).
  */
 import { act, cleanup, render } from '@testing-library/react'
+// @vitest-environment happy-dom
+import type { Variants } from '@toned/core'
 import {
   dp,
   defineSystem,
@@ -19,6 +18,7 @@ import {
 } from '@toned/core'
 import * as React from 'react'
 import { afterEach, describe, expect, test } from 'vitest'
+
 import { bind, ContainerSizesContext, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
 

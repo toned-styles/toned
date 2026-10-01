@@ -3,6 +3,7 @@ import {
   type AdaptiveLayoutName,
   defineAdaptiveLayout,
 } from '@toned/core/adaptive'
+
 import { stylesheet } from '../../styles/system.ts'
 
 export const adaptiveLayout = defineAdaptiveLayout({

@@ -1,5 +1,6 @@
 import { useStyles } from '@toned/react'
 import { useEffect, useState } from 'react'
+
 import { proseStyles } from '../../styles/prose.ts'
 import { docsStyles } from '../../styles/site.ts'
 import { themesPageStyles } from '../../styles/themes/page.ts'
@@ -15,8 +16,8 @@ import {
 import themesSource from '../../styles/themes/themes.ts?raw'
 import tokensSource from '../../styles/themes/tokens.ts?raw'
 import { CodeBlock } from '../CodeBlock.tsx'
-import { SiteHeader } from '../SiteHeader.tsx'
 import { SiteFooter } from '../site/SiteFooter.tsx'
+import { SiteHeader } from '../SiteHeader.tsx'
 import controlsSource from './controls.tsx?raw'
 import { ReleaseApp } from './ReleaseApp.tsx'
 import { ThemeScope } from './ThemeScope.tsx'

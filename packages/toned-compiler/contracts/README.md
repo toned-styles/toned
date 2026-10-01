@@ -22,23 +22,44 @@ const suite = createScenarios({
   facts: { 'Root:focus-visible': [false, true] },
   themes: ['light', 'dark'],
   texts: ['Save', 'Save all changes to this document'],
-  viewports: [{ width: 320, height: 640 }, { width: 1200, height: 800 }],
+  viewports: [
+    { width: 320, height: 640 },
+    { width: 1200, height: 800 },
+  ],
 })
 const report = await verifyContracts({
   suite,
-  resolve: scenario => renderer.explain(button, {
-    variants: scenario.variants,
-    facts: scenario.facts,
-    tokens: themes[scenario.theme!],
-  }),
+  resolve: (scenario) =>
+    renderer.explain(button, {
+      variants: scenario.variants,
+      facts: scenario.facts,
+      tokens: themes[scenario.theme!],
+    }),
   // Apply text, viewport, theme and facts to the mounted specimen, settle layout,
   // and return observations in logical pixels. This adapter owns its browser/device.
   measure: (scenario, resolution) => measureButton(scenario, resolution),
   contracts: [
-    { id: 'target', kind: 'interaction-size', part: 'Root', minWidth: 44, minHeight: 44 },
-    { id: 'text', kind: 'contrast', part: 'Label', backgroundPart: 'Root', minRatio: 4.5 },
+    {
+      id: 'target',
+      kind: 'interaction-size',
+      part: 'Root',
+      minWidth: 44,
+      minHeight: 44,
+    },
+    {
+      id: 'text',
+      kind: 'contrast',
+      part: 'Label',
+      backgroundPart: 'Root',
+      minRatio: 4.5,
+    },
     { id: 'overflow', kind: 'overflow', part: 'Label', axis: 'x' },
-    { id: 'focus', kind: 'focus', part: 'Root', when: { fact: 'Root:focus-visible', equals: true } },
+    {
+      id: 'focus',
+      kind: 'focus',
+      part: 'Root',
+      when: { fact: 'Root:focus-visible', equals: true },
+    },
   ],
 })
 ```

@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { defineSystem, defineTokenFor } from '../index.ts'
 import { assertBuildArtifact, buildStyles, generateThemes } from './index.ts'
 

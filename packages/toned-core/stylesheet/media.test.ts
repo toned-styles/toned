@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from 'vitest'
+
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { initMedia } from './media.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: test helper for globalThis access
 const g = globalThis as any
 
 const createMockSystem = (breakpoints?: Record<string, number>) =>
@@ -47,7 +47,6 @@ describe('initMedia', () => {
   describe('SSR safety', () => {
     test('does not crash when window is undefined', () => {
       const originalWindow = g.window
-      // biome-ignore lint/performance/noDelete: need to simulate SSR where window is truly absent
       delete g.window
 
       try {
@@ -64,7 +63,6 @@ describe('initMedia', () => {
 
     test('returns emitter with empty data when no breakpoints configured', () => {
       const originalWindow = g.window
-      // biome-ignore lint/performance/noDelete: need to simulate SSR where window is truly absent
       delete g.window
 
       try {
@@ -86,7 +84,6 @@ describe('initMedia', () => {
       } as unknown as TokenSystem<TokenStyleDeclaration>
 
       const originalWindow = g.window
-      // biome-ignore lint/performance/noDelete: need to simulate SSR where window is truly absent
       delete g.window
 
       try {

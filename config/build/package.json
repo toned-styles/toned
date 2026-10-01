@@ -4,11 +4,11 @@
   "type": "module",
   "main": "build.ts",
   "dependencies": {
+    "@rollup/plugin-multi-entry": "^6.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
     "rollup": "^4.46.3",
     "rollup-copy-transform-css": "^2.1.0",
     "rollup-plugin-copy": "^3.5.0",
-    "@rollup/plugin-multi-entry": "^6.0.1",
-    "@rollup/plugin-typescript": "^12.1.4",
     "tslib": "^2.8.1"
   },
   "devDependencies": {

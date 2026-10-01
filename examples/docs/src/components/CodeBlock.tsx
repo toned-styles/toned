@@ -1,5 +1,6 @@
 import { useStyles } from '@toned/react'
 import { Fragment, useMemo, useState } from 'react'
+
 import { highlight, languageLabel, resolveLanguage } from '../highlight.ts'
 import { proseStyles } from '../styles/prose.ts'
 import { codeStyles } from '../styles/site.ts'
@@ -64,7 +65,7 @@ export function CodeBlock({
         {...s.Pre.with(
           maxHeight ? { style: { maxHeight, overflowY: 'auto' } } : undefined,
         )}
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll wide code.
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll wide code.
         tabIndex={0}
       >
         <code>

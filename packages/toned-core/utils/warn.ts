@@ -26,7 +26,6 @@ const isDev = (): boolean => {
 export function warnOnce(key: string, message: string) {
   if (!isDev() || warned.has(key)) return
   warned.add(key)
-  // biome-ignore lint/suspicious/noConsole: the whole point
   console.warn(`[toned] ${message}`)
 }
 

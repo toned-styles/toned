@@ -4,6 +4,7 @@ import { stylesheet } from '@toned/systems/base'
 import { PanelLeftIcon } from 'lucide-react'
 import { Slot } from 'radix-ui'
 import * as React from 'react'
+
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
 import { Separator } from '@/components/ui/separator.tsx'
@@ -568,15 +569,14 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
           {...s.sidebarInner.with({
-            style: {
-              ...(variant === 'floating'
+            style:
+              variant === 'floating'
                 ? {
                     borderRadius: 'calc(var(--radius) + 2px)',
                     border: '1px solid var(--sidebar-border)',
                     boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
                   }
-                : {}),
-            },
+                : {},
           })}
         >
           {children}

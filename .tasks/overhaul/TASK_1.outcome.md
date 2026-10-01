@@ -37,6 +37,7 @@ Deleted unused type definitions that were no longer referenced anywhere in the c
 ### 4. Code Organization
 
 Types are now organized into logical sections:
+
 1. SYMBOLS
 2. TOKEN TYPES
 3. STYLE TYPES
@@ -47,15 +48,15 @@ Types are now organized into logical sections:
 
 ## Remaining `any` Types (Justified)
 
-| Location | Type | Justification |
-|----------|------|---------------|
-| L39 | `Tokens = Record<string, any>` | Dynamic user-defined token values |
-| L56 | `TokenConfig<Values extends readonly any[], Result>` | Required for const generic tuple inference |
-| L85,87 | Index signatures | Must accept all TokenConfig/Breakpoints variants |
-| L96 | `InlineStyle = any` | CSS properties vary by platform |
-| L124 | `Merge<D extends any[]>` | Required for tuple manipulation |
-| L171 | `this: any` in getProps | Context varies by usage pattern |
-| L367,369 | `Breakpoints<any>` | Generic default parameters |
+| Location | Type                                                 | Justification                                    |
+| -------- | ---------------------------------------------------- | ------------------------------------------------ |
+| L39      | `Tokens = Record<string, any>`                       | Dynamic user-defined token values                |
+| L56      | `TokenConfig<Values extends readonly any[], Result>` | Required for const generic tuple inference       |
+| L85,87   | Index signatures                                     | Must accept all TokenConfig/Breakpoints variants |
+| L96      | `InlineStyle = any`                                  | CSS properties vary by platform                  |
+| L124     | `Merge<D extends any[]>`                             | Required for tuple manipulation                  |
+| L171     | `this: any` in getProps                              | Context varies by usage pattern                  |
+| L367,369 | `Breakpoints<any>`                                   | Generic default parameters                       |
 
 ## Metrics
 

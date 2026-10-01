@@ -3,6 +3,7 @@ import { observeAdaptiveContainer } from '@toned/core/adaptive/web'
 import { createElements, useStyles } from '@toned/react'
 import { useAdaptiveVariants } from '@toned/react/adaptive'
 import { useEffect, useRef, useState } from 'react'
+
 import { libraryStyles } from '../../styles/library.ts'
 import { ShowcaseProvider } from '../ShowcaseProvider.tsx'
 import { adaptiveLayout, adaptiveStyles } from './adaptive.styles.ts'

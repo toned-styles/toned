@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { compileWebRules, webRules } from './rules.ts'
 
 test('webRules emits anchored selectors and preserves CSS numeric serialization', () => {

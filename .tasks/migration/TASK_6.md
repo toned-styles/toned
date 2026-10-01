@@ -9,11 +9,13 @@ TASK_5 was not fully completed. This task addresses the remaining issues to ensu
 ### 1. Module Path Errors in Examples
 
 Examples import non-existent paths:
+
 - `@toned/react/new/react-web` → should be `@toned/react/react-web`
 - `@toned/react/new/react-native` → should be `@toned/react/react-native`
 - `@toned/react/new/ctx.native` → should be `@toned/react/ctx.native`
 
 Files affected:
+
 - `examples/email/toned.config.ts`
 - `examples/email/App.tsx`
 - `examples/expo-app/toned.config.ts`
@@ -32,6 +34,7 @@ The `useStyles` function returns `Record<never, never>` which causes property ac
 ### 4. Lint Warnings
 
 Fix remaining lint issues:
+
 - `noExplicitAny` in `StyleMatcher.ts:539` (isEqual function)
 - `noExplicitAny` in `initMedia.ts:34` (Emitter class)
 - `noExplicitAny` in `definers.ts:81, 122`

@@ -32,7 +32,6 @@ queued ownership validation. See [`../hosts/README.md`](../hosts/README.md) for
 the host integration lifecycle and [`../core/README.md`](../core/README.md) for
 portable declaration compilation.
 
-
 ## Update work and cache bounds
 
 The matcher compiles a fact-to-part dependency index. Direct updates visit only

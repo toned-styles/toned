@@ -16,24 +16,29 @@ export const system = defineSystem({
   tokens: {
     tone: defineToken({
       values: ['neutral', 'accent'] as const,
-      resolve: value => ({ backgroundColor: value === 'accent' ? '#315bd6' : '#eee' }),
+      resolve: (value) => ({
+        backgroundColor: value === 'accent' ? '#315bd6' : '#eee',
+      }),
     }),
     padding: defineToken({
       values: [1, 2] as const,
-      resolve: step => ({ padding: step * 4 }),
+      resolve: (step) => ({ padding: step * 4 }),
     }),
   },
 })
 
 export const buttonStyles = system
-  .stylesheet(q => ({
-    Root: { $kind: 'pressable', tone: 'neutral', [q.state('hover')]: { tone: 'accent' } },
+  .stylesheet((q) => ({
+    Root: {
+      $kind: 'pressable',
+      tone: 'neutral',
+      [q.state('hover')]: { tone: 'accent' },
+    },
   }))
   .variants(($: Variants<{ size: 's' | 'm' }>) => ({
     [$.size('s')]: { Root: { padding: 1 } },
     [$.size('m')]: { Root: { padding: 2 } },
   }))
-
 ```
 
 ```tsx
@@ -50,7 +55,9 @@ const S = createElements(buttonStyles)
 function Button() {
   return (
     <S size="s">
-      <S.Root as="button" type="button">Save</S.Root>
+      <S.Root as="button" type="button">
+        Save
+      </S.Root>
     </S>
   )
 }
@@ -177,11 +184,12 @@ The checked factory accepts defaults as its second argument:
 
 ```tsx
 type ButtonVariants = { size: 's' | 'm'; active: boolean }
-const sheet = system.stylesheet({ Root: { $kind: 'pressable' } })
-  .variants(
-    ($: Variants<ButtonVariants>) => ({ [$.size('s')]: { Root: { padding: 1 } } }),
-    { defaults: { size: 'm' } },
-  )
+const sheet = system.stylesheet({ Root: { $kind: 'pressable' } }).variants(
+  ($: Variants<ButtonVariants>) => ({
+    [$.size('s')]: { Root: { padding: 1 } },
+  }),
+  { defaults: { size: 'm' } },
+)
 const s = useStyles(sheet, { active: false })
 ```
 
@@ -196,7 +204,11 @@ stable component functions and an immutable `$props` map for this render:
 
 ```tsx
 const s = useBind(buttonStyles, { size: 's' })
-return <button {...s.$props.Root.withProps<'button'>({ type: 'submit', disabled: true })} />
+return (
+  <button
+    {...s.$props.Root.withProps<'button'>({ type: 'submit', disabled: true })}
+  />
+)
 ```
 
 `withProps<Host>` checks the selected intrinsic or component's props; without a
@@ -273,9 +285,11 @@ import { TonedProvider } from '@toned/react'
 import { webHost as web } from '@toned/react/hosts/web'
 
 const renderer = createWebRenderer(system, { manifest })
-return <TonedProvider renderer={renderer} host={web} theme={currentTokens}>
-  <Application />
-</TonedProvider>
+return (
+  <TonedProvider renderer={renderer} host={web} theme={currentTokens}>
+    <Application />
+  </TonedProvider>
+)
 ```
 
 The renderer is pure and owns the system, backend and build validation. The host
@@ -382,7 +396,6 @@ Native direct patches now require an explicit `nativeHost` adapter. See
 semantics and the distinction between adapter fixture tests and concrete renderer
 certification. A `setNativeProps` member alone never enables native support.
 
-
 ## React version conformance
 
 The HQ consumer runs `bun scripts/build/test-toned-react-versions.ts` in CI. It
@@ -421,9 +434,13 @@ function Panel() {
   const motion = useMotion(fade)
   return present ? (
     <S.Root ref={motion.ref}>
-      <button onClick={async () => {
-        if (await motion.exit() === 'finished') setPresent(false)
-      }}>Close</button>
+      <button
+        onClick={async () => {
+          if ((await motion.exit()) === 'finished') setPresent(false)
+        }}
+      >
+        Close
+      </button>
     </S.Root>
   ) : null
 }

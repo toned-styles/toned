@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+
+import { createVariantSelector } from '../stylesheet/variantSelector.ts'
 import { createQueries } from './queries.ts'
 import { bindQueryPart, decodeQuery, type QueryKey } from './query-key.ts'
-import { createVariantSelector } from '../stylesheet/variantSelector.ts'
 const q = createQueries<{ breakpoints: { __breakpoints: { md: 768 } } }>()
 describe('computed query protocol', () => {
   it('is deterministic across builders and retains selector strings', () => {

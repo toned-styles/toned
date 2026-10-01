@@ -48,6 +48,7 @@ packages/toned-core/
 ## Changes Made
 
 ### 1. Created Modular Directory Structure
+
 - `types/` - All type definitions split by domain
 - `system/` - System definition and configuration
 - `stylesheet/` - Stylesheet and matching logic
@@ -55,7 +56,9 @@ packages/toned-core/
 - `utils/` - Shared utilities and symbols
 
 ### 2. Added Package Exports
+
 Updated `package.json` with subpath exports:
+
 ```json
 "exports": {
   ".": "./index.ts",
@@ -68,22 +71,26 @@ Updated `package.json` with subpath exports:
 ```
 
 ### 3. Updated All Imports
+
 - Updated imports in `toned-core` to use new paths
 - Updated imports in `toned-react` to use main exports
 - Updated imports in `toned-systems` to use main exports
 - Updated imports in `toned/scripts` to use main exports
 
 ### 4. Renamed Files
+
 - `initMedia.ts` → `media.ts` (clearer naming)
 - Consolidated `StyleSheet/` and `StyleMatcher/` into single `stylesheet/` directory
 
 ### 5. Removed Old Files
+
 - Deleted: `config.ts`, `definers.ts`, `dom.ts`, `types.ts`, `utils.ts` (root level)
 - Cleaned up: `.dist/` directory
 
 ## Import Patterns
 
 ### Before
+
 ```typescript
 import { getConfig } from '@toned/core/config.js'
 import { SYMBOL_INIT } from '@toned/core/types.js'
@@ -91,6 +98,7 @@ import type { Base } from '@toned/core/StyleSheet/StyleSheet.ts'
 ```
 
 ### After
+
 ```typescript
 import { getConfig, SYMBOL_INIT } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'

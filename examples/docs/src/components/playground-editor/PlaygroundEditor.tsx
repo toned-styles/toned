@@ -8,13 +8,14 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import { playgroundEditorStyles } from '../../styles/playground-editor.ts'
 import { CodeEditor, type CodeEditorHandle } from './CodeEditor.tsx'
 import type { LanguageProblem } from './language/protocol.ts'
 import { useLanguage } from './language/useLanguage.ts'
 import { CompiledOutput, GeneratedCss, ResolvedStyles } from './Outputs.tsx'
-import { PreviewStage } from './Preview.tsx'
 import { defaultPreset, findPreset, presets } from './presets.ts'
+import { PreviewStage } from './Preview.tsx'
 import {
   type Axis,
   type Compiled,

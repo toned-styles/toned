@@ -5,6 +5,7 @@
  * guard outcomes, without depending on private parameter names.
  */
 import { describe, expect, test } from 'vitest'
+
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { generate } from '../dom/generate.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
@@ -71,9 +72,7 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
       },
     }))
 
-  // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
   const styleFor = (state: Record<string, unknown>): any => {
-    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
     const base = (sheet as any)[SYMBOL_INIT](config, state)
     return base.getCurrentStyle('root').style
   }
@@ -91,7 +90,6 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
   })
 
   test('no runtime interaction handlers are armed for self pseudos in css mode', () => {
-    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
     const base = (sheet as any)[SYMBOL_INIT](config, { variant: 'solid' })
     expect(base.matcher.interactions['root']).toBeUndefined()
   })
@@ -100,7 +98,6 @@ describe('pseudo keys inside variant element blocks, css mode', () => {
     const alphaSheet = system.stylesheet({
       root: { bgColor: 'primary', ':hover': { bgColor: 'primary/90' } },
     })
-    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
     const base = (alphaSheet as any)[SYMBOL_INIT](config, {})
     const style = base.getCurrentStyle('root').style
     expectPaint(style, { '--toned_hover': false }, 'primary')
@@ -113,7 +110,6 @@ describe('css-only pseudo states and the hover gate', () => {
     const sheet = system.stylesheet({
       root: { bgColor: 'primary', ':focus-visible': { bgColor: 'accent' } },
     })
-    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
     const base = (sheet as any)[SYMBOL_INIT](config, {})
     const style = base.getCurrentStyle('root').style
     expectPaint(style, { '--toned_focus-visible': false }, 'primary')
@@ -133,7 +129,6 @@ describe('css-only group hover (source channel)', () => {
     icon: { bgColor: 'muted', ':hover': { bgColor: 'primary' } },
     'root:hover': { icon: { bgColor: 'accent' } },
   })
-  // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
   const base: any = (sheet as any)[SYMBOL_INIT](config, {})
 
   test('the source carries the marker class, no runtime handlers armed', () => {
@@ -174,7 +169,6 @@ describe('breakpoint raw-style chains', () => {
       },
     })
     const mediaConfig = { ...config, useMedia: true, mediaMode: 'css' as const }
-    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
     const style = (sheet as any)
       [SYMBOL_INIT](mediaConfig, {})
       .getCurrentStyle('root').style
@@ -217,7 +211,6 @@ describe('declared states (data-state / attribute selectors)', () => {
         ':open': { bgColor: 'primary' },
       },
     })
-    // biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
     const style = (sheet as any)
       [SYMBOL_INIT](
         { ...config, useMedia: true, mediaMode: 'css' as const },

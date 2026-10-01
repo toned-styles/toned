@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import { docsNav, headerLinks } from '../../content/nav.ts'
 import { searchStyles } from '../../styles/search.ts'
 import {
@@ -132,9 +133,10 @@ function Option({
 }) {
   const s = useStyles(searchStyles, { active })
   return (
-    // biome-ignore lint/a11y/useFocusableInteractive: focus stays in the combobox input; options are reached through aria-activedescendant
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the combobox input handles the keyboard
+    // oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- focus stays in the combobox input; options are reached through aria-activedescendant
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- the combobox input handles the keyboard
     <div
+      tabIndex={0}
       id={id}
       role="option"
       aria-selected={active}
@@ -389,7 +391,7 @@ export function SearchPalette({
 
   let position = 0
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: a press on the scrim closes the dialog; Escape and the Close button do the same
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- a press on the scrim closes the dialog; Escape and the Close button do the same
     <div
       {...s.Overlay}
       onMouseDown={(event) => {

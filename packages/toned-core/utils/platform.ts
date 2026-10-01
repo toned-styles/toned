@@ -22,7 +22,7 @@ import { isGrid, isGridArea, resolveGrid } from '../grid/index.ts'
 import { declarationLayers } from '../stylesheet/removals.ts'
 import { RULE_LAYERS } from '../stylesheet/rule-protocol.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: rules are dynamically shaped
+// oxlint-disable-next-line typescript/no-explicit-any -- rules are dynamically shaped
 type AnyValue = any
 
 const PREFIX = '@platform.'

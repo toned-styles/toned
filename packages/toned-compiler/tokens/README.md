@@ -27,7 +27,10 @@ const library = importDtcg({
     button: { $value: '{space.small}', $description: 'Compact padding' },
   },
 })
-const values = mapDtcgTokens(library, token => [token.path.join('.'), token.value])
+const values = mapDtcgTokens(library, (token) => [
+  token.path.join('.'),
+  token.value,
+])
 const retainedDocument = exportDtcg(library)
 ```
 
@@ -55,7 +58,6 @@ characters. Alias/reference chains cap at 64, external sources at 128, expansion
 steps at 10,000 and merged fields at 200,000. Exceeding a resource budget throws
 before returning a misleading partial result. Source metadata may be exported
 losslessly as JSON structure even when its runtime interpretation is unsupported.
-
 
 Context overlays merge into private group accumulators. Existing accumulated
 fields are not recopied for each source; the 200,000-field merge budget counts

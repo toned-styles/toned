@@ -12,6 +12,7 @@ import {
   useMemo,
   useSyncExternalStore,
 } from 'react'
+
 // Cycle-safe: index.ts imports this module for its typed re-exports, and this
 // line imports back. `useStyles` is a hoisted function declaration, so its
 // binding is live before index.ts finishes evaluating; `useBind` only calls it
@@ -21,7 +22,7 @@ import { type HostProps, PartHost } from './part-host.tsx'
 import { useRuntimeConfig } from './runtime-config.ts'
 import { controllerOf, elementProps } from './style-view.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: the runtime binding is stylesheet-agnostic; index.ts provides the precise typed surface.
+// oxlint-disable-next-line typescript/no-explicit-any -- the runtime binding is stylesheet-agnostic; index.ts provides the precise typed surface.
 type AnyProps = Record<string, any>
 
 /**
@@ -39,7 +40,7 @@ const EmptyRenderContext = createContext<Instance | null>(null)
 
 type Instance = Base
 
-// biome-ignore lint/suspicious/noExplicitAny: matches StylesheetLike in index.ts.
+// oxlint-disable-next-line typescript/no-explicit-any -- matches StylesheetLike in index.ts.
 type StylesheetLike = { [SYMBOL_INIT]: (...args: any[]) => any }
 
 /**
@@ -92,7 +93,7 @@ function buildBoundElement(
       // Module-level bind has no owning hook; the host owns its lifecycle.
       if (!subscribe) return instance.mount()
       instance.validateHosts()
-    }, [instance, subscribe])
+    }, [instance])
     return createElement(PartHost, {
       instance,
       part: key,
@@ -164,7 +165,7 @@ export function useBind(
   const config = useRuntimeConfig(styles)
   // The candidate is the initial snapshot only; later candidates publish below.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stylesheet/config own the component family; instance only seeds it, subsequent candidates publish at commit.
+  // oxlint-disable-next-line react/exhaustive-deps -- stylesheet/config own the component family; instance only seeds it, subsequent candidates publish at commit.
   const store = useMemo(() => {
     const store = {
       current: instance,

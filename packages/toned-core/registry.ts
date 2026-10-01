@@ -21,5 +21,5 @@
  * @module registry
  */
 
-// biome-ignore lint/suspicious/noEmptyInterface: filled by host declaration merging
+// oxlint-disable-next-line typescript/no-empty-object-type -- filled by host declaration merging
 export interface TonedTypeRegistry {}

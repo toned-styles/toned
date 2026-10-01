@@ -1,6 +1,7 @@
 import type { Properties } from 'csstype'
-import { camelToKebab } from '../utils/css.ts'
+
 import { serializeCssValue } from '../utils/css-value.ts'
+import { camelToKebab } from '../utils/css.ts'
 
 /** Exported for declaration emit of sheets carrying the opaque extension type. */
 export const WEB_RULES = Symbol.for('toned:web-rules')

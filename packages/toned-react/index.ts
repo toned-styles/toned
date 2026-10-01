@@ -35,6 +35,7 @@ import {
   useMemo,
   useRef,
 } from 'react'
+
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
 import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
 import { createElements as _createElements } from './create-elements.tsx'
@@ -92,23 +93,23 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
  * so `s.el.anything` stopped silently typing as `any`.
  */
 type InteractionHandlerProps = Partial<{
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onMouseEnter: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onMouseLeave: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onMouseDown: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onFocus: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onBlur: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onPressIn: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onPressOut: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onHoverIn: (event: any) => void
-  // biome-ignore lint/suspicious/noExplicitAny: platform event types vary
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
   onHoverOut: (event: any) => void
 }>
 
@@ -120,7 +121,7 @@ type StylesheetMethod = 'variants' | 'extend'
  * Uses structural typing to accept any object with SYMBOL_INIT.
  */
 type StylesheetLike = {
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic function signature
+  // oxlint-disable-next-line typescript/no-explicit-any -- dynamic function signature
   [SYMBOL_INIT]: (...args: any[]) => any
 }
 
@@ -143,21 +144,24 @@ type StylesheetLike = {
  */
 type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
 
-type InferElements<S> = InferMeta<S> extends {
-  system: infer Sys extends TokenStyleDeclaration
-  elements: infer T
-}
-  ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
-  : {
-      // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
-      // key, so the composition methods have to be excluded by name — otherwise
-      // `s.extend` types as an element and a typo'd element name resolves to it.
-      [K in keyof S as K extends StylesheetMethod
-        ? never
-        : K extends string
-          ? K
-          : never]: ElementProps
-    }
+type InferElements<S> =
+  InferMeta<S> extends {
+    system: infer Sys extends TokenStyleDeclaration
+    elements: infer T
+  }
+    ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
+    : {
+        // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
+        // key, so the composition methods have to be excluded by name — otherwise
+        // `s.extend` types as an element and a typo'd element name resolves to it.
+        [
+          K in keyof S as K extends StylesheetMethod
+            ? never
+            : K extends string
+              ? K
+              : never
+        ]: ElementProps
+      }
 
 type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
 type InferDefaults<S> = InferMeta<S> extends { defaults: infer D } ? D : {}
@@ -297,7 +301,7 @@ export type ElementsOf<T> = ((
 
 type ReservedElementName =
   | keyof Function
-  | keyof Object
+  | keyof object
   // Legacy Object.prototype members also satisfy the runtime `part in Elements`
   // check, although modern TypeScript's Object interface omits them.
   | '__proto__'
@@ -310,16 +314,16 @@ type ReservedElementName =
   | 'render'
   | 'defaultProps'
   | 'propTypes'
-type ElementsConstraint<T> = Extract<
-  keyof InferElements<T>,
-  ReservedElementName
-> extends never
-  ? [InferMods<T>] extends [never]
-    ? unknown
-    : Extract<keyof InferMods<T>, 'children' | 'key' | 'ref'> extends never
+type ElementsConstraint<T> =
+  Extract<keyof InferElements<T>, ReservedElementName> extends never
+    ? [InferMods<T>] extends [never]
       ? unknown
-      : { readonly 'Toned: variant axes cannot be children, key or ref': never }
-  : { readonly 'Toned: part name conflicts with component metadata': never }
+      : Extract<keyof InferMods<T>, 'children' | 'key' | 'ref'> extends never
+        ? unknown
+        : {
+            readonly 'Toned: variant axes cannot be children, key or ref': never
+          }
+    : { readonly 'Toned: part name conflicts with component metadata': never }
 
 /** Call at module scope; no host configuration or token values are read here. */
 export const createElements = _createElements as unknown as <
@@ -352,16 +356,17 @@ export type StyleOverrideVariantRules<
  * invent, and one that could be invented would be dead code that type-checks.
  * A matcher the sheet declared is replaced; one it did not is added.
  */
-type OverrideSystem<T> = InferMeta<T> extends {
-  system: infer S extends TokenStyleDeclaration
-}
-  ? S
-  : TokenStyleDeclaration
-type OverrideParts<T> = InferMeta<T> extends { elements: infer E }
-  ? keyof E & string
-  : string
-export interface OverrideEntry<T extends StylesheetLike>
-  extends StyleOverrideEntry {
+type OverrideSystem<T> =
+  InferMeta<T> extends {
+    system: infer S extends TokenStyleDeclaration
+  }
+    ? S
+    : TokenStyleDeclaration
+type OverrideParts<T> =
+  InferMeta<T> extends { elements: infer E } ? keyof E & string : string
+export interface OverrideEntry<
+  T extends StylesheetLike,
+> extends StyleOverrideEntry {
   variants<const Rules extends Record<string, unknown>>(
     callback: (
       selector: VariantSelector<

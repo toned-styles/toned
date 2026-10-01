@@ -1,5 +1,4 @@
 import react from '@vitejs/plugin-react'
-
 import type { Plugin } from 'vite'
 import { defineConfig } from 'vite'
 

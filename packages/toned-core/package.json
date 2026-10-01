@@ -1,8 +1,13 @@
 {
   "name": "@toned/core",
   "version": "0.6.0",
-  "author": "Kenzhaev Artur",
   "license": "MIT",
+  "author": "Kenzhaev Artur",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lttb/toned.git",
+    "directory": "@toned/core"
+  },
   "type": "module",
   "exports": {
     ".": "./index.ts",
@@ -31,14 +36,17 @@
     "directory": ".dist",
     "linkDirectory": false
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/core"
-  },
   "scripts": {
     "prepublishOnly": "bun run build",
     "build": "bun --bun -e 'import(`@toned-config/build`)'"
+  },
+  "dependencies": {
+    "csstype": "^3.2.3"
+  },
+  "devDependencies": {
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
+    "vite": "^6.3.5"
   },
   "peerDependencies": {
     "vite": ">=5"
@@ -47,13 +55,5 @@
     "vite": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@toned-config/build": "workspace:*",
-    "@toned-config/typescript": "workspace:*",
-    "vite": "^6.3.5"
-  },
-  "dependencies": {
-    "csstype": "^3.2.3"
   }
 }

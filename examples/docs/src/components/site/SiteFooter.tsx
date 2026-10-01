@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { footerStyles } from '../../styles/site.ts'
 
 export function SiteFooter() {

@@ -1,5 +1,6 @@
 import { createElements } from '@toned/react'
 import { useState } from 'react'
+
 import { type NoticeVariants, noticeStyles } from './styles.ts'
 
 // Bind the sheet once, at module scope. `Notice` is the family: it takes the

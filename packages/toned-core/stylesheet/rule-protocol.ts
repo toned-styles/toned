@@ -21,5 +21,5 @@ export interface ConditionalRule {
 
 // The authoring grammar is dynamic at this boundary; the compiler consumes the
 // structured rule metadata and never reparses a selector during an update.
-// biome-ignore lint/suspicious/noExplicitAny: authoring syntax boundary
+// oxlint-disable-next-line typescript/no-explicit-any -- authoring syntax boundary
 export type RuleObject = Record<string, any>

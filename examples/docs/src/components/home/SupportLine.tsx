@@ -1,4 +1,5 @@
 import { useStyles } from '@toned/react'
+
 import { homeStyles } from '../../styles/home.ts'
 import { Platforms } from './Platforms.tsx'
 
@@ -50,7 +51,7 @@ export function SupportLine() {
       <section
         className="tnd-marquee"
         aria-labelledby="support-label"
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: focus pauses the moving line for keyboard users.
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus pauses the moving line for keyboard users.
         tabIndex={0}
       >
         <div className="tnd-marquee-track">

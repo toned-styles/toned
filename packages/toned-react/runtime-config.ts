@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
 } from 'react'
+
 import { bindTokenContext } from './token-config.ts'
 
 const RendererTokensContext = createContext<ReadonlyMap<object, Tokens>>(
@@ -131,7 +132,7 @@ export function TonedProvider({
     matchStyleOverrideScope,
   } = host
   useStableScopeHook(useStyleOverrideScope)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: any changed host capability invalidates its cached renderer configurations
+  // oxlint-disable-next-line react/exhaustive-deps -- any changed host capability invalidates its cached renderer configurations
   const cache = useMemo(
     () => new WeakMap<object, Config>(),
     [

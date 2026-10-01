@@ -1,9 +1,10 @@
-import { createQueries } from '../../system/queries.ts'
 import { describe, expect, test } from 'vitest'
+
 import { cssTestValue } from '../../backends/css/test-values.test.helpers.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
-import { createVariantSelector } from '../variantSelector.ts'
+import { createQueries } from '../../system/queries.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
+import { createVariantSelector } from '../variantSelector.ts'
 import { RULE_LAYERS, TOKEN_OPERATIONS } from './normalizeRules.ts'
 
 const variants = createVariantSelector<{

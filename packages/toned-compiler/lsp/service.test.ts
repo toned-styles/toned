@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { PassThrough } from 'node:stream'
+
 import { describe, expect, it } from 'vitest'
 import {
   CompletionItemKind,
@@ -11,6 +12,7 @@ import {
   StreamMessageWriter,
   SymbolKind,
 } from 'vscode-languageserver/node.js'
+
 import * as browserEntry from '../language-service.ts'
 import { registerLanguageServer } from './server.ts'
 import { DesignLanguageService } from './service.ts'

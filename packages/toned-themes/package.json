@@ -1,18 +1,22 @@
 {
   "name": "@toned/themes",
   "version": "0.2.0",
-  "author": "Kenzhaev Artur",
   "license": "MIT",
-  "type": "module",
-  "publishConfig": {
-    "access": "public",
-    "directory": ".dist",
-    "linkDirectory": false
-  },
+  "author": "Kenzhaev Artur",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lttb/toned.git",
     "directory": "@toned/themes"
+  },
+  "type": "module",
+  "exports": {
+    "./shadcn": "./shadcn/config.ts",
+    "./shadcn/config.css": "./shadcn/config.css"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": ".dist",
+    "linkDirectory": false
   },
   "scripts": {
     "prepublishOnly": "bun run build",
@@ -23,9 +27,5 @@
     "@toned-config/typescript": "workspace:*",
     "rollup-copy-transform-css": "^2.1.0",
     "rollup-plugin-copy": "^3.5.0"
-  },
-  "exports": {
-    "./shadcn": "./shadcn/config.ts",
-    "./shadcn/config.css": "./shadcn/config.css"
   }
 }

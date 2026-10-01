@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
+
 import { highlight } from '../../highlight.ts'
 import { playgroundEditorStyles } from '../../styles/playground-editor.ts'
 import type { EditorController } from './codemirror.ts'

@@ -38,11 +38,10 @@ const sheet = base.variants(
   { defaults: { variant: 'quiet' } },
 )
 type Meta = NonNullable<typeof sheet.__toned__>
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-  ? 1
-  : 2
-  ? true
-  : false
+type Equal<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false
 export const mods: Equal<Meta['mods'], Mods> = true
 export const defaults: Equal<Meta['defaults'], { readonly variant: 'quiet' }> =
   true

@@ -15,7 +15,7 @@ const motion = attachMotion(host, {
 })
 // Toned variant/state updates now transition these properties without rendering.
 // Retain host until the exit completes; removing it first cancels the animation.
-if (await motion.exit() === 'finished') removeHost()
+if ((await motion.exit()) === 'finished') removeHost()
 motion.dispose()
 ```
 

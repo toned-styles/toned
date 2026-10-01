@@ -3,6 +3,7 @@
 ## Summary
 
 Successfully migrated the library to the new interface with:
+
 - Flat pseudo classes inside elements (`:hover`, `@sm` for self-styling only)
 - Flat cross-element selectors (`'container:hover'` with nested element names)
 - Separate `.variants<T>({...})` chain method instead of `...stylesheet.state<T>`
@@ -94,35 +95,38 @@ stylesheet: (<T extends StylesheetInput<S & C, T>>(rules: T) => {
 Updated `examples/shared/button.ts` and `examples/shared/card.ts` to use new API.
 
 **Old API:**
+
 ```typescript
 stylesheet({
   ...stylesheet.state<{ variant: 'accent' | 'secondary' }>,
   container: {
     ':hover': {
       $container: { bgColor: 'red' },
-      $label: { color: 'white' }
-    }
+      $label: { color: 'white' },
+    },
   },
   '[variant=accent]': {
-    $container: { bgColor: 'blue' }
-  }
+    $container: { bgColor: 'blue' },
+  },
 })
 ```
 
 **New API:**
+
 ```typescript
 stylesheet({
   container: {
-    ':hover': { bgColor: 'red' },  // self only
+    ':hover': { bgColor: 'red' }, // self only
   },
-  'container:hover': {             // cross-element
+  'container:hover': {
+    // cross-element
     container: { bgColor: 'red' },
-    label: { color: 'white' }
-  }
+    label: { color: 'white' },
+  },
 }).variants<{ variant: 'accent' | 'secondary' }>({
   '[variant=accent]': {
-    container: { bgColor: 'blue' }
-  }
+    container: { bgColor: 'blue' },
+  },
 })
 ```
 

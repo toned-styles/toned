@@ -6,9 +6,9 @@ const defineBreakpoints = <O extends Record<string, number | string>>(
   return { __breakpoints: obj }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: placeholder declaration
+// oxlint-disable-next-line typescript/no-explicit-any -- placeholder declaration
 declare const defineSelectors: any
-// biome-ignore lint/suspicious/noExplicitAny: placeholder declaration
+// oxlint-disable-next-line typescript/no-explicit-any -- placeholder declaration
 declare const defineRules: any
 
 /*

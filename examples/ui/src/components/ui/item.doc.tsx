@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { PackageIcon, ShieldCheckIcon } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { Button } from './button.tsx'
 import {
   Item,

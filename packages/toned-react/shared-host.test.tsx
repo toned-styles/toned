@@ -2,6 +2,7 @@
 import { act, cleanup, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { afterEach, expect, test } from 'vitest'
+
 import { useStyles } from './index.ts'
 import web from './react-web.ts'
 

@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { Fragment, type ReactNode, useMemo, useState } from 'react'
+
 import { highlight } from '../../highlight.ts'
 import { choiceStyles, homeStyles, tourStyles } from '../../styles/home.ts'
 

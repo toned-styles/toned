@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { createGridScope, defineGrid, dp, fr, resolveGrid } from './index.ts'
 
 describe('typed grid declarations', () => {

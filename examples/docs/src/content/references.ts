@@ -161,9 +161,9 @@ export const references = [
       'Select a part, inspect declarations and preview a checked source change.',
     path: 'packages/toned-compiler/inspector/README.md',
     load: () =>
-      import(
-        '../../../../packages/toned-compiler/inspector/README.md?raw'
-      ).then((m) => m.default),
+      import('../../../../packages/toned-compiler/inspector/README.md?raw').then(
+        (m) => m.default,
+      ),
   },
   {
     slug: 'bridge',
@@ -219,9 +219,9 @@ export const references = [
       'Build bounded scenarios and evaluate real measurements with explicit inconclusive results.',
     path: 'packages/toned-compiler/contracts/README.md',
     load: () =>
-      import(
-        '../../../../packages/toned-compiler/contracts/README.md?raw'
-      ).then((m) => m.default),
+      import('../../../../packages/toned-compiler/contracts/README.md?raw').then(
+        (m) => m.default,
+      ),
   },
   {
     slug: 'engine',

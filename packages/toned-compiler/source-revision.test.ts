@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto'
+
 import { expect, test } from 'vitest'
+
 import { sourceRevision } from './source.ts'
 
 test.each([

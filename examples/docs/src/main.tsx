@@ -1,10 +1,10 @@
 import '../toned.config.ts'
 import '../../ui/src/styles.css'
 import './docs-theme.css'
-
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
+
 import { routeTree } from './routeTree.gen.ts'
 
 // The dev server inlines the SSR render's stylesheets to avoid a flash of

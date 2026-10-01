@@ -9,6 +9,7 @@ Optimize the StyleMatcher implementation for extreme performance in variant matc
 **Location**: `packages/toned-core/StyleMatcher/StyleMatcher.ts`
 
 ### Current Approach
+
 - Uses bitwise operations for variant matching (efficient)
 - Caches results via Map (good)
 - Compiles rules into bit masks at construction time
@@ -20,6 +21,7 @@ Optimize the StyleMatcher implementation for extreme performance in variant matc
    - Could use `for...in` loops instead
 
 2. **`getPropsBits()` - called every match**
+
    ```typescript
    getPropsBits(props: Partial<Schema>) {
      let bits = 0
@@ -51,6 +53,7 @@ Optimize the StyleMatcher implementation for extreme performance in variant matc
 ### 5.2 Optimize `getPropsBits()`
 
 Current:
+
 ```typescript
 this.bits.forEach((x) => {
   const prop = x[0]
@@ -61,6 +64,7 @@ this.bits.forEach((x) => {
 ```
 
 Optimized:
+
 ```typescript
 for (let i = 0; i < this.bits.length; i++) {
   const [prop, values] = this.bits[i]

@@ -1,4 +1,5 @@
 import { type Variants, webRules } from '@toned/core'
+
 import { stylesheet } from '../system.ts'
 
 /** The frame of the interface: stage, window, bars, sidebar and main column. */

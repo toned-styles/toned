@@ -1,5 +1,6 @@
 /** The alpha modifier — parsing, CSS emission, exec resolution, literals. */
 import { describe, expect, test } from 'vitest'
+
 import { generate } from '../dom/generate.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { alpha, alphaLiteral, splitAlphaValue } from './alpha.ts'
@@ -21,14 +22,12 @@ const textColor = defineToken({
 
 const system = defineSystem({ bgColor, textColor })
 
-// biome-ignore lint/suspicious/noExplicitAny: tests inspect dynamic style output
 const exec = (style: Record<string, unknown>, useClassName: boolean): any =>
   system.exec(
     {
       tokens: new Proxy({}, { get: (_t, p: string) => `var(--${p})` }),
       useClassName,
     },
-    // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
     style as any,
   )
 
@@ -119,10 +118,8 @@ describe('exec, inline mode (native/email path)', () => {
 
   test('literal tokens compute an rgba', () => {
     const literalTokens = { primary: '#2f54eb' }
-    // biome-ignore lint/suspicious/noExplicitAny: tests inspect dynamic style output
     const out: any = system.exec(
       { tokens: literalTokens, useClassName: false },
-      // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
       { bgColor: 'primary/50' } as any,
     )
     expect(out.style.backgroundColor).toBe('rgba(47, 84, 235, 0.5)')
@@ -174,7 +171,6 @@ describe('defineAnimations', async () => {
   test('a stylesheet references an animation by name', () => {
     const out = animSystem.exec(
       { tokens: {}, useClassName: true },
-      // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
       { animation: 'fade-in' } as any,
     )
     expect(out.className).toContain('animation_fade-in')
@@ -245,7 +241,6 @@ describe('bridges', async () => {
         ),
         useClassName: true,
       },
-      // biome-ignore lint/suspicious/noExplicitAny: test drives the open surface
       { placeholderColor: 'muted', iconSize: 4 } as any,
     )
     expect(out.className).toContain('placeholderColor_muted')

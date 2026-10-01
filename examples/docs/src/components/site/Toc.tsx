@@ -1,5 +1,6 @@
 import { useStyles } from '@toned/react'
 import { useEffect, useState } from 'react'
+
 import { tocStyles } from '../../styles/site.ts'
 
 type Heading = { id: string; text: string; depth: 2 | 3 }

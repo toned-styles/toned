@@ -14,9 +14,14 @@ export const ui = defineSystem({
   tokens: {
     bgColor: defineToken({
       values: ['primary', 'primary-hover'],
-      resolve: value => ({ backgroundColor: value === 'primary' ? '#2563eb' : '#1d4ed8' }),
+      resolve: (value) => ({
+        backgroundColor: value === 'primary' ? '#2563eb' : '#1d4ed8',
+      }),
     }),
-    opacity: defineToken({ values: [0, 0.5, 1], resolve: value => ({ opacity: value }) }),
+    opacity: defineToken({
+      values: [0, 0.5, 1],
+      resolve: (value) => ({ opacity: value }),
+    }),
   },
   conditions: {
     media: { md: 768 },
@@ -26,18 +31,20 @@ export const ui = defineSystem({
 
 type ButtonVariants = { size: 's' | 'm'; variant: 'accent' | 'quiet' }
 
-export const button = ui.stylesheet(q => ({
-  Root: {
-    $kind: 'pressable',
-    bgColor: 'primary',
-    [q.state('hover')]: { bgColor: 'primary-hover' },
-    '@platform web': { $style: { cursor: 'pointer' } },
-  },
-})).variants(($: Variants<ButtonVariants>, q) => ({
-  [$.size('s').variant('quiet')]: {
-    Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
-  },
-}))
+export const button = ui
+  .stylesheet((q) => ({
+    Root: {
+      $kind: 'pressable',
+      bgColor: 'primary',
+      [q.state('hover')]: { bgColor: 'primary-hover' },
+      '@platform web': { $style: { cursor: 'pointer' } },
+    },
+  }))
+  .variants(($: Variants<ButtonVariants>, q) => ({
+    [$.size('s').variant('quiet')]: {
+      Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
+    },
+  }))
 ```
 
 Keep token properties camelCase and named values kebab-case. A semantic
@@ -74,7 +81,7 @@ filter execution but keep `$style` portable. Nest an explicit
 Use the same computed-key form for compound queries, including inside a part:
 
 ```ts
-const emphasis = ui.stylesheet(q => ({
+const emphasis = ui.stylesheet((q) => ({
   Root: {
     opacity: 1,
     [q.not(q.any(q.media('md'), q.state('hover')))]: { opacity: 0 },
@@ -190,7 +197,10 @@ that part's declarations.
 ```ts
 // Build script; include lazy stylesheet declarations explicitly.
 import { buildStyles } from '@toned/core/build'
-const { css, manifest } = buildStyles(ui, { sheets: [button, emphasis], layer: 'components' })
+const { css, manifest } = buildStyles(ui, {
+  sheets: [button, emphasis],
+  layer: 'components',
+})
 // Write css to an application asset and manifest to a generated module.
 ```
 
@@ -239,7 +249,9 @@ presence, not function source or captured values.
 ```ts
 import { createWebRenderer } from '@toned/core/server'
 const web = createWebRenderer(ui, { manifest })
-const props = web.resolve(button, { variants: { size: 's', variant: 'accent' } })
+const props = web.resolve(button, {
+  variants: { size: 's', variant: 'accent' },
+})
 // <button {...props.Root} /> works in an RSC/server entry: no hooks or refs.
 ```
 
@@ -257,7 +269,9 @@ module imported by the CSS inventory), use the standalone explicit constructor:
 ```ts
 import { createTokenStyles, cssVariableTokens } from '@toned/core/server'
 export const t = createTokenStyles(ui, {
-  tokens: cssVariableTokens(), platform: 'web', useClassName: true,
+  tokens: cssVariableTokens(),
+  platform: 'web',
+  useClassName: true,
 })
 ```
 
@@ -355,7 +369,10 @@ configuration; avoid changing global configuration for each server request.
 import { defineGrid, dp, fr } from '@toned/core'
 const message = defineGrid('message', {
   columns: [dp(48), fr(1)],
-  areas: [['avatar', 'title'], ['.', 'body']],
+  areas: [
+    ['avatar', 'title'],
+    ['.', 'body'],
+  ],
 })
 const sheet = ui.stylesheet({
   Root: { '@platform web': { $grid: message } },
@@ -410,7 +427,6 @@ keep its areas and apply conditional `display`. This keeps ownership validation
 stable even when the browser alone evaluates a condition. It deliberately rejects
 a condition-only grid registration instead of silently skipping host checks.
 
-
 ## Source map
 
 - `system/`: definitions, normalization, predicate lowering, namespaces.
@@ -424,7 +440,6 @@ Tests cover bit boundaries, reference evaluation, zero/conditional properties,
 selector types, suspended React work, ref cleanup, theme updates and owned native
 patches. The HQ integration adds real-browser first-paint and showcase gates.
 A fixture is not certification of a React Native/Fabric device integration.
-
 
 ## Variant defaults and alpha
 
@@ -475,12 +490,17 @@ preferences, pass explicit media groups. These do not change the fixed-pixel
 contract of portable conditions:
 
 ```ts
-webRules({}, {
-  media: {
-    '(min-width: 64rem)': webRules({ '&': { display: 'flex' } }),
-    '(prefers-reduced-motion: reduce)': webRules({ '&': { animation: 'none' } }),
+webRules(
+  {},
+  {
+    media: {
+      '(min-width: 64rem)': webRules({ '&': { display: 'flex' } }),
+      '(prefers-reduced-motion: reduce)': webRules({
+        '&': { animation: 'none' },
+      }),
+    },
   },
-})
+)
 ```
 
 Groups retain declaration order and the owning selector/scope. They are immutable,
@@ -498,7 +518,7 @@ layer without React, provider context or token reads. It preserves the sheet's
 part kinds, axes and defaults, and accepts the same typed query builders.
 
 ```ts
-const compact = overrideSheet(button, { Root: { padding: null } }, $ => ({
+const compact = overrideSheet(button, { Root: { padding: null } }, ($) => ({
   [$.size('s')]: { Root: { padding: 4 } },
 }))
 const artifact = buildStyles(ui, { sheets: [button, compact] })
@@ -544,9 +564,9 @@ Switching is CSS only: changing the attribute rerenders nothing, and classes and
 inline styles stay as they were.
 
 ```ts
-const artifact = buildStyles(ui, { sheets })            // themes included
+const artifact = buildStyles(ui, { sheets }) // themes included
 buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
-buildStyles(ui, { sheets, themes: false })                // deliver them yourself
+buildStyles(ui, { sheets, themes: false }) // deliver them yourself
 ```
 
 A class sets each side of a box separately, so a field read by a four-sided
@@ -568,11 +588,14 @@ Fixed query thresholds can also be colocated at the use site:
 const layout = defineSystem({
   id: 'local-queries',
   tokens: {
-    opacity: defineToken({ values: [0.8, 1], resolve: value => ({ opacity: value }) }),
+    opacity: defineToken({
+      values: [0.8, 1],
+      resolve: (value) => ({ opacity: value }),
+    }),
   },
   conditions: { containers: { card: {} } },
 })
-layout.stylesheet(q => ({
+layout.stylesheet((q) => ({
   Root: {
     [q.media(dp(600))]: { opacity: 0.8 },
     [q.container('card', dp(300))]: { opacity: 1 },

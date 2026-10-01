@@ -2,7 +2,9 @@ import type { ChildProcess } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
 import { expect, test, vi } from 'vitest'
+
 import { OwnedServer } from './owned-server.ts'
 import { evictClosedSession } from './session-lifecycle.ts'
 

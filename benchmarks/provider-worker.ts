@@ -13,9 +13,8 @@ const { Base } = await moduleAt('packages/toned-core/stylesheet/StyleSheet.ts')
 const { registerNativeHost } = await moduleAt(
   'packages/toned-core/stylesheet/native-host.ts',
 )
-const { Window } = await import(
-  '../packages/toned-react/node_modules/happy-dom/lib/index.js'
-)
+const { Window } =
+  await import('../packages/toned-react/node_modules/happy-dom/lib/index.js')
 const window = new Window()
 Object.assign(globalThis, {
   window,
@@ -25,15 +24,12 @@ Object.assign(globalThis, {
   MutationObserver: window.MutationObserver,
   IS_REACT_ACT_ENVIRONMENT: true,
 })
-const React = await import(
-  '../packages/toned-react/node_modules/react/index.js'
-)
-const { createRoot } = await import(
-  '../packages/toned-react/node_modules/react-dom/client.js'
-)
-const { renderToString } = await import(
-  '../packages/toned-react/node_modules/react-dom/server.js'
-)
+const React =
+  await import('../packages/toned-react/node_modules/react/index.js')
+const { createRoot } =
+  await import('../packages/toned-react/node_modules/react-dom/client.js')
+const { renderToString } =
+  await import('../packages/toned-react/node_modules/react-dom/server.js')
 const { TonedProvider, createElements } = await moduleAt(
   'packages/toned-react/index.ts',
 )

@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'vitest'
+
 import { createQueries, type QueryPredicate } from '../../system/queries.ts'
 import { queryExpression } from '../../system/query-key.ts'
-import { createVariantSelector } from '../variantSelector.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
+import { createVariantSelector } from '../variantSelector.ts'
 import { CONDITIONAL_RULES, type ConditionalRule } from './normalizeRules.ts'
 
 const q = createQueries<

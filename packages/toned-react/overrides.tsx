@@ -7,6 +7,7 @@ import {
   useContext,
   useMemo,
 } from 'react'
+
 import { useRuntimeConfig } from './runtime-config.ts'
 
 /**
@@ -31,7 +32,7 @@ import { useRuntimeConfig } from './runtime-config.ts'
  * never overridden.
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: the runtime is stylesheet-agnostic; index.ts provides the typed surface.
+// oxlint-disable-next-line typescript/no-explicit-any -- the runtime is stylesheet-agnostic; index.ts provides the typed surface.
 type AnyRules = Record<string, any>
 
 export interface StyleOverrideEntry {
@@ -43,7 +44,7 @@ export interface StyleOverrideEntry {
    * `mergeOverrideVariants` in core). Set by the entry's `.variants()`, which
    * is non-enumerable so an entry still compares and spreads as plain data.
    */
-  // biome-ignore lint/suspicious/noExplicitAny: the selector is the sheet's, typed at the index.ts surface
+  // oxlint-disable-next-line typescript/no-explicit-any -- the selector is the sheet's, typed at the index.ts surface
   readonly variantRules?: ($: any) => AnyRules
   /**
    * When set, the entry applies only where the config's ambient scope matches
@@ -77,7 +78,7 @@ export function overrideStyles(
 /** Attach the chained `.variants()` without making it an enumerable field. */
 function withVariants(entry: StyleOverrideEntry): StyleOverrideEntry {
   Object.defineProperty(entry, 'variants', {
-    // biome-ignore lint/suspicious/noExplicitAny: the selector is the sheet's own; index.ts types it
+    // oxlint-disable-next-line typescript/no-explicit-any -- the selector is the sheet's own; index.ts types it
     value: (fn: ($: any) => AnyRules) =>
       withVariants({ ...entry, variantRules: fn }),
     enumerable: false,

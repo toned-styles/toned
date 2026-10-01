@@ -4,7 +4,6 @@ import type { OutputBackend } from '../backends/index.ts'
  *
  * @module types/config
  */
-
 import type { ElementType, Tokens } from './tokens.ts'
 
 /**
@@ -76,7 +75,7 @@ export type Config = Readonly<{
   debug: boolean
 
   /** Get props for an element - returns style/className based on config */
-  // biome-ignore lint/suspicious/noExplicitAny: context type varies by usage
+  // oxlint-disable-next-line typescript/no-explicit-any -- context type varies by usage
   getProps(
     this: any,
     elementKey: string,

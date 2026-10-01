@@ -1,12 +1,12 @@
 {
   "name": "@examples/shared",
-  "type": "module",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
+  "type": "module",
   "main": "index.ts",
   "dependencies": {
-    "@toned/themes": "workspace:*",
-    "@toned/systems": "workspace:*"
+    "@toned/systems": "workspace:*",
+    "@toned/themes": "workspace:*"
   },
   "devDependencies": {
     "@toned-config/typescript": "workspace:*",

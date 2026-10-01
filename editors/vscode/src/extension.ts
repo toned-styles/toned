@@ -4,6 +4,7 @@ import {
   ErrorAction,
   LanguageClient,
 } from 'vscode-languageclient/node'
+
 import { OwnedServer } from './owned-server.ts'
 import { evictClosedSession } from './session-lifecycle.ts'
 
@@ -183,9 +184,9 @@ export async function activate(extension: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand('toned.restart', restart),
     vscode.commands.registerCommand('toned.indexStatus', async () => {
-      const result = await (await activeSession()).sendRequest(
-        'toned/statistics',
-      )
+      const result = await (
+        await activeSession()
+      ).sendRequest('toned/statistics')
       output.appendLine(JSON.stringify(result, null, 2))
       output.show(true)
       return result
@@ -194,13 +195,12 @@ export async function activate(extension: vscode.ExtensionContext) {
       const editor = vscode.window.activeTextEditor
       if (!editor)
         throw new Error('Open a source file to inspect its Toned declaration.')
-      const result = await (await activeSession()).sendRequest(
-        'textDocument/hover',
-        {
-          textDocument: { uri: editor.document.uri.toString() },
-          position: editor.selection.active,
-        },
-      )
+      const result = await (
+        await activeSession()
+      ).sendRequest('textDocument/hover', {
+        textDocument: { uri: editor.document.uri.toString() },
+        position: editor.selection.active,
+      })
       output.appendLine(JSON.stringify(result, null, 2))
       output.show(true)
       return result

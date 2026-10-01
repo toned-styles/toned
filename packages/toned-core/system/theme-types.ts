@@ -16,9 +16,7 @@ export interface ThemeContract<Theme> {
 }
 type ThemeOf<Token> = Token extends ThemeContract<infer Theme> ? Theme : never
 type Intersection<U> = (
-  U extends unknown
-    ? (value: U) => void
-    : never
+  U extends unknown ? (value: U) => void : never
 ) extends (value: infer I) => void
   ? I
   : never
@@ -48,15 +46,16 @@ type ExactOutput<Result, Output> = Result & {
 
 /** References must name a compatible member of this factory's theme, not
  * merely a member with the right value type in an unrelated schema. */
-type ThemeOutput<Value, Theme> = Value extends ThemeReference<infer Referenced>
-  ? {
-      [Key in keyof Theme & string]: Theme[Key] extends Referenced
-        ? ThemeReference<Theme[Key], Key>
-        : never
-    }[keyof Theme & string]
-  : Value extends object
-    ? { [Key in keyof Value]: ThemeOutput<Value[Key], Theme> }
-    : Value
+type ThemeOutput<Value, Theme> =
+  Value extends ThemeReference<infer Referenced>
+    ? {
+        [Key in keyof Theme & string]: Theme[Key] extends Referenced
+          ? ThemeReference<Theme[Key], Key>
+          : never
+      }[keyof Theme & string]
+    : Value extends object
+      ? { [Key in keyof Value]: ThemeOutput<Value[Key], Theme> }
+      : Value
 
 export interface ThemeTokenFactory<
   Theme,

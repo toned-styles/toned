@@ -5,11 +5,12 @@
  * sharing is unaffected.
  */
 import { describe, expect, test } from 'vitest'
+
 import { defineGrid, fr } from '../grid/index.ts'
-import { RULE_LAYERS } from './rule-protocol.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_INIT } from '../utils/symbols.ts'
+import { RULE_LAYERS } from './rule-protocol.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent', 'muted'] as const,
@@ -33,7 +34,6 @@ const configFor = (platform: 'web' | 'native' | undefined) => ({
   initInteraction: () => {},
 })
 
-// biome-ignore lint/suspicious/noExplicitAny: test reaches into instances
 const styleFor = (sheet: any, platform: 'web' | 'native' | undefined): any =>
   sheet[SYMBOL_INIT](configFor(platform), {}).getCurrentStyle('root').style
 

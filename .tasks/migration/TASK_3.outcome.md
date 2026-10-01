@@ -9,15 +9,18 @@ Added comprehensive tests for the new API and updated documentation with complet
 ### 1. StyleSheet Tests (`packages/toned-core/StyleSheet/StyleSheet.test.ts`)
 
 **Basic Functionality:**
+
 - Creates stylesheet with element definitions
 - Stylesheet has `SYMBOL_INIT` for initialization
 - Stylesheet has `SYMBOL_REF` for system reference
 
 **Variants Chain:**
+
 - Variants method returns new stylesheet
 - Variants can be chained multiple times
 
 **Rule Transformation:**
+
 - Transforms inline pseudo classes to internal format
 - Transforms cross-element selectors
 - Handles multiple pseudo classes in cross-element selector
@@ -26,11 +29,13 @@ Added comprehensive tests for the new API and updated documentation with complet
 - Handles combined variant selectors
 
 **Base Class:**
+
 - Initializes with rules and config
 - Matches styles based on mods state
 - `applyState` updates styles correctly
 
 **Integration Tests:**
+
 - Inline pseudo class affects only self element
 - Cross-element pseudo affects multiple elements
 - Variants apply correctly
@@ -73,18 +78,19 @@ Added comprehensive documentation for:
 
 ### Selector Syntax Reference
 
-| Selector | Description | Example |
-|----------|-------------|---------|
-| `element` | Element definition | `container: { ... }` |
-| `:pseudo` | Pseudo class (self only) | `':hover': { ... }` |
-| `@breakpoint` | Breakpoint (self only) | `'@sm': { ... }` |
-| `element:pseudo` | Cross-element pseudo | `'container:hover': { ... }` |
-| `[key=value]` | Single variant | `'[size=sm]': { ... }` |
-| `[key1=val1][key2=val2]` | Combined variants | `'[size=sm][variant=primary]': { ... }` |
+| Selector                 | Description              | Example                                 |
+| ------------------------ | ------------------------ | --------------------------------------- |
+| `element`                | Element definition       | `container: { ... }`                    |
+| `:pseudo`                | Pseudo class (self only) | `':hover': { ... }`                     |
+| `@breakpoint`            | Breakpoint (self only)   | `'@sm': { ... }`                        |
+| `element:pseudo`         | Cross-element pseudo     | `'container:hover': { ... }`            |
+| `[key=value]`            | Single variant           | `'[size=sm]': { ... }`                  |
+| `[key1=val1][key2=val2]` | Combined variants        | `'[size=sm][variant=primary]': { ... }` |
 
 ## Test Results
 
 All 27 tests passing:
+
 - 18 tests in `StyleSheet.test.ts`
 - 9 tests in `StyleMatcher.test.ts`
 

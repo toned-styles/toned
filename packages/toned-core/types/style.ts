@@ -1,4 +1,5 @@
 import type { Properties } from 'csstype'
+
 import type {
   LogicalLength,
   PortableColor,

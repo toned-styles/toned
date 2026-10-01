@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { writeVarChain } from './varChain.ts'
 
 describe('writeVarChain', () => {

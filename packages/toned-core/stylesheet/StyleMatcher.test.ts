@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { defineToken } from '../system/index.ts'
 import type { TokenSystem } from '../types/index.ts'
 import { StyleMatcher } from './StyleMatcher.ts'

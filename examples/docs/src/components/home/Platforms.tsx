@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import type { ReactNode } from 'react'
+
 import { homeStyles } from '../../styles/home.ts'
 
 const atom = (

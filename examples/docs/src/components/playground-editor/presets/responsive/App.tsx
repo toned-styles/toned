@@ -1,4 +1,5 @@
 import { useStyles } from '@toned/react'
+
 import { planStyles } from './styles.ts'
 
 // No variants here, and one part is repeated on plain hosts, so this example

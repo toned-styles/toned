@@ -1,4 +1,5 @@
 import { bench, describe } from 'vitest'
+
 import { StyleMatcher } from './StyleMatcher.ts'
 
 // Complex rules similar to real-world usage

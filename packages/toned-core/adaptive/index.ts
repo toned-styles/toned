@@ -74,22 +74,10 @@ export interface AdaptiveLayout<
     selector: VariantSelector<Record<Axis, Name>>,
   ): Readonly<Record<`[${Axis}=${Name}]`, AdaptiveRule<Root, Area>>>
 }
-export type AdaptiveLayoutName<T> = T extends AdaptiveLayout<
-  any,
-  infer Name,
-  any,
-  any
->
-  ? Name
-  : never
-export type AdaptiveLayoutAreas<T> = T extends AdaptiveLayout<
-  any,
-  any,
-  any,
-  infer Area
->
-  ? Area
-  : never
+export type AdaptiveLayoutName<T> =
+  T extends AdaptiveLayout<any, infer Name, any, any> ? Name : never
+export type AdaptiveLayoutAreas<T> =
+  T extends AdaptiveLayout<any, any, any, infer Area> ? Area : never
 type CheckedCandidates<Layouts, Area extends string> = {
   [Name in keyof Layouts]: Record<
     Exclude<keyof Layouts[Name], keyof AdaptiveCandidate>,

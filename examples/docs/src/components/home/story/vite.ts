@@ -1,5 +1,6 @@
 import { buildStyles } from '@toned/core/build'
 import type { Plugin } from 'vite'
+
 import { noticeStyles } from './styles.ts'
 import { ui } from './system.ts'
 

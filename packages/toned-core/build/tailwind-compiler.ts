@@ -1,6 +1,6 @@
 import type { TailwindBackend } from '../backends/tailwind.ts'
-import { camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
+import { camelToKebab } from '../utils/css.ts'
 
 /** Inject Tailwind's public `compile` function. Applications retain ownership of
  * their imports, theme, plugins, prefix, version and CSS layer ordering. */

@@ -1,10 +1,11 @@
-import type { Variants } from '../types/index.ts'
 import { expect, test } from 'vitest'
+
 import { buildStyles } from '../build/index.ts'
 import { defineSystem } from '../index.ts'
 import { createWebRenderer } from '../server/index.ts'
 import { overrideSheet } from '../stylesheet/overrideSheet.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
+import type { Variants } from '../types/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import {
   createGridScope,

@@ -1,5 +1,6 @@
 import { useStyles } from '@toned/react'
 import { useState } from 'react'
+
 import { experimentStyles } from '../../styles/site.ts'
 import { CodeBlock } from '../CodeBlock.tsx'
 
@@ -58,6 +59,7 @@ export function LayerSource({
   return (
     <div {...s.Source}>
       <div
+        tabIndex={0}
         {...s.Tabs}
         role="tablist"
         aria-label={label}

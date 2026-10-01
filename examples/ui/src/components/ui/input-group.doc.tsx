@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { ArrowUpIcon, SearchIcon } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import {
   InputGroup,
   InputGroupAddon,

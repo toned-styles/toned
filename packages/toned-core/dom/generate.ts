@@ -7,7 +7,6 @@ import {
  *
  * @module dom/generate
  */
-
 import { namespaceCss } from '../system/namespace.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
@@ -22,8 +21,8 @@ import {
   atomSlug,
   parseConditionKey,
 } from '../utils/conditions.ts'
-import { bridgeVarName, camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
+import { bridgeVarName, camelToKebab } from '../utils/css.ts'
 
 const tokens = new Proxy(Object.create(null), {
   get(_target, prop: string) {
@@ -365,7 +364,7 @@ export function generate<const S extends TokenStyleDeclaration>(
   let alphaClasses = ''
 
   for (const key in system) {
-    // biome-ignore lint/suspicious/noExplicitAny: the index union narrows structurally, not by type
+    // oxlint-disable-next-line typescript/no-explicit-any -- the index union narrows structurally, not by type
     const token = system[key] as any
 
     // Skip non-token entries (like breakpoints)
@@ -393,7 +392,7 @@ export function generate<const S extends TokenStyleDeclaration>(
       }
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
+    // oxlint-disable-next-line typescript/no-explicit-any -- token values are dynamically typed
     token.values.forEach((value: any) => {
       if (value instanceof Number || value instanceof String) {
         // Skip boxed primitives - these represent dynamic/runtime values
@@ -511,10 +510,10 @@ export function generate<const S extends TokenStyleDeclaration>(
           : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
       let block = ''
       for (const key of responsiveTokens) {
-        // biome-ignore lint/suspicious/noExplicitAny: same structural narrowing as the token loop
+        // oxlint-disable-next-line typescript/no-explicit-any -- same structural narrowing as the token loop
         const token = system[key] as any
         if (!token || !('values' in token) || !('resolve' in token)) continue
-        // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
+        // oxlint-disable-next-line typescript/no-explicit-any -- token values are dynamically typed
         token.values.forEach((value: any) => {
           if (value instanceof Number || value instanceof String) return
           const result = resolveConfiguredToken(token, value, tokens, {

@@ -1,5 +1,4 @@
 import { styles } from '@examples/shared/button'
-
 import { useStyles } from '@toned/react'
 import { Pressable, Text } from 'react-native'
 

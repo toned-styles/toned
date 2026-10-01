@@ -18,31 +18,31 @@ declare const _symStyle: unique symbol
 declare const _symAccess: unique symbol
 
 /** Symbol used to reference the parent TokenSystem from styled objects */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
+// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_REF: typeof _symRef = Symbol.for(
   '@toned/core/SYMBOL_REF',
 ) as any
 
 /** Symbol used for lazy stylesheet initialization */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
+// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_INIT: typeof _symInit = Symbol.for(
   '@toned/core/SYMBOL_INIT',
 ) as any
 
 /** Symbol used to store variant definitions */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
+// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_VARIANTS: typeof _symVariants = Symbol.for(
   '@toned/core/SYMBOL_VARIANTS',
 ) as any
 
 /** Symbol used to store style values in t() results */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
+// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_STYLE: typeof _symStyle = Symbol.for(
   '@toned/core/SYMBOL_STYLE',
 ) as any
 
 /** Symbol used for accessing ref and value from styled objects */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
+// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_ACCESS: typeof _symAccess = Symbol.for(
   '@toned/core/SYMBOL_ACCESS',
 ) as any

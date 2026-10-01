@@ -1,10 +1,12 @@
 import type { Readable, Writable } from 'node:stream'
+
 import {
   createConnection,
   ProposedFeatures,
   StreamMessageReader,
   StreamMessageWriter,
 } from 'vscode-languageserver/node.js'
+
 import { registerLanguageServer } from './server.ts'
 
 /** Embed the standard LSP over owned streams. The CLI supplies process stdio.

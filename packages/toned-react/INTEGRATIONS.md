@@ -5,12 +5,12 @@ or the host configuration's `resolveElement`. Those components can integrate
 another styling system. This is an existing composition boundary, not a claim
 that Toned ships a Unistyles backend or has certified a native Unistyles host.
 
-| Integration | Current contract |
-| --- | --- |
-| Custom primitive | `as={Component}` checks that component's props and forwards the composed host ref. `resolveElement` supplies stable application defaults for semantic kinds. |
-| Foreign style handle | Carry it in a separate component prop; consume it inside the primitive. Toned does not interpret arbitrary props as styles. |
-| Shared theme/runtime | An application bridge can subscribe to another system and supply Toned's token/configuration inputs. No Unistyles-specific bridge is shipped. |
-| Another engine executing Toned declarations | Requires declaration compilation, host binding, ownership and delivery integration; not implemented by the existing plain-field output adapter alone. |
+| Integration                                 | Current contract                                                                                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Custom primitive                            | `as={Component}` checks that component's props and forwards the composed host ref. `resolveElement` supplies stable application defaults for semantic kinds. |
+| Foreign style handle                        | Carry it in a separate component prop; consume it inside the primitive. Toned does not interpret arbitrary props as styles.                                  |
+| Shared theme/runtime                        | An application bridge can subscribe to another system and supply Toned's token/configuration inputs. No Unistyles-specific bridge is shipped.                |
+| Another engine executing Toned declarations | Requires declaration compilation, host binding, ownership and delivery integration; not implemented by the existing plain-field output adapter alone.        |
 
 ## Keep foreign styles opaque
 

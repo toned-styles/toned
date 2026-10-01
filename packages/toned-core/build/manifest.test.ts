@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { createWebRenderer } from '../server/index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
 import {
@@ -8,18 +9,24 @@ import {
 } from './index.ts'
 
 test('bundled token enumeration order does not invalidate the build manifest', () => {
-  const width = defineToken({ values: [20, 40], resolve: (value) => ({ width: value }) })
-  const opacity = defineToken({ values: [0, 1], resolve: (value) => ({ opacity: value }) })
+  const width = defineToken({
+    values: [20, 40],
+    resolve: (value) => ({ width: value }),
+  })
+  const opacity = defineToken({
+    values: [0, 1],
+    resolve: (value) => ({ opacity: value }),
+  })
   const built = defineSystem({ id: 'bundled', tokens: { width, opacity } })
   const bundled = defineSystem({ id: 'bundled', tokens: { opacity, width } })
   const rules = { Root: { width: 20, opacity: 1 } } as const
   const artifact = buildStyles(built, { sheets: [built.stylesheet(rules)] })
-  const expected = createWebRenderer(built, { manifest: artifact.manifest }).resolve(
-    built.stylesheet(rules),
-  )
-  const actual = createWebRenderer(bundled, { manifest: artifact.manifest }).resolve(
-    bundled.stylesheet(rules),
-  )
+  const expected = createWebRenderer(built, {
+    manifest: artifact.manifest,
+  }).resolve(built.stylesheet(rules))
+  const actual = createWebRenderer(bundled, {
+    manifest: artifact.manifest,
+  }).resolve(bundled.stylesheet(rules))
   expect(actual.Root.className).toBe(expected.Root.className)
   expect(actual.Root.style).toEqual(expected.Root.style)
   expect(() => assertBuildArtifact(artifact)).not.toThrow()
@@ -28,12 +35,15 @@ test('bundled token enumeration order does not invalidate the build manifest', (
     id: 'bundled',
     tokens: {
       opacity,
-      width: defineToken({ values: [20, 60], resolve: (value) => ({ width: value }) }),
+      width: defineToken({
+        values: [20, 60],
+        resolve: (value) => ({ width: value }),
+      }),
     },
   })
-  expect(() => createWebRenderer(changed, { manifest: artifact.manifest })).toThrow(
-    'different system definition',
-  )
+  expect(() =>
+    createWebRenderer(changed, { manifest: artifact.manifest }),
+  ).toThrow('different system definition')
 })
 
 test('manifest rejects a stale named threshold even with the same system ID', () => {
@@ -126,7 +136,10 @@ test('the same tokens in another key order are the same system', () => {
   // A system spread from module namespaces gets its key order from the runtime:
   // sorted by name under the spec (Bun, Node), declaration order under Vite's
   // SSR module runner. Neither order may make the committed manifest stale.
-  const lineHeight = { values: [0] as const, resolve: () => ({ lineHeight: 1 }) }
+  const lineHeight = {
+    values: [0] as const,
+    resolve: () => ({ lineHeight: 1 }),
+  }
   const letterSpacing = {
     values: [''] as const,
     resolve: () => ({ letterSpacing: '0' }),

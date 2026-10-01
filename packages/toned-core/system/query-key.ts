@@ -25,11 +25,12 @@ type Unescape<S extends string> = Replace<
   '%25',
   '%'
 >
-type Encoded<T extends string> = SelectorText<T> extends infer S extends string
-  ? S extends `@query ${infer Body}`
-    ? Body
-    : `a:${Escape<S>}|`
-  : never
+type Encoded<T extends string> =
+  SelectorText<T> extends infer S extends string
+    ? S extends `@query ${infer Body}`
+      ? Body
+      : `a:${Escape<S>}|`
+    : never
 type Operands<A extends readonly string[]> = number extends A['length']
   ? string
   : A extends readonly [infer H extends string, ...infer T extends string[]]

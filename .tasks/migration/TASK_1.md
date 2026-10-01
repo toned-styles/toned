@@ -14,7 +14,7 @@ But in short, the key idea is:
 For example,
 
 ```ts
-import {stylesheet} from 'my-design-system'
+import { stylesheet } from 'my-design-system'
 
 export const styles = stylesheet({
   container: {
@@ -23,7 +23,7 @@ export const styles = stylesheet({
     alignItems: 'flex-start',
     flexLayout: 'column',
   },
-  code: {textColor: 'destructive'},
+  code: { textColor: 'destructive' },
 })
 ```
 
@@ -32,11 +32,11 @@ It can be rendered as inline styles for web, can be composition of classnames fr
 For example,
 
 ```tsx
-import {styles} from '@examples/shared/card'
-import {useStyles} from '@toned/react'
-import {t} from 'my-design-system'
+import { styles } from '@examples/shared/card'
+import { useStyles } from '@toned/react'
+import { t } from 'my-design-system'
 
-import {Button} from './Button.tsx'
+import { Button } from './Button.tsx'
 
 export function Card() {
   const s = useStyles(styles)
@@ -45,7 +45,7 @@ export function Card() {
     <div {...s.container}>
       <Button label={String(Math.random())} />
 
-      <span {...t({textColor: 'status_info'})}>
+      <span {...t({ textColor: 'status_info' })}>
         Edit <span {...s.code}>src/App.tsx</span> and save to test HMR
       </span>
     </div>
@@ -62,9 +62,9 @@ You should also understand how variants/states work and how they can be efficien
 For example,
 
 ```tsx
-import {stylesheet} from 'my-design-system'
-import {useStyles} from '@toned/react'
-import {t} from 'my-design-system'
+import { stylesheet } from 'my-design-system'
+import { useStyles } from '@toned/react'
+import { t } from 'my-design-system'
 
 export const styles = stylesheet({
   ...stylesheet.state<{
@@ -77,7 +77,7 @@ export const styles = stylesheet({
     alignItems: 'flex-start',
     flexLayout: 'column',
   },
-  code: {textColor: 'destructive'},
+  code: { textColor: 'destructive' },
 
   '[variant=primary]': {
     $container: {
@@ -87,13 +87,13 @@ export const styles = stylesheet({
 })
 
 export function Card() {
-  const s = useStyles(styles, {variant: 'primary'})
+  const s = useStyles(styles, { variant: 'primary' })
 
   return (
     <div {...s.container}>
       <Button label={String(Math.random())} />
 
-      <span {...t({textColor: 'status_info'})}>
+      <span {...t({ textColor: 'status_info' })}>
         Edit <span {...s.code}>src/App.tsx</span> and save to test HMR
       </span>
     </div>

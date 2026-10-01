@@ -171,9 +171,8 @@ void hosts
 
 // Use one physical React installation for both source trees. This measures a
 // synthetic component workload using each version's real useStyles binding.
-const { Window } = await import(
-  '../packages/toned-react/node_modules/happy-dom/lib/index.js'
-)
+const { Window } =
+  await import('../packages/toned-react/node_modules/happy-dom/lib/index.js')
 const window = new Window()
 Object.assign(globalThis, {
   window,
@@ -183,16 +182,13 @@ Object.assign(globalThis, {
   MutationObserver: window.MutationObserver,
   IS_REACT_ACT_ENVIRONMENT: true,
 })
-const React = await import(
-  '../packages/toned-react/node_modules/react/index.js'
-)
-const { createRoot } = await import(
-  '../packages/toned-react/node_modules/react-dom/client.js'
-)
+const React =
+  await import('../packages/toned-react/node_modules/react/index.js')
+const { createRoot } =
+  await import('../packages/toned-react/node_modules/react-dom/client.js')
 const binding = await moduleAt('packages/toned-react/index.ts')
-const { renderToString } = await import(
-  '../packages/toned-react/node_modules/react-dom/server.js'
-)
+const { renderToString } =
+  await import('../packages/toned-react/node_modules/react-dom/server.js')
 const web = (await moduleAt('packages/toned-react/react-web.ts')).default
 core.setConfig({
   ...web,

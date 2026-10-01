@@ -72,7 +72,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
   readonly hasMediaRules: boolean
   readonly cacheMax: number
   readonly bits: Array<[string, PropertyMap[string]]>
-  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous element token values
+  // oxlint-disable-next-line typescript/no-explicit-any -- heterogeneous element token values
   readonly cache = new Map<number | string, any>()
   private readonly factParts = new Map<string, Set<string>>()
   private bitCount = 0
@@ -257,7 +257,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
       return cached
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: output maps tokens for each element
+    // oxlint-disable-next-line typescript/no-explicit-any -- output maps tokens for each element
     const result: Record<string | symbol, any> = Object.create(null)
     for (const element of this.elementSet) result[element] = {}
     for (const part of this.baseParts)
@@ -320,7 +320,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
   }
 
   /** Exact rule membership within this plan; different plans never compare equal. */
-  // biome-ignore lint/suspicious/noExplicitAny: result metadata is private to the matcher
+  // oxlint-disable-next-line typescript/no-explicit-any -- result metadata is private to the matcher
   isEqual(elementKey: string, style1: any, style2: any) {
     const before = this.results.get(style1)
     const after = this.results.get(style2)

@@ -7,6 +7,7 @@ Consolidate, simplify, and properly document the type system. Remove unnecessary
 ## Current State
 
 Types are spread across multiple files with complex intersections:
+
 - `packages/toned-core/types.ts` - Main type definitions
 - `packages/toned-core/definers.ts` - System definition types
 - `packages/toned-core/StyleSheet/StyleSheet.ts` - Inline types
@@ -38,15 +39,18 @@ Types are spread across multiple files with complex intersections:
 Review each `biome-ignore lint/suspicious/noExplicitAny` comment:
 
 **In `types.ts`:**
+
 - `Tokens = Record<string, any>` - Can this be `Record<string, unknown>`?
 - `TokenConfig<Values extends readonly any[]>` - Necessary for const generics
 - `TokenStyleDeclaration` index signature - Required for dynamic tokens
 - `getProps(this: any, ...)` - Can be properly typed
 
 **In `definers.ts`:**
+
 - Generic constraints on `defineSystem` - Review necessity
 
 **In `StyleMatcher.ts`:**
+
 - Cache types - Could use `unknown` with type guards
 - Rule types - Could be more specific
 

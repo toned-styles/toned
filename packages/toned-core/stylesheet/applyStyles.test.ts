@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import { recordHostCommit, setStyles } from './applyStyles.ts'
 

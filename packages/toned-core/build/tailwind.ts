@@ -1,9 +1,9 @@
-import type { TailwindBackend } from '../backends/tailwind.ts'
 import { compileTailwindPlan } from '../backends/tailwind-plan.ts'
 import {
   createTailwindRuntime,
   tailwindProfileDefinition,
 } from '../backends/tailwind-runtime.ts'
+import type { TailwindBackend } from '../backends/tailwind.ts'
 import {
   compilePlan,
   type ResolvedOperation,

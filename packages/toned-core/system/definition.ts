@@ -12,7 +12,7 @@ export type SystemOptions = {
   layoutContext?: LayoutContext
   /** Canonical named viewport thresholds in fixed logical pixels. */
   media?: Record<string, number | (LogicalLength & { unit: 'dp' })>
-  // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
+  // oxlint-disable-next-line typescript/no-explicit-any -- breakpoints config uses generic parameter
   breakpoints?: Breakpoints<any>
   animations?: Record<string, AnimationInput>
   bridges?: Record<string, BridgeConfig>

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
-import { createQueries } from '../system/queries.ts'
 
+import { createQueries } from '../system/queries.ts'
 import {
   deepMerge,
   extractOrderedKeys,

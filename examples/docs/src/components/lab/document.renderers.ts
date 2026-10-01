@@ -1,4 +1,5 @@
 import { createInlineRenderer, createPdfRenderer } from '@toned/core/server'
+
 import { documentSystem } from './document.system.ts'
 
 /** Concrete web style properties: no CSS variables, no stylesheet. */

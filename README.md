@@ -121,17 +121,17 @@ export const ui = defineSystem({
   tokens: {
     surface: defineToken({
       values: ['accent', 'quiet'] as const,
-      resolve: value => ({
+      resolve: (value) => ({
         backgroundColor: value === 'accent' ? '#284bdd' : '#e8edff',
       }),
     }),
     ink: defineToken({
       values: ['on-accent', 'accent'] as const,
-      resolve: value => ({ color: value === 'accent' ? '#284bdd' : '#fff' }),
+      resolve: (value) => ({ color: value === 'accent' ? '#284bdd' : '#fff' }),
     }),
     padding: defineToken({
       values: [2, 3] as const,
-      resolve: step => ({ padding: step * 4 }),
+      resolve: (step) => ({ padding: step * 4 }),
     }),
     text: defineToken({
       values: ['label'] as const,
@@ -153,25 +153,25 @@ Start with your own vocabulary, or add the optional `@toned/systems` and
 
 ## Further capabilities
 
-| Topic | Reference |
-| --- | --- |
-| A reusable design vocabulary | [Systems and tokens](packages/toned-core/README.md#declare-a-system) |
-| Components with multiple parts and variants | [React element families](packages/toned-react/README.md#element-families) |
-| Responsive and state-aware styles | [Conditions and precedence](packages/toned-core/README.md#conditions-and-precedence) |
-| Server-rendered applications | [SSR guide](https://toned.style/guides/ssr) |
-| Native host integrations | [Native support and acceptance scope](packages/toned-react/NATIVE-HOSTS.md) |
-| Layouts that adapt to content | [Adaptive layout](packages/toned-core/adaptive/README.md) |
-| Timing, springs, interruption, and reduced motion | [Portable motion](packages/toned-core/motion/README.md) |
-| Email and PDF output | [Renderer guide](examples/docs/src/content/renderers.md) · [live output](https://toned.style/examples#renderers) |
-| Typed grid and named areas | [Grid reference](packages/toned-core/README.md#typed-web-grid) · [grid demo](https://toned.style/examples#grid) |
-| Typed themes, palettes and named fragments | [Core authoring reference](packages/toned-core/README.md) |
-| Scoped overrides and multiple systems | [React reference](packages/toned-react/README.md) |
-| Source navigation, completions and rename | [Compiler and language server](packages/toned-compiler/README.md) · [VS Code](editors/vscode/README.md) |
-| Source inspection and checked edits | [Inspector](packages/toned-compiler/inspector/README.md) · [development bridge](packages/toned-compiler/bridge/README.md) · [live inspector](https://toned.style/examples#inspector) |
-| Portable design-token interchange | [DTCG subset and mapping](packages/toned-compiler/tokens/README.md) · [live exchange](https://toned.style/examples#tokens) |
-| Measured design policies | [Contracts and scenario coverage](packages/toned-compiler/contracts/README.md) · [measure a target](https://toned.style/examples#contracts) |
-| Safer authoring in CI | [ESLint and Oxlint rules](packages/toned-eslint-plugin/README.md) |
-| Custom hosts and backends | [Host adapters](packages/toned-core/hosts/README.md) · [backend boundaries](packages/toned-core/backends/README.md) |
+| Topic                                             | Reference                                                                                                                                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A reusable design vocabulary                      | [Systems and tokens](packages/toned-core/README.md#declare-a-system)                                                                                                                 |
+| Components with multiple parts and variants       | [React element families](packages/toned-react/README.md#element-families)                                                                                                            |
+| Responsive and state-aware styles                 | [Conditions and precedence](packages/toned-core/README.md#conditions-and-precedence)                                                                                                 |
+| Server-rendered applications                      | [SSR guide](https://toned.style/guides/ssr)                                                                                                                                          |
+| Native host integrations                          | [Native support and acceptance scope](packages/toned-react/NATIVE-HOSTS.md)                                                                                                          |
+| Layouts that adapt to content                     | [Adaptive layout](packages/toned-core/adaptive/README.md)                                                                                                                            |
+| Timing, springs, interruption, and reduced motion | [Portable motion](packages/toned-core/motion/README.md)                                                                                                                              |
+| Email and PDF output                              | [Renderer guide](examples/docs/src/content/renderers.md) · [live output](https://toned.style/examples#renderers)                                                                     |
+| Typed grid and named areas                        | [Grid reference](packages/toned-core/README.md#typed-web-grid) · [grid demo](https://toned.style/examples#grid)                                                                      |
+| Typed themes, palettes and named fragments        | [Core authoring reference](packages/toned-core/README.md)                                                                                                                            |
+| Scoped overrides and multiple systems             | [React reference](packages/toned-react/README.md)                                                                                                                                    |
+| Source navigation, completions and rename         | [Compiler and language server](packages/toned-compiler/README.md) · [VS Code](editors/vscode/README.md)                                                                              |
+| Source inspection and checked edits               | [Inspector](packages/toned-compiler/inspector/README.md) · [development bridge](packages/toned-compiler/bridge/README.md) · [live inspector](https://toned.style/examples#inspector) |
+| Portable design-token interchange                 | [DTCG subset and mapping](packages/toned-compiler/tokens/README.md) · [live exchange](https://toned.style/examples#tokens)                                                           |
+| Measured design policies                          | [Contracts and scenario coverage](packages/toned-compiler/contracts/README.md) · [measure a target](https://toned.style/examples#contracts)                                          |
+| Safer authoring in CI                             | [ESLint and Oxlint rules](packages/toned-eslint-plugin/README.md)                                                                                                                    |
+| Custom hosts and backends                         | [Host adapters](packages/toned-core/hosts/README.md) · [backend boundaries](packages/toned-core/backends/README.md)                                                                  |
 
 Adaptive layout, motion, and compiler tooling are opt-in. Native capabilities are
 verified per concrete host profile; **native grid is not supported**. See the
@@ -180,14 +180,14 @@ verified per concrete host profile; **native grid is not supported**. See the
 
 ## Packages
 
-| Package | Purpose |
-| --- | --- |
-| [`@toned/core`](packages/toned-core/README.md) | Typed authoring, matching, pure renderers, backends, and deterministic CSS builds. |
-| [`@toned/react`](packages/toned-react/README.md) | React 18/19 element families, prop bags, providers, and web/native host bindings. |
-| [`@toned/systems`](packages/toned-systems/README.md) | Optional starting vocabularies, including the base system. |
-| [`@toned/themes`](packages/toned-themes/README.md) | Optional CSS theme values. |
-| [`@toned/eslint-plugin`](packages/toned-eslint-plugin/README.md) | Optional syntax-aware ESLint and Oxlint rules. |
-| [`@toned/compiler`](packages/toned-compiler/README.md) | Source graph, language server, inspector, measured contracts, and DTCG interchange. |
+| Package                                                          | Purpose                                                                             |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [`@toned/core`](packages/toned-core/README.md)                   | Typed authoring, matching, pure renderers, backends, and deterministic CSS builds.  |
+| [`@toned/react`](packages/toned-react/README.md)                 | React 18/19 element families, prop bags, providers, and web/native host bindings.   |
+| [`@toned/systems`](packages/toned-systems/README.md)             | Optional starting vocabularies, including the base system.                          |
+| [`@toned/themes`](packages/toned-themes/README.md)               | Optional CSS theme values.                                                          |
+| [`@toned/eslint-plugin`](packages/toned-eslint-plugin/README.md) | Optional syntax-aware ESLint and Oxlint rules.                                      |
+| [`@toned/compiler`](packages/toned-compiler/README.md)           | Source graph, language server, inspector, measured contracts, and DTCG interchange. |
 
 ## Editor mode
 

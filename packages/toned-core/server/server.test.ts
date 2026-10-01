@@ -1,4 +1,5 @@
 import { expect, test, vi } from 'vitest'
+
 import { buildStyles } from '../build/index.ts'
 import * as manifestValidation from '../build/manifest.ts'
 import { dp } from '../core/values.ts'
@@ -39,9 +40,8 @@ test('renderer theme snapshots and returned nested styles cannot mutate other re
 
 test('explicit token composition snapshots inputs, preserves composition symbols and never consults global config', async () => {
   const { createTokenStyles, cssVariableTokens } = await import('./index.ts')
-  const { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } = await import(
-    '../utils/symbols.ts'
-  )
+  const { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } =
+    await import('../utils/symbols.ts')
   const { immutableSnapshot } = await import('../utils/immutable.ts')
   const system = defineSystem({
     ink: defineToken({

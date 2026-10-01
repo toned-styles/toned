@@ -1,9 +1,10 @@
 import { expect, it, vi } from 'vitest'
+
 import { compileRules } from '../../core/plan.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
+import { StyleMatcher } from '../StyleMatcher.ts'
 import * as normalizer from './normalizeRules.ts'
 import { sharedMatcher } from './sharedMatcher.ts'
-import { StyleMatcher } from '../StyleMatcher.ts'
 import { sharedRuntimeNormalization } from './sharedNormalization.ts'
 
 it('shares only the requested cascade mode and preserves standalone matcher input updates', () => {

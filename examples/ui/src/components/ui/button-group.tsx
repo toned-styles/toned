@@ -2,6 +2,7 @@ import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Slot } from 'radix-ui'
+
 import { Separator } from '@/components/ui/separator.tsx'
 
 /*

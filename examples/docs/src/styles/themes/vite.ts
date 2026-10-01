@@ -1,5 +1,6 @@
 import { buildStyles } from '@toned/core/build'
 import type { Plugin } from 'vite'
+
 import { themeSheets } from './index.ts'
 import { themeSystem } from './system.ts'
 

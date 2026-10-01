@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { Fragment } from 'react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { ScrollArea } from './scroll-area.tsx'
 import { Separator } from './separator.tsx'
 

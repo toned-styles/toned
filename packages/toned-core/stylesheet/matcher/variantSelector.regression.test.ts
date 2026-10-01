@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { StyleMatcher } from '../StyleMatcher.ts'
 import { createVariantSelector } from '../variantSelector.ts'
 

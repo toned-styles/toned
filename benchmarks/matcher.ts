@@ -1,6 +1,7 @@
 /** Deterministic comparative microbenchmark; timing is evidence, never a test gate. */
 import { performance } from 'node:perf_hooks'
 import { pathToFileURL } from 'node:url'
+
 import { StyleMatcher } from '../packages/toned-core/stylesheet/StyleMatcher.ts'
 
 const baselinePath = process.argv[2]

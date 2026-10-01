@@ -4,6 +4,7 @@
 
 import { cpus, release } from 'node:os'
 import { performance } from 'node:perf_hooks'
+
 import { DesignLanguageService } from '../packages/toned-compiler/lsp/service.ts'
 import { DesignProject } from '../packages/toned-compiler/project.ts'
 

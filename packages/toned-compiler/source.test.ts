@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { applyDesignEdit, proposeValueEdit } from './edits.ts'
 import { DesignProject } from './project.ts'
 import { parseDesignDocument } from './source.ts'

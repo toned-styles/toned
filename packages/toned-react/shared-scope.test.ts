@@ -8,6 +8,7 @@ import {
 import { defineGrid, fr } from '@toned/core/grid'
 import type { Base } from '@toned/core/stylesheet'
 import { expect, test } from 'vitest'
+
 import {
   assertStandalonePart,
   standaloneScopeRequirement,

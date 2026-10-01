@@ -1,5 +1,6 @@
 import { createElements } from '@toned/react'
 import type { ReactNode } from 'react'
+
 import { noticeStyles } from './styles.ts'
 
 const Parts = createElements(noticeStyles)

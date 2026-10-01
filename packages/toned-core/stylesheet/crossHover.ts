@@ -31,7 +31,7 @@
  * @module stylesheet/crossHover
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: rules are dynamically shaped
+// oxlint-disable-next-line typescript/no-explicit-any -- rules are dynamically shaped
 type AnyValue = any
 
 const HOVER = ':hover'
@@ -90,7 +90,7 @@ export function resolveCrossHoverCss(
     out ??= { ...rules }
     delete out[key]
 
-    const source = { ...(out[bareSource] ?? {}) }
+    const source = { ...out[bareSource] }
     // One `_s` marker suffices however many channels a source drives (hover +
     // several states), so a multi-channel source does not accumulate duplicates.
     const classes: string = source.className ?? ''
@@ -103,7 +103,7 @@ export function resolveCrossHoverCss(
       if (!(targetKey in rules) && !knownParts?.has(targetKey)) continue
       const styles = elementMap[targetKeyRaw]
       if (!styles || typeof styles !== 'object') continue
-      const target = { ...(out[targetKey] ?? {}) }
+      const target = { ...out[targetKey] }
       for (const prop in styles) {
         if (prop[0] === '$') continue
         target[`:${channel}_${prop}`] = styles[prop]

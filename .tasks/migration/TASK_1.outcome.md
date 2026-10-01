@@ -16,6 +16,7 @@ The project is a monorepo with the following key packages:
 ### 1. Token System (`defineSystem`)
 
 Creates a token system that provides:
+
 - `system` - The token definitions
 - `t` - Inline token function for one-off styles
 - `stylesheet` - Function to create stylesheets
@@ -26,6 +27,7 @@ Location: `packages/toned-core/definers.ts`
 ### 2. Stylesheet Creation
 
 Current API pattern:
+
 ```ts
 stylesheet({
   ...stylesheet.state<{
@@ -36,12 +38,12 @@ stylesheet({
   container: {
     /* base tokens */
     ':hover': {
-      $container: { /* hover styles for container */ },
-      $label: { /* hover styles for label */ },
+      $container: {/* hover styles for container */},
+      $label: {/* hover styles for label */},
     },
   },
 
-  label: { /* base tokens */ },
+  label: {/* base tokens */},
 
   '[variant=accent]': {
     $container: {
@@ -57,6 +59,7 @@ stylesheet({
 ```
 
 Key characteristics:
+
 - State types defined via `...stylesheet.state<{...}>` spread
 - Variants use `[key=value]` selector syntax
 - Element references use `$element` prefix
@@ -68,12 +71,14 @@ Key characteristics:
 Location: `packages/toned-core/StyleMatcher/StyleMatcher.ts`
 
 The StyleMatcher is the runtime matching engine that:
+
 1. **Flattens nested rules** - Converts the nested structure into a flat representation
 2. **Compiles rules into bitmasks** - Each variant/state value gets a unique bit position
 3. **Efficient matching** - Uses bitwise AND operations for O(1) state matching
 4. **Caching** - Results are cached by state bits
 
 How it works:
+
 ```
 propertyBits = { size: { m: 1, s: 2 }, variant: { accent: 4, danger: 8 } }
 state = { size: 'm', variant: 'accent' }
@@ -87,6 +92,7 @@ For each rule: if (stateBits & rule.mask) === rule.value → apply rule
 Location: `packages/toned-core/types.ts`
 
 Key types:
+
 - `TokenConfig<Values, Result>` - Token definition
 - `TokenSystem<S, Config>` - Full system type
 - `StylesheetValue<S, Mods, T>` - Stylesheet input type
@@ -94,6 +100,7 @@ Key types:
 - `ElementStyle<S, Elements, Mods, Pseudo, Breakpoints>` - Element style with all modifiers
 
 The type system uses:
+
 - Mapped types for element keys
 - Template literal types for selectors like `[key=value]`
 - Recursive conditional types for nested structures
@@ -124,6 +131,7 @@ Styles are spread with `{...s.element}` which allows the adapter (web/native/etc
 Location: `packages/toned-core/config.ts`
 
 The config system manages:
+
 - Token resolution
 - Platform-specific behavior (className vs inline styles)
 - Media query handling

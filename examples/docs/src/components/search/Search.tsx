@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import { createPortal } from 'react-dom'
+
 import { searchStyles } from '../../styles/search.ts'
 import { loadSearchIndex } from './index-loader.ts'
 import { SearchPalette } from './SearchPalette.tsx'

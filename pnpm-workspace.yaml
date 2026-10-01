@@ -25,7 +25,6 @@ catalog:
   typescript: 5.9.2
 
 onlyBuiltDependencies:
-  - '@biomejs/biome'
   - esbuild
 
 supportedArchitectures:

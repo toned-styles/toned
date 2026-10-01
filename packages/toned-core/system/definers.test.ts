@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { getConfig, setConfig } from './config.ts'
 import { defineSystem, defineToken, defineUnit } from './definers.ts'
@@ -21,7 +22,6 @@ function expectConditions(
   }
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: test helper for dynamic style access
 type AnyStyle = Record<string, any>
 
 describe('defineToken', () => {
@@ -647,7 +647,6 @@ describe('defineSystem', () => {
 })
 
 describe('exec() chain fidelity (css pseudo mode, className on)', () => {
-  // biome-ignore lint/suspicious/noExplicitAny: test-side dynamic style shape
   type AnyStyle = Record<string, any>
 
   const shadowStep = defineToken({

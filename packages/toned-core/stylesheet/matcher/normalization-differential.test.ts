@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { compileRules, foldOperations, resolvePlan } from '../../core/plan.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
 import {

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, expect, test, vi } from 'vitest'
+
 import { defineGrid, fr } from '../grid/index.ts'
 import { createHostIntegration } from '../hosts/index.ts'
 import { getConfig } from '../system/config.ts'

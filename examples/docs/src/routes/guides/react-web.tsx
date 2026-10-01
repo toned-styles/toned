@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { InstallCommand } from '../../components/site/InstallCommand.tsx'
 import { proseStyles } from '../../styles/prose.ts'

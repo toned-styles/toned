@@ -1,3 +1,4 @@
+import { TextDocument } from 'vscode-languageserver-textdocument'
 import type { Connection } from 'vscode-languageserver/node.js'
 import {
   DidChangeWatchedFilesNotification,
@@ -6,7 +7,7 @@ import {
   ResponseError,
   TextDocumentSyncKind,
 } from 'vscode-languageserver/node.js'
-import { TextDocument } from 'vscode-languageserver-textdocument'
+
 import { DesignProject } from '../project.ts'
 import { parseEditRequest, parseQuery } from '../requests.ts'
 import {

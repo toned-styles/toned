@@ -9,6 +9,7 @@ Optimize the StyleSheet implementation for extreme performance in stylesheet cre
 **Location**: `packages/toned-core/StyleSheet/StyleSheet.ts`
 
 ### Current Approach
+
 - Creates proxy objects for element access
 - Uses StyleMatcher for variant resolution
 - Lazy initialization via `SYMBOL_INIT`
@@ -54,15 +55,17 @@ Optimize the StyleSheet implementation for extreme performance in stylesheet cre
 ### 6.3 Optimize Element Access
 
 Current (proxy-based):
+
 ```typescript
 const proxy = new Proxy(target, {
   get(target, prop) {
     // ... compute and return element props
-  }
+  },
 })
 ```
 
 Consider:
+
 ```typescript
 // Pre-compute elements at creation time
 class Stylesheet {
@@ -136,6 +139,7 @@ describe('StyleSheet', () => {
 ## Integration with StyleMatcher
 
 The StyleSheet uses StyleMatcher internally. Ensure optimizations are compatible:
+
 - StyleMatcher caching should be leveraged
 - Avoid re-creating StyleMatcher instances
 - Share compiled rules where possible

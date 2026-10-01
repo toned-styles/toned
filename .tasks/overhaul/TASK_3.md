@@ -9,6 +9,7 @@ Simplify the public API for better developer experience. Focus on ergonomics, di
 ### 1. Multiple Symbols Exported
 
 Currently exports many symbols that are internal implementation details:
+
 - `SYMBOL_REF`
 - `SYMBOL_INIT`
 - `SYMBOL_VARIANTS`
@@ -20,6 +21,7 @@ Currently exports many symbols that are internal implementation details:
 ### 2. `defineSystem` Return Type Complexity
 
 Returns object with `system`, `config`, `t`, `stylesheet`, `exec`:
+
 ```typescript
 const { t, stylesheet } = defineSystem({ ... })
 ```
@@ -29,11 +31,13 @@ const { t, stylesheet } = defineSystem({ ... })
 ### 3. `t()` Function Ergonomics
 
 Current usage:
+
 ```typescript
 t({ bgColor: 'primary', padding: 2 })
 ```
 
 **Consider**:
+
 - Is the API intuitive?
 - Can type inference be improved?
 - Should there be shorthand helpers?
@@ -41,11 +45,13 @@ t({ bgColor: 'primary', padding: 2 })
 ### 4. Stylesheet Creation Chain
 
 Current:
+
 ```typescript
 stylesheet({ ... }).variants({ ... })
 ```
 
 **Consider**:
+
 - Is `.variants()` chaining intuitive?
 - Should variants be part of initial definition?
 - How to handle `.extend()`?

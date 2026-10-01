@@ -6,7 +6,9 @@ import {
   SettingsIcon,
   UsersIcon,
 } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import {
   Sidebar,
   SidebarContent,

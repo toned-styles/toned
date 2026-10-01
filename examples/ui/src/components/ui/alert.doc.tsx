@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { CircleAlertIcon, InfoIcon } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { Alert, AlertDescription, AlertTitle } from './alert.tsx'
 
 export default doc({

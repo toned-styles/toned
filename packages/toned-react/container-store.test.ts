@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { ContainerSizesStore } from './container-store.ts'
 
 test('hierarchical widths shadow ancestors and equal updates preserve snapshots', () => {

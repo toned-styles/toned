@@ -1,5 +1,5 @@
-import { isQueryKey, queryExpression } from '../system/query-key.ts'
 import type { QueryPredicate } from '../system/queries.ts'
+import { isQueryKey, queryExpression } from '../system/query-key.ts'
 /**
  * The condition model behind every `'@…'` stylesheet key.
  *
@@ -31,7 +31,6 @@ import type { QueryPredicate } from '../system/queries.ts'
  *
  * @module utils/conditions
  */
-
 import { camelToKebab } from './css.ts'
 
 export type ConditionAtom = {

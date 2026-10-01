@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { pathToFileURL } from 'node:url'
+
 import { expect, test } from 'vitest'
 import {
   createConnection,
@@ -11,6 +12,7 @@ import {
   StreamMessageReader,
   StreamMessageWriter,
 } from 'vscode-languageserver/node.js'
+
 import { DesignProject } from '../project.ts'
 import { registerLanguageServer } from './server.ts'
 import { DesignLanguageService } from './service.ts'

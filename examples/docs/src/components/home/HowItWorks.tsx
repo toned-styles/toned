@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { TonedProvider, useStyles } from '@toned/react'
 import { webHost } from '@toned/react/hosts/web'
 import { type ReactNode, useState } from 'react'
+
 import { homeStyles } from '../../styles/home.ts'
 import { ChoiceButton } from '../ChoiceButton.tsx'
 import { CodeBlock, InlineCode } from '../CodeBlock.tsx'
@@ -176,7 +177,7 @@ export function HowItWorks() {
               <figure {...s.Diagnostic} aria-label="A type error">
                 <pre
                   {...s.DiagnosticCode}
-                  // biome-ignore lint/a11y/noNoninteractiveTabindex: keyboard users must be able to scroll wide code.
+                  // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- keyboard users must be able to scroll wide code.
                   tabIndex={0}
                 >
                   {'Root: { tint: '}

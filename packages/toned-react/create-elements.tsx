@@ -14,13 +14,14 @@ import {
   useEffect,
   useSyncExternalStore,
 } from 'react'
+
 import { useStyles } from './index.ts'
 import { type HostProps, PartHost } from './part-host.tsx'
 import { assertStandalonePart } from './shared-scope.ts'
 import { controllerOf } from './style-view.ts'
 
 // The typed public export in index.ts preserves each stylesheet's axes and parts.
-// biome-ignore lint/suspicious/noExplicitAny: stylesheet adapter boundary
+// oxlint-disable-next-line typescript/no-explicit-any -- stylesheet adapter boundary
 type StylesheetLike = { [SYMBOL_INIT]: (...args: any[]) => any }
 
 const serverValidationRevision = () => 0

@@ -32,13 +32,13 @@ For Oxlint 1.69 or newer, configure the JavaScript plugins explicitly:
 }
 ```
 
-| Rule | Checks | Automatic fix |
-| --- | --- | --- |
-| `toned/react/no-create-elements-in-render` | Proven `createElements` calls inside named components, hooks, React `memo`/`forwardRef` callbacks, and render-time `useMemo`/`useState` callbacks | No: hoisting captured values needs a design decision |
-| `toned/react/no-partial-host-bag` | A proven `useStyles` part's `style`, `className`, or `ref` passed alone to an intrinsic or known native host | No: merge caller props with `withProps` deliberately |
-| `toned/prefer-canonical-declarations` | Declaration `style`/`$$type` aliases and explicitly generic `.variants<Mods>(...)` | Renames ordinary keys only; skips duplicate keys, spreads, computed keys, and shorthand |
-| `toned/no-global-config` | Proven process-global `setConfig` calls | No: install an explicit renderer/provider at the application boundary |
-| `toned/prefer-semantic-tokens` | Opt-in static raw style properties with configured semantic alternatives | No: lint cannot prove visual equivalence |
+| Rule                                       | Checks                                                                                                                                            | Automatic fix                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `toned/react/no-create-elements-in-render` | Proven `createElements` calls inside named components, hooks, React `memo`/`forwardRef` callbacks, and render-time `useMemo`/`useState` callbacks | No: hoisting captured values needs a design decision                                    |
+| `toned/react/no-partial-host-bag`          | A proven `useStyles` part's `style`, `className`, or `ref` passed alone to an intrinsic or known native host                                      | No: merge caller props with `withProps` deliberately                                    |
+| `toned/prefer-canonical-declarations`      | Declaration `style`/`$$type` aliases and explicitly generic `.variants<Mods>(...)`                                                                | Renames ordinary keys only; skips duplicate keys, spreads, computed keys, and shorthand |
+| `toned/no-global-config`                   | Proven process-global `setConfig` calls                                                                                                           | No: install an explicit renderer/provider at the application boundary                   |
+| `toned/prefer-semantic-tokens`             | Opt-in static raw style properties with configured semantic alternatives                                                                          | No: lint cannot prove visual equivalence                                                |
 
 Canonical authoring keeps component identities stable and preserves Toned's host
 ref and interaction props:
@@ -47,14 +47,19 @@ ref and interaction props:
 import { createElements, useStyles } from '@toned/react'
 import type { Variants } from '@toned/core'
 
-const styles = ui.stylesheet({ Root: { $kind: 'pressable', opacity: 1 } })
+const styles = ui
+  .stylesheet({ Root: { $kind: 'pressable', opacity: 1 } })
   .variants(($: Variants<{ size: 's' | 'l' }>) => ({
     [$.size('s')]: { Root: { padding: 2 } },
   }))
 const S = createElements(styles)
 
 function Button({ size }) {
-  return <S size={size}><S.Root as="button" /></S>
+  return (
+    <S size={size}>
+      <S.Root as="button" />
+    </S>
+  )
 }
 function RawButton() {
   const s = useStyles(styles)
@@ -74,9 +79,12 @@ opt in while a compatibility library continues to support the global API:
 ```json
 {
   "toned/no-global-config": "error",
-  "toned/prefer-semantic-tokens": ["warn", {
-    "properties": { "color": "textColor", "fontSize": "typography" }
-  }]
+  "toned/prefer-semantic-tokens": [
+    "warn",
+    {
+      "properties": { "color": "textColor", "fontSize": "typography" }
+    }
+  ]
 }
 ```
 
@@ -95,9 +103,12 @@ reexports are not loaded or guessed. Supply explicit contracts per rule:
 
 ```json
 {
-  "toned/prefer-canonical-declarations": ["warn", {
-    "modules": { "./design-system": { "stylesheet": "stylesheet" } }
-  }]
+  "toned/prefer-canonical-declarations": [
+    "warn",
+    {
+      "modules": { "./design-system": { "stylesheet": "stylesheet" } }
+    }
+  ]
 }
 ```
 

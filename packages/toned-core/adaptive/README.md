@@ -7,46 +7,68 @@ apply the styles. There is no second renderer or imperative child rearrangement.
 
 ```tsx
 import * as React from 'react'
-import { defineAdaptiveLayout, createAdaptiveStore, type AdaptiveLayoutName } from '@toned/core/adaptive'
+import {
+  defineAdaptiveLayout,
+  createAdaptiveStore,
+  type AdaptiveLayoutName,
+} from '@toned/core/adaptive'
 import { observeAdaptiveContainer } from '@toned/core/adaptive/web'
 import { useAdaptiveVariants } from '@toned/react/adaptive'
 import { createElements } from '@toned/react'
 import type { Variants } from '@toned/core'
 
 const adaptive = defineAdaptiveLayout({
-  axis: 'layout', root: 'Root', areas: ['Title', 'Body', 'Actions'],
+  axis: 'layout',
+  root: 'Root',
+  areas: ['Title', 'Body', 'Actions'],
   fallback: 'stack',
   hysteresis: { size: 24, textScale: 0.1 },
   layouts: {
     stack: { flow: 'stack', gap: 8 },
     wide: {
-      flow: 'row', gap: 12,
+      flow: 'row',
+      gap: 12,
       when: { minWidth: 600, maxTextScale: 1.5 },
       areas: { Body: { grow: 1 } },
     },
     wrapped: { flow: 'wrap', gap: 8, when: { keyboard: 'shown' } },
   },
 })
-const sheet = ui.stylesheet({
-  Root: {}, Title: { $kind: 'text' }, Body: {}, Actions: {},
-}).variants(
-  ($: Variants<{ layout: AdaptiveLayoutName<typeof adaptive> }>) => adaptive.rules($),
-  { defaults: { layout: adaptive.fallback } },
-)
+const sheet = ui
+  .stylesheet({
+    Root: {},
+    Title: { $kind: 'text' },
+    Body: {},
+    Actions: {},
+  })
+  .variants(
+    ($: Variants<{ layout: AdaptiveLayoutName<typeof adaptive> }>) =>
+      adaptive.rules($),
+    { defaults: { layout: adaptive.fallback } },
+  )
 const S = createElements(sheet)
 
 function Card() {
-  const [store] = React.useState(() => createAdaptiveStore(adaptive, { textScale: 1 }))
+  const [store] = React.useState(() =>
+    createAdaptiveStore(adaptive, { textScale: 1 }),
+  )
   const available = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => {
-    if (available.current) return observeAdaptiveContainer(store, available.current)
+    if (available.current)
+      return observeAdaptiveContainer(store, available.current)
   }, [store])
   const variants = useAdaptiveVariants(store)
-  return <div ref={available} style={{ width: '100%' }}>
-    <S {...variants}><S.Root>
-      <S.Title>Title</S.Title><S.Body>Body</S.Body><S.Actions>Actions</S.Actions>
-    </S.Root></S>
-  </div>
+  return (
+    <div ref={available} style={{ width: '100%' }}>
+      <S {...variants}>
+        <S.Root>
+          <S.Title>Title</S.Title>
+          <S.Body>Body</S.Body>
+          <S.Actions>Actions</S.Actions>
+        </S.Root>
+      </S>
+    </div>
+  )
 }
 ```
 
@@ -69,7 +91,8 @@ native. Inputs are explicit immutable snapshots:
 ```ts
 store.update({
   container: { width: 640, height: 480 },
-  textScale: 1.25, keyboardHeight: 200,
+  textScale: 1.25,
+  keyboardHeight: 200,
   safeArea: { top: 20, right: 0, bottom: 16, left: 0 },
   content: {
     Title: { width: 150, height: 32 },
@@ -104,9 +127,14 @@ Native uses the same decision model and generated flex styles:
 import { nativeAdaptiveLayout } from '@toned/core/adaptive/native'
 const onLayout = React.useMemo(() => nativeAdaptiveLayout(store), [store])
 const variants = useAdaptiveVariants(store)
-return <View style={{ width: availableWidth, height: availableHeight }} onLayout={onLayout}>
-  <S {...variants}>...</S>
-</View>
+return (
+  <View
+    style={{ width: availableWidth, height: availableHeight }}
+    onLayout={onLayout}
+  >
+    <S {...variants}>...</S>
+  </View>
+)
 ```
 
 Supply native viewport, text scale, keyboard and safe-area snapshots from the

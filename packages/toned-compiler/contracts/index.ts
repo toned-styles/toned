@@ -1,4 +1,5 @@
 import type { DeclarationOrigin } from '@toned/core/core'
+
 import { contrastRatio } from './color.ts'
 import type { Scenario, ScenarioSuite, ScenarioValue } from './scenarios.ts'
 

@@ -2,8 +2,8 @@ import { systemDefinition } from '../build/manifest.ts'
 import type { TailwindManifest } from '../build/tailwind.ts'
 import type { TokenSystem } from '../types/index.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
-import type { TailwindBackend } from './tailwind.ts'
 import { compileTailwindPlan } from './tailwind-plan.ts'
+import type { TailwindBackend } from './tailwind.ts'
 
 /** Exact data schema. Serializer implementations, like token resolver functions,
  * must be versioned with application assets; function source is not a cache key. */

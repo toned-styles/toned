@@ -35,19 +35,21 @@ import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_DEFAULTS } from '../utils/symbols.ts'
 
 type SheetMeta<T> = T extends { readonly __toned__?: infer M } ? M : never
-type SheetVariants<T> = SheetMeta<T> extends {
-  mods: infer M
-  defaults: infer D
-}
-  ? [M] extends [never]
-    ? never
-    : Omit<M, keyof D> & Partial<Pick<M, Extract<keyof D, keyof M>>>
-  : SheetMeta<T> extends { mods: infer M }
-    ? M
-    : never
-type SheetOutput<T> = SheetMeta<T> extends { elements: infer E }
-  ? Readonly<{ [K in keyof E]: ResolvedProps }>
-  : Readonly<Record<string, ResolvedProps>>
+type SheetVariants<T> =
+  SheetMeta<T> extends {
+    mods: infer M
+    defaults: infer D
+  }
+    ? [M] extends [never]
+      ? never
+      : Omit<M, keyof D> & Partial<Pick<M, Extract<keyof D, keyof M>>>
+    : SheetMeta<T> extends { mods: infer M }
+      ? M
+      : never
+type SheetOutput<T> =
+  SheetMeta<T> extends { elements: infer E }
+    ? Readonly<{ [K in keyof E]: ResolvedProps }>
+    : Readonly<Record<string, ResolvedProps>>
 type RuntimeInput = {
   variants?: object
   facts?: Readonly<Record<string, unknown>>
@@ -184,7 +186,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     validated.add(sheet)
   }
   const inputs = (sheet: object, input: RuntimeInput) => ({
-    ...((sheet as Record<symbol, object>)[SYMBOL_DEFAULTS] ?? {}),
+    ...(sheet as Record<symbol, object>)[SYMBOL_DEFAULTS],
     ...Object.fromEntries(
       Object.entries(input.variants ?? {}).filter(
         ([, value]) => value !== undefined,

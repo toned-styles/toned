@@ -1,7 +1,7 @@
 import { defineUnit } from '@toned/core'
 
 // TODO: move to configuration level
-// biome-ignore lint/complexity/noBannedTypes: instance is expected
+// oxlint-disable-next-line typescript/no-wrapper-object-types -- instance is expected
 export const SpaceUnit = defineUnit<Number | String>((value, tokens) => {
   // @ts-expect-error
   const base = tokens.base

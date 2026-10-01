@@ -1,6 +1,7 @@
-import type { PropDoc } from 'virtual:component-docs/*'
 import { useStyles } from '@toned/react'
 import { useId } from 'react'
+import type { PropDoc } from 'virtual:component-docs/*'
+
 import { Input } from '@/components/ui/input.tsx'
 import { Label } from '@/components/ui/label.tsx'
 import {
@@ -8,6 +9,7 @@ import {
   NativeSelectOption,
 } from '@/components/ui/native-select.tsx'
 import { Switch } from '@/components/ui/switch.tsx'
+
 import { playgroundStyles } from '../../styles/playground.ts'
 
 export interface PropGroup {

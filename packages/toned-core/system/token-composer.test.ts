@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+
 import { defineSystem, defineToken } from '../index.ts'
 import { createTokenStyles } from '../server/index.ts'
 import { SYMBOL_STYLE } from '../utils/symbols.ts'

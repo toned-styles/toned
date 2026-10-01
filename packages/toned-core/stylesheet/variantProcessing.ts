@@ -9,7 +9,7 @@
 
 import { getNamedStyleName, isNamedStyleKey } from './variantSelector.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
+// oxlint-disable-next-line typescript/no-explicit-any -- internal type alias for dynamic stylesheet values
 type AnyValue = any
 
 /**

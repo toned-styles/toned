@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import {
   CSS_ONLY_PSEUDO_STATES,
   PSEUDO_CASCADE_ORDER,

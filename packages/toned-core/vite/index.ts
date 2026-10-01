@@ -1,5 +1,7 @@
 import { resolve } from 'node:path'
+
 import type { Plugin } from 'vite'
+
 import { generateArtifact } from '../build/artifact.ts'
 import { buildStyles } from '../build/index.ts'
 import type { BuildArtifact } from '../build/manifest.ts'

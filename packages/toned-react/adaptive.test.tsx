@@ -10,6 +10,7 @@ import * as React from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, expect, test } from 'vitest'
+
 import { useAdaptiveVariants } from './adaptive.tsx'
 import { createElements, useStyles } from './index.ts'
 import web from './react-web.ts'

@@ -1,7 +1,5 @@
 import './index.css'
-
 import '../toned.config.ts'
-
 import { t } from '@toned/systems/base'
 import { lazy, Suspense } from 'react'
 

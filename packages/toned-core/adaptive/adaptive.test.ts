@@ -1,4 +1,5 @@
 import { expect, test, vi } from 'vitest'
+
 import { cssVariablesBackend } from '../backends/index.ts'
 import { buildStyles } from '../build/index.ts'
 import { createNativeRenderer, createRenderer } from '../server/index.ts'

@@ -1,6 +1,7 @@
 import { defineSystem } from '@toned/core'
 import { createNativeRenderer } from '@toned/core/server'
 import { describe, expect, test } from 'vitest'
+
 import * as sizes from './sizes.ts'
 
 // Match the compatibility base system's unnamespaced declarations.

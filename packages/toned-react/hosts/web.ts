@@ -1,10 +1,11 @@
 import type { HostConditions } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
+
 import { attachPart } from '../attach-part.ts'
 import { addWith, supportsRefCleanup } from '../host-props.ts'
 import type { ReactHost } from '../runtime-config.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: ignore
+// oxlint-disable-next-line typescript/no-explicit-any -- ignore
 type AnyValue = any
 
 type Ref = AnyValue

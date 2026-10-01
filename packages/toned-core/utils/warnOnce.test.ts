@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
+
 import { __resetWarnings, warnOnce } from './warnOnce.ts'
 
 describe('warnOnce', () => {

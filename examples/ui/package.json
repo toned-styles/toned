@@ -2,6 +2,9 @@
   "name": "@examples/toned-ui",
   "private": true,
   "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@toned/core": "workspace:~",
@@ -27,8 +30,5 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
   }
 }

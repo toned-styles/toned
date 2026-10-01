@@ -1,4 +1,5 @@
 import { c, doc } from '@/lib/doc.tsx'
+
 import { Button } from './button.tsx'
 
 export default doc({

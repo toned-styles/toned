@@ -1,7 +1,7 @@
 import { fixedQueryWidth } from '../utils/conditions.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
-import { isQueryKey, queryExpression } from './query-key.ts'
 import type { QueryPredicate } from './queries.ts'
+import { isQueryKey, queryExpression } from './query-key.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null &&

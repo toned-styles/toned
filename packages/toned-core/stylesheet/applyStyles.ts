@@ -1,6 +1,6 @@
+import { serializeCssValue } from '../utils/css-value.ts'
 /** Differential host patches with per-controller requests and committed declarations. */
 import { camelToKebab } from '../utils/css.ts'
-import { serializeCssValue } from '../utils/css-value.ts'
 import { immutableSnapshot, isImmutableSnapshot } from '../utils/immutable.ts'
 import { nativeHostAdapter } from './native-host.ts'
 

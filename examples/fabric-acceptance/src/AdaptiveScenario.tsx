@@ -9,6 +9,7 @@ import { useStyles } from '@toned/react'
 import { useAdaptiveVariants } from '@toned/react/adaptive'
 import * as React from 'react'
 import { View, type ViewProps } from 'react-native'
+
 import { type ScenarioProps, until, useScenario } from './Harness.tsx'
 
 const adaptive = defineAdaptiveLayout({

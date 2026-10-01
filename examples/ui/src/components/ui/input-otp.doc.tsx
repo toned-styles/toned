@@ -1,6 +1,8 @@
 import { t } from '@toned/systems/base'
 import { useState } from 'react'
+
 import { c, type DocParts, doc } from '@/lib/doc.tsx'
+
 import {
   InputOTP,
   InputOTPGroup,

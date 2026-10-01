@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { useState } from 'react'
+
 import { homeStyles } from '../../styles/home.ts'
 import {
   defaultTheme,
@@ -46,7 +47,7 @@ export function ThemeDemo() {
         <section
           {...s.ThemeFrame}
           aria-label="Themed interface"
-          // biome-ignore lint/a11y/noNoninteractiveTabindex: the frame scrolls on small screens, so keyboard users must reach it.
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the frame scrolls on small screens, so keyboard users must reach it.
           tabIndex={0}
         >
           <ReleaseApp theme={theme} />

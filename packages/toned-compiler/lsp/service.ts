@@ -1,3 +1,4 @@
+import { TextDocument } from 'vscode-languageserver-textdocument'
 import type {
   CompletionItemKind as CompletionItemKindValue,
   CompletionList,
@@ -10,7 +11,7 @@ import type {
   SymbolKind as SymbolKindValue,
   WorkspaceEdit,
 } from 'vscode-languageserver/node.js'
-import { TextDocument } from 'vscode-languageserver-textdocument'
+
 import { proposeValueEdit } from '../edits.ts'
 import type {
   DesignChange,

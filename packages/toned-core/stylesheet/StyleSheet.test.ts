@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
+
 import { defineSystem, defineToken } from '../system/index.ts'
 import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import type { Config, TokenSystem } from '../types/index.ts'
@@ -206,12 +207,10 @@ describe('createStylesheet', () => {
       const sheet = createStylesheet(mockTokenSystem, rules).variants({
         '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
       })
-      // biome-ignore lint/suspicious/noExplicitAny: reaching the runtime extend surface
       const extended = (sheet as any).extend({
         container: { bgColor: 'green' },
       })
       const base = extended[SYMBOL_INIT](
-        // biome-ignore lint/suspicious/noExplicitAny: minimal mock config
         { getProps() {}, getTokens: () => ({}), tokens: {} } as any,
         {},
       )
@@ -619,7 +618,6 @@ describe('callback-based variants API', () => {
     }
 
     const stylesheet = createStylesheet(mockTokenSystem, rules)
-    // biome-ignore lint/suspicious/noExplicitAny: test callback variants
     const withVariants = (stylesheet as any).variants(($: any) => ({
       [$.menuOpen('true')]: {
         sidebar: { bgColor: 'yellow' },
@@ -639,7 +637,6 @@ describe('callback-based variants API', () => {
     }
 
     const stylesheet = createStylesheet(mockTokenSystem, rules)
-    // biome-ignore lint/suspicious/noExplicitAny: test callback variants
     const withVariants = (stylesheet as any).variants(($: any) => ({
       [$.active('true')]: {
         container: { bgColor: 'red' },

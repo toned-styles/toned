@@ -1,7 +1,7 @@
 {
   "name": "@examples/vite",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "bun server.js",
@@ -14,8 +14,8 @@
     "@examples/shared": "workspace:*",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
-    "@toned/themes": "workspace:*",
     "@toned/systems": "workspace:*",
+    "@toned/themes": "workspace:*",
     "compression": "^1.8.1",
     "express": "^5.1.0",
     "react": "catalog:",

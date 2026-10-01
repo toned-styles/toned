@@ -1,5 +1,6 @@
 import { useStyles } from '@toned/react'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+
 import { playgroundStyles } from '../../styles/playground.ts'
 
 /** Shows a component's render error on the stage instead of blanking the page. */

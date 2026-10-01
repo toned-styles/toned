@@ -4,6 +4,7 @@ import bash from 'shiki/langs/bash.mjs'
 import css from 'shiki/langs/css.mjs'
 import json from 'shiki/langs/json.mjs'
 import tsx from 'shiki/langs/tsx.mjs'
+
 import { brand } from './styles/brand.ts'
 
 export type CodeLanguage = 'bash' | 'css' | 'json' | 'tsx'

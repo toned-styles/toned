@@ -10,7 +10,6 @@ vi.mock('./config.ts', () => ({ default: {} }))
 
 import reactWebConfig from './react-web.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: test doubles use dynamic shapes
 type AnyValue = any
 
 function fakeEventTarget() {

@@ -1,11 +1,12 @@
-import type { Variants } from '../../types/index.ts'
 import { describe, expect, it, vi } from 'vitest'
+
 import { buildStyles } from '../../build/index.ts'
 import { compilePlan, compileRules, resolvePlan } from '../../core/plan.ts'
 import { createNativeRenderer, createWebRenderer } from '../../server/index.ts'
 import { RULE_LAYERS } from '../../stylesheet/rule-protocol.ts'
 import { StyleMatcher } from '../../stylesheet/StyleMatcher.ts'
 import { defineSystem, defineToken } from '../../system/definers.ts'
+import type { Variants } from '../../types/index.ts'
 import { resolveCssPlan } from './plan.ts'
 import { cssTestValue } from './test-values.test.helpers.ts'
 

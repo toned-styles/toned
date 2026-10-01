@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { lazy, Suspense, useLayoutEffect } from 'react'
-import { GalleryThemeSwitcher } from '../../components/playground/GalleryThemeSwitcher.tsx'
+
 import {
   applyGalleryTheme,
   clearGalleryTheme,
@@ -9,8 +9,10 @@ import {
   galleryThemeBootScript,
   useServerMarkup,
 } from '../../components/playground/galleryTheme.ts'
-import { SiteHeader } from '../../components/SiteHeader.tsx'
+import { GalleryThemeSwitcher } from '../../components/playground/GalleryThemeSwitcher.tsx'
 import { SiteFooter } from '../../components/site/SiteFooter.tsx'
+import { SiteHeader } from '../../components/SiteHeader.tsx'
+
 import '../../styles/home.css'
 import '../../styles/gallery-themes.css'
 import { playgroundStyles } from '../../styles/playground.ts'

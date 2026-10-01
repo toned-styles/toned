@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+
 import { defineSystem, defineTokenFor } from '../index.ts'
 import { createNativeRenderer } from '../server/index.ts'
 

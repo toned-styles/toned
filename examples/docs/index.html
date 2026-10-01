@@ -5,31 +5,91 @@
     <link rel="icon" type="image/svg+xml" href="/brand/toned-mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Toned — Typed styling for React and React Native</title>
-    <meta name="description" content="Toned is a styling library for React and React Native: typed design tokens, named component parts and variants in one stylesheet." />
-    <meta property="og:title" content="Toned — Typed styling for React and React Native" />
-    <meta property="og:description" content="Typed design tokens, named component parts and variants for React and React Native." />
+    <meta
+      name="description"
+      content="Toned is a styling library for React and React Native: typed design tokens, named component parts and variants in one stylesheet."
+    />
+    <meta
+      property="og:title"
+      content="Toned — Typed styling for React and React Native"
+    />
+    <meta
+      property="og:description"
+      content="Typed design tokens, named component parts and variants for React and React Native."
+    />
     <meta property="og:type" content="website" />
     <meta name="theme-color" content="#284bdd" />
     <style>
       /* Modern CSS reset */
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      body { margin: 0; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-      img, picture, video, canvas, svg { display: block; max-width: 100%; }
-      input, button, textarea, select { font: inherit; color: inherit; }
-      :root { accent-color: #284bdd; }
-      button { background: none; border: none; cursor: pointer; }
-      p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
-      a { color: inherit; text-decoration: inherit; }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        margin: 0;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      img,
+      picture,
+      video,
+      canvas,
+      svg {
+        display: block;
+        max-width: 100%;
+      }
+      input,
+      button,
+      textarea,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      :root {
+        accent-color: #284bdd;
+      }
+      button {
+        background: none;
+        border: none;
+        cursor: pointer;
+      }
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        overflow-wrap: break-word;
+      }
+      a {
+        color: inherit;
+        text-decoration: inherit;
+      }
       /* A visually hidden native checkbox remains keyboard operable. */
-      .visually-hidden, .menu-toggle { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-      #menu-toggle:focus-visible + label { outline: 2px solid currentColor; outline-offset: 2px; }
+      .visually-hidden,
+      .menu-toggle {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      #menu-toggle:focus-visible + label {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+      }
       /* CSS-only mobile menu toggle (works without JS) */
       @media (max-width: 767px) {
         #menu-toggle:checked ~ nav {
           display: block;
           position: fixed;
         }
-        #menu-toggle:checked ~ [role="presentation"] {
+        #menu-toggle:checked ~ [role='presentation'] {
           display: block;
         }
       }

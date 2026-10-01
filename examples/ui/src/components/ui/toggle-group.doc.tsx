@@ -1,5 +1,7 @@
 import { AlignCenterIcon, AlignLeftIcon, AlignRightIcon } from 'lucide-react'
+
 import { c, doc } from '@/lib/doc.tsx'
+
 import { ToggleGroup, ToggleGroupItem } from './toggle-group.tsx'
 
 export default doc({

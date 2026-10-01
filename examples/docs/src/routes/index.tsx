@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { HowItWorks } from '../components/home/HowItWorks.tsx'
 import { SupportLine } from '../components/home/SupportLine.tsx'
 import { ThemeDemo } from '../components/home/ThemeDemo.tsx'
 import { Tooling } from '../components/home/Tooling.tsx'
-import { SiteHeader } from '../components/SiteHeader.tsx'
 import { SiteFooter } from '../components/site/SiteFooter.tsx'
+import { SiteHeader } from '../components/SiteHeader.tsx'
 import { ThemeScope } from '../components/themes/ThemeScope.tsx'
 import { homeStyles } from '../styles/home.ts'
+
 import '../styles/home.css'
 
 export const Route = createFileRoute('/')({ component: Home })

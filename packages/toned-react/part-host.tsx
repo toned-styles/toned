@@ -1,13 +1,14 @@
 import type { ElementType, HostConditions } from '@toned/core'
 import type { Base } from '@toned/core/stylesheet'
 import { createElement, useContext, useLayoutEffect, useMemo } from 'react'
+
 import { ContainerSizesStore } from './container-store.ts'
 import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
 import { addWith } from './host-props.ts'
 import { elementProps } from './style-view.ts'
 
 // Host props are platform-dependent; the public callable checks explicit `as`.
-// biome-ignore lint/suspicious/noExplicitAny: adapter boundary
+// oxlint-disable-next-line typescript/no-explicit-any -- adapter boundary
 export type HostProps = Record<string, any>
 
 type PartHostProps = {

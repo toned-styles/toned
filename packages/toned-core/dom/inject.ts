@@ -32,7 +32,7 @@ export function inject<
   const S extends
     | TokenStyleDeclaration
     | {
-        // biome-ignore lint/suspicious/noExplicitAny: breakpoint config uses generic parameter
+        // oxlint-disable-next-line typescript/no-explicit-any -- breakpoint config uses generic parameter
         breakpoints?: Breakpoints<any>
       },
 >(system: S) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { createInlineRenderer } from '../server/index.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
 import type { Variants } from '../types/stylesheet.ts'
