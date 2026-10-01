@@ -768,9 +768,14 @@ export class Base {
       owners = new WeakMap()
       ATTACHMENTS.set(node, owners)
     }
+    const partOwner = this.family.partOwner(elementKey)
+    // The family entry answers "which controller handles events here"; the
+    // part entry tracks this part's own attachment, so a second part of the
+    // family on the same element cannot release or replace the first.
     owners.set(this.family, { owner: this, generation })
+    owners.set(partOwner, { owner: this, generation })
     this.queueHostValidation(node)
-    recordHostCommit(node, toned, caller, this.family)
+    recordHostCommit(node, toned, caller, partOwner)
     if (this.relationQueries().length) {
       const existing = this.family.relationHosts.get(node)
       if (existing && existing.part !== elementKey) {
@@ -806,18 +811,21 @@ export class Base {
       attached = false
       detachHost?.()
       refs.delete(node)
-      if (ATTACHMENTS.get(node)?.get(this.family)?.generation === generation) {
+      if (ATTACHMENTS.get(node)?.get(partOwner)?.generation === generation) {
         this.family.pendingHostValidation.delete(node)
-        prepareHostRelease(node, this.family)
+        prepareHostRelease(node, partOwner)
       }
       // React detaches and reattaches callback refs in one commit. Retain
       // transient facts through that handoff, then discard true unmounts.
       queueMicrotask(() => {
-        if (ATTACHMENTS.get(node)?.get(this.family)?.generation !== generation)
+        if (ATTACHMENTS.get(node)?.get(partOwner)?.generation !== generation)
           return
-        ATTACHMENTS.get(node)?.delete(this.family)
+        ATTACHMENTS.get(node)?.delete(partOwner)
+        // Another part of this family may still be attached to the element.
+        if (ATTACHMENTS.get(node)?.get(this.family)?.generation === generation)
+          ATTACHMENTS.get(node)?.delete(this.family)
         this.family.hostConditions.delete(node)
-        releaseHost(node, this.family)
+        releaseHost(node, partOwner)
         const relationship = this.family.relationHosts.get(node)
         this.family.relationHosts.delete(node)
         relationship?.detach()
@@ -908,7 +916,7 @@ export class Base {
     setStyles(
       node,
       owner.styleForHostConditions(part, node, registration.readSizes()),
-      this.family,
+      this.family.partOwner(part),
     )
   }
 
@@ -1247,13 +1255,17 @@ export class Base {
       setStyles(
         el,
         this.styleForHostConditions(elementKey, el, conditions.readSizes()),
-        this.family,
+        this.family.partOwner(elementKey),
       )
       return
     }
     const active = this.activePseudos(elementKey, el)
     if (active.length === 0) return
-    setStyles(el, this.styleForPseudos(elementKey, active), this.family)
+    setStyles(
+      el,
+      this.styleForPseudos(elementKey, active),
+      this.family.partOwner(elementKey),
+    )
   }
 
   // Remove a single unmounted element from refs and from every interaction set.
@@ -1328,7 +1340,7 @@ export class Base {
           setStyles(
             el,
             this.styleForHostConditions(elementKey, el, conditions.readSizes()),
-            this.family,
+            this.family.partOwner(elementKey),
           )
         }
       }
@@ -1370,7 +1382,11 @@ export class Base {
                 this.styleForPseudos(elementKey, active),
               )
             }
-            setStyles(el, styleBySignature.get(signature), this.family)
+            setStyles(
+              el,
+              styleBySignature.get(signature),
+              this.family.partOwner(elementKey),
+            )
           }
         } else if (isMultiInstance) {
           // A non-interactive element shared across instances may still be a
@@ -1396,7 +1412,7 @@ export class Base {
               this.pruneEl(elementKey, el)
               continue
             }
-            setStyles(el, restingStyle, this.family)
+            setStyles(el, restingStyle, this.family.partOwner(elementKey))
           }
         } else {
           // Single shared instance: full cross-element behavior is safe.
@@ -1411,12 +1427,16 @@ export class Base {
               this.pruneEl(elementKey, el)
               continue
             }
-            setStyles(el, style, this.family)
+            setStyles(el, style, this.family.partOwner(elementKey))
           }
         }
       } else if (ref) {
         // Single ref (native) — unchanged.
-        setStyles(ref, this.getCurrentStyle(elementKey), this.family)
+        setStyles(
+          ref,
+          this.getCurrentStyle(elementKey),
+          this.family.partOwner(elementKey),
+        )
       }
     }
   }
