@@ -13,7 +13,14 @@ import { routeTree } from './routeTree.gen.ts'
 
 export async function render(url: string) {
   const memoryHistory = createMemoryHistory({ initialEntries: [url] })
-  const router = createRouter({ routeTree, history: memoryHistory })
+  // `scrollRestoration` matches the client router. On the server it adds the
+  // router's inline script, which restores the scroll position of a reloaded
+  // page before the application hydrates.
+  const router = createRouter({
+    routeTree,
+    history: memoryHistory,
+    scrollRestoration: true,
+  })
 
   await router.load()
 

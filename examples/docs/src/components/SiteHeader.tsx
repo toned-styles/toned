@@ -3,6 +3,7 @@ import { useStyles } from '@toned/react'
 import { type ReactNode, useEffect, useId, useState } from 'react'
 import { headerLinks, isActive } from '../content/nav.ts'
 import { docsStyles, headerStyles } from '../styles/site.ts'
+import { Search } from './search/Search.tsx'
 
 function HeaderLink({
   to,
@@ -81,6 +82,7 @@ export function SiteHeader({ menu }: { menu?: ReactNode }) {
           </nav>
           <div {...s.Spacer} />
           <div {...s.Actions}>
+            <Search />
             <a
               href="https://github.com/toned-styles/toned"
               {...s.IconLink}

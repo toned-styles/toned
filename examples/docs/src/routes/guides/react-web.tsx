@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
+import { InstallCommand } from '../../components/site/InstallCommand.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
 export const Route = createFileRoute('/guides/react-web')({
@@ -13,17 +14,15 @@ function GuideReactWeb() {
     <article {...s.container}>
       <h1 {...s.h1}>React Web Guide</h1>
       <p>
-        This guide walks you through setting up toned-styles in a React web
-        project using Vite. The same approach works with any bundler that
-        supports TypeScript.
+        This guide walks you through setting up Toned in a React web project
+        using Vite. The same approach works with any bundler that supports
+        TypeScript.
       </p>
 
       <h2 {...s.h2} id="1-install-dependencies">
         1. Install Dependencies
       </h2>
-      <CodeBlock>
-        {'npm install @toned/core @toned/react @toned/systems @toned/themes'}
-      </CodeBlock>
+      <InstallCommand packages="@toned/core @toned/react @toned/systems @toned/themes" />
 
       <h2 {...s.h2} id="2-add-the-vite-plugin">
         2. Add the Vite Plugin
@@ -174,7 +173,7 @@ export function Button({ label, variant = 'primary' }: {
         <code {...s.code}>:hover</code>, <code {...s.code}>:focus</code> and{' '}
         <code {...s.code}>:active</code> through CSS custom properties instead
         of JavaScript event listeners. See{' '}
-        <a href="/guides/interactive">Interactive Styles</a>.
+        <Link to="/guides/interactive">Interactive Styles</Link>.
       </p>
     </article>
   )

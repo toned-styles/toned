@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
+import { InstallCommand } from '../../components/site/InstallCommand.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
 export const Route = createFileRoute('/guides/react-native')({
@@ -22,7 +23,7 @@ function GuideReactNative() {
       <h2 {...s.h2} id="1-define-portable-parts">
         1. Define portable parts
       </h2>
-      <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
+      <InstallCommand packages="@toned/core @toned/react" />
       <CodeBlock title="styles.ts">{`import { stylesheet } from './system'
 
 export const cardStyles = stylesheet({

@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
@@ -47,7 +47,7 @@ function GuideSsr() {
       <p>
         <code {...s.code}>system.ts</code> and{' '}
         <code {...s.code}>styles.ts</code> are the modules from{' '}
-        <a href="/getting-started">Getting Started</a>.
+        <Link to="/getting-started">Getting Started</Link>.
       </p>
       <CodeBlock title="vite.config.ts">{`import toned from '@toned/core/vite'
 import react from '@vitejs/plugin-react'
@@ -65,7 +65,7 @@ export default defineConfig({
       <p>
         Import <code {...s.code}>virtual:toned.css</code> in the application and
         use <code {...s.code}>virtual:toned.manifest</code> to create the
-        renderer. See <a href="/getting-started">Getting Started</a> for the
+        renderer. See <Link to="/getting-started">Getting Started</Link> for the
         complete provider setup. The production CSS file must be linked from the
         initial HTML.
       </p>
@@ -138,7 +138,7 @@ export const renderer = createWebRenderer(ui, { manifest, tokens: {} })`}</CodeB
         browser. <code {...s.code}>createElements</code> families are client
         components and can be imported into a Server Component as they are; they
         need a <code {...s.code}>TonedProvider</code> above them, as in{' '}
-        <a href="/getting-started">Getting Started</a>.
+        <Link to="/getting-started">Getting Started</Link>.
       </p>
       <CodeBlock title="LikeButton.tsx">{`'use client'
 import { createElements } from '@toned/react'

@@ -1,6 +1,7 @@
 import { createElements } from '@toned/react'
 import {
   type ButtonHTMLAttributes,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   useId,
@@ -10,6 +11,7 @@ import { buttonStyles } from '../../styles/themes/sheets/button.ts'
 import {
   avatarStyles,
   badgeStyles,
+  chartStyles,
   meterStyles,
 } from '../../styles/themes/sheets/content.ts'
 import {
@@ -20,12 +22,14 @@ import {
   switchStyles,
   tabStyles,
 } from '../../styles/themes/sheets/controls.ts'
+import { sliderValue } from '../../styles/themes/vars.ts'
 
 // One family per stylesheet, created once. Each names its parts as components.
 const ButtonParts = createElements(buttonStyles)
 const Badges = createElements(badgeStyles)
 const Avatars = createElements(avatarStyles)
 const Meters = createElements(meterStyles)
+const Charts = createElements(chartStyles)
 const Fields = createElements(fieldStyles)
 const Checks = createElements(checkStyles)
 const Switches = createElements(switchStyles)
@@ -42,7 +46,7 @@ export function Button({
   shape?: 'label' | 'icon'
 }) {
   return (
-    <ButtonParts tone={tone} shape={shape}>
+    <ButtonParts tone={tone} shape={shape} disabled={props.disabled ?? false}>
       <ButtonParts.Root as="button" type="button" {...props} />
     </ButtonParts>
   )
@@ -102,6 +106,40 @@ export function Meter({ value, label }: { value: number; label: string }) {
     </Meters.Track>
   )
 }
+
+/**
+ * A bar chart of a short series. `size="spark"` draws it small, beside a
+ * figure, where it is decoration: the figure carries the meaning.
+ */
+export function Bars({
+  values,
+  size,
+  label,
+}: {
+  values: readonly number[]
+  size?: 'full' | 'spark'
+  label?: string
+}) {
+  const max = Math.max(...values)
+  return (
+    <Charts size={size}>
+      <Charts.Root
+        role={label ? 'img' : undefined}
+        aria-label={label}
+        aria-hidden={label ? undefined : true}
+      >
+        {values.map((value, index) => (
+          <Charts key={index} newest={index === values.length - 1}>
+            {/* The height is the measurement itself, not a design value. */}
+            <Charts.Bar style={{ height: `${(value / max) * 100}%` }} />
+          </Charts>
+        ))}
+      </Charts.Root>
+    </Charts>
+  )
+}
+
+export const ChartAxis = Charts.Axis
 
 export const FieldGrid = Fields.Grid
 
@@ -353,6 +391,8 @@ export function Slider({
           max={100}
           step={5}
           value={value}
+          // The filled part of the track follows the value: it is data.
+          style={{ [sliderValue.onElement]: `${value}%` } as CSSProperties}
           onChange={(event) => onChange(Number(event.currentTarget.value))}
         />
         <Sliders.Value as="output" htmlFor={id}>

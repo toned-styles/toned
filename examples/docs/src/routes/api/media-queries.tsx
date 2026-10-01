@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
@@ -13,8 +13,8 @@ function ApiMediaQueries() {
     <article {...s.container}>
       <h1 {...s.h1}>Media Queries</h1>
       <p>
-        toned-styles supports responsive styling through breakpoints defined in
-        your system configuration. Token values can be overridden at specific
+        Toned supports responsive styling through breakpoints defined in your
+        system configuration. Token values can be overridden at specific
         breakpoints, and the system handles media query generation
         automatically.
       </p>
@@ -46,6 +46,14 @@ function ApiMediaQueries() {
         <code {...s.code}>$style</code> escape hatch as the base element
         definition. Properties set inside a breakpoint block override the base
         values when the viewport matches.
+      </p>
+      <p>
+        <code {...s.code}>'@media md'</code> can also be written as the builder
+        call <code {...s.code}>[q.media('md')]</code> or as the earlier short
+        key <code {...s.code}>'@md'</code>; all three declare the same rule.
+        Container and platform conditions follow the same pattern. See{' '}
+        <Link to="/api/conditions">Conditions and selectors</Link> for every
+        form.
       </p>
 
       <h2 {...s.h2} id="root-level-breakpoints">
@@ -204,8 +212,8 @@ export const ui = defineSystem({
         <code {...s.code}>@</code> block is dropped, the base token value still
         applies, and a development-only warning explains why. Where you need
         responsive styling on React Native, use{' '}
-        <a href="/api/stylesheet">stylesheet</a> with{' '}
-        <a href="/api/use-styles">useStyles</a> instead.
+        <Link to="/api/stylesheet">stylesheet</Link> with{' '}
+        <Link to="/api/use-styles">useStyles</Link> instead.
       </p>
     </article>
   )

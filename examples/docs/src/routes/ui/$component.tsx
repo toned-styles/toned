@@ -137,7 +137,7 @@ function ComponentPlayground() {
         <SimplePlayground key={name} name={name} doc={primaryDoc} mod={mod} />
       ) : (
         <StylesheetWorkbench key={name} name={name} mod={mod}>
-          <div {...s.preview} data-preview-stage>
+          <div {...s.preview} data-preview-stage data-gallery-themed>
             <p {...s.compoundNotice}>
               This component has no example yet. Its source is shown alongside.
             </p>

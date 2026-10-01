@@ -98,6 +98,13 @@ export const initialReleases: Record<ProjectId, Release[]> = {
   ],
 }
 
+/** Initials → name, for the people who own releases. */
+export const people: Record<string, string> = {
+  AK: 'Ada King',
+  MR: 'Mo Rahimi',
+  JL: 'Jun Lee',
+}
+
 export const statusLabel: Record<Status, string> = {
   live: 'Live',
   rolling: 'Rolling out',
@@ -117,6 +124,7 @@ export const stats = [
     label: 'Deploys this week',
     value: '24',
     change: '+6',
+    note: 'vs last week',
     tone: 'ok',
     trend: [4, 6, 5, 8, 7, 10, 9, 12],
   },
@@ -124,6 +132,7 @@ export const stats = [
     label: 'Success rate',
     value: '98.2%',
     change: '+0.4',
+    note: 'points, 30 days',
     tone: 'ok',
     trend: [9, 9, 8, 9, 10, 9, 10, 10],
   },
@@ -131,6 +140,7 @@ export const stats = [
     label: 'Median build',
     value: '3m 12s',
     change: '+18s',
+    note: 'vs last week',
     tone: 'warn',
     trend: [6, 5, 6, 7, 6, 8, 8, 9],
   },

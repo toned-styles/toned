@@ -112,7 +112,11 @@ export function StylesheetWorkbench({
         <StyleOverrides value={overrides}>{children}</StyleOverrides>
         {controls}
       </div>
-      <section {...s.panel} aria-label="Component stylesheet workbench">
+      <section
+        {...s.panel}
+        aria-label="Component stylesheet workbench"
+        data-gallery-chrome
+      >
         <div {...s.panelBar}>
           <div {...s.tabs} role="group" aria-label="Source views">
             {tabs.map(([value, label]) => (

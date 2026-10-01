@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../components/CodeBlock.tsx'
 import { proseStyles } from '../styles/prose.ts'
@@ -13,7 +13,7 @@ function Concepts() {
     <article {...s.container}>
       <h1 {...s.h1}>Core Concepts</h1>
       <p>
-        toned-styles is built around four core ideas: design tokens, systems,
+        Toned is built around four core ideas: design tokens, systems,
         stylesheets, and variants. Together they give you type-safe,
         cross-platform styling with a single authoring model.
       </p>
@@ -167,7 +167,21 @@ const buttonStyles = stylesheet({
         evaluates them at runtime, while inline <code {...s.code}>t</code>{' '}
         blocks -- which compile to CSS custom properties and have no runtime
         equivalent -- are dropped with a development-only warning. See{' '}
-        <a href="/api/media-queries">Media Queries</a>.
+        <Link to="/api/media-queries">Media Queries</Link>.
+      </p>
+
+      <h2 {...s.h2} id="states-and-conditions">
+        States and Conditions
+      </h2>
+      <p>
+        Breakpoints are one kind of condition. A part can also change in a state
+        (<code {...s.code}>':hover'</code>,{' '}
+        <code {...s.code}>':focus-visible'</code>), inside a container of a
+        given width (<code {...s.code}>'@container card wide'</code>), on one
+        platform (<code {...s.code}>'@platform web'</code>), or when another
+        part is in a state (<code {...s.code}>'Root:hover'</code>). Every key
+        and its forms are listed in{' '}
+        <Link to="/api/conditions">Conditions and selectors</Link>.
       </p>
     </article>
   )

@@ -8,28 +8,32 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root.tsx'
-import { Route as ApiDefineSystemRouteImport } from './routes/api/define-system.tsx'
-import { Route as ApiMediaQueriesRouteImport } from './routes/api/media-queries.tsx'
-import { Route as ApiStylesheetRouteImport } from './routes/api/stylesheet.tsx'
-import { Route as ApiUseStylesRouteImport } from './routes/api/use-styles.tsx'
-import { Route as ApiVariantsRouteImport } from './routes/api/variants.tsx'
-import { Route as ConceptsRouteImport } from './routes/concepts.tsx'
-import { Route as ExploreRouteImport } from './routes/explore.tsx'
-import { Route as GettingStartedRouteImport } from './routes/getting-started.tsx'
-import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive.tsx'
-import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native.tsx'
-import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web.tsx'
-import { Route as GuidesSsrRouteImport } from './routes/guides/ssr.tsx'
-import { Route as GuidesThemingRouteImport } from './routes/guides/theming.tsx'
-import { Route as IndexRouteImport } from './routes/index.tsx'
-import { Route as LabRouteImport } from './routes/lab.tsx'
-import { Route as LearnTopicRouteImport } from './routes/learn/$topic.tsx'
-import { Route as PlaygroundRouteImport } from './routes/playground.tsx'
-import { Route as ThemesRouteImport } from './routes/themes.tsx'
-import { Route as UiComponentRouteImport } from './routes/ui/$component.tsx'
-import { Route as UiIndexRouteImport } from './routes/ui/index.tsx'
-import { Route as UiRouteRouteImport } from './routes/ui/route.tsx'
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as ThemesRouteImport } from './routes/themes'
+import { Route as PlaygroundRouteImport } from './routes/playground'
+import { Route as LabRouteImport } from './routes/lab'
+import { Route as GettingStartedRouteImport } from './routes/getting-started'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as ExamplesRouteImport } from './routes/examples'
+import { Route as ConceptsRouteImport } from './routes/concepts'
+import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as UiRouteRouteImport } from './routes/ui/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as UiIndexRouteImport } from './routes/ui/index'
+import { Route as UiComponentRouteImport } from './routes/ui/$component'
+import { Route as LearnTopicRouteImport } from './routes/learn/$topic'
+import { Route as GuidesThemingRouteImport } from './routes/guides/theming'
+import { Route as GuidesSsrRouteImport } from './routes/guides/ssr'
+import { Route as GuidesReactWebRouteImport } from './routes/guides/react-web'
+import { Route as GuidesReactNativeRouteImport } from './routes/guides/react-native'
+import { Route as GuidesOverridesRouteImport } from './routes/guides/overrides'
+import { Route as GuidesInteractiveRouteImport } from './routes/guides/interactive'
+import { Route as ApiVariantsRouteImport } from './routes/api/variants'
+import { Route as ApiUseStylesRouteImport } from './routes/api/use-styles'
+import { Route as ApiStylesheetRouteImport } from './routes/api/stylesheet'
+import { Route as ApiMediaQueriesRouteImport } from './routes/api/media-queries'
+import { Route as ApiDefineSystemRouteImport } from './routes/api/define-system'
+import { Route as ApiConditionsRouteImport } from './routes/api/conditions'
 
 const ThemesRoute = ThemesRouteImport.update({
   id: '/themes',
@@ -56,9 +60,19 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExamplesRoute = ExamplesRouteImport.update({
+  id: '/examples',
+  path: '/examples',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConceptsRoute = ConceptsRouteImport.update({
   id: '/concepts',
   path: '/concepts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UiRouteRoute = UiRouteRouteImport.update({
@@ -106,6 +120,11 @@ const GuidesReactNativeRoute = GuidesReactNativeRouteImport.update({
   path: '/guides/react-native',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuidesOverridesRoute = GuidesOverridesRouteImport.update({
+  id: '/guides/overrides',
+  path: '/guides/overrides',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GuidesInteractiveRoute = GuidesInteractiveRouteImport.update({
   id: '/guides/interactive',
   path: '/guides/interactive',
@@ -136,22 +155,31 @@ const ApiDefineSystemRoute = ApiDefineSystemRouteImport.update({
   path: '/api/define-system',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiConditionsRoute = ApiConditionsRouteImport.update({
+  id: '/api/conditions',
+  path: '/api/conditions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/changelog': typeof ChangelogRoute
   '/concepts': typeof ConceptsRoute
+  '/examples': typeof ExamplesRoute
   '/explore': typeof ExploreRoute
   '/getting-started': typeof GettingStartedRoute
   '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
   '/themes': typeof ThemesRoute
+  '/api/conditions': typeof ApiConditionsRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
   '/api/use-styles': typeof ApiUseStylesRoute
   '/api/variants': typeof ApiVariantsRoute
   '/guides/interactive': typeof GuidesInteractiveRoute
+  '/guides/overrides': typeof GuidesOverridesRoute
   '/guides/react-native': typeof GuidesReactNativeRoute
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
@@ -162,18 +190,22 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/changelog': typeof ChangelogRoute
   '/concepts': typeof ConceptsRoute
+  '/examples': typeof ExamplesRoute
   '/explore': typeof ExploreRoute
   '/getting-started': typeof GettingStartedRoute
   '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
   '/themes': typeof ThemesRoute
+  '/api/conditions': typeof ApiConditionsRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
   '/api/use-styles': typeof ApiUseStylesRoute
   '/api/variants': typeof ApiVariantsRoute
   '/guides/interactive': typeof GuidesInteractiveRoute
+  '/guides/overrides': typeof GuidesOverridesRoute
   '/guides/react-native': typeof GuidesReactNativeRoute
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
@@ -186,18 +218,22 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ui': typeof UiRouteRouteWithChildren
+  '/changelog': typeof ChangelogRoute
   '/concepts': typeof ConceptsRoute
+  '/examples': typeof ExamplesRoute
   '/explore': typeof ExploreRoute
   '/getting-started': typeof GettingStartedRoute
   '/lab': typeof LabRoute
   '/playground': typeof PlaygroundRoute
   '/themes': typeof ThemesRoute
+  '/api/conditions': typeof ApiConditionsRoute
   '/api/define-system': typeof ApiDefineSystemRoute
   '/api/media-queries': typeof ApiMediaQueriesRoute
   '/api/stylesheet': typeof ApiStylesheetRoute
   '/api/use-styles': typeof ApiUseStylesRoute
   '/api/variants': typeof ApiVariantsRoute
   '/guides/interactive': typeof GuidesInteractiveRoute
+  '/guides/overrides': typeof GuidesOverridesRoute
   '/guides/react-native': typeof GuidesReactNativeRoute
   '/guides/react-web': typeof GuidesReactWebRoute
   '/guides/ssr': typeof GuidesSsrRoute
@@ -211,18 +247,22 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ui'
+    | '/changelog'
     | '/concepts'
+    | '/examples'
     | '/explore'
     | '/getting-started'
     | '/lab'
     | '/playground'
     | '/themes'
+    | '/api/conditions'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
     | '/api/use-styles'
     | '/api/variants'
     | '/guides/interactive'
+    | '/guides/overrides'
     | '/guides/react-native'
     | '/guides/react-web'
     | '/guides/ssr'
@@ -233,18 +273,22 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/changelog'
     | '/concepts'
+    | '/examples'
     | '/explore'
     | '/getting-started'
     | '/lab'
     | '/playground'
     | '/themes'
+    | '/api/conditions'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
     | '/api/use-styles'
     | '/api/variants'
     | '/guides/interactive'
+    | '/guides/overrides'
     | '/guides/react-native'
     | '/guides/react-web'
     | '/guides/ssr'
@@ -256,18 +300,22 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ui'
+    | '/changelog'
     | '/concepts'
+    | '/examples'
     | '/explore'
     | '/getting-started'
     | '/lab'
     | '/playground'
     | '/themes'
+    | '/api/conditions'
     | '/api/define-system'
     | '/api/media-queries'
     | '/api/stylesheet'
     | '/api/use-styles'
     | '/api/variants'
     | '/guides/interactive'
+    | '/guides/overrides'
     | '/guides/react-native'
     | '/guides/react-web'
     | '/guides/ssr'
@@ -280,18 +328,22 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   UiRouteRoute: typeof UiRouteRouteWithChildren
+  ChangelogRoute: typeof ChangelogRoute
   ConceptsRoute: typeof ConceptsRoute
+  ExamplesRoute: typeof ExamplesRoute
   ExploreRoute: typeof ExploreRoute
   GettingStartedRoute: typeof GettingStartedRoute
   LabRoute: typeof LabRoute
   PlaygroundRoute: typeof PlaygroundRoute
   ThemesRoute: typeof ThemesRoute
+  ApiConditionsRoute: typeof ApiConditionsRoute
   ApiDefineSystemRoute: typeof ApiDefineSystemRoute
   ApiMediaQueriesRoute: typeof ApiMediaQueriesRoute
   ApiStylesheetRoute: typeof ApiStylesheetRoute
   ApiUseStylesRoute: typeof ApiUseStylesRoute
   ApiVariantsRoute: typeof ApiVariantsRoute
   GuidesInteractiveRoute: typeof GuidesInteractiveRoute
+  GuidesOverridesRoute: typeof GuidesOverridesRoute
   GuidesReactNativeRoute: typeof GuidesReactNativeRoute
   GuidesReactWebRoute: typeof GuidesReactWebRoute
   GuidesSsrRoute: typeof GuidesSsrRoute
@@ -336,11 +388,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/examples': {
+      id: '/examples'
+      path: '/examples'
+      fullPath: '/examples'
+      preLoaderRoute: typeof ExamplesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/concepts': {
       id: '/concepts'
       path: '/concepts'
       fullPath: '/concepts'
       preLoaderRoute: typeof ConceptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ui': {
@@ -406,6 +472,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GuidesReactNativeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guides/overrides': {
+      id: '/guides/overrides'
+      path: '/guides/overrides'
+      fullPath: '/guides/overrides'
+      preLoaderRoute: typeof GuidesOverridesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/guides/interactive': {
       id: '/guides/interactive'
       path: '/guides/interactive'
@@ -448,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDefineSystemRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/conditions': {
+      id: '/api/conditions'
+      path: '/api/conditions'
+      fullPath: '/api/conditions'
+      preLoaderRoute: typeof ApiConditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -467,18 +547,22 @@ const UiRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   UiRouteRoute: UiRouteRouteWithChildren,
+  ChangelogRoute: ChangelogRoute,
   ConceptsRoute: ConceptsRoute,
+  ExamplesRoute: ExamplesRoute,
   ExploreRoute: ExploreRoute,
   GettingStartedRoute: GettingStartedRoute,
   LabRoute: LabRoute,
   PlaygroundRoute: PlaygroundRoute,
   ThemesRoute: ThemesRoute,
+  ApiConditionsRoute: ApiConditionsRoute,
   ApiDefineSystemRoute: ApiDefineSystemRoute,
   ApiMediaQueriesRoute: ApiMediaQueriesRoute,
   ApiStylesheetRoute: ApiStylesheetRoute,
   ApiUseStylesRoute: ApiUseStylesRoute,
   ApiVariantsRoute: ApiVariantsRoute,
   GuidesInteractiveRoute: GuidesInteractiveRoute,
+  GuidesOverridesRoute: GuidesOverridesRoute,
   GuidesReactNativeRoute: GuidesReactNativeRoute,
   GuidesReactWebRoute: GuidesReactWebRoute,
   GuidesSsrRoute: GuidesSsrRoute,

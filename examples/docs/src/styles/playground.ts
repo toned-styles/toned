@@ -7,6 +7,63 @@ import { stylesheet } from './system.ts'
  * stylesheets; this sheet styles only the page around them.
  */
 export const playgroundStyles = stylesheet({
+  // The gallery's theme switcher, above every gallery page.
+  gallery: { flexLayout: 'column', gap: 8, minWidth: 0 },
+  themeBar: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 3,
+    minWidth: 0,
+    paddingBottom: 5,
+    border: 'bottom',
+    borderTone: 'subtle',
+  },
+  themeLabel: { textStyle: 'overline', weight: 'semibold', text: 'faint' },
+  themeOptions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 1.5,
+    minWidth: 0,
+  },
+  themeOption: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    minHeight: '32px',
+    paddingLeft: 1.5,
+    paddingRight: 3,
+    radius: 'full',
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'body',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    cursor: 'pointer',
+    motion: 'colors',
+    ':hover': { borderTone: 'accent' },
+  },
+  // Its colours come from gallery-themes.css, keyed on the option's theme.
+  themeSwatch: {
+    width: '20px',
+    height: '20px',
+    flexShrink: '0',
+    radius: 'full',
+    border: 'all',
+    borderTone: 'default',
+  },
+  note: {
+    measure: 'article',
+    textStyle: 'body-small',
+    lineHeight: 1.6,
+    text: 'muted',
+    wrap: 'pretty',
+  },
+  // A themed backdrop behind a demo; it has no box of its own in Modern.
+  stage: { flexLayout: 'column', gap: 5, minWidth: 0 },
+
   container: { flexLayout: 'column', gap: 8, minWidth: 0 },
   header: { flexLayout: 'column', minWidth: 0 },
   title: { textStyle: 'title', weight: 'bold', text: 'default' },
@@ -215,12 +272,24 @@ export const playgroundStyles = stylesheet({
     borderTone: 'danger',
   },
 }).variants(
-  ($: Variants<{ status: 'idle' | 'applied' | 'invalid' }>) => ({
+  (
+    $: Variants<{
+      status: 'idle' | 'applied' | 'invalid'
+      selected: boolean
+    }>,
+  ) => ({
+    [$.selected(true)]: {
+      themeOption: {
+        text: 'accent-strong',
+        fill: 'accent-soft',
+        borderTone: 'accent',
+      },
+    },
     [$.status('applied')]: { status: { text: 'success' } },
     [$.status('invalid')]: {
       status: { text: 'danger' },
       editor: { borderTone: 'danger' },
     },
   }),
-  { defaults: { status: 'idle' } },
+  { defaults: { status: 'idle', selected: false } },
 )

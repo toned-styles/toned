@@ -1,6 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../components/CodeBlock.tsx'
+import { InstallCommand } from '../components/site/InstallCommand.tsx'
 import { proseStyles } from '../styles/prose.ts'
 
 export const Route = createFileRoute('/getting-started')({
@@ -18,28 +19,25 @@ function GettingStarted() {
         instance owns its styling state. Web styles are generated before
         rendering.
       </p>
-      <h2 {...s.h2} id="choose-a-release">
-        Choose a release
+      <h2 {...s.h2} id="install">
+        Install
       </h2>
       <p>
-        This site describes the development branch, including APIs that are not
-        in the latest npm release. To try everything shown here, use the source
-        checkout below. The npm command installs the published packages; use
-        their bundled reference for that release.
+        <code {...s.code}>@toned/core</code> holds the system, stylesheets and
+        the CSS build; <code {...s.code}>@toned/react</code> binds them to React
+        18 or 19.
       </p>
-      <CodeBlock lang="sh">{`git clone --branch feat/toned-style-showcase https://github.com/toned-styles/toned.git
-cd toned
-pnpm install
-pnpm --filter @examples/docs dev`}</CodeBlock>
+      <InstallCommand packages="@toned/core @toned/react" />
       <p>
-        The docs application is a complete working Vite example. Its package
-        references and sheet inventory match this checkout. If Toned is embedded
-        in another workspace, install from that workspace root instead.
+        Three more packages are optional:{' '}
+        <code {...s.code}>@toned/systems</code> (a ready-made token vocabulary),{' '}
+        <code {...s.code}>@toned/themes</code> (theme values for that
+        vocabulary) and, as development dependencies,{' '}
+        <code {...s.code}>@toned/eslint-plugin</code> and{' '}
+        <code {...s.code}>@toned/compiler</code> (lint rules, the language
+        server and the design tooling). The{' '}
+        <Link to="/changelog">changelog</Link> lists what each release contains.
       </p>
-      <h2 {...s.h2} id="published-packages">
-        Published packages
-      </h2>
-      <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
       <h2 {...s.h2} id="declare-a-system-and-stylesheet">
         Declare a stylesheet
       </h2>
@@ -176,7 +174,8 @@ declare module 'virtual:toned.manifest' {
       <p>
         <code {...s.code}>useStyles</code> prop bags and the existing{' '}
         <code {...s.code}>useBind</code> API remain supported. See the{' '}
-        <a href="/api/use-styles">React bindings guide</a> for their contracts.
+        <Link to="/api/use-styles">React bindings guide</Link> for their
+        contracts.
       </p>
     </article>
   )

@@ -110,10 +110,10 @@ reject valid reuse of one condition in separate parts or larger expressions.
 
 The experimental curried `.variants<Mods>()(factory)`, `q.rules(...)`, and
 `.when(...)` forms are removed. Annotate the single `.variants` callback and put
-compound conditions directly in its returned objects. Existing main-branch
+compound conditions directly in its returned objects. Existing
 explicit-generic callback and object variant declarations remain compatible.
-The experimental branch's public object-predicate types `QueryAtom` and
-`QueryPredicate` are removed; they were never part of main's public API. The
+The object-predicate types `QueryAtom` and
+`QueryPredicate` are removed; they were never part of a released API. The
 internal `WHEN_RULES` metadata protocol is also removed. Query builders now
 return typed `QueryKey` strings; consumers use those keys in declarations instead
 of assembling predicate objects or attaching conditional-rule metadata.
@@ -135,7 +135,7 @@ computed keys so arguments are checked before that widening occurs. Place
 platform-specific styles inside the variant's part or condition group: mixing a
 separate top-level platform rule with widened computed variant keys loses the
 key-to-host association needed to validate its raw styles.
-The main-compatible explicit-generic direct callback and object signatures remain
+The earlier explicit-generic direct callback and object signatures remain
 compatible; the explicit-generic direct callback cannot catch every excess property.
 **Migration note:** callbacks without explicit method type arguments now use the
 checked overload, including callbacks annotated with the existing `VariantSelector`.
@@ -146,7 +146,7 @@ Overload errors can mention `VariantsInput`, the final compatibility signature;
 check the callback's declarations and literal values first. The checked signature
 must precede compatibility signatures to provide literal context: moving it last
 widens otherwise valid inline token and fragment values. Removing those signatures
-would break callers on main. This diagnostic limitation remains while those calls
+would break existing callers. This diagnostic limitation remains while those calls
 are supported. The stricter inferred callback behavior is an intentional
 type-checking change.
 Variant keys are canonical
@@ -330,7 +330,7 @@ const compact = ui.t(base, { $style: { minHeight: 24 } })
 ```
 
 Later arguments override earlier token values; raw `$style` fields merge across
-arguments. The main-compatible `style` spelling and composed `t` results remain
+arguments. The earlier `style` spelling and composed `t` results remain
 accepted. `t()` normalizes its inputs immediately and snapshots raw style fields;
 mutating a caller style object later does not change a retained result. Invalid
 metadata (such as a conditional `$kind` or conflicting kind aliases) throws

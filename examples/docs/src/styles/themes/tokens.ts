@@ -1,5 +1,6 @@
 import { defineToken, defineTokenFor, type WebInlineStyle } from '@toned/core'
 import type { Theme } from './theme.ts'
+import { sliderValue } from './vars.ts'
 
 /**
  * The showcase's vocabulary. Stylesheets name a role (`fill: 'raised'`,
@@ -42,14 +43,33 @@ const fills = {
   bad: 'bad',
   track: 'track',
   meter: 'meter',
+  tray: 'tray',
+  thumb: 'thumb',
+  knob: 'knob',
+  'tab-tray': 'tabTray',
+  'tab-selected': 'tabSelected',
+  chart: 'chart',
   ink: 'ink',
 } as const satisfies Record<string, keyof Theme>
+
+/** Fills the theme may light: its `sheen` is laid over the colour. */
+const lit: readonly string[] = [
+  'accent',
+  'accent-hover',
+  'danger',
+  'danger-hover',
+]
 
 /** Background, by role. */
 export const fill = token({
   values: [...roles(fills), 'none'],
   resolve: (value, theme) => ({
-    background: value === 'none' ? 'transparent' : theme[fills[value]],
+    background:
+      value === 'none'
+        ? 'transparent'
+        : lit.includes(value)
+          ? `${theme.sheen}, ${theme[fills[value]]}`
+          : theme[fills[value]],
   }),
 })
 
@@ -63,6 +83,8 @@ const inks = {
   danger: 'danger',
   'on-danger': 'onDanger',
   'on-selected': 'onSelected',
+  'on-thumb': 'onThumb',
+  'on-tab-selected': 'onTabSelected',
   'on-bar': 'onBar',
   'on-head': 'onHead',
   'on-ok': 'onOk',
@@ -87,7 +109,11 @@ export const edge = token({
     'filled',
     'field',
     'rule',
+    'rule-top',
     'side',
+    'bar',
+    'tab',
+    'tab-selected',
     'cutout',
     'none',
   ],
@@ -116,54 +142,81 @@ export const edge = token({
         borderStyle: theme.controlBorderStyle,
         borderColor: value === 'filled' ? theme.lineFilled : theme.lineStrong,
       }
-    // A divider under a row, or beside a column.
-    if (value === 'rule' || value === 'side')
+    // A divider under or over a row, or beside a column.
+    if (value === 'rule' || value === 'rule-top' || value === 'side')
       return {
         borderWidth:
           value === 'rule'
             ? `0 0 ${theme.ruleWidth} 0`
-            : `0 ${theme.ruleWidth} 0 0`,
+            : value === 'rule-top'
+              ? `${theme.ruleWidth} 0 0 0`
+              : `0 ${theme.ruleWidth} 0 0`,
         borderStyle: theme.ruleStyle,
-        borderColor: theme.line,
+        borderColor: theme.rule,
+      }
+    if (value === 'bar')
+      return {
+        borderWidth: `0 0 ${theme.barRule} 0`,
+        borderStyle: theme.ruleStyle,
+        borderColor: theme.rule,
+      }
+    // The line under a tab. Every tab reserves it, so selecting moves nothing.
+    if (value === 'tab' || value === 'tab-selected')
+      return {
+        borderWidth: `0 0 ${theme.tabRule} 0`,
+        borderStyle: 'solid',
+        borderColor:
+          value === 'tab-selected' ? theme.tabIndicator : 'transparent',
       }
     // Separates overlapping avatars from each other.
     if (value === 'cutout')
       return {
         borderWidth: '2px',
         borderStyle: 'solid',
-        borderColor: theme.surface,
+        borderColor: theme.cutout,
       }
     return { borderWidth: 0, borderStyle: 'none', borderColor: 'transparent' }
   },
 })
 
+const corners = {
+  control: 'radiusControl',
+  'tab-tray': 'radiusTabTray',
+  inner: 'radiusInner',
+  tab: 'radiusTab',
+  panel: 'radiusPanel',
+  window: 'radiusWindow',
+  'app-bar': 'radiusAppBar',
+  badge: 'radiusBadge',
+  pill: 'radiusPill',
+  chart: 'radiusChart',
+} as const satisfies Record<string, keyof Theme>
+
 export const corner = token({
-  values: ['control', 'panel', 'pill', 'none'],
+  values: [...roles(corners), 'none'],
   resolve: (value, theme) => ({
-    borderRadius:
-      value === 'control'
-        ? theme.radiusControl
-        : value === 'panel'
-          ? theme.radiusPanel
-          : value === 'pill'
-            ? theme.radiusPill
-            : 0,
+    borderRadius: value === 'none' ? 0 : theme[corners[value]],
   }),
 })
 
+const shadows = {
+  panel: 'shadowPanel',
+  control: 'shadowControl',
+  button: 'shadowButton',
+  field: 'shadowField',
+  thumb: 'shadowThumb',
+  knob: 'shadowKnob',
+  selected: 'shadowSelected',
+  'app-bar': 'shadowAppBar',
+  'tab-tray': 'shadowTabTray',
+  overlay: 'shadowOverlay',
+  window: 'shadowWindow',
+} as const satisfies Record<string, keyof Theme>
+
 export const depth = token({
-  values: ['panel', 'control', 'overlay', 'window', 'none'],
+  values: [...roles(shadows), 'none'],
   resolve: (value, theme) => ({
-    boxShadow:
-      value === 'panel'
-        ? theme.shadowPanel
-        : value === 'control'
-          ? theme.shadowControl
-          : value === 'overlay'
-            ? theme.shadowOverlay
-            : value === 'window'
-              ? theme.shadowWindow
-              : 'none',
+    boxShadow: value === 'none' ? 'none' : theme[shadows[value]],
   }),
 })
 
@@ -211,6 +264,7 @@ export const type = token({
         fontSize: theme.sizeDisplay,
         fontWeight: theme.weightDisplay,
         fontStyle: theme.displayStyle,
+        letterSpacing: theme.displayTracking,
         textTransform: theme.caps,
         lineHeight: 1.1,
       }
@@ -267,6 +321,7 @@ export const size = token({
     'thumb',
     'meter',
     'swatch',
+    'spark',
   ],
   resolve: (value, theme) => {
     const square = (side: string) => ({
@@ -288,8 +343,20 @@ export const size = token({
     if (value === 'swatch') return square(steps(theme, 3))
     if (value === 'switch')
       return { width: steps(theme, 10), height: steps(theme, 6), flexShrink: 0 }
-    return { height: steps(theme, 2) }
+    // A small chart beside a figure.
+    if (value === 'spark')
+      return { width: steps(theme, 18), height: steps(theme, 8), minWidth: 0 }
+    return { height: theme.meterHeight }
   },
+})
+
+/** Room a theme leaves around a part, or inside it. */
+export const inset = token({
+  values: ['app-bar', 'tab-tray'],
+  resolve: (value, theme) =>
+    value === 'app-bar'
+      ? { margin: theme.barInset }
+      : { padding: theme.tabTrayPad, alignSelf: theme.tabTrayAlign },
 })
 
 /** Pulls an avatar over the one before it. */
@@ -325,11 +392,36 @@ export const slide = token({
 })
 
 export const focus = token({
-  values: ['ring'],
-  resolve: (_value, theme) => ({
+  // `inside` is for a part in a scrolling row, which would clip a ring around it.
+  values: ['ring', 'inside'],
+  resolve: (value, theme) => ({
     outline: theme.focusRing,
-    outlineOffset: theme.focusOffset,
+    outlineOffset:
+      value === 'inside'
+        ? `calc(${theme.focusOffset} * -1 - 2px)`
+        : theme.focusOffset,
   }),
+})
+
+/** A control that cannot be used right now. */
+export const state = token({
+  values: ['disabled'],
+  resolve: (_value, theme) => ({
+    opacity: theme.disabledOpacity,
+    pointerEvents: 'none',
+  }),
+})
+
+/** The text cursor of a field. */
+export const caret = token({
+  values: ['themed'],
+  resolve: (_value, theme) => ({ caretColor: theme.caret }),
+})
+
+/** How icons are drawn. It is inherited, so the stage sets it once. */
+export const icons = token({
+  values: ['themed'],
+  resolve: (_value, theme) => ({ shapeRendering: theme.iconRendering }),
 })
 
 // ── Structure ───────────────────────────────────────────────────────────
@@ -346,9 +438,12 @@ export const chrome = token({
   }),
 })
 
-/** Text a theme draws around a part: `[ Save ]`, or a marker on the selection. */
+/**
+ * Text a theme draws around a part: `[ Save ]`, a marker on the selection,
+ * or a cursor after the page title.
+ */
 export const affix = token({
-  values: ['button', 'bullet'],
+  values: ['button', 'bullet', 'cursor'],
   resolve: () => ({}),
   pseudoRules: (value, theme): PseudoRules =>
     value === 'button'
@@ -356,25 +451,29 @@ export const affix = token({
           '::before': { content: theme.buttonOpen },
           '::after': { content: theme.buttonClose },
         }
-      : { '::before': { content: theme.bullet } },
+      : value === 'bullet'
+        ? { '::before': { content: theme.bullet } }
+        : { '::after': { content: theme.cursor, color: theme.accent } },
 })
 
 const sliderTrack = (theme: Theme) => ({
-  height: steps(theme, 2),
-  background: theme.track,
+  height: theme.meterHeight,
+  // The part up to the thumb takes the accent; the rest is the track.
+  background: `linear-gradient(${theme.accent}, ${theme.accent}) 0 0 / var(${sliderValue.inToken}, 0%) 100% no-repeat, ${theme.track}`,
   borderRadius: theme.radiusPill,
 })
 
 const sliderThumb = (theme: Theme) => ({
   appearance: 'none',
+  boxSizing: 'border-box',
   width: steps(theme, 4.5),
   height: steps(theme, 4.5),
-  background: theme.accent,
+  background: theme.knob,
   borderWidth: theme.controlBorder,
   borderStyle: theme.controlBorderStyle,
   borderColor: theme.lineStrong,
   borderRadius: theme.radiusPill,
-  boxShadow: theme.shadowControl,
+  boxShadow: theme.shadowKnob,
 })
 
 /**
@@ -393,7 +492,7 @@ export const native = token({
         '::-webkit-slider-thumb': {
           ...sliderThumb(theme),
           // Centres the thumb on the thinner track.
-          marginTop: steps(theme, -1.25),
+          marginTop: `calc((${theme.meterHeight} - ${steps(theme, 4.5)}) / 2)`,
         },
         '::-moz-range-thumb': sliderThumb(theme),
       }
@@ -461,7 +560,7 @@ export const flex = defineToken({
 })
 
 const grids = {
-  stats: 'repeat(auto-fit, minmax(150px, 1fr))',
+  stats: 'repeat(auto-fit, minmax(190px, 1fr))',
   fields: 'repeat(auto-fit, minmax(200px, 1fr))',
   chart: 'repeat(12, minmax(0, 1fr))',
 } as const
@@ -479,7 +578,7 @@ const measures = {
   sidebar: 208,
   dialog: 440,
   menu: 200,
-  chart: 96,
+  chart: 120,
   meter: 64,
   percent: '4ch',
 } as const
@@ -503,7 +602,6 @@ export const measure = defineToken({
 const placements = {
   origin: { position: 'relative' },
   menu: { position: 'absolute', top: '100%', right: 0, zIndex: 3 },
-  toast: { position: 'absolute', right: 16, bottom: 16, zIndex: 2 },
   // A select's arrow, over the control's trailing edge.
   chevron: {
     position: 'absolute',

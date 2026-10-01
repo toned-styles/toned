@@ -122,6 +122,9 @@ export const docsStyles = stylesheet({
     paddingX: 5,
     paddingTop: 8,
     paddingBottom: 16,
+    // No token: the region takes focus after a navigation and from the skip
+    // link, as a place to continue from, not as a control to mark with a ring.
+    '@platform web': { $style: { outline: 'none' } },
     '@media md': { paddingX: 10, paddingTop: 12 },
   },
   Article: { measure: 'article', marginX: 'auto', minWidth: 0 },
@@ -462,7 +465,7 @@ export const indexStyles = stylesheet({
   },
 }))
 
-/** Capability lab: each experiment is a titled stage with its source, by layer, below. */
+/** Interactive examples: each one is a titled stage with its source, by layer, below. */
 export const experimentStyles = stylesheet({
   Jump: { display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 6 },
   Chip: {
@@ -526,13 +529,15 @@ export const experimentStyles = stylesheet({
     text: 'accent',
     ':hover': { textDecoration: 'underline' },
   },
-  // A caption above one layer of an experiment: styles, output, configuration.
+  // A caption above one layer of an example: styles, output, configuration.
   Layer: {
     textStyle: 'overline',
     weight: 'semibold',
     text: 'faint',
   },
   Block: { flexLayout: 'column', gap: 2, minWidth: 0 },
+  // A source frame set in running text takes the margins of a code block.
+  Inline: { marginY: 5, minWidth: 0 },
   // One frame holding the layer tabs and the selected file.
   Source: {
     minWidth: 0,

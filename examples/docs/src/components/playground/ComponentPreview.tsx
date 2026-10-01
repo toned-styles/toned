@@ -15,7 +15,7 @@ export function ComponentPreview({
 
   if (!Comp) {
     return (
-      <div {...s.preview} data-preview-stage>
+      <div {...s.preview} data-preview-stage data-gallery-themed>
         <span {...s.readOnly}>No component to preview</span>
       </div>
     )
@@ -33,7 +33,7 @@ export function ComponentPreview({
   }
 
   return (
-    <div {...s.preview} data-preview-stage>
+    <div {...s.preview} data-preview-stage data-gallery-themed>
       <PreviewBoundary>
         <Comp {...cleanProps}>
           {children != null && children !== '' ? String(children) : undefined}

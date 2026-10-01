@@ -28,8 +28,8 @@ function Explore() {
         <Link to="/getting-started" {...s.Primary}>
           Getting started →
         </Link>
-        <Link to="/lab" {...s.Secondary}>
-          Capability lab
+        <Link to="/examples" {...s.Secondary}>
+          Interactive examples
         </Link>
         <Link to="/ui" {...s.Secondary}>
           56 components
@@ -97,11 +97,11 @@ function Explore() {
         </p>
       )}
       <p {...s.Note}>
-        This site documents the development branch, including APIs added since
-        the last npm release. Package version numbers alone do not establish
-        feature availability — follow the{' '}
-        <Link to="/getting-started">source checkout instructions</Link> for the
-        complete experience.
+        What changed in each release is in the{' '}
+        <Link to="/changelog" {...d.MetaLink}>
+          changelog
+        </Link>
+        .
       </p>
     </article>
   )

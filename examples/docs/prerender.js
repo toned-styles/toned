@@ -13,7 +13,10 @@ const routes = [
   '/themes',
   '/concepts',
   '/explore',
+  '/examples',
+  // The examples' former address; the page forwards to /examples.
   '/lab',
+  '/changelog',
   ...[
     'core',
     'react',
@@ -40,6 +43,7 @@ const routes = [
   ].map((topic) => `/learn/${topic}`),
   '/api/define-system',
   '/api/stylesheet',
+  '/api/conditions',
   '/api/variants',
   '/api/use-styles',
   '/api/media-queries',
@@ -47,6 +51,7 @@ const routes = [
   '/guides/react-native',
   '/guides/theming',
   '/guides/interactive',
+  '/guides/overrides',
   '/guides/ssr',
   '/ui',
   ...fs
@@ -94,6 +99,16 @@ async function prerender() {
   }
 
   console.log(`\nPrerendered ${routes.length} pages.`)
+
+  // Site search: index every prerendered page (src/plugins/search-index.js).
+  const { writeSearchIndex } = await import('./src/plugins/search-index.js')
+  const index = writeSearchIndex({
+    clientDir: resolve('dist/client'),
+    componentsDir: resolve('../ui/src/components/ui'),
+  })
+  console.log(
+    `Search index: ${index.pages} pages, ${index.sections} sections, ${index.bytes} bytes.`,
+  )
 }
 
 prerender().catch((err) => {

@@ -22,7 +22,7 @@ export const buttonStyles = stylesheet({
     ink: 'on-accent',
     edge: 'filled',
     corner: 'control',
-    depth: 'control',
+    depth: 'button',
     motion: 'themed',
     // Text the theme draws around the label, e.g. `[ Save ]`.
     affix: 'button',
@@ -35,6 +35,7 @@ export const buttonStyles = stylesheet({
     $: Variants<{
       tone: 'primary' | 'secondary' | 'danger' | 'quiet'
       shape: 'label' | 'icon'
+      disabled: boolean
     }>,
   ) => ({
     [$.tone('secondary')]: {
@@ -62,6 +63,7 @@ export const buttonStyles = stylesheet({
       },
     },
     [$.shape('icon')]: { Root: { size: 'square', padX: 0 } },
+    [$.disabled(true)]: { Root: { state: 'disabled' } },
   }),
-  { defaults: { tone: 'primary', shape: 'label' } },
+  { defaults: { tone: 'primary', shape: 'label', disabled: false } },
 )

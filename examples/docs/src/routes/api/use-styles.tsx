@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
@@ -151,13 +151,36 @@ function Card({ children }: { children: React.ReactNode }) {
   return <input {...s.Input.withProps<'input'>(rest)} />
 }`}</CodeBlock>
 
+      <h3 {...s.h3} id="two-parts-on-one-element">
+        Two Parts on One Element
+      </h3>
+      <p>
+        <code {...s.code}>.with()</code> merges another part of the same sheet
+        onto the element, and skips a falsy argument. Each part keeps its own
+        styles there, so removing one leaves the other intact. For a state with
+        a fixed set of values, a variant is the simpler declaration.
+      </p>
+      <CodeBlock>{`function Field({ invalid }: { invalid: boolean }) {
+  const s = useStyles(fieldStyles)
+  return <input {...s.Input.with(invalid && s.Invalid)} />
+}`}</CodeBlock>
+      <p>
+        Spread a prop bag whole and last. It carries the{' '}
+        <code {...s.code}>ref</code> that attaches the part, so a{' '}
+        <code {...s.code}>ref</code>, <code {...s.code}>style</code> or{' '}
+        <code {...s.code}>className</code> written before the spread is replaced
+        by it; pass those through <code {...s.code}>withProps</code>, which
+        merges them.
+      </p>
+
       <h2 {...s.h2} id="styles-used-on-this-page">
         Styles used on this page
       </h2>
       <p>
         The components above import these sheets. They use the base system's
-        tokens; see <a href="/api/stylesheet">stylesheet</a> and{' '}
-        <a href="/api/variants">variants</a> for the declarations themselves.
+        tokens; see <Link to="/api/stylesheet">stylesheet</Link> and{' '}
+        <Link to="/api/variants">variants</Link> for the declarations
+        themselves.
       </p>
       <CodeBlock title="styles.ts">{`import type { Variants } from '@toned/core'
 import { stylesheet } from '@toned/systems/base'
@@ -186,6 +209,11 @@ export const navStyles = stylesheet({
 }).variants(($: Variants<{ active: boolean }>) => ({
   [$.active(true)]: { Link: { textColor: 'action' } },
 }))
+
+export const fieldStyles = stylesheet({
+  Input: { borderWidth: 'thin', borderColor: 'default', borderRadius: 'medium' },
+  Invalid: { borderColor: 'status_error' },
+})
 
 export const inputStyles = stylesheet({
   Input: { borderWidth: 'thin', borderColor: 'default', borderRadius: 'medium' },

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { ReferenceMarkdown } from '../../components/ReferenceMarkdown.tsx'
 import { NotFound } from '../../components/site/NotFound.tsx'
@@ -31,10 +31,7 @@ function ReferencePage() {
         <a href={`${sourceBase}${reference.path}`} {...s.MetaLink}>
           {reference.path} ↗
         </a>
-        <span>Rendered from this checkout’s Markdown</span>
-        <Link to="/getting-started" {...s.MetaLink}>
-          Release status
-        </Link>
+        <span>Rendered from the package’s Markdown</span>
       </div>
       <div {...s.HeaderRule} />
       <ReferenceMarkdown
