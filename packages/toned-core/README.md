@@ -535,6 +535,22 @@ const ui = defineSystem({
 })
 ```
 
+On the web the build delivers declared themes. A resolver's `theme.field` becomes
+`var(--<system id>-field)` in the generated class, and `buildStyles` (and the Vite
+plugin) writes the values: the first declared theme on `:root`, and every theme
+under `[data-theme='<name>']`, so a subtree can select any theme by attribute.
+
+```ts
+const artifact = buildStyles(ui, { sheets })            // themes included
+buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
+buildStyles(ui, { sheets, themes: false })                // deliver them yourself
+```
+
+Only top-level string and number fields are written. A nested group, such as
+`colors` above, cannot be read through one CSS variable; give those values to a
+renderer as explicit `tokens`. `generateThemes(system, options)` from
+`@toned/core/build` returns the same CSS on its own.
+
 This is static schema checking, not validation of untrusted JSON. Applications
 validate external theme data before passing it to a renderer. Existing untyped
 `defineToken` remains compatible; adopting the typed factory is incremental.
