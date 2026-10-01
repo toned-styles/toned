@@ -41,14 +41,56 @@ pnpm --filter @examples/docs dev`}</CodeBlock>
       </h2>
       <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
       <h2 {...s.h2} id="declare-a-system-and-stylesheet">
-        Declare a system and stylesheet
+        Declare a stylesheet
       </h2>
       <p>
-        Keep declarations in a pure module that both the build and application
-        import.
+        A stylesheet names the parts of a component, gives each part token
+        values, and describes how they change per variant. It imports{' '}
+        <code {...s.code}>stylesheet</code> from the system module defined
+        further down.
       </p>
-      <CodeBlock>{`// styles.ts
-import { defineSystem, defineToken, type Variants } from '@toned/core'
+      <CodeBlock title="styles.ts">{`import type { Variants } from '@toned/core'
+import { stylesheet } from './system.ts'
+
+export const buttonStyles = stylesheet({
+  Root: { $kind: 'pressable', background: 'accent' },
+  Label: { $kind: 'text', text: 'label' },
+}).variants(($: Variants<{ size: 's' | 'm' }>) => ({
+  [$.size('s')]: { Root: { padding: 1 }, Label: { text: 'caption' } },
+  [$.size('m')]: { Root: { padding: 2 } },
+}), { defaults: { size: 'm' } })`}</CodeBlock>
+      <h2 {...s.h2} id="render-the-parts">
+        Render the parts
+      </h2>
+      <p>
+        Bind the sheet once, at module scope. Variant values go on the family
+        provider; host props go on the parts.
+      </p>
+      <CodeBlock title="Button.tsx">{`import { createElements } from '@toned/react'
+import { buttonStyles } from './styles.ts'
+
+const S = createElements(buttonStyles)
+
+export function Button({ label, size = 'm' }: {
+  label: string
+  size?: 's' | 'm'
+}) {
+  return (
+    <S size={size}>
+      <S.Root as="button" type="button">
+        <S.Label as="span">{label}</S.Label>
+      </S.Root>
+    </S>
+  )
+}`}</CodeBlock>
+      <h2 {...s.h2} id="define-the-system">
+        Define the system
+      </h2>
+      <p>
+        The system holds the tokens the sheet used above. Keep it, like the
+        sheets, in a pure module that both the build and the application import.
+      </p>
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'example',
@@ -67,13 +109,8 @@ export const ui = defineSystem({
     }),
   },
 })
-export const buttonStyles = ui.stylesheet({
-  Root: { $kind: 'pressable', background: 'accent' },
-  Label: { $kind: 'text', text: 'label' },
-}).variants(($: Variants<{ size: 's' | 'm' }>) => ({
-  [$.size('s')]: { Root: { padding: 1 }, Label: { text: 'caption' } },
-  [$.size('m')]: { Root: { padding: 2 } },
-}), { defaults: { size: 'm' } })`}</CodeBlock>
+
+export const { stylesheet } = ui`}</CodeBlock>
       <h2 {...s.h2} id="build-every-sheet">
         Build every sheet
       </h2>
@@ -82,14 +119,17 @@ export const buttonStyles = ui.stylesheet({
         lazy-route sheets in the inventory too; rendering does not discover
         missing CSS.
       </p>
-      <CodeBlock>{`// vite.config.ts
-import toned from '@toned/core/vite'
+      <CodeBlock title="vite.config.ts">{`import toned from '@toned/core/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { ui, buttonStyles } from './styles.ts'
+import { buttonStyles } from './styles.ts'
+import { ui } from './system.ts'
 
 export default defineConfig({
-  plugins: [toned({ system: ui, sheets: [buttonStyles], inputs: ['styles.ts'] }), react()],
+  plugins: [
+    toned({ system: ui, sheets: [buttonStyles], inputs: ['system.ts', 'styles.ts'] }),
+    react(),
+  ],
 })`}</CodeBlock>
       <p>
         Without Vite, call{' '}
@@ -100,26 +140,28 @@ export default defineConfig({
       <h2 {...s.h2} id="configure-and-render">
         Configure and render
       </h2>
-      <CodeBlock>{`// App.tsx
-import 'virtual:toned.css'
+      <p>
+        The application creates one renderer from the system and the generated
+        manifest, and provides it to the tree.
+      </p>
+      <CodeBlock title="App.tsx">{`import 'virtual:toned.css'
 import manifest from 'virtual:toned.manifest'
 import { createWebRenderer } from '@toned/core/server'
-import { createElements, TonedProvider } from '@toned/react'
+import { TonedProvider } from '@toned/react'
 import { webHost } from '@toned/react/hosts/web'
-import { ui, buttonStyles } from './styles.ts'
+import { Button } from './Button.tsx'
+import { ui } from './system.ts'
 
 const renderer = createWebRenderer(ui, { manifest, tokens: {} })
-const S = createElements(buttonStyles)
 
 export function App() {
-  return <TonedProvider renderer={renderer} host={webHost}>
-    <S size="s">
-      <S.Root as="button" type="button"><S.Label as="span">Save</S.Label></S.Root>
-    </S>
-  </TonedProvider>
+  return (
+    <TonedProvider renderer={renderer} host={webHost}>
+      <Button label="Save" size="s" />
+    </TonedProvider>
+  )
 }`}</CodeBlock>
-      <CodeBlock>{`// env.d.ts
-/// <reference types="vite/client" />
+      <CodeBlock title="env.d.ts">{`/// <reference types="vite/client" />
 declare module 'virtual:toned.css' {}
 declare module 'virtual:toned.manifest' {
   const manifest: import('@toned/core/build').BuildManifest

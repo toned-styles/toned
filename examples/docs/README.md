@@ -10,10 +10,19 @@ The extractor lives in
 application context for incomplete fragments, reuses the actual getting-started
 example for shared modules, and classifies CSS and installation commands
 separately. Adding a route or code block fails its inventory until the new
-example has a checked context. Do not duplicate a displayed snippet in a
+example has a checked context.
+
+Examples keep three layers apart, each in its own titled block (`title` is the
+file name): `styles.ts` for the stylesheet, a component file such as
+`Button.tsx`, and `system.ts` for `defineSystem` plus
+`export const { stylesheet } = ui`; build and renderer setup go in
+`vite.config.ts` and `App.tsx`. A page leads with the layer it teaches and shows
+the system once, later on the page, or links to Getting Started. The
+extractor's `modules` table writes those blocks under the same file names, so
+the other examples on the page import them as shown. Do not duplicate a displayed snippet in a
 separate test or replace missing dependencies with untyped declarations.
 
-The three native examples compile against the pinned, real React Native
+The four native examples compile against the pinned, real React Native
 dependencies in `bun scripts/build/test-toned-fabric.ts --phase prepare`. The
 web docs job reports this separate coverage and does not claim native
 certification. Application-owned host identity functions have explicit typed
@@ -53,7 +62,9 @@ The homepage uses a local web design system, explicit renderer and build
 manifest. The style studio uses real component variants; the token map uses the
 same accent vocabulary; the layout explorer uses a named 480px container
 condition. Its connection animation respects reduced motion. `/playground` is a
-free-form editor: write `styles.ts` and `App.tsx`, and the browser transpiles
+free-form editor with one file per layer: `styles.ts` (style declarations),
+`App.tsx` (the component) and `system.ts` (the design system the sheets import
+`stylesheet` from). The browser transpiles
 them with TypeScript (loaded on demand), evaluates them
 against a fixed module map, builds the exported sheets with `buildStyles` into a
 scoped `<style>`, and renders through `createWebRenderer` — the same path a real
@@ -64,7 +75,7 @@ The playground editor is CodeMirror 6 (`playground-editor/codemirror.ts`),
 created in an effect over the same static Shiki-highlighted code the server
 renders, with the same metrics and colours (`codeColors` in `src/highlight.ts`),
 so nothing moves when it mounts. A Web Worker
-(`playground-editor/language/ts.worker.ts`) runs two services over the two
+(`playground-editor/language/ts.worker.ts`) runs two services over the three
 files. TypeScript's language service checks them against an in-memory project:
 the ES2022 + DOM libs, React's types and the Toned packages' own source, loaded
 as text in lazy chunks (`types-lib`, `types-react`, `types-toned`) that only
@@ -97,8 +108,12 @@ reduced motion, guide navigation, syntax highlighting, and the gallery.
 rather than copied into routes. `/learn/$topic` renders them with semantic React
 markup; relative reference links map to the local directory and remaining source
 links point to the documented branch. Raw HTML is displayed as text, never injected.
-`/lab` contains seven real API experiments. Its source panels load the exact checked
-implementation modules. The source inspector loads the compiler on demand and uses
+`/lab` contains seven real API experiments. Each experiment is split into the
+modules a project would have — `*.styles.ts` (declarations), the component, and a
+system or configuration module — and its source panel shows those files as they
+run (`?raw`), one tab per layer, styles first. Where the declaration is the
+subject (email/PDF output, measured contracts) it is shown above the demo and the
+configuration below it. The source inspector loads the compiler on demand and uses
 one bounded in-memory document with revision-checked edits; it has no filesystem or
 network write transport. Source is never evaluated.
 

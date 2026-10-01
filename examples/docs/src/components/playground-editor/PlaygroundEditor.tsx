@@ -20,6 +20,7 @@ import {
   type Axis,
   type Compiled,
   type FileName,
+  fileLayers,
   fileNames,
   MAX_FILE_CHARS,
   type Problem,
@@ -27,7 +28,10 @@ import {
   type VariantValue,
 } from './types.ts'
 
-const STORAGE_KEY = 'toned-playground:draft:v1'
+// v2 drafts hold three files. A v1 draft (two files, with the system inside
+// `styles.ts`) cannot become a three-layer example, so it is discarded.
+const STORAGE_KEY = 'toned-playground:draft:v2'
+const RETIRED_STORAGE_KEYS = ['toned-playground:draft:v1']
 const noProblems: readonly LanguageProblem[] = []
 const DEBOUNCE_MS = 300
 
@@ -57,6 +61,7 @@ const problemTitles: Record<Problem['kind'], string> = {
 
 function readDraft(): { preset: string; files: SourceFiles } | undefined {
   try {
+    for (const key of RETIRED_STORAGE_KEYS) window.localStorage.removeItem(key)
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return undefined
     const draft = JSON.parse(raw) as {
@@ -219,6 +224,7 @@ function TabButton({
   active,
   children,
   controls,
+  title,
   onSelect,
   onKeyDown,
   id,
@@ -226,6 +232,7 @@ function TabButton({
   active: boolean
   children: ReactNode
   controls: string
+  title?: string
   onSelect: () => void
   onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void
   id: string
@@ -239,6 +246,7 @@ function TabButton({
       aria-selected={active}
       aria-controls={controls}
       tabIndex={active ? 0 : -1}
+      title={title}
       onClick={onSelect}
       onKeyDown={onKeyDown}
       {...s.Tab}
@@ -248,9 +256,26 @@ function TabButton({
   )
 }
 
-function FileBadge({ file, active }: { file: FileName; active: boolean }) {
+/** A file tab's content: the layer the file is, above its name. */
+function FileLabel({
+  file,
+  active,
+  problems,
+}: {
+  file: FileName
+  active: boolean
+  problems: readonly LanguageProblem[]
+}) {
   const s = useStyles(playgroundEditorStyles, { active })
-  return <span {...s.FileIcon}>{file.endsWith('.tsx') ? 'TSX' : 'TS'}</span>
+  return (
+    <span {...s.FileLabel}>
+      <span {...s.FileLayer}>{fileLayers[file].label}</span>
+      <span {...s.FileName}>
+        {file}
+        <TabBadge problems={problems} />
+      </span>
+    </span>
+  )
 }
 
 function StatusPill({ status }: { status: Status }) {
@@ -591,7 +616,7 @@ export function PlaygroundEditor() {
     language.status.kind === 'failed'
       ? `The language worker failed: ${language.status.message}. The preview still compiles.`
       : language.status.kind === 'ready'
-        ? `TypeScript ${language.status.typescript} and the Toned language service check both files as you type.`
+        ? `TypeScript ${language.status.typescript} and the Toned language service check all three files as you type.`
         : 'Loading TypeScript and the Toned language service…'
   const showProblems = problemsOpen && problems.length > 0
 
@@ -658,14 +683,15 @@ export function PlaygroundEditor() {
                   id={`playground-file-${file}`}
                   active={file === activeFile}
                   controls="playground-editor-panel"
+                  title={fileLayers[file].hint}
                   onSelect={() => setActiveFile(file)}
                   onKeyDown={(event) =>
                     arrowNavigate(event, fileNames, activeFile, setActiveFile)
                   }
                 >
-                  <FileBadge file={file} active={file === activeFile} />
-                  {file}
-                  <TabBadge
+                  <FileLabel
+                    file={file}
+                    active={file === activeFile}
                     problems={problems.filter((item) => item.file === file)}
                   />
                 </TabButton>

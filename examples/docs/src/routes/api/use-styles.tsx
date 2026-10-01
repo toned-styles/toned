@@ -24,13 +24,17 @@ function ApiUseStyles() {
         Signature
       </h2>
       <CodeBlock>{`import { useStyles } from '@toned/react'
+import { buttonStyles, cardStyles } from './styles.ts'
 
 // Without variants
-const cardStyles = stylesheet({ Root: { padding: 2 } })
-const base = useStyles(cardStyles)
+const card = useStyles(cardStyles)
 
 // With variants
-const selected = useStyles(buttonStyles, { variant: 'accent', size: 'm' })`}</CodeBlock>
+const button = useStyles(buttonStyles, { variant: 'accent', size: 'm' })`}</CodeBlock>
+      <p>
+        The examples on this page read their sheets from one module,{' '}
+        <a href="#styles-used-on-this-page">shown at the end</a>.
+      </p>
 
       <h3 {...s.h3} id="parameters">
         Parameters
@@ -80,7 +84,9 @@ return (
       <h2 {...s.h2} id="stable-element-families">
         Stable element families
       </h2>
-      <CodeBlock>{`import { createElements } from '@toned/react'
+      <CodeBlock title="Button.tsx">{`import { createElements } from '@toned/react'
+import { buttonStyles } from './styles.ts'
+
 const S = createElements(buttonStyles)
 
 function Button() {
@@ -107,9 +113,8 @@ function Button() {
         For stylesheets without variants, call useStyles with just the
         stylesheet:
       </p>
-      <CodeBlock>{`const cardStyles = stylesheet({
-  Root: { bgColor: 'elevated', borderRadius: 'large' },
-})
+      <CodeBlock title="Card.tsx">{`import { useStyles } from '@toned/react'
+import { cardStyles } from './styles.ts'
 
 function Card({ children }: { children: React.ReactNode }) {
   const s = useStyles(cardStyles)
@@ -145,6 +150,48 @@ function Card({ children }: { children: React.ReactNode }) {
   const s = useStyles(inputStyles, { error })
   return <input {...s.Input.withProps<'input'>(rest)} />
 }`}</CodeBlock>
+
+      <h2 {...s.h2} id="styles-used-on-this-page">
+        Styles used on this page
+      </h2>
+      <p>
+        The components above import these sheets. They use the base system's
+        tokens; see <a href="/api/stylesheet">stylesheet</a> and{' '}
+        <a href="/api/variants">variants</a> for the declarations themselves.
+      </p>
+      <CodeBlock title="styles.ts">{`import type { Variants } from '@toned/core'
+import { stylesheet } from '@toned/systems/base'
+
+export const cardStyles = stylesheet({
+  Root: { bgColor: 'elevated', borderRadius: 'large', padding: 2 },
+})
+
+export const buttonStyles = stylesheet({
+  Root: { $kind: 'pressable', bgColor: 'action', borderRadius: 'medium' },
+  Label: { $kind: 'text', textColor: 'on_action' },
+}).variants(($: Variants<{
+  size: 'm' | 's'
+  variant: 'accent' | 'danger'
+}>) => ({
+  [$.variant('danger')]: {
+    Root: { bgColor: 'destructive' },
+    Label: { textColor: 'on_destructive' },
+  },
+  [$.size('m')]: { Root: { paddingX: 3 } },
+  [$.size('s')]: { Root: { paddingX: 2, paddingY: 1 } },
+}))
+
+export const navStyles = stylesheet({
+  Link: { $kind: 'text', textColor: 'muted' },
+}).variants(($: Variants<{ active: boolean }>) => ({
+  [$.active(true)]: { Link: { textColor: 'action' } },
+}))
+
+export const inputStyles = stylesheet({
+  Input: { borderWidth: 'thin', borderColor: 'default', borderRadius: 'medium' },
+}).variants(($: Variants<{ error: boolean }>) => ({
+  [$.error(true)]: { Input: { borderColor: 'status_error' } },
+}))`}</CodeBlock>
     </article>
   )
 }

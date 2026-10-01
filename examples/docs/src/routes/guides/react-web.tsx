@@ -32,8 +32,7 @@ function GuideReactWeb() {
         The toned Vite plugin generates all token CSS at build time. Add it to
         your <code {...s.code}>vite.config.ts</code>:
       </p>
-      <CodeBlock>{`// vite.config.ts
-import toned from '@toned/core/vite'
+      <CodeBlock title="vite.config.ts">{`import toned from '@toned/core/vite'
 import { system } from '@toned/systems/base'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
@@ -49,8 +48,7 @@ export default defineConfig({
         Create <code {...s.code}>toned.config.ts</code> at your project root.
         This file must be imported before any component that uses toned styles:
       </p>
-      <CodeBlock>{`// toned.config.ts
-import '@toned/themes/shadcn/config.css'
+      <CodeBlock title="toned.config.ts">{`import '@toned/themes/shadcn/config.css'
 import 'virtual:toned.css'
 
 import { defineConfig, setConfig } from '@toned/core'
@@ -73,8 +71,7 @@ export default setConfig(
         Import the config file at the very top of your entry point, before any
         component imports:
       </p>
-      <CodeBlock>{`// main.tsx
-import '../toned.config.ts'
+      <CodeBlock title="main.tsx">{`import '../toned.config.ts'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -94,8 +91,7 @@ createRoot(document.getElementById('root')!).render(
         function from the base system. Keep style definitions separate from
         components for better reusability:
       </p>
-      <CodeBlock>{`// styles/button.ts
-import type { Variants } from '@toned/core'
+      <CodeBlock title="styles/button.ts">{`import type { Variants } from '@toned/core'
 import { stylesheet } from '@toned/systems/base'
 
 export const buttonStyles = stylesheet({
@@ -134,8 +130,7 @@ export const buttonStyles = stylesheet({
         <code {...s.code}>createElements</code>. Variants go on the family
         provider; host props go on the parts:
       </p>
-      <CodeBlock>{`// Button.tsx
-import { createElements } from '@toned/react'
+      <CodeBlock title="Button.tsx">{`import { createElements } from '@toned/react'
 import { buttonStyles } from './styles/button.ts'
 
 const S = createElements(buttonStyles)

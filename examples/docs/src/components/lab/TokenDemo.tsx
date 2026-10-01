@@ -1,31 +1,13 @@
-import { exportDtcg, importDtcg } from '@toned/compiler/tokens'
 import { useStyles } from '@toned/react'
 import { useMemo, useState } from 'react'
 import { libraryStyles } from '../../styles/library.ts'
 import { CodeBlock } from '../CodeBlock.tsx'
+import { exchangeTokens, initialDocument } from './token-exchange.ts'
 
-const initial = JSON.stringify(
-  {
-    space: {
-      small: { $type: 'dimension', $value: { value: 8, unit: 'px' } },
-      card: { $type: 'dimension', $value: '{space.small}' },
-    },
-  },
-  null,
-  2,
-)
 export function TokenDemo() {
   const s = useStyles(libraryStyles)
-  const [source, setSource] = useState(initial)
-  const result = useMemo(() => {
-    try {
-      const document: unknown = JSON.parse(source)
-      const library = importDtcg(document)
-      return { library, exported: exportDtcg(library), error: '' }
-    } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) }
-    }
-  }, [source])
+  const [source, setSource] = useState(initialDocument)
+  const result = useMemo(() => exchangeTokens(source), [source])
   return (
     <div {...s.stack}>
       <label {...s.label} htmlFor="dtcg-source">
@@ -48,7 +30,7 @@ export function TokenDemo() {
             : 'Diagnostics explain the unresolved values below.')}
       </p>
       {result.library && (
-        <CodeBlock>
+        <CodeBlock lang="json" title="Resolved tokens and diagnostics">
           {JSON.stringify(
             {
               tokens: result.library.tokens.map((token) => ({
@@ -65,10 +47,12 @@ export function TokenDemo() {
       {result.exported && (
         <details>
           <summary>Round-trip export</summary>
-          <CodeBlock>{JSON.stringify(result.exported, null, 2)}</CodeBlock>
+          <CodeBlock lang="json" title="exportDtcg(library)">
+            {JSON.stringify(result.exported, null, 2)}
+          </CodeBlock>
         </details>
       )}
-      <button type="button" onClick={() => setSource(initial)}>
+      <button type="button" onClick={() => setSource(initialDocument)}>
         Reset token document
       </button>
       <p {...s.muted}>

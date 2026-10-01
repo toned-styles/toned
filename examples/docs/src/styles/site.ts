@@ -1,5 +1,4 @@
-import { type Variants, webRules } from '@toned/core'
-import { brand } from './brand.ts'
+import type { Variants } from '@toned/core'
 import { stylesheet } from './system.ts'
 
 /** The header every page shares. */
@@ -463,7 +462,7 @@ export const indexStyles = stylesheet({
   },
 }))
 
-/** Capability lab: each experiment is a titled stage with its source below. */
+/** Capability lab: each experiment is a titled stage with its source, by layer, below. */
 export const experimentStyles = stylesheet({
   Jump: { display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 6 },
   Chip: {
@@ -527,24 +526,58 @@ export const experimentStyles = stylesheet({
     text: 'accent',
     ':hover': { textDecoration: 'underline' },
   },
-  Source: {
-    '@platform web': {
-      // Selector escape hatch: <summary> is the browser's own child element,
-      // so it cannot be a named part.
-      $webRules: webRules({
-        '& > summary': {
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 600,
-          color: brand.muted,
-          listStyle: 'none',
-        },
-        '& > summary::-webkit-details-marker': { display: 'none' },
-        '& > summary:hover': { color: brand.ink },
-      }),
-    },
+  // A caption above one layer of an experiment: styles, output, configuration.
+  Layer: {
+    textStyle: 'overline',
+    weight: 'semibold',
+    text: 'faint',
   },
-})
+  Block: { flexLayout: 'column', gap: 2, minWidth: 0 },
+  // One frame holding the layer tabs and the selected file.
+  Source: {
+    minWidth: 0,
+    overflow: 'hidden',
+    radius: 'lg',
+    fill: 'code',
+    border: 'all',
+    borderTone: 'default',
+  },
+  Tabs: {
+    display: 'flex',
+    overflowX: 'auto',
+    paddingX: 2,
+    fill: 'code-chrome',
+    border: 'bottom',
+    borderTone: 'subtle',
+  },
+  Tab: {
+    flexShrink: '0',
+    paddingX: 3,
+    paddingY: 2.5,
+    cursor: 'pointer',
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'muted',
+    wrap: 'nowrap',
+    border: 'marker-bottom',
+    borderTone: 'none',
+    ':hover': { text: 'default' },
+  },
+  // Demo chrome inside a stage.
+  Output: { flexLayout: 'column', gap: 5, minWidth: 0 },
+  Pair: {
+    columns: 'single',
+    gap: 5,
+    minWidth: 0,
+    '@media md': { columns: 'even-halves' },
+  },
+  Cell: { flexLayout: 'column', gap: 2, minWidth: 0 },
+  Note: { textStyle: 'caption', lineHeight: 1.6, text: 'muted' },
+}).variants(($: Variants<{ selected?: boolean; quiet?: boolean }>) => ({
+  [$.selected(true)]: { Tab: { text: 'accent', borderTone: 'accent' } },
+  // Configuration reads as a footnote to the styles and their output.
+  [$.quiet(true)]: { Source: { fill: 'none', borderTone: 'subtle' } },
+}))
 
 export const footerStyles = stylesheet({
   Root: { marginTop: 16, border: 'top', borderTone: 'subtle' },

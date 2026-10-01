@@ -7,6 +7,13 @@ import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import { routeTree } from './routeTree.gen.ts'
 
+// The dev server inlines the SSR render's stylesheets to avoid a flash of
+// unstyled content. By now the imports above have injected Vite's own copies,
+// so drop the inlined ones; otherwise they would shadow hot updates.
+if (import.meta.env.DEV)
+  for (const node of document.querySelectorAll('style[data-ssr-dev-style]'))
+    node.remove()
+
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',

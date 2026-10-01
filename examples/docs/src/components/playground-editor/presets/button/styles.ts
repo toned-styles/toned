@@ -1,5 +1,4 @@
-import type { Variants } from '@toned/core'
-import { stylesheet } from '@toned/systems/base'
+import { stylesheet, type Variants } from './system.ts'
 
 export type ButtonVariants = {
   size: 'small' | 'medium' | 'large'

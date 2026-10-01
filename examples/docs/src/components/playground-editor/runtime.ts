@@ -27,10 +27,12 @@ import type {
   VariantValue,
 } from './types.ts'
 import {
+  buildOrder,
   cannotImportMessage,
   fileNames,
   type ImportableModule,
   importableModules,
+  localFile,
   MAX_FILE_CHARS,
 } from './types.ts'
 
@@ -115,11 +117,8 @@ function evaluate(output: SourceFiles) {
     const require = (specifier: string) => {
       if (Object.hasOwn(modules, specifier))
         return modules[specifier as keyof typeof modules]
-      const local = specifier.replace(/^\.\//, '').replace(/\.(ts|tsx)$/, '')
-      if (specifier.startsWith('./') && local === 'styles')
-        return load('styles.ts').exports
-      if (specifier.startsWith('./') && local === 'App')
-        return load('App.tsx').exports
+      const local = localFile(specifier)
+      if (local) return load(local).exports
       throw new ProblemError({
         kind: 'import',
         file,
@@ -154,7 +153,10 @@ function evaluate(output: SourceFiles) {
     return record
   }
 
-  return { styles: load('styles.ts'), app: load('App.tsx') }
+  // Dependencies first, so a failure is reported against the file that
+  // caused it even when nothing imports that file yet.
+  for (const file of buildOrder) load(file)
+  return cache as ReadonlyMap<FileName, ModuleRecord>
 }
 
 function planOf(value: unknown) {
@@ -227,11 +229,13 @@ export async function compile(
   const started = performance.now()
   const output: Partial<SourceFiles> = {}
   try {
-    for (const file of fileNames)
+    for (const file of buildOrder)
       output[file] = transpile(ts, file, files[file])
-    const { styles, app } = evaluate(output as SourceFiles)
+    const records = evaluate(output as SourceFiles)
+    const exportsOf = (file: FileName) => records.get(file)?.exports ?? {}
 
-    const Component = app.exports.default ?? app.exports.App
+    const app = exportsOf('App.tsx')
+    const Component = app.default ?? app.App
     if (!isComponent(Component))
       throw new ProblemError({
         kind: 'module',
@@ -240,15 +244,14 @@ export async function compile(
           'Export your component from App.tsx: `export default function App() { … }`.',
       })
 
-    // Every exported stylesheet, from either file, in declaration order.
+    // Every exported stylesheet, from any file, in declaration order.
+    const declaredIn = (system: object) =>
+      buildOrder.find((file) => Object.values(exportsOf(file)).includes(system))
     const seen = new Set<object>()
     const sheets: SheetEntry[] = []
     const systems = new Map<object, object[]>()
-    for (const [file, record] of [
-      ['styles.ts', styles],
-      ['App.tsx', app],
-    ] as const) {
-      for (const [name, value] of Object.entries(record.exports)) {
+    for (const file of fileNames) {
+      for (const [name, value] of Object.entries(exportsOf(file))) {
         const plan = planOf(value)
         if (!plan || seen.has(value as object)) continue
         seen.add(value as object)
@@ -256,7 +259,8 @@ export async function compile(
         if (system.id === undefined && !isBaseSystem(system))
           throw new ProblemError({
             kind: 'module',
-            file,
+            // Point at the file that declares the system, when it exports it.
+            file: declaredIn(system) ?? file,
             message: `${name} belongs to a system without an id. Declare it as defineSystem({ id: 'my-system', tokens: { … } }) so its CSS stays namespaced inside the preview.`,
           })
         sheets.push({

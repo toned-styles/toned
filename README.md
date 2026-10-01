@@ -68,11 +68,50 @@ shipped with your chosen version before adopting a development API.
 
 ## Example
 
-A token gives a value meaning. A stylesheet gives it a home.
+A stylesheet names a component's parts, gives each part token values, and
+describes how they change per variant.
 
 ```ts
-// button-styles.ts
-import { defineSystem, defineToken, type Variants } from '@toned/core'
+// styles.ts
+import type { Variants } from '@toned/core'
+import { stylesheet } from './system'
+
+export const buttonStyles = stylesheet({
+  Root: { $kind: 'pressable', surface: 'accent', padding: 3 },
+  Label: { $kind: 'text', text: 'label', ink: 'on-accent' },
+}).variants(($: Variants<{ tone: 'accent' | 'quiet' }>) => ({
+  [$.tone('quiet')]: {
+    Root: { surface: 'quiet' },
+    Label: { ink: 'accent' },
+  },
+}))
+```
+
+Bind the parts once, at module scope. The family provider adds no wrapper element.
+
+```tsx
+// SaveButton.tsx
+import { createElements } from '@toned/react'
+import { buttonStyles } from './styles'
+
+const Button = createElements(buttonStyles)
+
+export function SaveButton() {
+  return (
+    <Button tone="quiet">
+      <Button.Root as="button" type="button">
+        <Button.Label as="span">Save your idea</Button.Label>
+      </Button.Root>
+    </Button>
+  )
+}
+```
+
+The tokens come from a system, defined once and shared by every stylesheet.
+
+```ts
+// system.ts
+import { defineSystem, defineToken } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'my-ui',
@@ -98,38 +137,11 @@ export const ui = defineSystem({
   },
 })
 
-export const buttonStyles = ui.stylesheet({
-  Root: { $kind: 'pressable', surface: 'accent', padding: 3 },
-  Label: { $kind: 'text', text: 'label', ink: 'on-accent' },
-}).variants(($: Variants<{ tone: 'accent' | 'quiet' }>) => ({
-  [$.tone('quiet')]: {
-    Root: { surface: 'quiet' },
-    Label: { ink: 'accent' },
-  },
-}))
+export const { stylesheet } = ui
 ```
 
-Bind the parts once, at module scope. The family provider adds no wrapper element.
-
-```tsx
-import { createElements } from '@toned/react'
-import { buttonStyles } from './button-styles'
-
-const Button = createElements(buttonStyles)
-
-export function SaveButton() {
-  return (
-    <Button tone="quiet">
-      <Button.Root as="button" type="button">
-        <Button.Label as="span">Save your idea</Button.Label>
-      </Button.Root>
-    </Button>
-  )
-}
-```
-
-This is the component declaration. To run it, generate its CSS and manifest and
-mount it under `TonedProvider`. The [getting-started guide](https://toned.style/getting-started)
+These are the declarations. To run them, generate the CSS and manifest and
+mount the component under `TonedProvider`. The [getting-started guide](https://toned.style/getting-started)
 walks through the complete Vite setup; the [React guide](packages/toned-react/README.md)
 shows the explicit build and renderer APIs.
 

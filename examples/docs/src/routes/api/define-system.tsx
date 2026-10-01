@@ -17,7 +17,7 @@ function ApiDefineSystem() {
         by its sheets. Keep the complete returned object for renderers and
         builds.
       </p>
-      <CodeBlock>{`import { defineSystem, defineToken } from '@toned/core'
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'controls',
@@ -37,7 +37,15 @@ export const ui = defineSystem({
   },
 })
 
-export const styles = ui.stylesheet(q => ({
+export const { stylesheet } = ui`}</CodeBlock>
+      <p>
+        Sheets import <code {...s.code}>stylesheet</code> from this module. It
+        is bound to the system, so token values and the conditions declared
+        above are checked where they are used:
+      </p>
+      <CodeBlock title="styles.ts">{`import { stylesheet } from './system.ts'
+
+export const styles = stylesheet(q => ({
   Root: {
     opacity: 0.5,
     padding: 2,
@@ -61,8 +69,10 @@ export const styles = ui.stylesheet(q => ({
       <h2 {...s.h2} id="use-the-complete-system">
         Use the complete system
       </h2>
-      <CodeBlock>{`import { buildStyles } from '@toned/core/build'
+      <CodeBlock title="build.ts">{`import { buildStyles } from '@toned/core/build'
 import { createWebRenderer } from '@toned/core/server'
+import { styles } from './styles.ts'
+import { ui } from './system.ts'
 
 const artifact = buildStyles(ui, { sheets: [styles] })
 const renderer = createWebRenderer(ui, { manifest: artifact.manifest, tokens: {} })

@@ -220,18 +220,18 @@ export const playgroundEditorStyles = stylesheet({
     '@platform web': { $style: { marginBottom: -1 } },
     ':hover': { text: 'default' },
   },
-  FileIcon: {
+  // A file tab reads as two lines: the layer the file is, then its name.
+  FileLabel: { flexLayout: 'column', alignItems: 'flex-start' },
+  FileLayer: {
     $kind: 'text',
-    paddingX: 1,
-    radius: 'xs',
-    font: 'mono',
     textStyle: 'badge',
     weight: 'heavy',
-    text: 'accent',
-    fill: 'accent-soft',
+    text: 'faint',
   },
+  FileName: { display: 'inline-flex', alignItems: 'center', gap: 2 },
   TabMeta: {
-    display: 'flex',
+    display: 'none',
+    '@media md': { display: 'flex' },
     alignItems: 'center',
     gap: 2,
     paddingRight: 2,
@@ -590,7 +590,7 @@ export const playgroundEditorStyles = stylesheet({
     },
     [$.active(true)]: {
       Tab: { text: 'default', borderTone: 'accent' },
-      FileIcon: { text: 'on-accent', fill: 'accent' },
+      FileLayer: { text: 'accent' },
     },
     [$.status('ok')]: {
       Pill: { text: 'success', fill: 'success-soft', borderTone: 'success' },
