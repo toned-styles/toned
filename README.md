@@ -2,59 +2,48 @@
   <a href="https://toned.style"><img src="examples/docs/public/brand/toned-logo.svg" width="260" alt="Toned" /></a>
 </p>
 
-<h1 align="center">Typed styling, independent of platform and framework</h1>
+<h1 align="center">Typed styling for design systems</h1>
 
-<p align="center">A typed vocabulary of design tokens, named component parts and variants, compiled for each target.</p>
+<p align="center">
+  Define your tokens once. Toned builds them into styles for the web, React Native, email and PDF, and TypeScript checks every value.
+  <br />
+  Platform-agnostic and framework-agnostic.
+</p>
 
 <p align="center">
   <a href="https://toned.style/getting-started">Get started</a> ·
   <a href="https://toned.style/playground">Playground</a> ·
   <a href="https://toned.style/ui">Components</a> ·
-  <a href="https://toned.style/explore">All capabilities</a> ·
-  <a href="https://toned.style/examples">Interactive examples</a>
+  <a href="https://toned.style/explore">Reference</a> ·
+  <a href="https://toned.style/examples">Examples</a>
 </p>
 
 ---
 
-Toned is a styling system. You define the values your product uses, name the
-parts of a component, and describe how they change together.
-TypeScript checks the declarations. The core (`@toned/core`) has no framework
-dependency: its renderers resolve a stylesheet to plain props for web CSS built
-ahead of time, React Native, inline styles for HTML email, or a PDF style
-profile. `@toned/react` is the framework binding that exists today, for React on
-the web, React Native and Server Components.
+Toned is a styling system for design systems. You define the values your product
+uses as typed tokens, name the parts of a component, and describe how they
+change together with variants and conditions. TypeScript checks every
+declaration.
 
-## What it provides
+Toned is **platform-agnostic**: the same stylesheet resolves to class names
+backed by CSS generated at build time, to React Native styles, to inline styles
+for HTML email, or to a PDF style profile. It is **framework-agnostic**: the core
+(`@toned/core`) has no framework dependency, and its renderers turn a stylesheet
+into plain props. `@toned/react` is the binding for React on the web, React
+Native and Server Components.
 
-- **Typed tokens.** Define semantic tokens for colour, spacing,
-  typography, or your own concepts. Invalid token values are type errors.
-- **Named parts.** Style a card's root, label, and action together.
-  `createElements` binds those parts to React with stable component identities.
-- **Composable variants.** Express size, tone, density, and their intersections
-  with typed selector chains. Each mounted family owns its selection.
-- **Typed conditions.** Combine media queries, containers,
-  interaction states, and cross-part relationships with the system's query builder.
-- **Build-time CSS.** A deterministic build produces CSS and a matching
-  manifest. Rendering never injects a missing stylesheet.
-- **SSR and React Server Components.** Server-rendered and static pages need no
-  style injection, and a Server Component resolves part props with
-  `renderer.resolve(sheet)`: no hooks, context or client JavaScript.
-- **Explicit platform boundaries.** Share declarations across web and native
-  integrations; use explicit platform blocks for platform-specific behavior.
+## Why Toned
 
-The [playground](https://toned.style/playground) is an editor: write a
-stylesheet and a component, with type checking and completion, and see it render.
-
-The [component gallery](https://toned.style/ui) has 56 components. Each page
-shows the component's source and props, and lets you try scoped token overrides.
-
-## Where to start
-
-- **New to Toned:** follow [Getting Started](https://toned.style/getting-started), then try the [playground](https://toned.style/playground).
-- **Evaluating it:** read component sources in the [gallery](https://toned.style/ui) and try scoped overrides.
-- **Beyond web styling:** the [interactive examples](https://toned.style/examples) run adaptive layout, springs, grid, document renderers, DTCG exchange, measured contracts and the source inspector.
-- **An exact API or limitation:** the [reference directory](https://toned.style/explore) renders each package's documentation.
-- **What changed:** the [changelog](https://toned.style/changelog) lists each release, per package.
+- **Design system first.** You define the system; components can only use what
+  it defines.
+- **Token first.** Every value is a named token, from colour and type to layout.
+- **Type safe.** Tokens, parts, variants and conditions are typed. A wrong value
+  does not compile.
+- **Build time.** CSS is generated when you build. Nothing is injected at render.
+- **SSR and Server Components.** Server-rendered and static pages need no style
+  runtime, and Server Components resolve styles without hooks.
+- **Cross-platform.** One stylesheet resolves for the web, React Native, email
+  and PDF, with explicit platform blocks where a platform needs its own styles.
 
 ## Install
 
@@ -63,79 +52,53 @@ npm install @toned/core @toned/react
 # or: pnpm add, yarn add, bun add
 ```
 
-`@toned/core` holds the system, stylesheets and the CSS build; `@toned/react`
-binds them to React 18 or 19. `@toned/systems` and `@toned/themes` are an
-optional ready-made vocabulary and its theme values. `@toned/eslint-plugin` and
-`@toned/compiler` are optional development tools. Import the scoped packages:
-`toned` itself is a private workspace placeholder, not an umbrella API.
+`@toned/core` holds the system, stylesheets, renderers and the CSS build.
+`@toned/react` binds them to React 18 or 19. Toned's types support
+TypeScript 5.9 and later, including TypeScript 7.
 
-## Example
+## A component, from tokens to output
 
-A stylesheet names a component's parts, gives each part token values, and
-describes how they change per variant.
-
-```ts
-// styles.ts
-import type { Variants } from '@toned/core'
-import { stylesheet } from './system'
-
-export const buttonStyles = stylesheet({
-  Root: { $kind: 'pressable', surface: 'accent', padding: 3 },
-  Label: { $kind: 'text', text: 'label', ink: 'on-accent' },
-}).variants(($: Variants<{ tone: 'accent' | 'quiet' }>) => ({
-  [$.tone('quiet')]: {
-    Root: { surface: 'quiet' },
-    Label: { ink: 'accent' },
-  },
-}))
-```
-
-Bind the parts once, at module scope. The family provider adds no wrapper element.
-
-```tsx
-// SaveButton.tsx
-import { createElements } from '@toned/react'
-import { buttonStyles } from './styles'
-
-const Button = createElements(buttonStyles)
-
-export function SaveButton() {
-  return (
-    <Button tone="quiet">
-      <Button.Root as="button" type="button">
-        <Button.Label as="span">Save your idea</Button.Label>
-      </Button.Root>
-    </Button>
-  )
-}
-```
-
-The tokens come from a system, defined once and shared by every stylesheet.
+**1. Define your tokens.** A token is one design decision: its name, the values
+it allows, and what each value means. A stylesheet can use these values and
+nothing else.
 
 ```ts
 // system.ts
 import { defineSystem, defineToken } from '@toned/core'
 
+const colours = {
+  info: { soft: '#eef2ff', line: '#bac8ff', solid: '#284bdd' },
+  danger: { soft: '#fdecea', line: '#f3c9c4', solid: '#b3261e' },
+} as const
+
+type Tone = keyof typeof colours
+
 export const ui = defineSystem({
-  id: 'my-ui',
+  id: 'notice',
   tokens: {
-    surface: defineToken({
-      values: ['accent', 'quiet'] as const,
-      resolve: (value) => ({
-        backgroundColor: value === 'accent' ? '#284bdd' : '#e8edff',
+    tint: defineToken({
+      values: ['info', 'danger'],
+      resolve: (tone: Tone) => ({
+        backgroundColor: colours[tone].soft,
+        borderColor: colours[tone].line,
+        borderWidth: 1,
+        borderStyle: 'solid',
       }),
     }),
-    ink: defineToken({
-      values: ['on-accent', 'accent'] as const,
-      resolve: (value) => ({ color: value === 'accent' ? '#284bdd' : '#fff' }),
+    fill: defineToken({
+      values: ['info', 'danger'],
+      resolve: (tone: Tone) => ({ backgroundColor: colours[tone].solid }),
     }),
-    padding: defineToken({
-      values: [2, 3] as const,
-      resolve: (step) => ({ padding: step * 4 }),
+    space: defineToken({
+      values: [12, 20] as const,
+      resolve: (padding) => ({ padding, borderRadius: 12 }),
     }),
     text: defineToken({
-      values: ['label'] as const,
-      resolve: () => ({ fontSize: 14 }),
+      values: ['title', 'label'],
+      resolve: (style) =>
+        style === 'title'
+          ? { fontSize: 18, fontWeight: 600 }
+          : { fontSize: 12, fontWeight: 600, color: '#ffffff' },
     }),
   },
 })
@@ -143,15 +106,137 @@ export const ui = defineSystem({
 export const { stylesheet } = ui
 ```
 
-These are the declarations. To run them, generate the CSS and manifest and
-mount the component under `TonedProvider`. The [getting-started guide](https://toned.style/getting-started)
-walks through the complete Vite setup; the [React guide](packages/toned-react/README.md)
-shows the explicit build and renderer APIs.
+**2. Style the parts.** A stylesheet names a component's parts, gives each part
+token values, and describes how they change per variant.
 
-Start with your own vocabulary, or add the optional `@toned/systems` and
-`@toned/themes` packages.
+```ts
+// styles.ts
+import type { Variants } from '@toned/core'
 
-## Further capabilities
+import { stylesheet } from './system.ts'
+
+type NoticeVariants = {
+  tone: 'info' | 'danger'
+  size: 'regular' | 'compact'
+}
+
+export const noticeStyles = stylesheet({
+  Root: { tint: 'info', space: 20 },
+  Badge: { $kind: 'text', fill: 'info', text: 'label' },
+  Title: { $kind: 'text', text: 'title' },
+}).variants(($: Variants<NoticeVariants>) => ({
+  [$.tone('danger')]: {
+    Root: { tint: 'danger' },
+    Badge: { fill: 'danger' },
+  },
+  [$.size('compact')]: {
+    Root: { space: 12 },
+  },
+}))
+```
+
+**3. Use it in a component.** `createElements` binds the parts once, at module
+scope. The family provider takes the variants and adds no wrapper element.
+
+```tsx
+// Notice.tsx
+import { createElements } from '@toned/react'
+import type { ReactNode } from 'react'
+
+import { noticeStyles } from './styles.ts'
+
+const Parts = createElements(noticeStyles)
+
+export function Notice(props: {
+  tone: 'info' | 'danger'
+  size: 'regular' | 'compact'
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <Parts tone={props.tone} size={props.size}>
+      <Parts.Root>
+        <Parts.Badge as="span">{props.label}</Parts.Badge>
+        <Parts.Title as="strong">{props.children}</Parts.Title>
+      </Parts.Root>
+    </Parts>
+  )
+}
+```
+
+**4. Build the CSS and render.** The Vite plugin generates static CSS and a
+matching manifest from every sheet you list. The application creates one
+renderer from them and provides it to the tree.
+
+```ts
+// vite.config.ts
+import toned from '@toned/core/vite'
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+
+import { noticeStyles } from './styles.ts'
+import { ui } from './system.ts'
+
+export default defineConfig({
+  plugins: [
+    toned({
+      system: ui,
+      sheets: [noticeStyles],
+      inputs: ['system.ts', 'styles.ts'],
+    }),
+    react(),
+  ],
+})
+```
+
+```tsx
+// App.tsx
+import 'virtual:toned.css'
+import { createWebRenderer } from '@toned/core/server'
+import { TonedProvider } from '@toned/react'
+import { webHost } from '@toned/react/hosts/web'
+import manifest from 'virtual:toned.manifest'
+
+import { Notice } from './Notice.tsx'
+import { ui } from './system.ts'
+
+const renderer = createWebRenderer(ui, { manifest, tokens: {} })
+
+export function App() {
+  return (
+    <TonedProvider renderer={renderer} host={webHost}>
+      <Notice tone="danger" size="compact" label="Failed">
+        Release 4.12 failed
+      </Notice>
+    </TonedProvider>
+  )
+}
+```
+
+Without Vite, `buildStyles(ui, { sheets })` from `@toned/core/build` returns the
+same CSS and manifest for any build script. The
+[getting-started guide](https://toned.style/getting-started) walks through the
+complete setup.
+
+**The same sheet, other targets.** Renderers need no React. For HTML email, the
+inline renderer resolves the sheet and variants to plain style props:
+
+```ts
+import { createInlineRenderer } from '@toned/core/server'
+
+import { noticeStyles } from './styles.ts'
+import { ui } from './system.ts'
+
+const email = createInlineRenderer(ui, { tokens: {} })
+const { Root, Badge, Title } = email.resolve(noticeStyles, {
+  variants: { tone: 'danger', size: 'compact' },
+})
+```
+
+`createNativeRenderer` does the same for React Native and `createPdfRenderer`
+for PDF documents. See the [renderer guide](https://toned.style/learn/renderers).
+
+## Learn more
 
 | Topic                                             | Reference                                                                                                                                                                            |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -173,10 +258,10 @@ Start with your own vocabulary, or add the optional `@toned/systems` and
 | Safer authoring in CI                             | [ESLint and Oxlint rules](packages/toned-eslint-plugin/README.md)                                                                                                                    |
 | Custom hosts and backends                         | [Host adapters](packages/toned-core/hosts/README.md) · [backend boundaries](packages/toned-core/backends/README.md)                                                                  |
 
-Adaptive layout, motion, and compiler tooling are opt-in. Native capabilities are
-verified per concrete host profile; **native grid is not supported**. See the
-[implementation status](SPEC-COMPLETION.md) for the precise boundaries and the
-[benchmarks](benchmarks/README.md) for measured results, including regressions.
+Adaptive layout, motion and compiler tooling are opt-in. Native capabilities are
+verified per concrete host profile, and **native grid is not supported**; the
+[native hosts guide](packages/toned-react/NATIVE-HOSTS.md) lists the exact
+boundaries. [Benchmarks](benchmarks/README.md) records measured performance.
 
 ## Packages
 
@@ -189,42 +274,47 @@ verified per concrete host profile; **native grid is not supported**. See the
 | [`@toned/eslint-plugin`](packages/toned-eslint-plugin/README.md) | Optional syntax-aware ESLint and Oxlint rules.                                      |
 | [`@toned/compiler`](packages/toned-compiler/README.md)           | Source graph, language server, inspector, measured contracts, and DTCG interchange. |
 
+Import the scoped packages; `toned` itself is a private workspace placeholder,
+not an umbrella API.
+
 ## Editor mode
 
-Part of Toned's typing exists only for editor completions: the vocabulary a
-`.variants()` callback, `overrideStyles` / `overrideSheet` rules and the blocks
-nested inside them are contextually typed by. Diagnostics never depend on it,
-so a batch check skips it. The switch is automatic and needs no setup:
+Part of Toned's typing exists only for editor completions: the vocabulary that
+contextually types a `.variants()` callback, `overrideStyles` / `overrideSheet`
+rules and the blocks nested inside them. Diagnostics never depend on it, so a
+batch check skips it. The switch is automatic and needs no setup:
 
 - **Editors: on.** A language server loads a referenced project's _source_
   rather than its declarations. That holds for TypeScript 7's native server
-  (`tsc --lsp --stdio`: VS Code's TypeScript Native extension with the
-  workspace `typescript.tsdk`, or nvim's `tsgo` / `tsc --lsp` config) and for
-  the JS `tsserver` (VS Code's built-in extension, nvim's `ts_ls` / `vtsls`).
-- **`tsc` / `tsc -b` and CI: off.** A consumer compiles against the referenced
-  project's emitted `.d.ts`, where `EditorModeProbe`'s private member has no
-  type (see `packages/toned-core/types/editor-mode.ts`). A published package is
-  consumed through its declarations too.
+  (`tsc --lsp --stdio`) and for the JavaScript `tsserver`.
+- **`tsc` / `tsc -b` and CI: off.** A consumer compiles against the emitted
+  `.d.ts`, where `EditorModeProbe`'s private member has no type (see
+  [`editor-mode.ts`](packages/toned-core/types/editor-mode.ts)). A published
+  package is consumed through its declarations too.
 
 Hover `import('@toned/core').EditorMode` to see which mode a program is in. A
-program that compiles Toned's sources directly — Toned's own packages, a
-project mapping `@toned/core` to source without a project reference, or a tool
-that loads references from source (HQ's `oxlint --type-aware` pass) — runs in
-editor mode. Language-service plugins are not used: TypeScript 7's native
-server does not load them.
+program that compiles Toned's sources directly, such as Toned's own packages or
+a project that maps `@toned/core` to source without a project reference, runs in
+editor mode. Language-service plugins are not used: TypeScript 7's native server
+does not load them.
 
-## Contracts and verification
+## Development
 
-- [Implementation status](SPEC-COMPLETION.md) records supported contracts and
-  architectural boundaries. A pinned [Android Fabric profile](packages/toned-react/NATIVE-HOSTS.md)
-  has real native acceptance evidence; native grid remains unsupported.
-- [Examples](examples/README.md) distinguish runnable integrations from historical
-  host sketches; they are not a substitute for package conformance tests.
-- [Benchmarks](benchmarks/README.md) report measured improvements and regressions.
-- Embedded in HQ, use the root dependency installation and guarded
-  `bun scripts/build/test-toned.ts` and `bun scripts/build/test-toned-react-versions.ts`
-  runners. `bun scripts/build/test-toned-docs.ts` checks the documentation and
-  gallery production build and browser hydration; see the examples guide for
-  browser installation. Do not install a second React tree in this submodule.
+The repository is a pnpm workspace. [mise](https://mise.jdx.dev) pins pnpm
+(`mise install`); package builds and some examples also use [Bun](https://bun.sh).
+
+```sh
+pnpm install
+pnpm test                  # Vitest
+pnpm run ci:typecheck      # project references, then tsc -b
+pnpm run lint              # oxlint
+pnpm run format            # oxfmt
+```
+
+[Examples](examples/README.md) describes the runnable integrations, including
+the documentation site. Examples demonstrate usage; they are not a substitute
+for the package tests.
+
+## License
 
 MIT; see [LICENSE](LICENSE).
