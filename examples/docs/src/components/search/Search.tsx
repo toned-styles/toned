@@ -42,7 +42,9 @@ function isEditable(target: EventTarget | null) {
 
 /** Starts the index request ahead of the first query; a failure is retried on open. */
 const preload = () => {
-  loadSearchIndex().catch(() => {})
+  loadSearchIndex().catch((error: unknown) => {
+    console.warn('Search index preload failed; opening search retries.', error)
+  })
 }
 
 /**
