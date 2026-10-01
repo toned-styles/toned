@@ -1,3 +1,4 @@
+import { t } from '@toned/systems/base'
 import { c, doc } from '@/lib/doc.tsx'
 import {
   Combobox,
@@ -6,32 +7,50 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-  ComboboxTrigger,
 } from './combobox.tsx'
 
+const frameworks = [
+  'React',
+  'React Native',
+  'Next.js',
+  'Remix',
+  'Astro',
+  'Expo',
+  'TanStack Start',
+]
+
 export default doc({
+  description:
+    'A text field that filters a list of options as you type. Choose with the arrow keys and Enter.',
   components: [
-    c({ Combobox }, {}),
-    c({ ComboboxTrigger }, {}),
-    c({ ComboboxInput }, { placeholder: 'Search...' }),
+    c({ Combobox }, { items: frameworks }),
+    c(
+      { ComboboxInput },
+      {
+        placeholder: 'Choose a framework',
+        'aria-label': 'Framework',
+        showClear: false,
+      },
+    ),
     c({ ComboboxContent }, {}),
     c({ ComboboxList }, {}),
-    c({ ComboboxItem }, { value: 'apple', children: 'Apple' }),
-    c({ ComboboxEmpty }, { children: 'No results found.' }),
+    c({ ComboboxEmpty }, { children: 'No framework matches.' }),
   ],
   preview: (C) => (
-    <C.Combobox>
-      <C.ComboboxTrigger>
+    <div {...t({ width: '100%', maxWidth: '280px' })}>
+      <C.Combobox>
         <C.ComboboxInput />
-      </C.ComboboxTrigger>
-      <C.ComboboxContent>
-        <C.ComboboxList>
-          <C.ComboboxItem value="apple">Apple</C.ComboboxItem>
-          <C.ComboboxItem value="banana">Banana</C.ComboboxItem>
-          <C.ComboboxItem value="cherry">Cherry</C.ComboboxItem>
-        </C.ComboboxList>
-        <C.ComboboxEmpty />
-      </C.ComboboxContent>
-    </C.Combobox>
+        <C.ComboboxContent>
+          <C.ComboboxEmpty />
+          <C.ComboboxList>
+            {(item: string) => (
+              <ComboboxItem key={item} value={item}>
+                {item}
+              </ComboboxItem>
+            )}
+          </C.ComboboxList>
+        </C.ComboboxContent>
+      </C.Combobox>
+    </div>
   ),
 })

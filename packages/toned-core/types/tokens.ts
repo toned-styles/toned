@@ -222,6 +222,7 @@ export const isAnimationDefinition = (
 
 export type TokenStyleDeclaration = {
   layoutContext?: import('../core/values.ts').LayoutContext
+  externalCssVariables?: readonly string[]
   // biome-ignore lint/suspicious/noExplicitAny: index signature must accept all TokenConfig variants
   [key: string]:
     | TokenConfig<any, any>
@@ -283,6 +284,7 @@ export type TokenKeys<S> = Exclude<
   | 'responsiveTokens'
   | 'containers'
   | 'base'
+  | 'externalCssVariables'
 >
 
 import type { TonedTypeRegistry } from '../registry.ts'

@@ -1,8 +1,3 @@
-import { defineConfig, setConfig } from '@toned/core'
-
-import reactConfig from '@toned/react/react-web'
-
-// should be preset for the framework?
-// also add options to process css-variables/native/tailwind etc
-
-export default setConfig(defineConfig(reactConfig))
+// Email rendering uses the explicit inline renderer in styles.ts.
+// No process-global configuration or React provider is required.
+export {}

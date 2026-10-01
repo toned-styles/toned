@@ -1,62 +1,132 @@
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { ShowcaseProvider } from '../components/ShowcaseProvider.tsx'
 import { Sidebar } from '../components/Sidebar.tsx'
-import { layoutStyles } from '../styles/layout.ts'
+import { SiteHeader } from '../components/SiteHeader.tsx'
+import { NotFound } from '../components/site/NotFound.tsx'
+import { Pager } from '../components/site/Pager.tsx'
+import { SiteFooter } from '../components/site/SiteFooter.tsx'
+import { Toc } from '../components/site/Toc.tsx'
+import { locate } from '../content/nav.ts'
+import { references } from '../content/references.ts'
+import { docsStyles } from '../styles/site.ts'
 
 export const Route = createRootRoute({
   component: RootLayout,
+  notFoundComponent: () => <NotFound />,
 })
 
-function RootLayout() {
-  const s = useStyles(layoutStyles)
+/** Pages that lay out a wider canvas than a reading column. */
+const widePages = new Set(['/explore', '/examples'])
 
-  // Close menu on route change
+function pageLabel(pathname: string) {
+  const topic = pathname.split('/')[2]
+  const reference = pathname.startsWith('/learn/')
+    ? references.find((item) => item.slug === topic)
+    : undefined
+  return (
+    reference?.title ??
+    locate(pathname)?.label ??
+    (
+      {
+        '/': 'Typed styling for React and React Native',
+        '/playground': 'Playground',
+        '/themes': 'Themes',
+        '/ui': 'Components',
+      } as Record<string, string>
+    )[pathname] ??
+    pathname
+      .split('/')
+      .filter(Boolean)
+      .map((part) => part.replace(/-/g, ' '))
+      .join(' · ')
+  )
+}
+
+function RootLayout() {
   const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+    select: (state) => state.location.pathname.replace(/(.)\/$/, '$1'),
+  })
+  const routeIds = useRouterState({
+    select: (state) => state.matches.map((match) => match.routeId),
   })
   useEffect(() => {
-    const toggle = document.getElementById('menu-toggle') as HTMLInputElement
-    if (toggle) toggle.checked = false
+    document.title = `Toned — ${pageLabel(pathname)}`
   }, [pathname])
 
-  return (
-    <div {...s.root}>
-      <input
-        type="checkbox"
-        id="menu-toggle"
-        className="menu-toggle"
-        aria-label="Toggle menu"
-        aria-controls="docs-navigation"
-      />
-      <label htmlFor="menu-toggle" {...s.hamburger} aria-label="Toggle menu">
-        <svg
-          aria-hidden="true"
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        >
-          <path d="M3 5h14M3 10h14M3 15h14" />
-        </svg>
-      </label>
-      <label
-        htmlFor="menu-toggle"
-        {...s.overlay}
-        role="presentation"
-        aria-hidden="true"
-      >
-        <span className="menu-toggle">Close menu</span>
-      </label>
-      <nav id="docs-navigation" {...s.sidebar}>
-        <Sidebar />
-      </nav>
-      <main {...s.content}>
+  if (routeIds.includes('/ui')) return <Outlet />
+
+  if (
+    routeIds.includes('/') ||
+    routeIds.includes('/playground') ||
+    routeIds.includes('/themes')
+  )
+    return (
+      <ShowcaseProvider>
         <Outlet />
-      </main>
+      </ShowcaseProvider>
+    )
+
+  return <DocsLayout pathname={pathname} />
+}
+
+/**
+ * After a client navigation to another page, focus moves to the main region,
+ * so a keyboard or screen-reader user continues from the new page's content
+ * rather than from the link they followed. The path is that of the rendered
+ * route match, not of the location: the location changes when a navigation
+ * starts, the match when the new page is on screen. The first page load and a
+ * change of hash within a page leave focus alone.
+ */
+function useFocusMainOnNavigation() {
+  const rendered = useRouterState({
+    select: (state) => state.matches.at(-1)?.pathname,
+  })
+  const previous = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const from = previous.current
+    previous.current = rendered
+    if (from === undefined || rendered === undefined || from === rendered)
+      return
+    // The router owns scrolling; focusing must not move the page.
+    document.getElementById('docs-main')?.focus({ preventScroll: true })
+  }, [rendered])
+}
+
+function DocsLayout({ pathname }: { pathname: string }) {
+  const s = useStyles(docsStyles)
+  const place = locate(pathname)
+  useFocusMainOnNavigation()
+  return (
+    <div {...s.Page}>
+      <a href="#docs-main" className="tnd-skip-link">
+        Skip to content
+      </a>
+      <SiteHeader menu={<Sidebar />} />
+      <div {...s.Shell}>
+        <aside
+          {...s.Sidebar}
+          aria-label="Documentation"
+          // Names this scroll region for the router's scroll restoration.
+          data-scroll-restoration-id="docs-sidebar"
+        >
+          <Sidebar />
+        </aside>
+        <main id="docs-main" tabIndex={-1} {...s.Main}>
+          <div {...(widePages.has(pathname) ? s.Wide : s.Article)}>
+            {place && <p {...s.Breadcrumb}>{place.section}</p>}
+            <div id="docs-article">
+              <Outlet />
+            </div>
+            <Pager prev={place?.prev} next={place?.next} />
+          </div>
+        </main>
+        <aside id="docs-rail" {...s.Rail}>
+          <Toc containerId="docs-article" />
+        </aside>
+      </div>
+      <SiteFooter />
     </div>
   )
 }

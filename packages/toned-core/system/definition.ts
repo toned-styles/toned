@@ -26,6 +26,7 @@ export type SystemOptions = {
   >
   /** See `TokenStyleDeclaration.base` — px per numeric unit (default 4). */
   base?: number
+  externalCssVariables?: readonly string[]
 }
 /** Portable named query thresholds are fixed logical lengths. Legacy systems
  * retain their explicit CSS/string and spacing-step interpretation. */
@@ -110,6 +111,8 @@ export function fixedConditions<C extends SystemOptions>(
 }
 export type SystemDefinition<S, C> = {
   id: string
+  /** Explicit references to application-owned CSS variables; all others remain namespaced. */
+  externalCssVariables?: readonly string[]
   layout?: LayoutContext
   tokens: S
   conditions?: C & FixedConditions<C>

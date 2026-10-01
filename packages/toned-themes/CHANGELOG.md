@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# Next release
+
+### Added
+
+* `@toned/themes/shadcn/config.css` is an exported subpath, so a bundler can import the theme's stylesheet.
+
 # [0.2.0](https://github.com/lttb/toned/compare/@toned/themes@0.0.2...@toned/themes@0.2.0) (2026-08-05)
 
 ### Features

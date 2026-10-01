@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type { Label as LabelPrimitive } from 'radix-ui'
@@ -15,14 +16,12 @@ import {
 import { Label } from '@/components/ui/label.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const formStyles = stylesheet({
+export const formStyles = stylesheet({
   item: {
     display: 'grid',
     gap: 2,
   },
-  labelError: {
-    textColor: 'destructive',
-  },
+  label: {},
   description: {
     textColor: 'muted',
     typo: 'body_small',
@@ -31,7 +30,12 @@ const formStyles = stylesheet({
     textColor: 'destructive',
     typo: 'body_small',
   },
-})
+}).variants(
+  ($: Variants<{ error: boolean }>) => ({
+    [$.error(true)]: { label: { textColor: 'destructive' } },
+  }),
+  { defaults: { error: false } },
+)
 
 const Form = FormProvider
 
@@ -106,14 +110,14 @@ function FormLabel({
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root>) {
   const { error, formItemId } = useFormField()
-  const s = useStyles(formStyles)
+  const s = useStyles(formStyles, { error: !!error })
 
   return (
     <Label
       data-slot="form-label"
       data-error={!!error}
-      className={cn(error && s.labelError.className, className)}
-      style={error ? s.labelError.style : undefined}
+      // Label owns the element; this part only adds the error colour class.
+      className={cn(s.label.className, className)}
       htmlFor={formItemId}
       {...props}
     />

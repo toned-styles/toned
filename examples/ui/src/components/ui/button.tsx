@@ -15,15 +15,13 @@ const buttonStyles = stylesheet({
     typo: 'label_small',
     shadow: 'small',
     cursor: 'pointer',
+    // No tokens for text wrapping or transitions.
     style: {
       whiteSpace: 'nowrap' as const,
       transition:
-        'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s, text-decoration 0.15s',
+        'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s',
     },
-  },
-  disabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
+    ':focus-visible': { shadow: 'focus' },
   },
 }).variants(
   (
@@ -44,6 +42,7 @@ const buttonStyles = stylesheet({
         | 'icon-xs'
         | 'icon-sm'
         | 'icon-lg'
+      disabled: boolean
     }>,
   ) => ({
     // Variants
@@ -52,6 +51,7 @@ const buttonStyles = stylesheet({
         bgColor: 'action',
         textColor: 'on_action',
         ':hover': { opacity: 0.9 },
+        ':active': { opacity: 0.8 },
       },
     },
     [$.variant('destructive')]: {
@@ -60,15 +60,16 @@ const buttonStyles = stylesheet({
         textColor: 'on_destructive',
         shadow: 'none',
         ':hover': { opacity: 0.9 },
+        ':active': { opacity: 0.8 },
       },
     },
     [$.variant('outline')]: {
       root: {
         bgColor: 'default',
-        borderColor: 'default',
+        textColor: 'default',
+        borderColor: 'input',
         borderWidth: 'thin',
-        shadow: 'small',
-        ':hover': { bgColor: 'subtle', textColor: 'subtle' },
+        ':hover': { bgColor: 'subtle' },
       },
     },
     [$.variant('secondary')]: {
@@ -77,20 +78,23 @@ const buttonStyles = stylesheet({
         textColor: 'on_action_secondary',
         shadow: 'none',
         ':hover': { opacity: 0.8 },
+        ':active': { opacity: 0.7 },
       },
     },
     [$.variant('ghost')]: {
       root: {
+        textColor: 'default',
         shadow: 'none',
-        ':hover': { bgColor: 'subtle', textColor: 'subtle' },
+        ':hover': { bgColor: 'subtle' },
       },
     },
     [$.variant('link')]: {
       root: {
         textColor: 'action',
         shadow: 'none',
+        // No token for the underline offset.
         style: { textUnderlineOffset: '4px' },
-        ':hover': { style: { textDecoration: 'underline' } },
+        ':hover': { textDecoration: 'underline' },
       },
     },
     // Sizes
@@ -124,7 +128,11 @@ const buttonStyles = stylesheet({
     [$.size('icon-lg')]: {
       root: { width: '2.5rem', height: '2.5rem' },
     },
+    [$.disabled(true)]: {
+      root: { pointerEvents: 'none', opacity: 0.5 },
+    },
   }),
+  { defaults: { variant: 'default', size: 'default', disabled: false } },
 )
 
 type ButtonVariant =
@@ -146,6 +154,7 @@ type ButtonSize =
 
 function Button({
   className,
+  style,
   variant = 'default',
   size = 'default',
   asChild = false,
@@ -157,14 +166,14 @@ function Button({
   asChild?: boolean
 }) {
   const Comp = asChild ? Slot.Root : 'button'
-  const s = useStyles(buttonStyles, { variant, size })
+  const s = useStyles(buttonStyles, { variant, size, disabled: !!disabled })
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      {...s.root.with(disabled && s.disabled).with({ className })}
+      {...s.root.with({ className, style })}
       disabled={disabled}
       {...props}
     />

@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# Next release
+
+### Added
+
+* `marginInlineStart` and `marginInlineEnd` in the base system.
+* `fit-content` and `max-content` size keywords, and step `32` on the spacing scale.
+* `flexBasis`.
+* `SpaceUnit` is exported from `@toned/systems/base`.
+
+### Fixed
+
+* Inset tokens (`top`, `right`, `bottom`, `left`) pass CSS lengths and expressions such as `50%` and `calc(100% - 2rem)` through instead of reading them as spacing aliases.
+
 # [0.2.0](https://github.com/lttb/toned/compare/@toned/systems@0.0.3...@toned/systems@0.2.0) (2026-08-05)
 
 ### Bug Fixes

@@ -61,9 +61,9 @@ describe('splitAlphaValue', () => {
 describe('generated CSS', () => {
   const css = generate(system.system)
 
-  test('alpha-capable colour rules route through relative colour syntax', () => {
+  test('alpha-capable colour rules retain fallbacks before relative colour syntax', () => {
     expect(css).toContain(
-      '.bgColor_primary{background-color:rgb(from var(--primary) r g b / calc(alpha * var(--toned-alpha-background-color, 1)));}',
+      '.bgColor_primary{background-color:var(--primary);background-color:color-mix(in oklab, var(--primary) calc(var(--toned-alpha-background-color, 1) * 100%), transparent);background-color:rgb(from var(--primary) r g b / calc(alpha * var(--toned-alpha-background-color, 1)));}',
     )
   })
 

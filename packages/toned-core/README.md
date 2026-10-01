@@ -110,10 +110,10 @@ reject valid reuse of one condition in separate parts or larger expressions.
 
 The experimental curried `.variants<Mods>()(factory)`, `q.rules(...)`, and
 `.when(...)` forms are removed. Annotate the single `.variants` callback and put
-compound conditions directly in its returned objects. Existing main-branch
+compound conditions directly in its returned objects. Existing
 explicit-generic callback and object variant declarations remain compatible.
-The experimental branch's public object-predicate types `QueryAtom` and
-`QueryPredicate` are removed; they were never part of main's public API. The
+The object-predicate types `QueryAtom` and
+`QueryPredicate` are removed; they were never part of a released API. The
 internal `WHEN_RULES` metadata protocol is also removed. Query builders now
 return typed `QueryKey` strings; consumers use those keys in declarations instead
 of assembling predicate objects or attaching conditional-rule metadata.
@@ -135,7 +135,7 @@ computed keys so arguments are checked before that widening occurs. Place
 platform-specific styles inside the variant's part or condition group: mixing a
 separate top-level platform rule with widened computed variant keys loses the
 key-to-host association needed to validate its raw styles.
-The main-compatible explicit-generic direct callback and object signatures remain
+The earlier explicit-generic direct callback and object signatures remain
 compatible; the explicit-generic direct callback cannot catch every excess property.
 **Migration note:** callbacks without explicit method type arguments now use the
 checked overload, including callbacks annotated with the existing `VariantSelector`.
@@ -146,7 +146,7 @@ Overload errors can mention `VariantsInput`, the final compatibility signature;
 check the callback's declarations and literal values first. The checked signature
 must precede compatibility signatures to provide literal context: moving it last
 widens otherwise valid inline token and fragment values. Removing those signatures
-would break callers on main. This diagnostic limitation remains while those calls
+would break existing callers. This diagnostic limitation remains while those calls
 are supported. The stricter inferred callback behavior is an intentional
 type-checking change.
 Variant keys are canonical
@@ -196,12 +196,22 @@ const { css, manifest } = buildStyles(ui, { sheets: [button, emphasis], layer: '
 
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
 condition variables and keyframes with their ID. Theme variables consumed by such
-a system must use the same namespace; `namespaceCss` in the system subpath can
-namespace a generated palette. Application-provided external CSS is not discovered. Resolver implementation
+a system must use the same namespace. Declared `themes` are namespaced by the
+build; for a separately generated palette, `namespaceCss` from
+`@toned/core/system` applies the same prefix. A system consuming an existing application palette can
+declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
+`tokens`. These exact custom-property names remain unchanged in generated CSS and
+runtime output; classes, condition toggles and undeclared variables remain isolated.
+The immutable, validated list is part of the manifest contract. External variables
+must be supplied by the application; Toned does not discover or emit their values.
+Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
 The build manifest records ad-hoc conditions and the exact static system schema,
 including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema
 or an undeclared condition with a regeneration instruction; it never injects a rule.
+Token names are canonicalized in that schema, so a bundler changing module-export
+enumeration order does not invalidate an otherwise identical system. This does
+not reorder emitted CSS or weaken its byte-level artifact fingerprint.
 
 `@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
 explicit optional development tool. The old `dom` entry remains compatible.
@@ -265,6 +275,25 @@ and function values retain their identity and disable this caching, so valid
 mutable payloads remain observable. Legacy `system.t` continues reading its live
 installed context on each getter access.
 
+`createInlineRenderer(ui, { tokens })` produces concrete web style props for email
+and static HTML without a manifest, global configuration, hooks, or CSS assets.
+Spread the complete result of `renderer.resolve(sheet).Part` into the email
+component. Explicit variants and platform branches work; media, state, container,
+relation conditions and CSS extensions are rejected before branch selection.
+CSS variables, class names, non-finite numbers and structured CSS values are also
+rejected. Email-client property support remains the template author's responsibility;
+this backend does not add Outlook fallbacks or rewrite unsupported CSS.
+All pure renderer constructors return the exported `PureRenderer<S>` contract,
+so applications can export renderer instances from declaration-emitting packages.
+
+`createPdfRenderer(ui, { tokens })` resolves static report styles in a finite
+profile shared by React PDF and Forme. Numeric measurements are points. It keeps
+percentage dimensions and PDF `textDecoration`, and rejects browser conditions,
+CSS variables, web units, native-only fields, transforms and grid. The profile
+uses native platform branches but has its own field/value validation; it does not
+pretend that React Native and PDF hosts have identical style contracts. See the
+email and PDF examples for full-props spreading into their host components.
+
 `createNativeRenderer` evaluates the same declarations with explicit host facts
 and rejects fields outside its documented finite native profile. Unsupported CSS
 properties and values fail visibly instead of reaching a native host silently.
@@ -301,7 +330,7 @@ const compact = ui.t(base, { $style: { minHeight: 24 } })
 ```
 
 Later arguments override earlier token values; raw `$style` fields merge across
-arguments. The main-compatible `style` spelling and composed `t` results remain
+arguments. The earlier `style` spelling and composed `t` results remain
 accepted. `t()` normalizes its inputs immediately and snapshots raw style fields;
 mutating a caller style object later does not change a retained result. Invalid
 metadata (such as a conditional `$kind` or conflicting kind aliases) throws
@@ -436,10 +465,31 @@ require `readState`. Unsupported host capabilities throw named errors.
 Use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
 `'@platform.web'` block for CSS selectors or pseudo-elements. Styles use checked
 CSS property types. Each entry has one `&`-anchored selector; comma lists and
-at-rules are rejected (write separate entries or use typed queries). Exact DOM
+at-rules are rejected as selector keys. Exact DOM
 child syntax such as `& > input:checked` belongs here, distinct from the portable
 registered-part relationship. The generated CSS belongs to the normal build
 artifact, and native resolution must never silently interpret it as native style.
+
+For browser-only media semantics, including rem breakpoints and reduced-motion
+preferences, pass explicit media groups. These do not change the fixed-pixel
+contract of portable conditions:
+
+```ts
+webRules({}, {
+  media: {
+    '(min-width: 64rem)': webRules({ '&': { display: 'flex' } }),
+    '(prefers-reduced-motion: reduce)': webRules({ '&': { animation: 'none' } }),
+  },
+})
+```
+
+Groups retain declaration order and the owning selector/scope. They are immutable,
+participate in the extension's content identity, and must be inventoried before
+rendering. Selector-only extension identities remain unchanged. Media query
+support belongs to the browser; the builder rejects empty queries, block delimiters
+and comments. This is a CSS-only extension, unavailable to document/native backends.
+For exported inferred sheets, `import type { WEB_RULES } from '@toned/core'`
+lets TypeScript name the opaque brand during declaration emit.
 
 ## Pure authoritative overrides
 
@@ -486,6 +536,28 @@ const ui = defineSystem({
 })
 ```
 
+On the web the build delivers declared themes. A resolver's `theme.field` becomes
+`var(--<system id>-field)` in the generated class, and `buildStyles` (and the Vite
+plugin) writes the values: the first declared theme on `:root`, and every theme
+under `[data-theme='<name>']`, so a subtree can select any theme by attribute.
+Switching is CSS only: changing the attribute rerenders nothing, and classes and
+inline styles stay as they were.
+
+```ts
+const artifact = buildStyles(ui, { sheets })            // themes included
+buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
+buildStyles(ui, { sheets, themes: false })                // deliver them yourself
+```
+
+A class sets each side of a box separately, so a field read by a four-sided
+property (`borderWidth`, `padding`, `margin`, `inset`) must hold a single value;
+the build refuses a value such as `3px 0 0 0` there. Use one field per side.
+
+Only top-level string and number fields are written. A nested group, such as
+`colors` above, cannot be read through one CSS variable; give those values to a
+renderer as explicit `tokens`. `generateThemes(system, options)` from
+`@toned/core/build` returns the same CSS on its own.
+
 This is static schema checking, not validation of untrusted JSON. Applications
 validate external theme data before passing it to a renderer. Existing untyped
 `defineToken` remains compatible; adopting the typed factory is incremental.
@@ -494,12 +566,16 @@ Fixed query thresholds can also be colocated at the use site:
 
 ```ts
 const layout = defineSystem({
-  id: 'local-queries', tokens: {}, conditions: { containers: { card: {} } },
+  id: 'local-queries',
+  tokens: {
+    opacity: defineToken({ values: [0.8, 1], resolve: value => ({ opacity: value }) }),
+  },
+  conditions: { containers: { card: {} } },
 })
 layout.stylesheet(q => ({
   Root: {
-    [q.media(dp(600))]: { $style: { opacity: 0.8 } },
-    [q.container('card', dp(300))]: { $style: { opacity: 1 } },
+    [q.media(dp(600))]: { opacity: 0.8 },
+    [q.container('card', dp(300))]: { opacity: 1 },
   },
 }))
 ```

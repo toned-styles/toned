@@ -1,56 +1,59 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
-const textareaStyles = stylesheet({
+export const textareaStyles = stylesheet({
   root: {
+    display: 'block',
+    bgColor: 'default',
+    textColor: 'default',
     borderColor: 'input',
     borderWidth: 'thin',
     borderRadius: 'medium',
     width: '100%',
-    minHeight: '4rem',
+    minHeight: '5rem',
     paddingX: 3,
     paddingY: 2,
+    // 16px on small screens, so iOS does not zoom the page on focus.
     typo: 'body_medium',
+    '@md': { typo: 'body_small' },
     shadow: 'small',
-    display: 'flex',
+    // No tokens: the field grows with its content and resizes vertically.
     style: {
-      backgroundColor: 'transparent',
-      outline: 'none',
       fieldSizing: 'content',
-      transition: 'color 0.15s, box-shadow 0.15s',
+      resize: 'vertical',
+      transition: 'border-color 0.15s, box-shadow 0.15s',
     },
-    '@md': {
-      typo: 'body_small',
+    ':focus-visible': { borderColor: 'action', shadow: 'focus' },
+  },
+}).variants(
+  ($: Variants<{ disabled: boolean; invalid: boolean }>) => ({
+    [$.invalid(true)]: {
+      root: { borderColor: 'destructive' },
     },
-  },
-  disabled: {
-    cursor: 'not-allowed',
-    opacity: 0.5,
-  },
-  invalid: {
-    borderColor: 'destructive',
-    style: {
-      boxShadow:
-        '0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent)',
+    [$.disabled(true)]: {
+      root: { cursor: 'not-allowed', opacity: 0.5 },
     },
-  },
-})
+  }),
+  { defaults: { disabled: false, invalid: false } },
+)
 
 function Textarea({
   className,
   disabled,
   ...props
 }: React.ComponentProps<'textarea'>) {
-  const s = useStyles(textareaStyles)
+  const invalid = props['aria-invalid']
+  const s = useStyles(textareaStyles, {
+    disabled: !!disabled,
+    invalid: invalid === true || invalid === 'true',
+  })
 
   return (
     <textarea
       data-slot="textarea"
-      {...s.root
-        .with(disabled && s.disabled)
-        .with(props['aria-invalid'] === 'true' && s.invalid)
-        .with({ className })}
+      {...s.root.with({ className })}
       disabled={disabled}
       {...props}
     />

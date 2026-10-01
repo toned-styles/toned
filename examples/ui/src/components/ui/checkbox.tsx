@@ -4,41 +4,58 @@ import type { Variants } from '@toned/core'
 
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
-import { CheckIcon } from 'lucide-react'
+import { CheckIcon, MinusIcon } from 'lucide-react'
 import { Checkbox as CheckboxPrimitive } from 'radix-ui'
 import * as React from 'react'
 
-const checkboxStyles = stylesheet({
+export const checkboxStyles = stylesheet({
   root: {
-    borderColor: 'input',
-    borderWidth: 'thin',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     width: '1rem',
     height: '1rem',
     flexShrink: '0',
+    bgColor: 'default',
+    borderColor: 'input',
+    borderWidth: 'thin',
     borderRadius: 'small',
     shadow: 'small',
+    cursor: 'pointer',
+    // No token: the transition list is specific to this control.
     style: {
-      outline: 'none',
-      transition: 'box-shadow 0.15s',
+      transition:
+        'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
     },
-  },
-  disabled: {
-    cursor: 'not-allowed',
-    opacity: 0.5,
+    ':hover': { borderColor: 'action' },
+    ':focus-visible': { shadow: 'focus' },
   },
   indicator: {
-    display: 'grid',
-    style: {
-      placeContent: 'center',
-      color: 'currentColor',
-      transition: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    width: '0.75rem',
+    height: '0.75rem',
+    // No token: a heavier stroke keeps the mark legible at 12px.
+    style: { strokeWidth: 3 },
+  },
+}).variants(
+  ($: Variants<{ checked: boolean; disabled: boolean }>) => ({
+    [$.checked(true)]: {
+      root: {
+        bgColor: 'action',
+        textColor: 'on_action',
+        borderColor: 'action',
+      },
     },
-  },
-}).variants(($: Variants<{ checked: boolean }>) => ({
-  [$.checked(true)]: {
-    root: { bgColor: 'action', textColor: 'on_action', borderColor: 'action' },
-  },
-}))
+    [$.disabled(true)]: {
+      root: { cursor: 'not-allowed', opacity: 0.5 },
+    },
+  }),
+  { defaults: { checked: false, disabled: false } },
+)
 
 function Checkbox({
   className,
@@ -54,7 +71,11 @@ function Checkbox({
   const current = checkedProp ?? internal
   const isActive = current === true || current === 'indeterminate'
 
-  const s = useStyles(checkboxStyles, { checked: isActive })
+  const s = useStyles(checkboxStyles, {
+    checked: isActive,
+    disabled: !!disabled,
+  })
+  const Mark = current === 'indeterminate' ? MinusIcon : CheckIcon
 
   return (
     <CheckboxPrimitive.Root
@@ -65,7 +86,7 @@ function Checkbox({
         setInternal(val)
         onCheckedChange?.(val)
       }}
-      {...s.root.with(disabled && s.disabled).with({ className })}
+      {...s.root.with({ className })}
       disabled={disabled}
       {...props}
     >
@@ -73,7 +94,7 @@ function Checkbox({
         data-slot="checkbox-indicator"
         {...s.indicator}
       >
-        <CheckIcon className="size-3.5" />
+        <Mark {...s.icon} />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   )

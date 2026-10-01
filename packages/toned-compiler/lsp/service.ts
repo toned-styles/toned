@@ -1,16 +1,14 @@
 import type {
+  CompletionItemKind as CompletionItemKindValue,
   CompletionList,
   Diagnostic,
+  DiagnosticSeverity as DiagnosticSeverityValue,
   DocumentSymbol,
   Hover,
   Location,
   Position,
+  SymbolKind as SymbolKindValue,
   WorkspaceEdit,
-} from 'vscode-languageserver/node.js'
-import {
-  CompletionItemKind,
-  DiagnosticSeverity,
-  SymbolKind,
 } from 'vscode-languageserver/node.js'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import { proposeValueEdit } from '../edits.ts'
@@ -28,6 +26,22 @@ interface Vocabulary {
   readonly domains: ReadonlyMap<string, ReadonlySet<string>>
 }
 const emptyTokens: readonly DesignNode[] = Object.freeze([])
+// The protocol's numeric constants, checked against its types. Importing the
+// enum objects would load the Node-only transport, and this service also runs
+// in browsers and workers (`@toned/compiler/language-service`).
+const CompletionItemKind = {
+  Property: 10,
+  EnumMember: 20,
+} as const satisfies Record<string, CompletionItemKindValue>
+const DiagnosticSeverity = {
+  Error: 1,
+  Warning: 2,
+  Information: 3,
+} as const satisfies Record<string, DiagnosticSeverityValue>
+const SymbolKind = {
+  Namespace: 3,
+  Property: 7,
+} as const satisfies Record<string, SymbolKindValue>
 /** Transport-independent language features share the agent/inspector's index. */
 export class DesignLanguageService {
   readonly project: DesignProject

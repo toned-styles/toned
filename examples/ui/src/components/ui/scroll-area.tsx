@@ -1,48 +1,48 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { ScrollArea as ScrollAreaPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const scrollAreaStyles = stylesheet({
+export const scrollAreaStyles = stylesheet({
   root: {
     position: 'relative',
+    overflow: 'hidden',
   },
   viewport: {
     width: '100%',
     height: '100%',
-    style: {
-      borderRadius: 'inherit',
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
-    },
+    // No token: the viewport follows the root's corners.
+    style: { borderRadius: 'inherit' },
+    ':focus-visible': { shadow: 'focus' },
   },
   scrollbar: {
     display: 'flex',
-    style: {
-      touchAction: 'none',
-      padding: '1px',
-      transition: 'background 150ms',
-      userSelect: 'none',
-    },
-    ':hover': {
-      style: {
-        background: 'color-mix(in srgb, var(--border) 50%, transparent)',
-      },
-    },
+    padding: 0.5,
+    // No tokens: dragging the bar must not scroll the page or select text.
+    style: { touchAction: 'none', userSelect: 'none' },
   },
   thumb: {
-    bgColor: 'subtle',
-    borderRadius: 'full',
     position: 'relative',
-    style: {
-      flex: 1,
-      transition: 'background 150ms',
-    },
+    flexGrow: '1',
+    bgColor: 'interactive_muted',
+    borderRadius: 'full',
   },
-})
+}).variants(
+  ($: Variants<{ orientation: 'vertical' | 'horizontal' }>) => ({
+    [$.orientation('vertical')]: {
+      scrollbar: { height: '100%', width: '0.625rem' },
+    },
+    [$.orientation('horizontal')]: {
+      scrollbar: { flexLayout: 'column', height: '0.625rem' },
+    },
+  }),
+  { defaults: { orientation: 'vertical' } },
+)
 
 function ScrollArea({
   className,
+  style,
   children,
   ...props
 }: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
@@ -51,7 +51,7 @@ function ScrollArea({
   return (
     <ScrollAreaPrimitive.Root
       data-slot="scroll-area"
-      {...s.root.with({ className })}
+      {...s.root.with({ className, style })}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
@@ -71,27 +71,13 @@ function ScrollBar({
   orientation = 'vertical',
   ...props
 }: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
-  const s = useStyles(scrollAreaStyles)
+  const s = useStyles(scrollAreaStyles, { orientation })
 
   return (
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
-      {...s.scrollbar.with({
-        className,
-        style:
-          orientation === 'vertical'
-            ? {
-                height: '100%',
-                width: '10px',
-                borderLeft: '1px solid transparent',
-              }
-            : {
-                height: '10px',
-                flexDirection: 'column' as const,
-                borderTop: '1px solid transparent',
-              },
-      })}
+      {...s.scrollbar.with({ className })}
       {...props}
     >
       <ScrollAreaPrimitive.ScrollAreaThumb

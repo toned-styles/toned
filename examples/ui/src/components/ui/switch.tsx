@@ -4,38 +4,58 @@ import { stylesheet } from '@toned/systems/base'
 import { Switch as SwitchPrimitive } from 'radix-ui'
 import * as React from 'react'
 
-const switchStyles = stylesheet({
+export const switchStyles = stylesheet({
   root: {
     display: 'inline-flex',
     flexShrink: '0',
     alignItems: 'center',
+    width: '2.25rem',
+    height: '1.25rem',
+    padding: 0.5,
     borderRadius: 'full',
-    shadow: 'small',
-    style: {
-      outline: 'none',
-      border: '1px solid transparent',
-      transition: 'all 0.15s',
-    },
-  },
-  disabled: {
-    cursor: 'not-allowed',
-    opacity: 0.5,
+    bgColor: 'interactive_muted',
+    cursor: 'pointer',
+    // No token: the transition list is specific to this control.
+    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    ':focus-visible': { shadow: 'focus' },
   },
   thumb: {
-    bgColor: 'default',
-    pointerEvents: 'none',
-    borderRadius: 'full',
     display: 'block',
-    style: {
-      boxShadow: 'none',
-      transition: 'transform 0.15s',
+    width: '1rem',
+    height: '1rem',
+    bgColor: 'default',
+    borderRadius: 'full',
+    shadow: 'small',
+    pointerEvents: 'none',
+    // No token: the thumb slides when its inline-start margin changes, which
+    // also mirrors it in right-to-left layouts.
+    style: { transition: 'margin 0.15s' },
+  },
+}).variants(
+  (
+    $: Variants<{
+      checked: boolean
+      size: 'sm' | 'default'
+      disabled: boolean
+    }>,
+  ) => ({
+    [$.size('sm')]: {
+      root: { width: '1.75rem', height: '1rem' },
+      thumb: { width: '0.75rem', height: '0.75rem' },
     },
-  },
-}).variants(($: Variants<{ checked: boolean }>) => ({
-  [$.checked(true)]: {
-    root: { bgColor: 'action' },
-  },
-}))
+    [$.checked(true)]: {
+      root: { bgColor: 'action' },
+      thumb: { marginInlineStart: 4 },
+    },
+    [$.checked(true).size('sm')]: {
+      thumb: { marginInlineStart: 3 },
+    },
+    [$.disabled(true)]: {
+      root: { cursor: 'not-allowed', opacity: 0.5 },
+    },
+  }),
+  { defaults: { checked: false, size: 'default', disabled: false } },
+)
 
 function Switch({
   className,
@@ -53,7 +73,7 @@ function Switch({
   )
   const checked = checkedProp ?? internal
 
-  const s = useStyles(switchStyles, { checked })
+  const s = useStyles(switchStyles, { checked, size, disabled: !!disabled })
 
   return (
     <SwitchPrimitive.Root
@@ -65,7 +85,7 @@ function Switch({
         setInternal(val)
         onCheckedChange?.(val)
       }}
-      {...s.root.with(disabled && s.disabled).with({ className })}
+      {...s.root.with({ className })}
       disabled={disabled}
       {...props}
     >

@@ -3,6 +3,26 @@ import { defineToken } from '../system/definers.ts'
 import { generate } from './generate.ts'
 
 describe('generate', () => {
+  test('alpha-capable atomics keep plain and color-mix browser fallbacks', () => {
+    const result = generate({
+      ink: defineToken({
+        values: ['muted'] as const,
+        resolve: () => ({ color: 'var(--muted)' }),
+        alphaChannel: ['color'],
+      }),
+    })
+    const plain = 'color:var(--muted);'
+    const mix =
+      'color:color-mix(in oklab, var(--muted) calc(var(--toned-alpha-color, 1) * 100%), transparent);'
+    const relative =
+      'color:rgb(from var(--muted) r g b / calc(alpha * var(--toned-alpha-color, 1)));'
+    expect(result).toContain(`.ink_muted{${plain}${mix}${relative}}`)
+    expect(result).toContain('.ink\\$50{--toned-alpha-color:0.5}')
+    expect(result).toContain(
+      "@property --toned-alpha-color {syntax:'<number>';inherits:false;initial-value:1;}",
+    )
+  })
+
   describe('sibling and focus-within channels', () => {
     test('the system css carries sibling-hover, focus-within and sibling-state toggles', () => {
       const result = generate({
@@ -537,5 +557,16 @@ describe('condition breakpoints — parenthesised values are raw media condition
     expect(css).toContain(
       '@media (min-width: 480px) { html { --media-sm: ; --media-sm-not: initial; } }',
     )
+  })
+})
+
+
+describe('main CSS numeric emission regressions', () => {
+  test('serializes lengths, unitless values and custom parameters independently', () => {
+    const css = generate({ probe: { values: ['on'], resolve: () => ({ padding: 8, fontWeight: 700, opacity: 0.5, '--gap': 8 }) } })
+    expect(css).toContain('padding:8px')
+    expect(css).toContain('font-weight:700')
+    expect(css).toContain('opacity:0.5')
+    expect(css).toContain('--gap:8')
   })
 })

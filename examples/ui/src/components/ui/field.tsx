@@ -1,121 +1,101 @@
 'use client'
 
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { useMemo } from 'react'
 import { Label } from '@/components/ui/label.tsx'
-import { Separator } from '@/components/ui/separator.tsx'
 import { cn } from '@/lib/utils.ts'
 
-const fieldStyles = stylesheet({
+export const fieldStyles = stylesheet({
   fieldSet: {
-    display: 'flex',
     flexLayout: 'column',
-    gap: 6,
+    gap: 5,
+    minWidth: 0,
   },
   legend: {
-    fontWeight: 500,
     marginBottom: 3,
-  },
-  legendVariantLegend: {
-    style: {
-      fontSize: '1rem',
-      lineHeight: '1.5',
-    },
-  },
-  legendVariantLabel: {
-    typo: 'body_small',
+    textColor: 'default',
   },
   fieldGroup: {
-    display: 'flex',
     flexLayout: 'column',
-    gap: 7,
+    gap: 5,
     width: '100%',
   },
   field: {
     display: 'flex',
-    gap: 3,
     width: '100%',
   },
-  fieldVertical: {
-    flexLayout: 'column',
-  },
-  fieldHorizontal: {
-    alignItems: 'center',
-    style: {
-      flexDirection: 'row',
-    },
-  },
   fieldContent: {
-    display: 'flex',
     flexLayout: 'column',
-    gap: 1.5,
-    style: {
-      flex: 1,
-      lineHeight: '1.4',
-    },
+    gap: 1,
+    flexGrow: '1',
+    flexBasis: 0,
+    minWidth: 0,
   },
   fieldLabel: {
-    display: 'flex',
-    gap: 2,
-    style: {
-      width: 'fit-content',
-      lineHeight: '1.4',
-    },
+    width: 'fit-content',
   },
   fieldTitle: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    typo: 'body_small',
-    fontWeight: 500,
-    style: {
-      width: 'fit-content',
-      lineHeight: '1.4',
-    },
+    width: 'fit-content',
+    typo: 'label_small',
   },
   fieldDescription: {
     textColor: 'muted',
     typo: 'body_small',
-    fontWeight: 400,
-    style: {
-      lineHeight: '1.5',
-    },
   },
   fieldSeparator: {
     position: 'relative',
-    typo: 'body_small',
-    marginTop: -2,
-    marginBottom: -2,
-    height: '1.25rem',
-  },
-  fieldSeparatorContent: {
-    bgColor: 'default',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 3,
+    typo: 'caption',
     textColor: 'muted',
-    position: 'relative',
-    paddingLeft: 2,
-    paddingRight: 2,
-    style: {
-      display: 'block',
-      width: 'fit-content',
-      margin: '0 auto',
-    },
+  },
+  fieldSeparatorLine: {
+    flexGrow: '1',
+    borderColor: 'default',
+    // No token sets a single edge.
+    style: { borderTopWidth: 1 },
   },
   fieldError: {
     textColor: 'destructive',
     typo: 'body_small',
-    fontWeight: 400,
   },
   errorList: {
-    display: 'flex',
     flexLayout: 'column',
     gap: 1,
-    marginLeft: 4,
-    style: {
-      listStyleType: 'disc',
-    },
+    paddingLeft: 4,
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      orientation: 'vertical' | 'horizontal' | 'responsive'
+      legend: 'legend' | 'label'
+    }>,
+  ) => ({
+    [$.orientation('vertical')]: {
+      field: { flexLayout: 'column', gap: 2 },
+    },
+    [$.orientation('horizontal')]: {
+      field: { flexLayout: 'row', alignItems: 'flex-start', gap: 3 },
+    },
+    // Stacked on small screens, side by side from the `md` breakpoint.
+    [$.orientation('responsive')]: {
+      field: {
+        flexLayout: 'column',
+        gap: 2,
+        '@md': { flexLayout: 'row', alignItems: 'flex-start', gap: 3 },
+      },
+    },
+    [$.legend('legend')]: { legend: { typo: 'heading_4' } },
+    [$.legend('label')]: { legend: { typo: 'label_small' } },
+  }),
+  { defaults: { orientation: 'vertical', legend: 'legend' } },
+)
 
 function FieldSet({ className, ...props }: React.ComponentProps<'fieldset'>) {
   const s = useStyles(fieldStyles)
@@ -134,17 +114,13 @@ function FieldLegend({
   variant = 'legend',
   ...props
 }: React.ComponentProps<'legend'> & { variant?: 'legend' | 'label' }) {
-  const s = useStyles(fieldStyles)
-
-  const variantStyle =
-    variant === 'label' ? s.legendVariantLabel : s.legendVariantLegend
+  const s = useStyles(fieldStyles, { legend: variant })
 
   return (
     <legend
       data-slot="field-legend"
       data-variant={variant}
-      className={cn(s.legend.className, variantStyle.className, className)}
-      style={{ ...s.legend.style, ...variantStyle.style }}
+      {...s.legend.with({ className })}
       {...props}
     />
   )
@@ -156,7 +132,7 @@ function FieldGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="field-group"
-      {...s.fieldGroup.with({ className: cn('group/field-group', className) })}
+      {...s.fieldGroup.with({ className })}
       {...props}
     />
   )
@@ -169,23 +145,14 @@ function Field({
 }: React.ComponentProps<'div'> & {
   orientation?: 'vertical' | 'horizontal' | 'responsive'
 }) {
-  const s = useStyles(fieldStyles)
-
-  const orientationStyle =
-    orientation === 'horizontal' ? s.fieldHorizontal : s.fieldVertical
+  const s = useStyles(fieldStyles, { orientation })
 
   return (
     <div
       role="group"
       data-slot="field"
       data-orientation={orientation}
-      className={cn(
-        'group/field',
-        s.field.className,
-        orientationStyle.className,
-        className,
-      )}
-      style={{ ...s.field.style, ...orientationStyle.style }}
+      {...s.field.with({ className })}
       {...props}
     />
   )
@@ -197,9 +164,7 @@ function FieldContent({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="field-content"
-      {...s.fieldContent.with({
-        className: cn('group/field-content', className),
-      })}
+      {...s.fieldContent.with({ className })}
       {...props}
     />
   )
@@ -214,7 +179,7 @@ function FieldLabel({
   return (
     <Label
       data-slot="field-label"
-      {...s.fieldLabel.with({ className: cn('group/field-label', className) })}
+      className={cn(s.fieldLabel.className, className)}
       {...props}
     />
   )
@@ -225,7 +190,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<'div'>) {
 
   return (
     <div
-      data-slot="field-label"
+      data-slot="field-title"
       {...s.fieldTitle.with({ className })}
       {...props}
     />
@@ -260,11 +225,12 @@ function FieldSeparator({
       {...s.fieldSeparator.with({ className })}
       {...props}
     >
-      <Separator style={{ position: 'absolute', inset: 0, top: '50%' }} />
+      <span data-slot="field-separator-line" {...s.fieldSeparatorLine} />
       {children && (
-        <span {...s.fieldSeparatorContent} data-slot="field-separator-content">
-          {children}
-        </span>
+        <>
+          <span data-slot="field-separator-content">{children}</span>
+          <span data-slot="field-separator-line" {...s.fieldSeparatorLine} />
+        </>
       )}
     </div>
   )

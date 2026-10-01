@@ -1,66 +1,100 @@
 'use client'
 
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { XIcon } from 'lucide-react'
 import { Dialog as SheetPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const sheetStyles = stylesheet({
+export const sheetStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',
     zIndex: 50,
+    // No token for the inset shorthand.
     style: { inset: 0 },
   },
   content: {
-    bgColor: 'default',
+    bgColor: 'elevated',
+    textColor: 'default',
+    borderColor: 'default',
     position: 'fixed',
     zIndex: 50,
     flexLayout: 'column',
     gap: 4,
-    shadow: 'large',
-    style: {
-      transition: 'transform 0.3s ease-in-out',
-    },
+    shadow: 'xlarge',
   },
   close: {
     position: 'absolute',
-    borderRadius: 'small',
-    opacity: 0.7,
-    top: '1rem',
-    right: '1rem',
+    top: 3,
+    right: 3,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '1.75rem',
+    height: '1.75rem',
+    borderRadius: 'medium',
+    textColor: 'muted',
     cursor: 'pointer',
-    padding: 0,
+    // No token: the transition list is specific to this part.
     style: {
-      transition: 'opacity 0.15s',
-      background: 'none',
-      border: 'none',
+      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
     },
-    ':hover': {
-      opacity: 1,
-    },
+    ':hover': { bgColor: 'subtle', textColor: 'default' },
+    ':focus-visible': { shadow: 'focus' },
   },
   header: {
     flexLayout: 'column',
     gap: 1.5,
-    padding: 4,
+    padding: 5,
+    paddingRight: 12,
   },
   footer: {
     flexLayout: 'column',
     gap: 2,
-    padding: 4,
-    style: { marginTop: 'auto' },
+    padding: 5,
+    marginTop: 'auto',
   },
   title: {
-    textColor: 'default',
-    fontWeight: 600,
+    typo: 'heading_4',
   },
   description: {
     textColor: 'muted',
     typo: 'body_small',
   },
-})
+}).variants(
+  ($: Variants<{ side: 'top' | 'right' | 'bottom' | 'left' }>) => ({
+    // No token sets a single edge, so each side writes its one-pixel line.
+    [$.side('right')]: {
+      content: {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: '85%',
+        maxWidth: '24rem',
+        style: { borderLeftWidth: 1 },
+      },
+    },
+    [$.side('left')]: {
+      content: {
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: '85%',
+        maxWidth: '24rem',
+        style: { borderRightWidth: 1 },
+      },
+    },
+    [$.side('top')]: {
+      content: { top: 0, left: 0, right: 0, style: { borderBottomWidth: 1 } },
+    },
+    [$.side('bottom')]: {
+      content: { bottom: 0, left: 0, right: 0, style: { borderTopWidth: 1 } },
+    },
+  }),
+  { defaults: { side: 'right' } },
+)
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -109,33 +143,7 @@ function SheetContent({
   side?: 'top' | 'right' | 'bottom' | 'left'
   showCloseButton?: boolean
 }) {
-  const s = useStyles(sheetStyles)
-  const sideStyles: React.CSSProperties = {
-    right: {
-      inset: '0 0 0 auto',
-      height: '100%',
-      width: '75%',
-      maxWidth: '24rem',
-      borderLeft: '1px solid var(--border)',
-    },
-    left: {
-      inset: '0 auto 0 0',
-      height: '100%',
-      width: '75%',
-      maxWidth: '24rem',
-      borderRight: '1px solid var(--border)',
-    },
-    top: {
-      inset: '0 0 auto 0',
-      height: 'auto',
-      borderBottom: '1px solid var(--border)',
-    },
-    bottom: {
-      inset: 'auto 0 0 0',
-      height: 'auto',
-      borderTop: '1px solid var(--border)',
-    },
-  }[side]
+  const s = useStyles(sheetStyles, { side })
 
   return (
     <SheetPortal>
@@ -143,14 +151,17 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
-        {...s.content.with({ className, style: sideStyles })}
+        {...s.content.with({ className })}
         {...props}
       >
         {children}
         {showCloseButton && (
-          <SheetPrimitive.Close {...s.close}>
-            <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+          <SheetPrimitive.Close
+            data-slot="sheet-close"
+            aria-label="Close"
+            {...s.close}
+          >
+            <XIcon />
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>

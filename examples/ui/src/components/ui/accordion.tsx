@@ -4,61 +4,62 @@ import { ChevronDownIcon } from 'lucide-react'
 import { Accordion as AccordionPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const accordionStyles = stylesheet({
+export const accordionStyles = stylesheet({
+  root: {
+    width: '100%',
+  },
   item: {
     borderColor: 'default',
-    style: {
-      borderBottomWidth: '1px',
-    },
+    // No token sets a single edge.
+    style: { borderBottomWidth: 1 },
+  },
+  header: {
+    display: 'flex',
   },
   trigger: {
     display: 'flex',
-    alignItems: 'flex-start',
-    borderRadius: 'medium',
-    typo: 'body_small',
-    fontWeight: 500,
-    cursor: 'pointer',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 4,
+    width: '100%',
     paddingY: 4,
-    paddingX: 0,
-    style: {
-      flex: 1,
-      textAlign: 'left',
-      transition: 'all 0.15s',
-      outline: 'none',
-      background: 'none',
-      border: 'none',
-    },
-    ':hover': {
-      style: { textDecoration: 'underline' },
-    },
+    borderRadius: 'small',
+    typo: 'label_small',
+    textColor: 'default',
+    cursor: 'pointer',
+    // No token for text alignment or transitions.
+    style: { textAlign: 'left', transition: 'box-shadow 0.15s' },
+    ':hover': { textDecoration: 'underline' },
+    ':focus-visible': { shadow: 'focus' },
   },
   triggerIcon: {
     textColor: 'muted',
-    pointerEvents: 'none',
-    width: '1rem',
-    height: '1rem',
-    flexShrink: '0',
-    style: {
-      transform: 'translateY(2px)',
-      transition: 'transform 0.2s',
-    },
+    // The open state rotates the icon from styles.css.
+    style: { transition: 'transform 0.2s' },
   },
   content: {
     typo: 'body_small',
+    textColor: 'muted',
     overflow: 'hidden',
   },
   contentInner: {
-    paddingTop: 0,
     paddingBottom: 4,
   },
 })
 
 function Accordion({
+  className,
   ...props
 }: React.ComponentProps<typeof AccordionPrimitive.Root>) {
-  return <AccordionPrimitive.Root data-slot="accordion" {...props} />
+  const s = useStyles(accordionStyles)
+
+  return (
+    <AccordionPrimitive.Root
+      data-slot="accordion"
+      {...s.root.with({ className })}
+      {...props}
+    />
+  )
 }
 
 function AccordionItem({
@@ -84,7 +85,7 @@ function AccordionTrigger({
   const s = useStyles(accordionStyles)
 
   return (
-    <AccordionPrimitive.Header className="flex">
+    <AccordionPrimitive.Header data-slot="accordion-header" {...s.header}>
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         {...s.trigger.with({ className })}

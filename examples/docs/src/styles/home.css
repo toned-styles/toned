@@ -1,0 +1,94 @@
+@layer components {
+  .tnd-home :is(a, button, pre, [tabindex]):focus-visible {
+    outline: 3px solid #284bdd;
+    outline-offset: 4px;
+  }
+
+  .tnd-home :is(section, main) {
+    scroll-margin-top: 24px;
+  }
+}
+
+/*
+ * The moving line of supported targets. Keyframes, the hover pause and the
+ * reduced-motion fallback are plain CSS: the items themselves are styled by
+ * `homeStyles`. The list is rendered twice so the loop has no seam; the copy
+ * is hidden from assistive technology and removed when motion is reduced.
+ */
+.tnd-marquee {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 9999px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 8%,
+    #000 92%,
+    transparent
+  );
+}
+
+.tnd-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: tnd-marquee 60s linear infinite;
+}
+
+.tnd-marquee-track > ul {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  margin: 0;
+  padding: 4px 12px 4px 0;
+  list-style: none;
+}
+
+.tnd-marquee:hover .tnd-marquee-track,
+.tnd-marquee:focus .tnd-marquee-track,
+.tnd-marquee:focus-within .tnd-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes tnd-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tnd-marquee {
+    border-radius: 0;
+    mask-image: none;
+  }
+
+  .tnd-marquee-track {
+    width: auto;
+    animation: none;
+  }
+
+  .tnd-marquee-track > ul {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+    justify-content: center;
+    padding-right: 0;
+  }
+
+  .tnd-marquee-track > ul[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+.tnd-skip-link {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  padding: 12px 20px;
+  background: white;
+  color: #284bdd;
+  transform: translateY(-200%);
+}
+
+.tnd-skip-link:focus {
+  transform: translateY(0);
+}

@@ -4,41 +4,45 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
 
-const tableStyles = stylesheet({
+export const tableStyles = stylesheet({
   container: {
     position: 'relative',
     width: '100%',
-    overflow: 'auto',
+    overflowX: 'auto',
   },
   table: {
     width: '100%',
     typo: 'body_small',
-    style: { captionSide: 'bottom' },
+    textColor: 'default',
+    // No tokens for table layout.
+    style: { borderCollapse: 'collapse', captionSide: 'bottom' },
+  },
+  header: {
+    borderColor: 'default',
+    // No token sets a single edge.
+    style: { borderBottomWidth: 1 },
   },
   footer: {
+    bgColor: 'muted',
     borderColor: 'default',
-    borderWidth: 'thin',
     fontWeight: 500,
-    style: {
-      backgroundColor: 'color-mix(in srgb, var(--muted) 50%, transparent)',
-      borderTop: '1px solid var(--border)',
-    },
+    // No token sets a single edge.
+    style: { borderTopWidth: 1 },
   },
+  // The line between rows and the selected state are rules in styles.css.
   row: {
     borderColor: 'default',
-    style: {
-      borderBottom: '1px solid var(--border)',
-      transition: 'background-color 0.15s',
-    },
-    ':hover': {
-      bgColor: 'subtle',
-    },
+    // No token: the transition list is specific to this part.
+    style: { transition: 'background-color 0.15s' },
+    ':hover': { bgColor: 'muted' },
   },
   head: {
-    textColor: 'default',
     height: '2.5rem',
-    paddingX: 2,
+    paddingX: 3,
+    textColor: 'muted',
+    typo: 'caption',
     fontWeight: 500,
+    // No tokens for cell alignment or text wrapping.
     style: {
       textAlign: 'left',
       verticalAlign: 'middle',
@@ -46,16 +50,18 @@ const tableStyles = stylesheet({
     },
   },
   cell: {
-    padding: 2,
+    paddingX: 3,
+    paddingY: 2.5,
+    // No tokens for cell alignment or text wrapping.
     style: {
       verticalAlign: 'middle',
       whiteSpace: 'nowrap' as const,
     },
   },
   caption: {
+    paddingTop: 3,
     textColor: 'muted',
-    marginTop: 4,
-    typo: 'body_small',
+    typo: 'caption',
   },
 })
 
@@ -70,7 +76,15 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
-  return <thead data-slot="table-header" className={className} {...props} />
+  const s = useStyles(tableStyles)
+
+  return (
+    <thead
+      data-slot="table-header"
+      {...s.header.with({ className })}
+      {...props}
+    />
+  )
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {

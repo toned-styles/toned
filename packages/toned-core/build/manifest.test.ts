@@ -7,6 +7,35 @@ import {
   buildStyles,
 } from './index.ts'
 
+test('bundled token enumeration order does not invalidate the build manifest', () => {
+  const width = defineToken({ values: [20, 40], resolve: (value) => ({ width: value }) })
+  const opacity = defineToken({ values: [0, 1], resolve: (value) => ({ opacity: value }) })
+  const built = defineSystem({ id: 'bundled', tokens: { width, opacity } })
+  const bundled = defineSystem({ id: 'bundled', tokens: { opacity, width } })
+  const rules = { Root: { width: 20, opacity: 1 } } as const
+  const artifact = buildStyles(built, { sheets: [built.stylesheet(rules)] })
+  const expected = createWebRenderer(built, { manifest: artifact.manifest }).resolve(
+    built.stylesheet(rules),
+  )
+  const actual = createWebRenderer(bundled, { manifest: artifact.manifest }).resolve(
+    bundled.stylesheet(rules),
+  )
+  expect(actual.Root.className).toBe(expected.Root.className)
+  expect(actual.Root.style).toEqual(expected.Root.style)
+  expect(() => assertBuildArtifact(artifact)).not.toThrow()
+
+  const changed = defineSystem({
+    id: 'bundled',
+    tokens: {
+      opacity,
+      width: defineToken({ values: [20, 60], resolve: (value) => ({ width: value }) }),
+    },
+  })
+  expect(() => createWebRenderer(changed, { manifest: artifact.manifest })).toThrow(
+    'different system definition',
+  )
+})
+
 test('manifest rejects a stale named threshold even with the same system ID', () => {
   const old = defineSystem({
     id: 'responsive',
@@ -27,6 +56,22 @@ test('build/runtime namespaces cannot be independently overridden', () => {
   const system = defineSystem({ id: 'actual', tokens: {} })
   expect(() => buildStyles(system, { sheets: [], systemId: 'other' })).toThrow(
     'runtime system namespace',
+  )
+})
+test('manifest rejects a changed external variable contract', () => {
+  const original = defineSystem({
+    id: 'external',
+    tokens: {},
+    externalCssVariables: ['--brand'],
+  })
+  const current = defineSystem({
+    id: 'external',
+    tokens: {},
+    externalCssVariables: ['--accent'],
+  })
+  const { manifest } = buildStyles(original, { sheets: [] })
+  expect(() => createWebRenderer(current, { manifest, tokens: {} })).toThrow(
+    'different system definition',
   )
 })
 test('manifest collection sees deep conditions and internal layer/AST symbols', () => {
@@ -75,6 +120,29 @@ test('manifest rejects changes to static alpha vocabulary and pseudo presence', 
       'different system definition',
     )
   }
+})
+
+test('the same tokens in another key order are the same system', () => {
+  // A system spread from module namespaces gets its key order from the runtime:
+  // sorted by name under the spec (Bun, Node), declaration order under Vite's
+  // SSR module runner. Neither order may make the committed manifest stale.
+  const lineHeight = { values: [0] as const, resolve: () => ({ lineHeight: 1 }) }
+  const letterSpacing = {
+    values: [''] as const,
+    resolve: () => ({ letterSpacing: '0' }),
+  }
+  const built = defineSystem({
+    id: 'key-order',
+    tokens: { letterSpacing, lineHeight },
+  })
+  const { manifest } = buildStyles(built, { sheets: [] })
+  const reordered = defineSystem({
+    id: 'key-order',
+    tokens: { lineHeight, letterSpacing },
+  })
+  expect(() =>
+    createWebRenderer(reordered, { manifest, tokens: {} }),
+  ).not.toThrow()
 })
 
 test('an asset check detects CSS changed independently from its manifest', () => {

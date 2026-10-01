@@ -6,79 +6,66 @@ import type * as React from 'react'
 
 import { Button } from '@/components/ui/button.tsx'
 
-const dialogStyles = stylesheet({
+export const dialogStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',
     zIndex: 50,
+    // No token for the inset shorthand.
     style: { inset: 0 },
   },
   content: {
-    bgColor: 'default',
+    bgColor: 'elevated',
+    textColor: 'default',
     position: 'fixed',
     zIndex: 50,
     display: 'grid',
-    width: '100%',
     gap: 4,
-    borderRadius: 'large',
+    width: '100%',
+    maxWidth: 'calc(100% - 2rem)',
+    padding: 6,
+    borderRadius: 'xlarge',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 6,
-    shadow: 'large',
+    shadow: 'xlarge',
     top: '50%',
     left: '50%',
-    style: {
-      transform: 'translate(-50%, -50%)',
-      maxWidth: 'calc(100% - 2rem)',
-      outline: 'none',
-      animation: 'zoom-in 0.2s ease',
-    },
-    '@sm': {
-      maxWidth: '32rem',
-    },
+    // No token for transforms: centres the panel on its top-left anchor.
+    style: { transform: 'translate(-50%, -50%)' },
+    '@sm': { maxWidth: '30rem' },
   },
   close: {
     position: 'absolute',
-    borderRadius: 'small',
-    opacity: 0.7,
-    top: '1rem',
-    right: '1rem',
+    top: 3,
+    right: 3,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '1.75rem',
+    height: '1.75rem',
+    borderRadius: 'medium',
+    textColor: 'muted',
     cursor: 'pointer',
-    padding: 0,
+    // No token: the transition list is specific to this part.
     style: {
-      transition: 'opacity 0.15s',
-      background: 'none',
-      border: 'none',
+      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
     },
-    ':hover': {
-      opacity: 1,
-    },
+    ':hover': { bgColor: 'subtle', textColor: 'default' },
+    ':focus-visible': { shadow: 'focus' },
   },
   header: {
     flexLayout: 'column',
     gap: 2,
-    style: { textAlign: 'center' },
-    '@sm': {
-      style: { textAlign: 'left' },
-    },
+    paddingRight: 8,
   },
   footer: {
-    display: 'flex',
+    flexLayout: 'column-reverse',
     gap: 2,
-    style: {
-      flexDirection: 'column-reverse',
-    },
-    '@sm': {
-      justifyContent: 'flex-end',
-      style: {
-        flexDirection: 'row',
-      },
-    },
+    '@sm': { flexLayout: 'row', justifyContent: 'flex-end' },
   },
   title: {
+    typo: 'heading_4',
     fontSize: '1.125rem',
-    fontWeight: 600,
-    lineHeight: '1',
   },
   description: {
     textColor: 'muted',
@@ -145,9 +132,12 @@ function DialogContent({
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close data-slot="dialog-close" {...s.close}>
-            <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+          <DialogPrimitive.Close
+            data-slot="dialog-close"
+            aria-label="Close"
+            {...s.close}
+          >
+            <XIcon />
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>

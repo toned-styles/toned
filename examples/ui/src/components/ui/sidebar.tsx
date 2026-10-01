@@ -1,3 +1,4 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { PanelLeftIcon } from 'lucide-react'
@@ -21,7 +22,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip.tsx'
 import { useIsMobile } from '@/hooks/use-mobile.ts'
-import { cn } from '@/lib/utils.ts'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -30,7 +30,13 @@ const SIDEBAR_WIDTH_MOBILE = '18rem'
 const SIDEBAR_WIDTH_ICON = '3rem'
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b'
 
-const sidebarStyles = stylesheet({
+/*
+ * The sidebar has its own surface colours (`--sidebar`, `--sidebar-accent`,
+ * ...), which the base system has no tokens for, so they are written as
+ * variables in `style`. Collapsed and off-canvas states are keyed on data
+ * attributes in styles.css.
+ */
+export const sidebarStyles = stylesheet({
   wrapper: {
     display: 'flex',
     minHeight: '100svh',
@@ -77,9 +83,9 @@ const sidebarStyles = stylesheet({
     position: 'fixed',
     zIndex: 10,
     display: 'none',
+    top: 0,
+    bottom: 0,
     style: {
-      inset: '0',
-      height: '100svh',
       width: 'var(--sidebar-width)',
       transition: 'left 200ms linear, right 200ms linear, width 200ms linear',
     },
@@ -141,11 +147,10 @@ const sidebarStyles = stylesheet({
     padding: 2,
   },
   separator: {
-    marginLeft: 2,
-    marginRight: 2,
+    marginX: 2,
     style: {
       width: 'auto',
-      background: 'var(--sidebar-border)',
+      borderColor: 'var(--sidebar-border)',
     },
   },
   content: {
@@ -167,6 +172,7 @@ const sidebarStyles = stylesheet({
     minWidth: 0,
   },
   groupLabel: {
+    borderRadius: 'medium',
     display: 'flex',
     alignItems: 'center',
     height: '2rem',
@@ -176,13 +182,12 @@ const sidebarStyles = stylesheet({
     paddingLeft: 2,
     paddingRight: 2,
     style: {
-      borderRadius: 'calc(var(--radius) - 2px)',
       color: 'color-mix(in srgb, var(--sidebar-foreground) 70%, transparent)',
-      outline: 'none',
       transition: 'margin 200ms linear, opacity 200ms linear',
     },
   },
   groupAction: {
+    borderRadius: 'medium',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -197,9 +202,7 @@ const sidebarStyles = stylesheet({
     style: {
       aspectRatio: '1',
       padding: 0,
-      borderRadius: 'calc(var(--radius) - 2px)',
       color: 'var(--sidebar-foreground)',
-      outline: 'none',
       transition: 'transform 150ms',
     },
   },
@@ -231,48 +234,21 @@ const sidebarStyles = stylesheet({
     alignItems: 'center',
     width: '100%',
     gap: 2,
-    overflow: 'hidden',
-    fontSize: '0.875rem',
-    lineHeight: '1.25rem',
-    ':hover': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-    },
-    ':active': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-    },
     padding: 2,
+    overflow: 'hidden',
+    borderRadius: 'medium',
+    typo: 'body_small',
+    cursor: 'pointer',
     style: {
-      borderRadius: 'calc(var(--radius) - 2px)',
       textAlign: 'left',
-      outline: 'none',
       color: 'var(--sidebar-foreground)',
-      transition: 'width 200ms, height 200ms, padding 200ms',
+      transition:
+        'background-color 150ms, width 200ms, height 200ms, padding 200ms',
     },
-  },
-  menuButtonOutline: {
-    style: {
-      background: 'var(--background)',
-      boxShadow: '0 0 0 1px var(--sidebar-border)',
-    },
-  },
-  menuButtonSm: {
-    height: '1.75rem',
-    fontSize: '0.75rem',
-    lineHeight: '1rem',
-  },
-  menuButtonDefault: {
-    height: '2rem',
-    fontSize: '0.875rem',
-    lineHeight: '1.25rem',
-  },
-  menuButtonLg: {
-    height: '3rem',
-    fontSize: '0.875rem',
-    lineHeight: '1.25rem',
+    ':hover': { style: { backgroundColor: 'var(--sidebar-accent)' } },
   },
   menuAction: {
+    borderRadius: 'medium',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -287,13 +263,12 @@ const sidebarStyles = stylesheet({
     style: {
       aspectRatio: '1',
       padding: 0,
-      borderRadius: 'calc(var(--radius) - 2px)',
       color: 'var(--sidebar-foreground)',
-      outline: 'none',
       transition: 'transform 150ms',
     },
   },
   menuBadge: {
+    borderRadius: 'medium',
     position: 'absolute',
     display: 'flex',
     alignItems: 'center',
@@ -307,22 +282,20 @@ const sidebarStyles = stylesheet({
     paddingLeft: 1,
     paddingRight: 1,
     style: {
-      borderRadius: 'calc(var(--radius) - 2px)',
       fontVariantNumeric: 'tabular-nums',
       userSelect: 'none',
       color: 'var(--sidebar-foreground)',
     },
   },
   menuSkeleton: {
+    borderRadius: 'medium',
     display: 'flex',
     alignItems: 'center',
     height: '2rem',
     gap: 2,
     paddingLeft: 2,
     paddingRight: 2,
-    style: {
-      borderRadius: 'calc(var(--radius) - 2px)',
-    },
+    style: {},
   },
   menuSub: {
     display: 'flex',
@@ -352,26 +325,53 @@ const sidebarStyles = stylesheet({
     minWidth: 0,
     gap: 2,
     overflow: 'hidden',
-    fontSize: '0.875rem',
-    lineHeight: '1.25rem',
-    ':hover': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-    },
-    ':active': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-    },
-    paddingLeft: 2,
-    paddingRight: 2,
+    paddingX: 2,
+    borderRadius: 'medium',
+    typo: 'body_small',
     style: {
       transform: 'translateX(-1px)',
-      borderRadius: 'calc(var(--radius) - 2px)',
       color: 'var(--sidebar-foreground)',
-      outline: 'none',
+      transition: 'background-color 150ms',
     },
+    ':hover': { style: { backgroundColor: 'var(--sidebar-accent)' } },
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      size: 'default' | 'sm' | 'lg'
+      variant: 'default' | 'outline'
+      active: boolean
+    }>,
+  ) => ({
+    [$.size('sm')]: { menuButton: { height: '1.75rem', typo: 'caption' } },
+    [$.size('default')]: { menuButton: { height: '2rem' } },
+    [$.size('lg')]: { menuButton: { height: '3rem' } },
+    [$.variant('outline')]: {
+      menuButton: {
+        style: {
+          backgroundColor: 'var(--background)',
+          boxShadow: '0 0 0 1px var(--sidebar-border)',
+        },
+      },
+    },
+    [$.active(true)]: {
+      menuButton: {
+        fontWeight: 500,
+        style: {
+          backgroundColor: 'var(--sidebar-accent)',
+          color: 'var(--sidebar-accent-foreground)',
+        },
+      },
+      menuSubButton: {
+        style: {
+          backgroundColor: 'var(--sidebar-accent)',
+          color: 'var(--sidebar-accent-foreground)',
+        },
+      },
+    },
+  }),
+  { defaults: { size: 'default', variant: 'default', active: false } },
+)
 
 type SidebarContextProps = {
   state: 'expanded' | 'collapsed'
@@ -473,7 +473,7 @@ function SidebarProvider({
         <div
           data-slot="sidebar-wrapper"
           {...s.wrapper.with({
-            className: cn('group/sidebar-wrapper', className),
+            className,
             style: {
               '--sidebar-width': SIDEBAR_WIDTH,
               '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
@@ -542,9 +542,7 @@ function Sidebar({
 
   return (
     <div
-      {...s.sidebarOuter.with({
-        className: cn('group peer'),
-      })}
+      {...s.sidebarOuter}
       data-state={state}
       data-collapsible={state === 'collapsed' ? collapsible : ''}
       data-variant={variant}
@@ -600,6 +598,7 @@ function SidebarTrigger({
     <Button
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
+      aria-label="Toggle sidebar"
       variant="ghost"
       size="icon"
       {...s.trigger.with({ className })}
@@ -610,7 +609,6 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
 }
@@ -801,7 +799,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<'li'>) {
     <li
       data-slot="sidebar-menu-item"
       data-sidebar="menu-item"
-      {...s.menuItem.with({ className: cn('group/menu-item', className) })}
+      {...s.menuItem.with({ className })}
       {...props}
     />
   )
@@ -824,33 +822,16 @@ function SidebarMenuButton({
 }) {
   const Comp = asChild ? Slot.Root : 'button'
   const { isMobile, state } = useSidebar()
-  const s = useStyles(sidebarStyles)
-
-  const sizeStyle =
-    size === 'sm'
-      ? s.menuButtonSm
-      : size === 'lg'
-        ? s.menuButtonLg
-        : s.menuButtonDefault
+  const s = useStyles(sidebarStyles, { size, variant, active: isActive })
 
   const button = (
     <Comp
       data-slot="sidebar-menu-button"
       data-sidebar="menu-button"
       data-size={size}
+      data-variant={variant}
       data-active={isActive}
-      className={cn(
-        'peer/menu-button',
-        s.menuButton.className,
-        sizeStyle.className,
-        variant === 'outline' && s.menuButtonOutline.className,
-        className,
-      )}
-      style={{
-        ...s.menuButton.style,
-        ...sizeStyle.style,
-        ...(variant === 'outline' ? s.menuButtonOutline.style : {}),
-      }}
+      {...s.menuButton.with({ className })}
       {...props}
     />
   )
@@ -944,7 +925,6 @@ function SidebarMenuSkeleton({
           style={{
             width: '1rem',
             height: '1rem',
-            borderRadius: 'calc(var(--radius) - 2px)',
           }}
         />
       )}
@@ -986,9 +966,7 @@ function SidebarMenuSubItem({
     <li
       data-slot="sidebar-menu-sub-item"
       data-sidebar="menu-sub-item"
-      {...s.menuSubItem.with({
-        className: cn('group/menu-sub-item', className),
-      })}
+      {...s.menuSubItem.with({ className })}
       {...props}
     />
   )
@@ -1006,7 +984,7 @@ function SidebarMenuSubButton({
   isActive?: boolean
 }) {
   const Comp = asChild ? Slot.Root : 'a'
-  const s = useStyles(sidebarStyles)
+  const s = useStyles(sidebarStyles, { active: isActive })
 
   return (
     <Comp
@@ -1014,10 +992,7 @@ function SidebarMenuSubButton({
       data-sidebar="menu-sub-button"
       data-size={size}
       data-active={isActive}
-      {...s.menuSubButton.with({
-        className,
-        style: size === 'sm' ? { fontSize: '0.75rem', lineHeight: '1rem' } : {},
-      })}
+      {...s.menuSubButton.with({ className })}
       {...props}
     />
   )

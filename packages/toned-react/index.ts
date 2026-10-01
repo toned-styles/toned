@@ -14,9 +14,12 @@ export {
 } from './runtime-config.ts'
 
 import {
+  type EditorOnly,
   type ModType,
+  type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
+  type OverrideVariantContext,
   SYMBOL_INIT,
   type TokenStyleDeclaration,
   type VariantSelector,
@@ -259,9 +262,15 @@ export function useStyles<T extends StylesheetLike>(
  * required, wrong values rejected. The no-`as` signature forbids `as`
  * entirely, so a mistyped `as` call cannot fall through to the open signature
  * and silently pass.
+ *
+ * `const` keeps `as="div"` inferred as the literal 'div'. Without it the
+ * literal is widened to `string` whenever the host's `JSX.IntrinsicElements`
+ * carries a PATTERN key — React Three Fiber's `ThreeElements` is keyed
+ * `Uncapitalize<string>` — and `ComponentPropsWithRef<string>` is `{}`, so any
+ * child or host prop was rejected and callers had to write `as="div"`.
  */
 type BoundCallable = {
-  <As extends HostElement>(
+  <const As extends HostElement>(
     props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>,
   ): ReactElement
   (props?: { as?: never } & Record<string, unknown>): ReactElement
@@ -359,11 +368,14 @@ export interface OverrideEntry<T extends StylesheetLike>
         InferMods<T> extends ModType ? InferMods<T> : never
       >,
       q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-    ) => Rules &
-      Record<
-        string,
-        OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Rules>>>
-      > &
+    ) => EditorOnly<
+      | Rules
+      | Record<
+          string,
+          OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Rules>>>
+        >,
+      Rules
+    > &
       ValidateDeclaration<
         NoInfer<Rules>,
         Record<
@@ -378,11 +390,16 @@ export interface OverrideEntry<T extends StylesheetLike>
 
 export const overrideStyles = _overrideStyles as <
   T extends StylesheetLike,
-  const Rules extends StyleOverrideRules<T>,
+  const Rules extends Record<string, unknown>,
 >(
   sheet: T,
+  /*
+   * Contextually typed by OverrideRulesContext (shared element shapes);
+   * validated by ValidateDeclaration against the full rules type. The rules
+   * type as the constraint re-derived itself against each call's literal.
+   */
   rules:
-    | (Rules &
+    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,
@@ -391,7 +408,7 @@ export const overrideStyles = _overrideStyles as <
         >)
     | ((
         q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-      ) => Rules &
+      ) => EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
         ValidateDeclaration<
           Rules,
           StyleOverrideRules<T>,

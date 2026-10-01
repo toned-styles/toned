@@ -1,8 +1,10 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import type * as React from 'react'
+import { createContext, useContext } from 'react'
 
-const cardStyles = stylesheet({
+export const cardStyles = stylesheet({
   root: {
     bgColor: 'elevated',
     textColor: 'default',
@@ -15,18 +17,16 @@ const cardStyles = stylesheet({
     shadow: 'small',
   },
   header: {
-    paddingX: 6,
+    display: 'grid',
     alignItems: 'flex-start',
-    style: {
-      display: 'grid',
-      gridAutoRows: 'min-content',
-      gridTemplateRows: 'auto auto',
-      gap: '8px',
-    },
+    gap: 1.5,
+    paddingX: 6,
+    // No token for grid tracks: an action adds a second, content-sized column.
+    style: { gridTemplateColumns: 'minmax(0, 1fr)' },
   },
   title: {
-    fontWeight: 600,
-    lineHeight: '1',
+    typo: 'heading_4',
+    lineHeight: 1.3,
   },
   description: {
     textColor: 'muted',
@@ -35,6 +35,7 @@ const cardStyles = stylesheet({
   action: {
     alignSelf: 'flex-start',
     justifySelf: 'flex-end',
+    // No token for grid placement: the action spans the title and description.
     style: {
       gridColumnStart: 2,
       gridRowStart: 1,
@@ -43,73 +44,160 @@ const cardStyles = stylesheet({
   },
   content: {
     paddingX: 6,
+    typo: 'body_small',
   },
   footer: {
     display: 'flex',
     alignItems: 'center',
+    gap: 2,
     paddingX: 6,
   },
+}).variants(
+  (
+    $: Variants<{
+      density: 'comfortable' | 'compact'
+      appearance: 'elevated' | 'outline' | 'soft'
+    }>,
+  ) => ({
+    [$.density('compact')]: {
+      root: { gap: 4, paddingY: 4 },
+      header: { paddingX: 4 },
+      content: { paddingX: 4 },
+      footer: { paddingX: 4 },
+    },
+    [$.appearance('outline')]: { root: { bgColor: 'default', shadow: 'none' } },
+    [$.appearance('soft')]: {
+      root: { bgColor: 'muted', shadow: 'none', borderWidth: 'none' },
+    },
+  }),
+)
+
+type CardOptions = {
+  density?: 'comfortable' | 'compact'
+  appearance?: 'elevated' | 'outline' | 'soft'
+}
+const CardContext = createContext<Required<CardOptions>>({
+  density: 'comfortable',
+  appearance: 'elevated',
 })
-
-function Card({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
-
-  return <div data-slot="card" {...s.root.with({ className })} {...props} />
+function useCardStyles() {
+  return useStyles(cardStyles, useContext(CardContext))
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
-
+function Card({
+  className,
+  style,
+  density = 'comfortable',
+  appearance = 'elevated',
+  ...props
+}: React.ComponentProps<'div'> & CardOptions) {
+  const s = useStyles(cardStyles, { density, appearance })
   return (
-    <div data-slot="card-header" {...s.header.with({ className })} {...props} />
+    <CardContext.Provider value={{ density, appearance }}>
+      <div
+        data-slot="card"
+        data-density={density}
+        data-appearance={appearance}
+        {...s.root.with({ className, style })}
+        {...props}
+      />
+    </CardContext.Provider>
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
+function CardHeader({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const s = useCardStyles()
 
   return (
-    <div data-slot="card-title" {...s.title.with({ className })} {...props} />
+    <div
+      data-slot="card-header"
+      {...s.header.with({ className, style })}
+      {...props}
+    />
   )
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
+function CardTitle({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const s = useCardStyles()
+
+  return (
+    <div
+      data-slot="card-title"
+      {...s.title.with({ className, style })}
+      {...props}
+    />
+  )
+}
+
+function CardDescription({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const s = useCardStyles()
 
   return (
     <div
       data-slot="card-description"
-      {...s.description.with({ className })}
+      {...s.description.with({ className, style })}
       {...props}
     />
   )
 }
 
-function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
+function CardAction({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const s = useCardStyles()
 
   return (
-    <div data-slot="card-action" {...s.action.with({ className })} {...props} />
+    <div
+      data-slot="card-action"
+      {...s.action.with({ className, style })}
+      {...props}
+    />
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
+function CardContent({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const s = useCardStyles()
 
   return (
     <div
       data-slot="card-content"
-      {...s.content.with({ className })}
+      {...s.content.with({ className, style })}
       {...props}
     />
   )
 }
 
-function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
-  const s = useStyles(cardStyles)
+function CardFooter({
+  className,
+  style,
+  ...props
+}: React.ComponentProps<'div'>) {
+  const s = useCardStyles()
 
   return (
-    <div data-slot="card-footer" {...s.footer.with({ className })} {...props} />
+    <div
+      data-slot="card-footer"
+      {...s.footer.with({ className, style })}
+      {...props}
+    />
   )
 }
 

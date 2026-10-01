@@ -56,9 +56,20 @@ export function assertBuildArtifact({ css, manifest }: BuildArtifact): void {
 }
 
 /** Structural identity is compared exactly, never through the CSS content hash.
- * Function implementations still require the normal build/asset version pipeline. */
+ * Function implementations still require the normal build/asset version pipeline.
+ *
+ * Tokens are compared in name order, not insertion order. A system is usually
+ * assembled by spreading module namespace objects, and runtimes disagree on a
+ * namespace's key order: the spec (and Bun, Node) sort it by name, while Vite's
+ * SSR module runner returns declaration order. The committed CSS already fixes
+ * the cascade, so the order a runtime happens to build is not part of identity. */
 export function systemDefinition(system: TokenStyleDeclaration): string {
-  const tokenShapes = Object.entries(system).flatMap(([name, token]) => {
+  // Module namespaces can enumerate exports differently after bundling. The
+  // schema is keyed by token name; asset bytes retain their own fingerprint.
+  const entries = Object.entries(system).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )
+  const tokenShapes = entries.flatMap(([name, token]) => {
     if (
       !token ||
       typeof token !== 'object' ||
@@ -93,6 +104,7 @@ export function systemDefinition(system: TokenStyleDeclaration): string {
     animations: system.animations,
     bridges: system.bridges,
     responsiveTokens: system.responsiveTokens,
+    externalCssVariables: system.externalCssVariables,
     tokens: tokenShapes,
   })
 }

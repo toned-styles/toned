@@ -19,6 +19,8 @@ export type {
   ThemeMeta,
   ThemeValue,
 } from './palette.ts'
+// Documented in the README: namespaces a generated palette for a system id.
+export { namespaceCss } from './namespace.ts'
 export { definePalette } from './palette.ts'
 export type { QueryBuilder } from './queries.ts'
 export type { QueryKey } from './query-key.ts'

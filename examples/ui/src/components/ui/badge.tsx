@@ -9,22 +9,18 @@ const badgeStyles = stylesheet({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 'full',
+    gap: 1,
+    flexShrink: '0',
+    width: 'fit-content',
+    height: '1.375rem',
     paddingX: 2,
-    paddingY: 0.5,
+    borderRadius: 'full',
     typo: 'caption',
     fontWeight: 500,
-    flexShrink: '0',
-    gap: 1,
     overflow: 'hidden',
-    width: 'fit-content',
-    style: {
-      whiteSpace: 'nowrap' as const,
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'transparent',
-      transition: 'color 0.15s, box-shadow 0.15s',
-    },
+    // No token for text wrapping.
+    style: { whiteSpace: 'nowrap' as const },
+    ':focus-visible': { shadow: 'focus' },
   },
 }).variants(
   (
@@ -49,20 +45,25 @@ const badgeStyles = stylesheet({
     },
     [$.variant('outline')]: {
       root: {
+        bgColor: 'default',
         textColor: 'default',
         borderColor: 'default',
+        borderWidth: 'thin',
       },
     },
     [$.variant('ghost')]: {
-      root: {},
+      root: { textColor: 'muted' },
     },
     [$.variant('link')]: {
       root: {
         textColor: 'action',
+        textDecoration: 'underline',
+        // No token for the underline offset.
         style: { textUnderlineOffset: '4px' },
       },
     },
   }),
+  { defaults: { variant: 'default' } },
 )
 
 type BadgeVariant =

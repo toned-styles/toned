@@ -3,37 +3,29 @@ import { stylesheet } from '@toned/systems/base'
 import { Tooltip as TooltipPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
-const tooltipStyles = stylesheet({
+// The open and close animations are keyed on `data-state` in styles.css.
+export const tooltipStyles = stylesheet({
   content: {
     bgColor: 'emphasized',
     textColor: 'on_action',
     zIndex: 50,
-    borderRadius: 'medium',
-    paddingX: 3,
-    paddingY: 1.5,
-    typo: 'caption',
     width: 'fit-content',
-    style: {
-      textWrap: 'balance',
-      transformOrigin: 'var(--radix-tooltip-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    maxWidth: '16rem',
+    paddingX: 2.5,
+    paddingY: 1.5,
+    borderRadius: 'medium',
+    typo: 'caption',
+    fontWeight: 500,
   },
   arrow: {
-    bgColor: 'emphasized',
     svgFill: 'default',
-    zIndex: 50,
     width: '0.625rem',
-    height: '0.625rem',
-    borderRadius: 'small',
-    style: {
-      transform: 'translateY(calc(-50% - 2px)) rotate(45deg)',
-    },
+    height: '0.3125rem',
   },
 })
 
 function TooltipProvider({
-  delayDuration = 0,
+  delayDuration = 200,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
@@ -59,7 +51,7 @@ function TooltipTrigger({
 
 function TooltipContent({
   className,
-  sideOffset = 0,
+  sideOffset = 6,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
@@ -74,7 +66,7 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow {...s.arrow} />
+        <TooltipPrimitive.Arrow data-slot="tooltip-arrow" {...s.arrow} />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )

@@ -141,3 +141,36 @@ compares first paint against CSS output with JavaScript disabled, and exercises
 media, local state, container, boolean overlaps, dynamic values/themes and lazy
 stylesheets without adding CSS rules. `toned-react/tailwind-built.test.tsx` checks
 host-driven class updates, caller ownership and unchanged React render counts.
+
+## Inline HTML and email
+
+`inlineBackend` emits only a frozen `style` props bag containing literal web CSS
+values. Use `createInlineRenderer` with explicit theme tokens. It has no generated
+CSS dependency and does not install process-global state. Its `validatePlan` hook
+checks every compiled branch before variants are selected: browser facts and opaque
+CSS effects cannot silently disappear just because they are inactive. Custom
+backends can implement the same optional hook to reject unsupported authored plans.
+Platform specialization still precedes this check, so native-only branches are
+irrelevant to an inline web renderer. The inline profile is not a PDF/native adapter.
+
+## PDF point profile
+
+`pdfBackend` / `createPdfRenderer` support the common static React PDF and Forme
+layout subset: flex layout, point/percentage dimensions, point spacing and borders,
+font and text properties, literal colors, opacity, and relative/absolute placement.
+The field and enum allowlists live in `pdf.ts`. Unsupported fields and values fail
+before reaching a document host. Numeric dimensions are passed through as points;
+CSS units and expressions are rejected. Native-only shadows/transforms, web classes,
+grid, CSS extensions and browser-dependent branches are unavailable. Use explicit
+variants for document choices. Font registration, pagination, SVG drawing, images,
+and PDF metadata remain owned by the document renderer.
+
+### Generated alpha-color compatibility
+
+Alpha-capable atomic rules emit a plain color first, a `color-mix(in oklab, …,
+transparent)` fallback second, and the existing relative-color expression last.
+A browser that cannot parse relative colors retains the canvas or text color;
+with color-mix support it also retains the alpha modifier, including the source
+color's own alpha. Modern rendering keeps its previous final expression. This
+fallback contract covers generated atomic rules; raw authored CSS and inline
+conditional expressions retain their own browser requirements.

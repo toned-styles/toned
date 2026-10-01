@@ -47,7 +47,7 @@ ref and interaction props:
 import { createElements, useStyles } from '@toned/react'
 import type { Variants } from '@toned/core'
 
-const styles = ui.stylesheet({ Root: { $kind: 'view', $style: { opacity: 1 } } })
+const styles = ui.stylesheet({ Root: { $kind: 'pressable', opacity: 1 } })
   .variants(($: Variants<{ size: 's' | 'l' }>) => ({
     [$.size('s')]: { Root: { padding: 2 } },
   }))

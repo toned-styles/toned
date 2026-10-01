@@ -17,7 +17,7 @@ function ApiDefineSystem() {
         by its sheets. Keep the complete returned object for renderers and
         builds.
       </p>
-      <CodeBlock>{`import { defineSystem, defineToken } from '@toned/core'
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
 
 export const ui = defineSystem({
   id: 'controls',
@@ -26,6 +26,10 @@ export const ui = defineSystem({
       values: [0, 0.5, 1] as const,
       resolve: opacity => ({ opacity }),
     }),
+    padding: defineToken({
+      values: [2, 4] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
   },
   conditions: {
     media: { compact: 640, wide: 1024 },
@@ -33,15 +37,25 @@ export const ui = defineSystem({
   },
 })
 
-export const styles = ui.stylesheet(q => ({
+export const { stylesheet } = ui`}</CodeBlock>
+      <p>
+        Sheets import <code {...s.code}>stylesheet</code> from this module. It
+        is bound to the system, so token values and the conditions declared
+        above are checked where they are used:
+      </p>
+      <CodeBlock title="styles.ts">{`import { stylesheet } from './system.ts'
+
+export const styles = stylesheet(q => ({
   Root: {
-    $kind: 'view',
     opacity: 0.5,
+    padding: 2,
     [q.media('wide')]: { opacity: 1 },
-    [q.container('field', 'wide')]: { $style: { padding: 16 } },
+    [q.container('field', 'wide')]: { padding: 4 },
   },
 }))`}</CodeBlock>
-      <h2 {...s.h2}>Token and condition contracts</h2>
+      <h2 {...s.h2} id="token-and-condition-contracts">
+        Token and condition contracts
+      </h2>
       <p>
         Token properties use camelCase; named values use kebab-case. Resolvers
         translate semantic values into output fields and may read the current
@@ -52,9 +66,13 @@ export const styles = ui.stylesheet(q => ({
         pixels. Query preludes cannot read CSS custom properties. Colocated
         conditions use the same typed builder in base and variant declarations.
       </p>
-      <h2 {...s.h2}>Use the complete system</h2>
-      <CodeBlock>{`import { buildStyles } from '@toned/core/build'
+      <h2 {...s.h2} id="use-the-complete-system">
+        Use the complete system
+      </h2>
+      <CodeBlock title="build.ts">{`import { buildStyles } from '@toned/core/build'
 import { createWebRenderer } from '@toned/core/server'
+import { styles } from './styles.ts'
+import { ui } from './system.ts'
 
 const artifact = buildStyles(ui, { sheets: [styles] })
 const renderer = createWebRenderer(ui, { manifest: artifact.manifest, tokens: {} })
@@ -65,7 +83,9 @@ const props = renderer.resolve(styles)`}</CodeBlock>
         configuration and identity; pass <code {...s.code}>ui</code> to new
         build/render integrations.
       </p>
-      <h2 {...s.h2}>Compatibility</h2>
+      <h2 {...s.h2} id="compatibility">
+        Compatibility
+      </h2>
       <p>
         The older <code {...s.code}>defineSystem(tokens, config)</code> form and
         <code {...s.code}>t</code> utility remain available for existing

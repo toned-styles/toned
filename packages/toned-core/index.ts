@@ -20,10 +20,17 @@ export type {
 } from './grid/index.ts'
 export { defineGrid, fr } from './grid/index.ts'
 export type { TonedTypeRegistry } from './registry.ts'
+export type {
+  EditorMode,
+  EditorModeProbe,
+  EditorOnly,
+} from './types/editor-mode.ts'
 export {
   type NullableOverride,
+  type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
+  type OverrideVariantContext,
   overrideSheet,
 } from './stylesheet/overrideSheet.ts'
 export type { SystemDefinition, SystemOptions } from './system/definers.ts'
@@ -86,6 +93,7 @@ export type {
   TokenConfig,
   TokenStyle,
   TokenStyleDeclaration,
+  TokenStyleWithSelectors,
   Tokens,
   TokenTypeConfig,
   VariantSelector,
@@ -107,5 +115,6 @@ export {
   isWebRules,
   type WebRuleStyle,
   type WebRules,
+  type WEB_RULES,
   webRules,
 } from './web/rules.ts'

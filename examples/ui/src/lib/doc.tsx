@@ -8,9 +8,13 @@ export interface ComponentEntry<
   defaultProps: Partial<ComponentProps<C>>
 }
 
+/** The documented components a preview receives, keyed by export name. */
+export type DocParts = Record<string, ComponentType<any>>
+
 export interface DocDescriptor {
+  description?: string
   entries: ComponentEntry[]
-  preview?: (components: Record<string, ComponentType<any>>) => ReactNode
+  preview?: (components: DocParts) => ReactNode
 }
 
 export function c<C extends ComponentType<any>>(
@@ -23,11 +27,13 @@ export function c<C extends ComponentType<any>>(
 }
 
 export function doc(config: {
+  description?: string
   components: ComponentEntry[]
-  preview?: (components: Record<string, ComponentType<any>>) => ReactNode
+  preview?: (components: DocParts) => ReactNode
 }): DocDescriptor {
   return {
     entries: config.components,
+    description: config.description,
     preview: config.preview,
   }
 }

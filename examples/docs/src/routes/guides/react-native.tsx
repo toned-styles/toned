@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { CodeBlock } from '../../components/CodeBlock.tsx'
+import { InstallCommand } from '../../components/site/InstallCommand.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
 export const Route = createFileRoute('/guides/react-native')({
@@ -19,26 +20,52 @@ function GuideReactNative() {
         establish a working or certified React Native integration.
       </p>
 
-      <h2 {...s.h2}>1. Define portable parts</h2>
-      <CodeBlock>{'npm install @toned/core @toned/react'}</CodeBlock>
-      <CodeBlock>{`// styles.ts
-import { defineSystem } from '@toned/core'
+      <h2 {...s.h2} id="1-define-portable-parts">
+        1. Define portable parts
+      </h2>
+      <InstallCommand packages="@toned/core @toned/react" />
+      <CodeBlock title="styles.ts">{`import { stylesheet } from './system'
 
-export const ui = defineSystem({ id: 'native-example', tokens: {} })
-export const cardStyles = ui.stylesheet({
-  Root: { $kind: 'view', $style: { padding: 16, backgroundColor: '#fff' } },
-  Title: { $kind: 'text', $style: { color: '#172033', fontSize: 20 } },
+export const cardStyles = stylesheet({
+  Root: { surface: 'card', padding: 4 },
+  Title: { $kind: 'text', text: 'title' },
 })`}</CodeBlock>
+      <p>The sheet takes its tokens from the application's system:</p>
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
+
+export const ui = defineSystem({
+  id: 'native-example',
+  tokens: {
+    surface: defineToken({
+      values: ['card'] as const,
+      resolve: () => ({ backgroundColor: '#fff' }),
+    }),
+    padding: defineToken({
+      values: [2, 4] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
+    text: defineToken({
+      values: ['title'] as const,
+      resolve: () => ({ color: '#172033', fontSize: 20 }),
+    }),
+  },
+})
+
+export const { stylesheet } = ui`}</CodeBlock>
       <p>
-        Shared <code {...s.code}>$style</code> declarations use the portable
-        property intersection. Explicit platform blocks can widen styles for
-        that platform. Native rejects unsupported CSS fields and values; a
-        web-only cursor or CSS variable is not automatically translated into a
-        native equivalent. Theme resolvers must supply concrete native values.
+        The token resolvers return concrete values that both platforms accept.
+        If you reach for the <code {...s.code}>$style</code> escape hatch,
+        shared declarations use the portable property intersection. Explicit
+        platform blocks can widen styles for that platform. Native rejects
+        unsupported CSS fields and values; a web-only cursor or CSS variable is
+        not automatically translated into a native equivalent. Theme resolvers
+        must supply concrete native values.
       </p>
 
-      <h2 {...s.h2}>2. Declare the application host</h2>
-      <CodeBlock>{`// host.ts — integration-owned adapter
+      <h2 {...s.h2} id="2-declare-the-application-host">
+        2. Declare the application host
+      </h2>
+      <CodeBlock title="host.ts">{`// Integration-owned adapter.
 import { Dimensions, Image, Pressable, Text, View } from 'react-native'
 import { defineReactNativeHost } from '@toned/core/stylesheet'
 import type { ReactHost } from '@toned/react'
@@ -74,13 +101,15 @@ export const host: ReactHost = {
         interrupted renders in a real native application.
       </p>
 
-      <h2 {...s.h2}>3. Install a renderer and render the parts</h2>
-      <CodeBlock>{`// App.tsx
-import { nativeBackend } from '@toned/core/backends'
+      <h2 {...s.h2} id="3-install-a-renderer-and-render-the-parts">
+        3. Install a renderer and render the parts
+      </h2>
+      <CodeBlock title="App.tsx">{`import { nativeBackend } from '@toned/core/backends'
 import { createRenderer } from '@toned/core/server'
 import { createElements, TonedProvider } from '@toned/react'
-import { cardStyles, ui } from './styles'
 import { host } from './host'
+import { cardStyles } from './styles'
+import { ui } from './system'
 
 const renderer = createRenderer(ui, { backend: nativeBackend, tokens: {} })
 const Card = createElements(cardStyles)
@@ -104,7 +133,9 @@ export default function App() {
         declarations. Bound refs must reach the real native hosts.
       </p>
 
-      <h2 {...s.h2}>4. Measurements, states and capability limits</h2>
+      <h2 {...s.h2} id="4-measurements-states-and-capability-limits">
+        4. Measurements, states and capability limits
+      </h2>
       <p>
         Viewport queries require the adapter&apos;s{' '}
         <code {...s.code}>getViewportWidth</code> and{' '}
