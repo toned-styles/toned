@@ -1,168 +1,79 @@
-# Design index measurements
+# Design tooling benchmarks
 
-Run `bun benchmarks/design-tools.ts 1000 3` or replace 1000 with the configured
-maximum of 4096. The bounded fixture uses twelve-part TSX sheets, finite token
-values and variant schemas, and a chain of relative imports. The script asserts
-that exactly one file is parsed per dirty update and no warm operation reparses.
+Two scripts measure `@toned/compiler`'s `DesignProject` index and
+`DesignLanguageService` in process. Neither walks the filesystem, executes
+project modules or starts the LSP transport. Both are microbenchmarks, not
+gates; see [README.md](README.md) for the general caveats.
 
-Measured locally on Bun 1.3.14 on 2026-09-26: Apple M4, arm64,
-darwin 27.0.0.
+## Workspace indexing
 
-| Operation (median milliseconds)                | 1,000 files / 90,000 nodes | 4,096 files / 368,640 nodes |
-| ---------------------------------------------- | -------------------------: | --------------------------: |
-| Cold whole-project indexing, 3 samples         |                 1317.77604 |                  3743.06308 |
-| One dirty document, 100 samples                |                    0.55783 |                     0.39946 |
-| Unchanged document, 1,000 samples              |                    0.00071 |                     0.00117 |
-| Local symbol + innermost range, 10,000 samples |                    0.00300 |                     0.00392 |
-| Sheet page with exact total, 1,000 samples     |                    0.04592 |                     0.24671 |
+```sh
+bun benchmarks/design-tools.ts 1000 3
+bun benchmarks/design-tools.ts 4096 3
+node --experimental-strip-types benchmarks/design-tools.ts 1000 3
+```
 
-The source sizes were 1.71 and 7.02 million UTF-16 characters. Cold p95 was 1357ms
-and 5724ms; dirty-document p95 was 2.425ms and 2.638ms. Machine-readable measurements
-and sample counts are in `design-tools-results.json`.
+Arguments are the file count (1–4096) and the number of cold samples (1–10).
+The fixture is a chain of TSX files, each importing the previous one, with a
+twelve-part stylesheet, finite token values, a variant schema and
+`createElements`. The script measures:
 
-The final run shared the machine with other integration work and has substantial
-scheduling noise (especially page-query p95). Treat these as observed bounds for
-this run, not isolated CPU latency. These are absolute measurements, not a speedup claim over an unmeasured version.
-Three cold samples provide a coarse range, not a stable tail-latency estimate.
-Cold indexing still scales with workspace size, and exact query totals scan their
-indexed bucket. Dirty-document parsing, unchanged updates and local lookups avoid
-whole-workspace rescans. This fixture excludes disk discovery, transport,
-TypeScript's full semantic service, rendering and device/browser checks. Retained
-heap was not measured; document/node counts are structural evidence only.
+- cold indexing of the whole workspace;
+- one dirty document (100 samples), asserting exactly one parse per update;
+- an unchanged document update (1,000 samples), asserting no parse;
+- a local symbol lookup plus innermost range (10,000 samples);
+- a sheet query page of 100 with an exact total (1,000 samples);
+- a token-value completion through `DesignLanguageService`, including position
+  conversion and text edits (10,000 samples).
 
-Actual token-value completion was also measured through `DesignLanguageService`
-(position conversion, token lookup and all four text edits), 10,000 requests per
-workspace after warming document wrappers. It performed no additional parses.
+The run fails if any warm operation reparses a document or returns a wrong
+result. The shipped language server runs on Node; the Bun runs show scaling.
 
-| Warm completion | 1,000 files | 4,096 files |
-| --------------- | ----------: | ----------: |
-| Median ms       |     0.00492 |     0.00896 |
-| p95 ms          |     0.00788 |     0.01229 |
+## Shared design system
 
-This measures service completion work, not JSON-RPC transport or VS Code UI time.
+```sh
+node --experimental-strip-types benchmarks/design-tools-shared.ts 1000
+```
 
-## Node execution
+One system with 70 finite tokens is imported by 1,000 consumer files. The script
+measures cold indexing, the first vocabulary lookup per consumer, a warm value
+completion, an unrelated edit followed by a lookup, and a shared-token edit
+followed by one consumer's completion. Each step asserts the expected vocabulary,
+so a stale result after an edit fails the run.
 
-The shipped LSP uses Node, so the same 1,000-file fixture was also measured under
-Node v26.8.1 with `node --experimental-strip-types benchmarks/design-tools.ts 1000 3`.
-This is a separate observation, not a runtime-speed comparison: CPU contention
-and runtime warmup differ between runs. The no-reparse assertions also passed.
+## Current results
 
-| Node operation                   | Median ms |    p95 ms |
-| -------------------------------- | --------: | --------: |
-| Cold index (3 samples)           | 428.18358 | 431.54725 |
-| One dirty document (100)         |   0.42417 |   0.47300 |
-| Unchanged document (1,000)       |   0.00067 |   0.00100 |
-| Local symbol + range (10,000)    |   0.00088 |   0.00279 |
-| Sheet page + exact total (1,000) |   0.04417 |   0.09738 |
-| Actual token completion (10,000) |   0.00658 |   0.00917 |
+Recorded on 2026-10-02 on an Apple M1 Pro (macOS 27, arm64) with Bun 1.4.2 and
+Node 26.10, while other builds were running (load average about 13). Raw output
+is in [results/design-tools.json](results/design-tools.json) and
+[results/design-tools-shared.json](results/design-tools-shared.json).
 
-## Shared systems and real HQ editing (2026-09-26)
+| Median, ms                     | Bun, 1,000 files | Bun, 4,096 files | Node, 1,000 files |
+| ------------------------------ | ---------------: | ---------------: | ----------------: |
+| Cold indexing (3 samples)      |            768.4 |           3064.0 |             924.4 |
+| One dirty document             |            1.708 |            4.685 |             1.203 |
+| Unchanged document             |          0.00038 |          0.00033 |           0.00183 |
+| Local symbol + innermost range |          0.00583 |          0.00667 |           0.00542 |
+| Sheet page with exact total    |           0.0682 |           0.4365 |            0.0716 |
+| Token-value completion         |           0.0150 |           0.0158 |            0.0162 |
 
-The earlier local-system fixture does not represent a shared design-system edit.
-The new [raw receipt](./design-tools-lsp.results.json) records three alternating
-fresh Node server runs for baseline `7e3944c` and the optimized source hashes in
-that receipt. Both used the same HQ configuration: 1,005 files and 5,429,016 source
-characters. The baseline archive was instrumented only to expose process memory
-in `toned/statistics`. No application modules or resolvers ran; all edits were
-unsaved editor buffers, and source-file integrity assertions passed.
+The 1,000- and 4,096-file workspaces contain 1.71 and 7.02 million characters
+and 90,000 and 368,640 design nodes.
 
-| Real HQ protocol scenario                                       | Baseline median ms | Optimized median ms |
-| --------------------------------------------------------------- | -----------------: | ------------------: |
-| First usable Daylight value completion during indexing          |             280.40 |              219.92 |
-| Full workspace indexing                                         |            1121.39 |             1115.92 |
-| Warm completion round trip                                      |              0.186 |               0.193 |
-| Unrelated component edit followed by completion                 |              1.255 |               0.885 |
-| Shared Daylight token edit followed by current-value completion |              7.423 |               7.560 |
-| 64 queued changes to one unrelated component, then completion   |             41.518 |              25.460 |
+| Shared system, 1,000 consumers (Node) | Median, ms |
+| ------------------------------------- | ---------: |
+| Cold indexing (1 sample)              |      118.1 |
+| First vocabulary lookup per consumer  |    0.00925 |
+| Warm value completion                 |    0.00279 |
+| Unrelated edit and lookup             |    0.02662 |
+| Shared token edit and completion      |      2.170 |
 
-First completion polls every 50ms until the expected value exists, so its result
-includes polling granularity. Warm round trips are below a millisecond; these
-samples do not establish a warm-request improvement. Shared-token editing and
-full indexing are effectively similar here. First completion and burst latency
-improved in these runs, without claiming every workload gets faster. Background
-loads may still progress while requests run; scheduling tests separately prove
-that a requested document and its current dependencies precede 100 unrelated
-queued documents, including import changes and formerly missing targets during
-a yield. Cancelled requests release their admission slot.
+## Limits
 
-After the editing scenarios, median observational RSS was 254.38 MiB baseline
-and 255.03 MiB optimized; heap used was 62.31 versus 66.58 MiB. GC was not forced,
-so these are process observations, not retained-heap measurements, memory savings
-or a leak proof. Cache retention has independent structural bounds and eviction
-regressions. OS filesystem caches were not flushed, and the machine/runtime are
-recorded in the receipt.
-
-`node --experimental-strip-types benchmarks/design-tools-shared.ts 1000` measures
-an additional synthetic system with 70 finite tokens shared by 1,000 consumers.
-An optional second argument selects an isolated compiler source directory for a
-baseline. One paired run observed these service-only medians:
-
-| Shared-system synthetic scenario              | Baseline ms | Optimized ms |
-| --------------------------------------------- | ----------: | -----------: |
-| Cold source indexing                          |      50.827 |       51.918 |
-| First vocabulary lookup per consumer          |     0.01104 |      0.00554 |
-| Warm value completion                         |     0.00304 |      0.00154 |
-| Tiny unrelated edit and vocabulary lookup     |     0.02646 |      0.01271 |
-| Shared token edit and one consumer completion |     0.76354 |      1.03463 |
-
-Shared-token invalidation touches the dependency graph and bounded caches; this
-single-consumer-after-shared-edit case paid about 0.27ms more in the observed run.
-The same shared caches reduce repeated resolution across consumers. These results
-justify retaining the bounded dependency-aware design, not a universal speedup
-claim. The scripts assert correct vocabularies after edits; timing thresholds are
-not CI gates. HQ's `scripts/build/test-toned-lsp.ts` runs the real protocol
-scenarios, and accepts `--serverBundle <isolated baseline bundle>` for paired
-measurements. See `scripts/build/__tests__/fixtures/toned-lsp-performance.ts` for the bounded edits.
-
-## Full LSP comparison: `7e3944c..2ef2d02`
-
-A further three alternating fresh-server pairs compare baseline `7e3944c` with
-`2ef2d02`. This span includes the language-service optimizations in `a2468ec`,
-`f3b263b` and the subsequent dependency-revision and disk-publication fixes. It
-does not isolate the gains or costs of any one of those changes.
-The updated HQ workspace contains 1,007 files and 5,440,076 source characters.
-All six protocol acceptance runs passed, including current-value completion after
-shared-token edits, source integrity and stale-edit rejection. The complete new
-receipt is `design-tools-lsp-review.results.json`; the earlier receipt above is
-retained as historical evidence. Both receipts redact the developer workspace URI.
-Latency medians pool all samples per scenario and variant, matching the earlier
-receipt: 15 warm, nine unrelated-edit, nine shared-token-edit and three burst
-samples; first completion and full indexing each have three observations. Memory
-summaries use the three end-of-scenario observations.
-
-Execution order was baseline 1, reviewed 1, baseline 2, reviewed 2, baseline 3,
-reviewed 3, as recorded by the sequential shell loop; the receipt includes that
-order. Individual run timestamps were not recorded. The first pair has the
-slowest full-index observations for both variants, and baseline first-run warm
-requests are higher, consistent with warm-up/cache effects whose cause was not
-isolated. All samples are retained; no warm-up pair was discarded.
-
-| Real HQ protocol scenario                                       | Baseline median ms | Reviewed median ms |
-| --------------------------------------------------------------- | -----------------: | -----------------: |
-| First usable Daylight completion during indexing                |             290.62 |             219.13 |
-| Full workspace indexing                                         |            1136.35 |            1185.01 |
-| Warm completion round trip                                      |              0.227 |              0.181 |
-| Unrelated component edit followed by completion                 |              1.286 |              0.908 |
-| Shared Daylight token edit followed by current-value completion |              8.063 |              7.539 |
-| 64 queued changes, then completion                              |             42.274 |             26.224 |
-
-First usable completion and burst handling improved in these samples. First
-completion and full-index completion are observed by polling every 50ms; the
-48.66ms indexing median difference is smaller than one polling interval and does
-not establish a reliable slowdown. Full-index ranges also overlap: baseline
-1126.48–1331.42ms and reviewed 1172.21–1455.63ms. OS filesystem caches were not
-flushed. Warm submillisecond requests and the small shared-token difference do not
-establish reliable gains. Unrelated-edit ranges also overlap (baseline
-0.97–2.71ms, reviewed 0.62–1.16ms); the lower pooled median alone does not
-establish a reliable gain. No machine-dependent timing threshold is a test gate.
-
-Median RSS after the scenarios was 256.22 MiB baseline versus 254.19 MiB reviewed;
-heap used was 66.75 versus 77.36 MiB. GC was not forced, so the higher heap reading
-is an observation, not a retained-memory conclusion. The dependency-revision map
-has one entry per indexed document; the disk queue allows 128 distinct files and
-one coalesced follow-up each. Guarded regressions separately establish large
-cyclic-graph responsiveness, negative-import invalidation, request cancellation,
-ordered disk reads, deletion/recreation and unsaved-buffer precedence. The
-256-file/1024-candidate initial-demand bounds and cooperative request limits
-remain; this work does not turn finite indexing into unlimited project analysis.
+- Cold indexing scales with workspace size, and exact query totals scan their
+  indexed bucket. Dirty updates, unchanged updates and local lookups do not
+  rescan the workspace; the scripts assert the parse counts.
+- Three cold samples give a coarse range, not a tail-latency estimate.
+- Disk discovery, JSON-RPC transport, editor UI, TypeScript's full semantic
+  service and retained heap are not measured. Memory figures in the shared
+  report are unforced process observations, not retained-heap measurements.

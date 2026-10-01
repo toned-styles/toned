@@ -1,7 +1,11 @@
-/** End-to-end engine/React acceptance measurements. Run from any directory with Node. */
+/** End-to-end controller/React/typecheck measurements. Run with Node from the
+ * repository root:
+ *   node benchmarks/completion.mjs [revision] [--raw-style | --platform-style]
+ * Without a revision only the current sources are measured. A revision is
+ * extracted with `git archive` into a temporary directory and resolved against
+ * this checkout's React installation; the working tree is not changed. */
 import { spawnSync } from 'node:child_process'
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -11,29 +15,23 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const hq = resolve(root, '../..')
-const currentOnly = process.argv.includes('--current-only')
 const rawStyle = process.argv.includes('--raw-style')
 const platformStyle = process.argv.includes('--platform-style')
 if (rawStyle && platformStyle)
   throw new Error('Choose one fixture: --raw-style or --platform-style')
-const checkpoint =
-  (currentOnly
-    ? undefined
-    : process.argv.slice(2).find((arg) => !arg.startsWith('--'))) ??
-  'ebd10355fb9c2d7178e256e442ee24ba7526406b'
+const revision = process.argv.slice(2).find((arg) => !arg.startsWith('--'))
 const temp = mkdtempSync(join(tmpdir(), 'toned-completion-'))
-const baseline = join(temp, 'checkpoint')
-if (!currentOnly) {
+const baseline = join(temp, 'baseline')
+if (revision) {
   mkdirSync(baseline)
   const archive = spawnSync(
     'git',
-    ['archive', checkpoint, 'packages/toned-core', 'packages/toned-react'],
-    { cwd: root, maxBuffer: 20 * 1024 * 1024 },
+    ['archive', revision, 'packages/toned-core', 'packages/toned-react'],
+    { cwd: root, maxBuffer: 64 * 1024 * 1024 },
   )
   if (archive.status !== 0) throw new Error(archive.stderr.toString())
   const extract = spawnSync('tar', ['-x', '-C', baseline], {
@@ -55,36 +53,30 @@ if (!currentOnly) {
     join(baseline, 'node_modules/csstype'),
   )
 }
+const env = { ...process.env, NODE_ENV: 'test' }
+const tsc = join(root, 'node_modules/.bin/tsc')
+const compilerOptions = [
+  '--skipLibCheck',
+  '--strict',
+  '--target',
+  'ESNext',
+  '--module',
+  'NodeNext',
+  '--moduleResolution',
+  'NodeNext',
+  '--allowImportingTsExtensions',
+]
 const results = []
-for (const [version, source] of currentOnly
-  ? [['current', root]]
-  : [
-      ['checkpoint', baseline],
+for (const [version, source] of revision
+  ? [
+      ['baseline', baseline],
       ['current', root],
-    ]) {
-  const net = join(temp, `${version}-network.log`),
-    fs = join(temp, `${version}-fs.log`)
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) =>
-      ['PATH', 'HOME', 'TMPDIR', 'LANG', 'TERM'].includes(key),
-    ),
-  )
-  Object.assign(env, {
-    NODE_ENV: 'test',
-    HQ_TEST_NET_LOG: net,
-    HQ_TEST_FS_LOG: fs,
-  })
-  const guards = [
-    'test-fs-guard',
-    'test-conf-mode',
-    'test-db-isolate',
-    'test-net-guard',
-  ].flatMap((name) => ['--preload', join(hq, 'scripts/build', `${name}.ts`)])
+    ]
+  : [['current', root]]) {
   const start = performance.now()
   const child = spawnSync(
     'bun',
     [
-      ...guards,
       join(root, 'benchmarks/completion-worker.ts'),
       source,
       version,
@@ -93,16 +85,13 @@ for (const [version, source] of currentOnly
       ...(platformStyle ? ['--platform-style'] : []),
     ],
     {
-      cwd: hq,
+      cwd: root,
       env,
       encoding: 'utf8',
       timeout: 120000,
       maxBuffer: 5 * 1024 * 1024,
     },
   )
-  for (const log of [net, fs])
-    if (existsSync(log) && readFileSync(log, 'utf8').trim())
-      throw new Error(readFileSync(log, 'utf8'))
   if (child.status !== 0) throw new Error(child.stderr + child.stdout)
   const result = JSON.parse(child.stdout)
   writeFileSync(
@@ -123,41 +112,17 @@ void sheet;`,
   )
   const timings = []
   let typeStatus, typeErrors
-  const nodeGuards = [
-    'test-fs-guard',
-    'test-conf-mode',
-    'test-db-isolate',
-    'test-net-guard',
-  ]
-    .map((name) => `--import=${join(hq, 'scripts/build', `${name}.ts`)}`)
-    .join(' ')
   for (let run = 0; run < 3; run++) {
     const start = performance.now()
-    const checked = spawnSync(
-      join(root, 'node_modules/.bin/tsc'),
-      [
-        '--ignoreConfig',
-        '--noEmit',
-        '--skipLibCheck',
-        '--strict',
-        '--target',
-        'ESNext',
-        '--module',
-        'NodeNext',
-        '--moduleResolution',
-        'NodeNext',
-        '--allowImportingTsExtensions',
-        fixture,
-      ],
-      {
-        cwd: hq,
-        env: { ...env, NODE_OPTIONS: nodeGuards },
-        encoding: 'utf8',
-        timeout: 60000,
-        maxBuffer: 1024 * 1024,
-      },
-    )
+    const checked = spawnSync(tsc, ['--noEmit', ...compilerOptions, fixture], {
+      cwd: temp,
+      env,
+      encoding: 'utf8',
+      timeout: 60000,
+      maxBuffer: 1 << 20,
+    })
     timings.push(performance.now() - start)
+    if (checked.error) throw checked.error
     typeStatus = checked.status
     typeErrors = (checked.stdout + checked.stderr).trim()
   }
@@ -173,40 +138,25 @@ void sheet;`,
   const declarationDir = join(temp, `${version}-declarations`)
   const emitDeclaration = () =>
     spawnSync(
-      join(root, 'node_modules/.bin/tsc'),
+      tsc,
       [
-        '--ignoreConfig',
         '--declaration',
         '--emitDeclarationOnly',
-        '--skipLibCheck',
-        '--strict',
-        '--target',
-        'ESNext',
-        '--module',
-        'NodeNext',
-        '--moduleResolution',
-        'NodeNext',
-        '--allowImportingTsExtensions',
+        ...compilerOptions,
         '--outDir',
         declarationDir,
         fixture,
       ],
-      {
-        cwd: hq,
-        env: { ...env, NODE_OPTIONS: nodeGuards },
-        encoding: 'utf8',
-        timeout: 60000,
-        maxBuffer: 1024 * 1024,
-      },
+      { cwd: temp, env, encoding: 'utf8', timeout: 60000, maxBuffer: 1 << 20 },
     )
   let emitted = emitDeclaration()
   result.declaration_emit_exit = emitted.status
   if (emitted.status !== 0) {
     result.declaration_emit_errors = (emitted.stdout + emitted.stderr).trim()
     if (version === 'current') throw new Error(result.declaration_emit_errors)
-    // Preserve the unmodified consumer's failure. The checkpoint documented
+    // Preserve the unmodified consumer's failure. Older revisions documented
     // these symbol imports as necessary for inferred declaration emission.
-    // Retry that historical workaround without annotating or widening the sheet.
+    // Retry that workaround without annotating or widening the sheet.
     writeFileSync(
       fixture,
       `import type {_internalBrand,SYMBOL_INIT,SYMBOL_REF} from ${JSON.stringify(join(source, 'packages/toned-core/types/stylesheet.ts'))};\n` +
@@ -242,25 +192,27 @@ void sheet;`,
     )
     result.declaration_closure_files = files.length
   }
-  for (const log of [net, fs])
-    if (existsSync(log) && readFileSync(log, 'utf8').trim())
-      throw new Error(readFileSync(log, 'utf8'))
   result.benchmark_and_typecheck_ms = Number(
     (performance.now() - start).toFixed(2),
   )
   results.push(result)
 }
 const report = {
-  checkpoint,
+  baseline: revision ?? null,
   workload: platformStyle
     ? 'platform-style'
     : rawStyle
       ? 'raw-style'
       : 'scalar-tokens',
-  environment: { platform: process.platform, arch: process.arch },
+  environment: {
+    platform: process.platform,
+    arch: process.arch,
+    bun: String(spawnSync('bun', ['--version']).stdout).trim(),
+  },
   fixture:
     'Synthetic 42-cell calendar: shared sheet and 42 distinct per-child override scopes; cold 43-part compilation, happy-dom React mounts, SSR/CSS and exported consumer declaration sizes; no browser layout or device measurement.',
   results,
 }
 writeFileSync(join(temp, 'report.json'), JSON.stringify(report, null, 2))
-console.log(JSON.stringify({ ...report, evidenceDirectory: temp }, null, 2))
+console.log(JSON.stringify(report, null, 2))
+console.error(`Evidence (SSR markup, generated CSS, declarations): ${temp}`)

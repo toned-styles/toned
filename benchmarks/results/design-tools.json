@@ -1,0 +1,170 @@
+[
+  {
+    "runtime": "Bun 1.4.2",
+    "machine": {
+      "os": "darwin",
+      "release": "27.0.0",
+      "arch": "arm64",
+      "cpu": "Apple M1 Pro"
+    },
+    "files": 1000,
+    "characters": 1711825,
+    "designNodes": 90000,
+    "cold": {
+      "samples": 3,
+      "medianMs": 768.3802089999999,
+      "p95Ms": 1265.572959
+    },
+    "dirtyDocument": {
+      "samples": 100,
+      "medianMs": 1.7082919999998012,
+      "p95Ms": 8.469458999999915
+    },
+    "unchangedDocument": {
+      "samples": 1000,
+      "medianMs": 0.00037500000007639755,
+      "p95Ms": 0.0007080000000314612
+    },
+    "localLookupAndInnermostRange": {
+      "samples": 10000,
+      "medianMs": 0.005832999999711319,
+      "p95Ms": 0.01179199999978664
+    },
+    "indexedSheetPage": {
+      "samples": 1000,
+      "medianMs": 0.06816699999990306,
+      "p95Ms": 0.27624999999989086
+    },
+    "tokenValueCompletion": {
+      "samples": 10000,
+      "medianMs": 0.015041999999994005,
+      "p95Ms": 0.02791700000034325
+    },
+    "statistics": {
+      "parses": 1100,
+      "unchanged": 1000,
+      "files": 1000,
+      "characters": 1711825,
+      "revision": 1100,
+      "resolution": {
+        "entries": 512,
+        "weight": 1280,
+        "hits": 0,
+        "evaluations": 30000
+      }
+    },
+    "limits": "Synthetic 12-part TSX files; timings are absolute and machine-specific. Heap, full TypeScript language service and browser/device work are not measured."
+  },
+  {
+    "runtime": "Bun 1.4.2",
+    "machine": {
+      "os": "darwin",
+      "release": "27.0.0",
+      "arch": "arm64",
+      "cpu": "Apple M1 Pro"
+    },
+    "files": 4096,
+    "characters": 7018368,
+    "designNodes": 368640,
+    "cold": {
+      "samples": 3,
+      "medianMs": 3063.9613750000003,
+      "p95Ms": 3161.277708
+    },
+    "dirtyDocument": {
+      "samples": 100,
+      "medianMs": 4.685208999999304,
+      "p95Ms": 5.672084000001632
+    },
+    "unchangedDocument": {
+      "samples": 1000,
+      "medianMs": 0.0003329999999550637,
+      "p95Ms": 0.0006250000005820766
+    },
+    "localLookupAndInnermostRange": {
+      "samples": 10000,
+      "medianMs": 0.006666999999652035,
+      "p95Ms": 0.01208299999962037
+    },
+    "indexedSheetPage": {
+      "samples": 1000,
+      "medianMs": 0.43645899999864923,
+      "p95Ms": 1.8801670000011654
+    },
+    "tokenValueCompletion": {
+      "samples": 10000,
+      "medianMs": 0.01583299999947485,
+      "p95Ms": 0.027415999998993357
+    },
+    "statistics": {
+      "parses": 4196,
+      "unchanged": 1000,
+      "files": 4096,
+      "characters": 7018368,
+      "revision": 4196,
+      "resolution": {
+        "entries": 512,
+        "weight": 1280,
+        "hits": 0,
+        "evaluations": 30000
+      }
+    },
+    "limits": "Synthetic 12-part TSX files; timings are absolute and machine-specific. Heap, full TypeScript language service and browser/device work are not measured."
+  },
+  {
+    "runtime": "v26.10.0",
+    "machine": {
+      "os": "darwin",
+      "release": "27.0.0",
+      "arch": "arm64",
+      "cpu": "Apple M1 Pro"
+    },
+    "files": 1000,
+    "characters": 1711825,
+    "designNodes": 90000,
+    "cold": {
+      "samples": 3,
+      "medianMs": 924.399833,
+      "p95Ms": 1005.12275
+    },
+    "dirtyDocument": {
+      "samples": 100,
+      "medianMs": 1.203041000000212,
+      "p95Ms": 2.109208000000308
+    },
+    "unchangedDocument": {
+      "samples": 1000,
+      "medianMs": 0.0018340000001444423,
+      "p95Ms": 0.004415999999764608
+    },
+    "localLookupAndInnermostRange": {
+      "samples": 10000,
+      "medianMs": 0.005415999999968335,
+      "p95Ms": 0.009415999999873748
+    },
+    "indexedSheetPage": {
+      "samples": 1000,
+      "medianMs": 0.07158299999991868,
+      "p95Ms": 0.1271670000000995
+    },
+    "tokenValueCompletion": {
+      "samples": 10000,
+      "medianMs": 0.016249999999672582,
+      "p95Ms": 0.030666999999994005
+    },
+    "statistics": {
+      "parses": 1100,
+      "unchanged": 1000,
+      "files": 1000,
+      "characters": 1711825,
+      "revision": 1100,
+      "resolution": {
+        "entries": 512,
+        "weight": 1280,
+        "hits": 0,
+        "evaluations": 30000
+      }
+    },
+    "limits": "Synthetic 12-part TSX files; timings are absolute and machine-specific. Heap, full TypeScript language service and browser/device work are not measured."
+  }
+]

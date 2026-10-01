@@ -1,3 +1,5 @@
+/** Synthetic 42-cell controller/React workload. Run through completion.mjs,
+ * which passes the source root, version label and evidence directory. */
 import assert from 'node:assert/strict'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -250,10 +252,10 @@ for (let round = 0; round < 6; round++) {
   container.remove()
 }
 const react_mount_ms = Number(mountSamples.sort((a, b) => a - b)[2]!.toFixed(3))
-// This mirrors Calendar's dayButtonEntry -> StyleOverrides -> Button path.
-// Each child has a distinct override value (offset plus selected/range/edge-like
-// state); entries are rebuilt when that child's selected state changes. It is
-// deliberately synthetic so both historical cores see identical declarations.
+// A calendar-like day -> StyleOverrides -> button path. Each child has a
+// distinct override value (offset plus selected/edge-like state); entries are
+// rebuilt when that child's selected state changes. It is deliberately
+// synthetic so a baseline revision sees identical declarations.
 let overrideEntries = 0
 let overrideFactoryCalls = 0
 function OverrideCell({ day, selected }: { day: number; selected: boolean }) {
@@ -376,6 +378,7 @@ writeFileSync(join(evidenceDirectory, `${version}-generated.css`), css)
 assert.ok(ssr_inline_bytes > 0 && ssr_css_bytes > 0 && generated_css_bytes > 0)
 assert.equal(document.body.childElementCount, 0)
 await window.happyDOM.close()
+void sink
 sink = undefined
 // Weak references independently sample object retention. Advance to a new job
 // before forcing GC: weak targets created in this job are kept alive by design.

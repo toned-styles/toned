@@ -1,14 +1,20 @@
-/** Deterministic comparative microbenchmark; timing is evidence, never a test gate. */
+/** Deterministic matcher microbenchmark; timing is evidence, never a test gate.
+ * Run through compare-matcher.mjs. Optional arguments: the path of a baseline
+ * StyleMatcher.ts extracted from another revision, and that revision's name. */
 import { performance } from 'node:perf_hooks'
 import { pathToFileURL } from 'node:url'
 
 import { StyleMatcher } from '../packages/toned-core/stylesheet/StyleMatcher.ts'
 
 const baselinePath = process.argv[2]
-if (!baselinePath)
-  throw new Error('Pass the extracted checkpoint StyleMatcher.ts path')
-const Baseline = (await import(pathToFileURL(baselinePath).href))
-  .StyleMatcher as typeof StyleMatcher
+const implementations: [string, typeof StyleMatcher][] = [
+  ['current', StyleMatcher],
+]
+if (baselinePath)
+  implementations.unshift([
+    'baseline',
+    (await import(pathToFileURL(baselinePath).href)).StyleMatcher,
+  ])
 
 type Props = Record<string, string>
 type Style = Record<string, string | number>
@@ -81,10 +87,7 @@ for (const [name, axes, values] of [
   ['large-80-facts', 10, 8],
 ] as const) {
   const data = fixture(axes, values)
-  for (const [version, Matcher] of [
-    ['checkpoint', Baseline],
-    ['current', StyleMatcher],
-  ] as const) {
+  for (const [version, Matcher] of implementations) {
     const matcher = new Matcher(data.rules)
     const matched = data.states.map((state) => matcher.match(state))
     const mismatches = data.states.filter((state, index) => {
@@ -95,6 +98,9 @@ for (const [name, axes, values] of [
         Object.entries(expected).some(([key, value]) => actual[key] !== value)
       )
     }).length
+    // A baseline may be wrong (and is reported as such); the current one may not.
+    if (version === 'current' && mismatches)
+      throw new Error(`${name}: ${mismatches} states differ from the reference`)
     results.push({
       fixture: name,
       version,
@@ -126,9 +132,10 @@ console.log(
   JSON.stringify(
     {
       measuredAt: new Date().toISOString(),
+      baseline: process.argv[3] ?? null,
       platform: process.platform,
       arch: process.arch,
-      runtime: process.versions,
+      bun: process.versions.bun,
       rounds: 7,
       units: 'microseconds per operation; median/min/max',
       note: 'Matcher only. Does not measure React renders, host writes, layout, or device performance. A baseline with reference mismatches is not a valid faster implementation.',

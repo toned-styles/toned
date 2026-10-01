@@ -1,4 +1,5 @@
-/** Actual explicit-provider/component-family workload; no global setConfig. */
+/** Actual explicit-provider/component-family workload; no global setConfig.
+ * Run through provider.mjs, which passes the source root and version label. */
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'

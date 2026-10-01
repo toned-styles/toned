@@ -1,63 +1,45 @@
+/** Matcher microbenchmark runner. Run with Node from the repository root:
+ *   node benchmarks/compare-matcher.mjs            current matcher only
+ *   node benchmarks/compare-matcher.mjs <revision> also a Git revision's matcher
+ * The revision is extracted with `git archive` into a temporary directory; the
+ * working tree is not changed. */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const checkpoint = process.argv[2] ?? 'ebd10355fb9c2d7178e256e442ee24ba7526406b'
-const output = mkdtempSync(join(tmpdir(), 'toned-matcher-benchmark-'))
-// Newer baselines split matching into modules; extract the complete package so
-// a comparison never accidentally imports current helpers into the baseline.
-const matcherPath = 'packages/toned-core/stylesheet/StyleMatcher.ts'
-const paths = ['packages/toned-core']
-const archive = spawnSync('git', ['archive', checkpoint, ...paths], {
-  cwd: root,
-  maxBuffer: 20 * 1024 * 1024,
-})
-if (archive.status !== 0) throw new Error(archive.stderr.toString())
-const extract = spawnSync('tar', ['-x', '-C', output], {
-  input: archive.stdout,
-})
-if (extract.status !== 0) throw new Error(extract.stderr.toString())
-
-const hq = resolve(root, '../..')
-const env = Object.fromEntries(
-  Object.entries(process.env).filter(([key]) =>
-    ['PATH', 'HOME', 'TMPDIR', 'LANG', 'TERM'].includes(key),
-  ),
-)
-const networkLog = join(output, 'network.log')
-const filesystemLog = join(output, 'filesystem.log')
-Object.assign(env, {
-  NODE_ENV: 'test',
-  HQ_TEST_NET_LOG: networkLog,
-  HQ_TEST_FS_LOG: filesystemLog,
-})
-const preloadNames = [
-  'test-fs-guard.ts',
-  'test-conf-mode.ts',
-  'test-db-isolate.ts',
-  'test-net-guard.ts',
-]
-const preloads = existsSync(join(hq, 'scripts/build/test-net-guard.ts'))
-  ? preloadNames.flatMap((name) => [
-      '--preload',
-      join(hq, 'scripts/build', name),
-    ])
-  : []
-const result = spawnSync(
-  'bun',
-  [...preloads, join(root, 'benchmarks/matcher.ts'), join(output, matcherPath)],
-  {
-    cwd: hq,
-    env,
+const revision = process.argv[2]
+const args = [join(root, 'benchmarks/matcher.ts')]
+let temp
+try {
+  if (revision) {
+    temp = mkdtempSync(join(tmpdir(), 'toned-matcher-benchmark-'))
+    // Extract the complete package so the baseline never imports current helpers.
+    const archive = spawnSync(
+      'git',
+      ['archive', revision, 'packages/toned-core'],
+      { cwd: root, maxBuffer: 64 * 1024 * 1024 },
+    )
+    if (archive.status !== 0) throw new Error(String(archive.stderr))
+    const extract = spawnSync('tar', ['-x', '-C', temp], {
+      input: archive.stdout,
+    })
+    if (extract.status !== 0) throw new Error(String(extract.stderr))
+    args.push(
+      join(temp, 'packages/toned-core/stylesheet/StyleMatcher.ts'),
+      revision,
+    )
+  }
+  const result = spawnSync('bun', args, {
+    cwd: root,
+    env: { ...process.env, NODE_ENV: 'test' },
     stdio: 'inherit',
-    timeout: 60000,
-  },
-)
-for (const log of [networkLog, filesystemLog])
-  if (existsSync(log) && readFileSync(log, 'utf8').trim())
-    throw new Error(readFileSync(log, 'utf8'))
-if (result.error) throw result.error
-process.exitCode = result.status ?? 1
+    timeout: 120000,
+  })
+  if (result.error) throw result.error
+  process.exitCode = result.status ?? 1
+} finally {
+  if (temp) rmSync(temp, { recursive: true, force: true })
+}

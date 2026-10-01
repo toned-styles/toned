@@ -1,19 +1,13 @@
-/** Shared-system invalidation benchmark. Optional second argument selects an isolated
- * compiler source directory; neither project nor source modules are executed. */
+/** Shared-system invalidation benchmark; no project or source modules execute.
+ * Run: node --experimental-strip-types benchmarks/design-tools-shared.ts [files=1000] */
 import { cpus, release } from 'node:os'
-import { resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+
+import { DesignLanguageService } from '../packages/toned-compiler/lsp/service.ts'
+import { DesignProject } from '../packages/toned-compiler/project.ts'
 
 const files = Number(process.argv[2] ?? 1000)
 if (!Number.isSafeInteger(files) || files < 1 || files > 4096)
   throw new Error('Use 1..4096 files')
-const compiler = process.argv[3]
-  ? pathToFileURL(resolve(process.argv[3]) + '/').href
-  : new URL('../packages/toned-compiler/', import.meta.url).href
-const { DesignProject } = await import(new URL('project.ts', compiler).href)
-const { DesignLanguageService } = await import(
-  new URL('lsp/service.ts', compiler).href
-)
 const project = new DesignProject(),
   service = new DesignLanguageService(project)
 const systemUri = 'file:///shared/system.ts'

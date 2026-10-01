@@ -1,362 +1,170 @@
-# Matcher benchmark
+# Benchmarks
 
-Run `node benchmarks/compare-matcher.mjs [checkpoint]` from the Toned checkout. The runner extracts the reviewed checkpoint into an OS temporary directory, then runs both implementations against identical deterministic fixtures in the same Bun process. Inside HQ it uses the repository test preloads and refuses any recorded network or filesystem guard violation. No repository checkout is changed.
+These runners measure the style engine, the React bindings and the design
+tooling against deterministic synthetic fixtures. Each one also asserts the
+behaviour it measures (correct matches, write counts, resolver calls, no
+reparsing), so a run that gets faster by doing the wrong thing fails.
 
-This is a microbenchmark, not a performance gate. It measures seven rounds after warmup and reports median/minimum/maximum microseconds per operation. The small fixture has 16 facts and 17 rules; the large fixture has 80 facts and 81 rules. Each implementation is also checked against a plain ordered evaluator for 512 states. Property order is ignored when checking equality.
+They are microbenchmarks, not performance gates. No wall-clock threshold is
+enforced anywhere; only the structural assertions can fail a run.
 
-Measured on macOS arm64 with Bun 1.3.14. Other implementation work was running on the machine, so these figures should be repeated on an idle machine before treating differences as release targets. This benchmark does not measure React render counts, host writes, layout, or mobile-device behavior.
+## Requirements
 
-| Fixture        | Version    | Incorrect states | Compile µs | Cache hit µs | Uncached match µs | Equality µs | Reference evaluator µs |
-| -------------- | ---------- | ---------------: | ---------: | -----------: | ----------------: | ----------: | ---------------------: |
-| small-16-facts | checkpoint |                0 |     52.721 |        0.264 |             0.308 |       0.014 |                  2.771 |
-| small-16-facts | current    |                0 |      88.43 |        0.197 |             0.699 |       0.011 |                  1.326 |
-| large-80-facts | checkpoint |              512 |    358.225 |        0.271 |             0.437 |       0.014 |                  6.325 |
-| large-80-facts | current    |                0 |     438.41 |        0.835 |             8.981 |       0.046 |                  6.868 |
+Run from the repository root after `pnpm install`. The runners use Node 26 and
+Bun 1.4; workers run in Bun with `NODE_ENV=test`, so React uses its development
+build (required for `act`). Nothing writes to the working tree: temporary files
+go to the OS temporary directory, and results are printed as JSON on stdout.
 
-Rule parts and operation arrays are pre-indexed during compilation, and exact result metadata is held in a WeakMap. Updates do not enumerate rule objects or create metadata properties on every result. The current small-plan cache-hit path remains comparable in this run. Construction and uncached matching are slower: ordered operation provenance and exact membership add work that the checkpoint omitted. Keep compilation shared by stylesheet and use the bounded state cache; do not move declaration construction into update paths. The large checkpoint produced the wrong result for every sampled state because its fact bits wrap after 32, so its lower match time is not a valid performance target. The current implementation matched the reference for every state in both fixtures.
+## Runners
 
-Large plans now select candidate rules using one necessary positive fact before
-checking the complete predicate. OR-only and negated expressions remain in a
-fallback bucket; original rule order and exact membership are preserved. Small
-plans still scan directly, and fallback-only/dense selections avoid pointless
-sorting. Further optimization must preserve differential checks and measure cold
-compilation, cache misses and host writes separately. Never replace exact identity
-with a folded hash to recover the old timing.
+| Command                                                                       | Measures                                                                    |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `node benchmarks/compare-matcher.mjs [revision]`                              | Rule compilation and variant-state matching in `StyleMatcher`               |
+| `node benchmarks/completion.mjs [revision] [--raw-style \| --platform-style]` | Controllers, host writes, `useStyles` in React, SSR/CSS sizes, typechecking |
+| `node benchmarks/provider.mjs [revision] [--pairs=N]`                         | `TonedProvider` and `createElements` in React, explicit `t`, a native host  |
+| `bun benchmarks/design-tools.ts [files] [coldSamples]`                        | Compiler indexing, incremental updates, queries and token completion        |
+| `node --experimental-strip-types benchmarks/design-tools-shared.ts [files]`   | Invalidation when many consumers share one design system                    |
 
-## September 18 follow-up against the previously delivered version
+The three `.mjs` runners accept an optional Git revision of this repository. The
+runner extracts that revision's `packages/toned-core` (and `toned-react` where
+needed) with `git archive` into a temporary directory, resolves it against this
+checkout's React installation, and measures it beside the current sources with
+identical fixtures. Without a revision only the current sources are measured.
+A revision older than the APIs a worker uses will fail to run; that is expected.
 
-The following run compares `1733fea` with the subsequent controller/index cleanup,
-not with the original checkpoint. Both versions produce correct results in all
-512 matcher states. The runner now extracts the complete historical core package
-and detects its available host/build APIs, so a recent comparison cannot borrow
-current helper modules or accidentally use the original checkpoint's host protocol.
+The design-tools details and results are in [design-tools.md](design-tools.md).
 
-| Measurement                          |     `1733fea` |     Follow-up |
-| ------------------------------------ | ------------: | ------------: |
-| Small matcher compilation, µs        |        43.874 |        47.686 |
-| Small uncached match, µs             |         0.447 |         0.423 |
-| Large matcher compilation, µs        |       221.951 |       230.587 |
-| Large uncached match, µs             |         5.022 |         2.319 |
-| Large cache hit, µs                  |         0.455 |         0.330 |
-| Shared controller construction, µs   |         0.618 |         0.406 |
-| Cold 43-part compilation, µs         |       276.168 |       295.213 |
-| Warm React mount, ms                 |         1.848 |         2.004 |
-| Distinct override mount / update, ms | 6.440 / 2.315 | 7.294 / 2.934 |
+### Matcher
 
-Candidate indexing approximately halves this large fixture's uncached matching;
-shared construction improves by about a third. Two earlier paired runs also
-showed shared construction improving from 0.637–0.639 to 0.400 µs. These are
-specific gains, not a general performance claim: the final run's cold compilation
-and React timings are slower, and override mounting was slower in each paired
-run. Ordinary mount and override-update timings varied in direction between runs.
-Measurements use a shared development machine, not an isolated benchmark host.
+`matcher.ts` builds two fixtures: 16 facts and 17 rules (4 axes × 4 values plus
+one compound rule), and 80 facts and 81 rules (10 axes × 8 values plus one). For
+each it measures compilation, a cache hit, an uncached match, membership
+equality, and a plain ordered reference evaluator for scale. Every
+implementation is checked against that reference for 512 deterministic states;
+the run fails if the current matcher differs, and a baseline's
+`reference_mismatches` must be 0 for its timing to mean anything. Each figure is
+the median of seven rounds after warmup, in microseconds per operation.
 
-The structural improvement is independently tested: immutable relation/state/
-condition metadata is shared by matcher, and pure render candidates allocate no
-mounted-family maps or listeners. Prepared candidates reuse committed family
-identity without changing its owner. The measured 42/0/42 host writes, 84 resolver
-calls, two changed override derivations, zero interaction renders, unchanged
-SSR/CSS sizes and zero retained disposed-controller samples remain intact.
-Consumer declaration output stays below its 64 KiB budget. Do not interpret
-byte differences between a temporary extracted package and the workspace as an
-API-size reduction: TypeScript's inferred imports depend on that resolution layout.
+### Controllers and `useStyles`
 
-## Normalization and snapshot follow-up against `768182d`
+`completion-worker.ts` is a synthetic 42-cell calendar-shaped workload:
 
-The compiler now reuses the normalizer's effective override layers instead of
-walking tombstones twice. Normalization appends token occurrences directly to
-their destination parts, avoiding temporary per-token rule trees. Neither change
-removes provenance, validation or source-order writes. A differential test checks
-40 overlapping rules across 128 states in both legacy and explicit declaration
-modes, including token/raw-style overlap and override removals.
+- shared controller construction, and cold compilation of a fresh 43-part
+  stylesheet (authoring, normalization, variant expansion and first compile);
+- a selected/reset transition across 42 native hosts, then 100 repeated
+  identical states, counting host writes and token resolver calls;
+- 42 `useStyles` cells mounted in happy-dom, plus hover events that must not
+  rerender React;
+- 42 children each wrapped in a distinct `StyleOverrides` entry; moving the
+  selection must derive exactly the two changed entries;
+- SSR markup size in inline and class-name modes, and generated CSS size;
+- a WeakRef sample of 5,000 disposed controllers after a new job and forced GC;
+- typechecking and declaration emission of an exported 42-part consumer sheet
+  with the repository's `tsc`. The run fails if the declaration exceeds 64 KiB.
 
-`immutableSnapshot` also reuses its own recursively immutable outputs. A private
-WeakSet certifies those outputs; caller-owned input objects are never memoized.
-Shallow-frozen objects still get fresh nested snapshots, so mutable direct `exec`
-inputs remain observable. Opaque class, Date, Map, Set and function values keep
-their existing identity and prevent certification of the containing snapshot.
-Arrays with custom mapping/construction or subclass state are also excluded.
+`--raw-style` adds a four-field raw `style` object to every day part and override;
+`--platform-style` puts the same object in both `@platform.web` and
+`@platform.native` blocks. Choose at most one. The runner prints a temporary
+evidence directory (SSR markup, generated CSS, declarations) on stderr.
 
-The default scalar-token fixture showed mixed cold-compilation and override
-timings across paired runs; these changes do **not** establish an override mount
-or update speedup. It contains no authored raw-style objects in those declarations,
-so it does not directly exercise repeated style snapshotting.
+### Provider
 
-For that workload, run:
+`provider-worker.ts` mounts the real `TonedProvider` and `createElements` for
+lists of 42 and 250 cells and measures mount, a provider update with unchanged
+children, a forced child rerender, a variant move, a theme change and SSR. Each
+list runs four rounds and reports the median of the last three. It counts host
+prop reads and resolver calls for each step, checks that hover does not rerender
+React and that host identities survive every update. It also measures spreading
+`renderer.t()` 2,000 times, a mount/change/repeat/reset/dispose cycle through a
+declared JavaScript native host adapter, and a WeakRef sample of 2,000 disposed
+controllers. `--pairs=N` (1–20) repeats the measurement; with a revision, each
+pair alternates which version runs first. The report includes a digest of the
+measured sources and fails if they change during the run.
 
-```sh
-node benchmarks/completion.mjs 768182d --raw-style
-```
+## Current results
 
-This labeled variant adds `{ paddingTop: day % 4, opacity: 0.9, width: 40,
-height: 32 }` as raw style on each of the 42 cold-sheet day parts and each of the
-42 distinct child override declarations. Other fixtures, assertions and guards
-are unchanged; the report names its workload `raw-style` or `scalar-tokens`.
-Before adding the switch, two guarded runs of that exact source variant measured:
+Recorded on 2026-10-02 on an Apple M1 Pro (macOS 27, arm64) with Bun 1.4.2,
+Node 26.10 and TypeScript 7.0.2, current sources only. The machine was running other builds at the
+time (load average about 13), so absolute timings are inflated and noisy; the
+counts are exact. Raw output is in [results/](results/).
 
-| Raw-style workload           | `768182d`, run 1 / run 2 | Follow-up, run 1 / run 2 |
-| ---------------------------- | -----------------------: | -----------------------: |
-| Cold 43-part compilation, µs |            463.4 / 475.3 |            407.2 / 417.7 |
-| Distinct override mount, ms  |            7.566 / 8.015 |            7.658 / 8.473 |
-| Distinct override update, ms |            3.078 / 3.472 |            3.460 / 3.359 |
+### Matcher ([results/matcher.json](results/matcher.json))
 
-Cold compilation improved about 12% in both raw-style runs. Override results are
-mixed or slower. These are macOS arm64/Bun 1.3.14 measurements on a shared machine,
-with other agent builds paused, not device or whole-application results. Both
-versions retained the same 42/0/42 host writes, 84 resolver calls, two changed
-override derivations, zero interaction renders and zero retained disposal samples.
-Do not combine the raw-style cold numbers with the default fixture's scalar-token
-numbers; the declarations intentionally contain different work.
+| Median, µs per operation | 16 facts / 17 rules | 80 facts / 81 rules |
+| ------------------------ | ------------------: | ------------------: |
+| Compile                  |               58.89 |              328.51 |
+| Cache hit                |               0.093 |               0.489 |
+| Uncached match           |               0.827 |               3.112 |
+| Membership equality      |               0.013 |               0.027 |
+| Reference evaluator      |                1.37 |                6.36 |
+| Reference mismatches     |                   0 |                   0 |
 
-## September 26 shared compilation follow-up against `2fb925e`
+Compilation runs once per stylesheet declaration and is shared by every
+controller; matches are then served from a bounded state cache.
 
-The compatibility matcher and portable compiler now reuse their runtime rule
-normalization. The cache is weakly owned by declarations with four finite
-cascade/platform-mode slots; a standalone matcher still reads mutable inputs afresh.
-CSS-condition lowering retains its separate adapter. Matcher preparation moved
-out of the mounted controller into `stylesheet/matcher/sharedMatcher.ts`.
+### Controllers and `useStyles` ([results/completion.json](results/completion.json))
 
-Portable compilation also shares one plan between an authored rule tree and its
-platform-prepared identity. Previously development diagnostics could compile the
-first while a mounted controller compiled the second. Preparing an already
-resolved grid tree now returns the same object, preserving materialized fields
-and override layers. Regression tests verify both compiler/matcher request orders,
-platform/system isolation, grid idempotence and standalone input mutation.
+Scalar-token workload:
 
-The final composition optimization also makes effective source-default preparation
-lazy. Plain override variants perform no default-source merge; nested condition
-maps do not clone inherited parts until a composition reference needs them. A
-no-composition part retains its already copied own style instead of copying it
-again. Structural tests verify no supplier/default merge for plain rules, one
-preparation for referenced sources, and unchanged kind, override/null and nested
-metadata validation.
+| Measurement                                          |         Result |
+| ---------------------------------------------------- | -------------: |
+| Shared controller construction                       |       0.387 µs |
+| Cold 43-part stylesheet compilation                  |       342.8 µs |
+| Matchers / portable plans shared by 42 controllers   |          1 / 1 |
+| Transition / repeated state / reset host writes      |    42 / 0 / 42 |
+| Token resolver calls across both transitions         |             84 |
+| Warm React mount, 42 cells                           |       3.575 ms |
+| Distinct per-child override mount / update           | 9.61 / 3.68 ms |
+| Override entries / variant-factory calls on update   |          2 / 2 |
+| React renders caused by hover                        |              0 |
+| SSR HTML bytes, inline / class-name mode             |  3,273 / 6,535 |
+| Generated CSS bytes                                  |          2,959 |
+| Consumer typecheck (median of three `tsc` processes) |         505 ms |
+| Consumer declaration bytes                           |         34,343 |
+| Declaration closure bytes / files                    |   225,197 / 86 |
+| Retained disposed controllers                        |      0 / 5,000 |
 
-After the final lazy composition-source preparation change, one paired run per
-fixture against `2fb925e` used identical guarded fixtures. All effective override,
-null, kind and static-metadata checks remained enabled. Parent validation work
-was paused during these two pairs, though this remains a shared host:
+The declaration closure includes the Toned source declarations the consumer
+depends on; it is not the published package's declaration size.
 
-| Workload and measurement                | `2fb925e` | Delivered follow-up |
-| --------------------------------------- | --------: | ------------------: |
-| Scalar shared construction, µs          |     0.376 |               0.413 |
-| Scalar cold compilation, µs             |   273.395 |             249.935 |
-| Scalar ordinary React mount, ms         |     1.872 |               2.854 |
-| Scalar override mount, ms               |     5.760 |               5.319 |
-| Scalar override update, ms              |     2.215 |               2.107 |
-| Platform-style shared construction, µs  |     0.384 |               0.395 |
-| Platform-style cold compilation, µs     |   487.569 |             456.995 |
-| Platform-style ordinary React mount, ms |     1.831 |               1.819 |
-| Platform-style override mount, ms       |     9.093 |               7.522 |
-| Platform-style override update, ms      |     3.467 |               2.971 |
+### Provider ([results/provider.json](results/provider.json))
 
-Cold compilation and override mounting/updates are lower in these final pairs.
-Shared construction is slower in both, and ordinary scalar React mounting is
-substantially slower. These observations do not establish a universal speedup or
-attribute each timing difference to one change. The report retains eighteen
-earlier pairs, including the preceding implementation's approximately 19% scalar
-override regression and other mixed results:
-[full recorded measurements](results/2026-09-26-normalization.json).
+Median of five runs:
 
-The structural improvements are one runtime normalization instead of two when
-the matcher and portable compiler consume the same declaration, and no effective
-default-source merging for variants that do not compose. Platform-sensitive
-queries get separate web/native metadata; platform-neutral prepared trees still
-share normalized data. Stronger authoring validation and effective override
-source handling remain enabled. The final rerun followed an actual code
-optimization; earlier timing regressions remain in the report.
+| Median, ms                          | 42 cells | 250 cells |
+| ----------------------------------- | -------: | --------: |
+| Mount                               |     5.48 |     18.21 |
+| Provider update, children unchanged |    0.149 |     0.131 |
+| Forced child rerender               |     3.43 |     13.54 |
+| Variant move                        |     3.27 |     14.05 |
+| Theme change                        |     4.80 |     20.31 |
+| Server render                       |     1.71 |      6.36 |
 
-The new fixture switch exercises the platform-specific duplication explicitly:
+Work counts were identical in every run:
 
-```sh
-node benchmarks/completion.mjs 2fb925e --platform-style
-```
+| Step                  | Resolver calls (42 / 250) | Host prop reads (42 / 250) |
+| --------------------- | ------------------------: | -------------------------: |
+| Mount                 |                  43 / 251 |                   42 / 250 |
+| Unchanged update      |                     0 / 0 |                      0 / 0 |
+| Forced child rerender |                     0 / 0 |                   42 / 250 |
+| Variant move          |                     3 / 3 |                   42 / 250 |
+| Theme change          |                  43 / 251 |                   42 / 250 |
 
-It puts the same four-field style used by `--raw-style` inside both
-`@platform.web` and `@platform.native` blocks on each cold day part and each
-per-child override. Foreign blocks must be discarded; the selected block's width
-is asserted on native resolution and web hosts. Choose one style switch per run;
-`--raw-style` remains unchanged. All twenty paired runs passed the existing guard,
-resolver, host-write, override-derivation, declaration-emission and disposal
-assertions: 42/0/42 writes, 84 resolver calls, two changed override factories,
-zero styling interaction renders and zero retained disposal samples. Retention
-samples do not prove whole-application leak freedom.
+Spreading `renderer.t()` took 18.1 µs per 2,000 spreads and called the resolver
+exactly 2,000 times. The native JavaScript host cycle took 43.5 µs. No sampled
+disposed controller was retained.
 
-## Controller, host, React and typechecking acceptance
+## Reading the numbers
 
-Run `node benchmarks/completion.mjs [checkpoint]` with HQ's root dependencies
-installed. The default checkpoint is the original pinned `ebd10355`. The runner
-extracts both core and React source into an OS temporary directory and resolves
-both versions against the same physical React installation. No installation or
-checkout mutation occurs. Each version runs in a separate guarded Bun process;
-network and filesystem refusal logs must be empty. The TypeScript 7 consumer
-check runs through the guarded Node launcher (its native compiler is outside JS
-instrumentation, as in the main Toned gate).
-
-This is a **synthetic 42-cell calendar-shaped workload**, not the complete HQ
-Calendar component. It measures fresh 43-part stylesheet authoring, normalization
-and first controller compilation separately from shared controller construction;
-a selected/reset transition across 42 hosts; repeated identical updates; actual
-`useStyles` React mounts/updates/hover events in happy-dom; WeakRef retention of
-5,000 disposed controllers; and a representative exported 42-part consumer's
-typecheck and declaration emission.
-
-The second React workload mirrors HQ Calendar's `dayButtonEntry -> StyleOverrides
--> Button` path: 42 children have distinct override entries, including a unique
-numeric token and selection/week-edge-like conditions. Moving selection changes
-exactly two entries; a declaration-factory counter measures actual derived-sheet
-construction independently of React rendering. This exercises the real override
-pipeline through public APIs, without importing HQ's day picker or theme graph.
-It reports mount/update time, SSR UTF-8 HTML bytes in inline and CSS modes,
-generated CSS UTF-8 bytes for the fixture system, and both the exported consumer's
-`.d.ts` size and its emitted source-dependency declaration closure size. Sizes are
-uncompressed; closure size is not the published package's total declaration size.
-The historical generator and current build entry each emit their complete default
-CSS support for the same system; extra current CSS is measured, not stripped for
-comparison. It does not measure
-browser layout, GPU work, mobile devices or the whole application's import graph.
-Construction reports the median of five warm batches; React mounting discards its
-first run and reports the median of five subsequent mounts; typechecking reports
-the median of three fresh compiler processes. The disposal sample holds only
-WeakRefs to 5,000 disposed controllers, advances to another event-loop job, then
-forces GC and reports how many targets remain. That count is observational;
-it checks this disposal workload, not arbitrary application retention. Current
-controllers additionally must share one actual portable plan as well as one
-compatibility matcher. The evidence directory retains both SSR outputs and the
-generated CSS so size changes can be inspected directly.
-
-On macOS arm64/Bun 1.3.14, the 2026-09-16 run before round-three review
-fixes reported the following. These timing rows describe that measured revision;
-the current-only gate below is rerun separately after review fixes.
-
-| Measurement                                        |    Checkpoint |       Current |
-| -------------------------------------------------- | ------------: | ------------: |
-| Shared controller construction, µs                 |         0.269 |         0.581 |
-| Cold 43-part stylesheet compilation, µs            |        44.412 |        289.73 |
-| Shared matcher instances for 42 controllers        |             1 |             1 |
-| Shared portable plan instances for 42 controllers  |             — |             1 |
-| Changed transition / repeated state / reset writes |   42 / 0 / 42 |   42 / 0 / 42 |
-| Token resolver calls across transitions            |            84 |            84 |
-| Warm React mount, ms                               |         1.276 |         2.467 |
-| Distinct per-child override mount / update, ms     |   3.8 / 1.576 | 5.999 / 2.699 |
-| Override entry creations, mount / update           |        42 / 2 |        42 / 2 |
-| Override variant-factory calls, mount / update     |       84 / 84 |        42 / 2 |
-| Styling interaction React renders                  |             0 |             0 |
-| SSR HTML bytes, inline / CSS modes                 | 3,273 / 6,535 | 3,273 / 6,535 |
-| Generated CSS bytes                                |         1,196 |         2,959 |
-| Representative consumer typecheck, ms              |        495.25 |         594.8 |
-| Plain inferred exported sheet declaration emit     |        TS4023 |          Pass |
-| Consumer declaration bytes                         |      129,460* |        48,602 |
-| Emitted declaration closure bytes / files          | 215,917 / 30* |  205,772 / 71 |
-| Retained disposed controllers / WeakRef samples    |     0 / 5,000 |     0 / 5,000 |
-
-*The checkpoint cannot emit the plain inferred export: it requires the documented
-`SYMBOL_INIT`, `SYMBOL_REF` and `_internalBrand` type imports. Its byte measurements
-use those imports, retaining complete inference; the unmodified failure remains
-in the JSON report. Current emission needs no symbol imports or broad annotation.
-The named public metadata/result types reduce this consumer's declaration size by
-about 62%. Closure size counts source dependencies too, so it measures a different
-thing and does not shrink proportionally.
-
-These results do not establish a general speedup. Every reported timing is slower
-in this run: cold compilation is about 6.5× the checkpoint (290 versus 44 µs),
-shared construction about 2.2×, React mounting about 1.9×, and the distinct-override
-mount/update about 1.6×/1.7×. The current cold path builds both the compatibility
-matcher and the portable operation plan, retaining declaration provenance and
-lowering token fields; the timing includes that additional construction work. Both
-plans are shared by warm controllers, but their warm lifecycle still costs more
-in this fixture. These measurements expose that cost; they do not attribute all
-of the difference to one mechanism or establish a whole-application slowdown.
-The operation cache keeps resolver calls equal to the checkpoint. The checkpoint
-invokes each override factory twice per derivation;
-current invokes it once. The 42-child update used to rebuild all 42 current
-variants because a 32-entry cache could not retain the siblings. Raising its bound
-to 64 reduces factory calls to the two changed entries; the regression assertion
-fails at 32. This is a measured reduction in work, even though timings do not show
-a blanket speedup. Current CSS includes interaction toggles even without viewport
-breakpoints
-(the checkpoint accidentally omitted them for this fixture) and negated-state
-channels. Its complete fixture stylesheet is therefore larger while SSR markup is
-unchanged after unused generated parameter slots are pruned; the smaller historical
-stylesheet is not an equivalent-capability target. Typecheck timing
-varies substantially on the shared machine. Stable counts and the 64 KiB inferred
-consumer declaration budget are stronger release checks than noisy timings.
-
-The current-only gate rerun after round-three review fixes also passed: one
-matcher and one portable plan, 42/0/42 writes, 84 resolver calls, two changed
-override derivations,
-zero styling renders, and a 48,602-byte inferred consumer declaration. Both runs
-observed zero retained targets out of 5,000 disposed-controller WeakRefs. These
-are clean results for the measured disposal sample, not a proof
-that arbitrary native host integrations or application ownership cannot retain
-objects. An earlier revision also reported a zero `process.memoryUsage().heapUsed`
-delta; that metric has been removed because Bun 1.3.14's same-job readings did not
-track live JS object allocation. It was not credible evidence of retained heap.
-The complete source declaration closure in that rerun is 205,855 bytes across 71
-files; the consumer declaration reduction remains about 62%.
-
-`node benchmarks/completion.mjs --current-only` requires no historical checkout
-and is suitable for CI. It fails if a current consumer stops typechecking, if 42
-controllers stop sharing one matcher and one portable plan, if a transition writes
-other than once per
-host, if an identical state writes again, if resolver calls exceed the two changed
-transitions per host, if an imperative styling interaction causes a React render,
-if a 42-child selection move derives more than the two changed override entries,
-or if the exported consumer fails declaration emission or exceeds 64 KiB. No
-absolute wall-clock or heap threshold is enforced.
-
-## Explicit-provider runtime follow-up against `7e3944c`
-
-Run from the HQ checkout with its installed dependencies:
-
-```sh
-bun vendor/toned/benchmarks/provider.mjs 7e3944c --pairs=5
-bun vendor/toned/benchmarks/provider.mjs --current-only
-```
-
-This supplements the compatibility `useStyles`/installed-config workload above.
-It mounts the real `TonedProvider` and `createElements` implementation with one
-physical React installation for both source trees. It measures 42- and 250-cell
-lists with fresh equivalent renderer arrays, forced child rerenders, changed
-variants and themes, SSR, off-render interactions, explicit token-prop spreads,
-and a declared native JS host adapter. It proves all four HQ guards inside each
-worker, rejects unexpected guard logs, bounds worker time/output, and removes its
-temporary extraction. A JSON receipt remains under `out/toned-validation`.
-`--pairs` is bounded to 1–20 and alternates baseline/current order. Source digests
-reject mixed-source measurements. CI uses current-only semantic assertions;
-wall-clock timings have no pass/fail threshold.
-
-The [five-pair receipt](results/2026-09-26-provider.json) records the September 26
-macOS arm64/Bun 1.3.14 run. The receipt's `current` Git HEAD is still the
-precommit `7e3944c`; `sourceDigest` identifies the optimized working-tree sources.
-The checkpoint was extracted from Git, so this is not a same-source comparison.
-Each row below is the median of the five worker medians.
-
-| Measurement                                                |                `7e3944c` |                Follow-up |
-| ---------------------------------------------------------- | -----------------------: | -----------------------: |
-| 42-cell mount / same-children provider update, ms          |            3.640 / 3.213 |            2.869 / 0.071 |
-| 42-cell forced rerender / variant move / theme, ms         |    2.961 / 2.792 / 3.143 |    2.114 / 2.289 / 3.131 |
-| 42-cell SSR, ms                                            |                    1.598 |                    1.332 |
-| 250-cell mount / same-children provider update, ms         |          10.739 / 14.774 |           11.506 / 0.099 |
-| 250-cell forced rerender / variant move / theme, ms        | 13.084 / 14.073 / 18.306 | 11.169 / 11.739 / 15.320 |
-| 250-cell SSR, ms                                           |                    5.281 |                    5.273 |
-| Explicit token-prop spread, µs                             |                   25.103 |                   15.642 |
-| Native JS-host mount/change/repeat/reset/dispose cycle, µs |                   29.763 |                   31.627 |
-
-Work counts are the stronger evidence. An unchanged provider update drops from
-42/250 host-prop reads and 43/251 token resolver calls to zero. Forced child
-rerenders still reconcile their own hosts, but perform zero resolver calls.
-Moving selection resolves three token operations instead of 43/251. A theme
-change still resolves 43/251 operations. Two thousand immutable token-prop
-spreads resolve 2,000 rather than 4,000 times. Interactions do not rerender React;
-host identities persist across all updates, repeated native state does not write,
-and every run retained zero of 2,000 sampled disposed controllers after a new job
-and forced GC.
-
-This is not a blanket speedup: the 250-cell mount is about 7% slower and the
-small native JS-host cycle about 6% slower in this run. The substantial unchanged
-update win comes from avoiding context broadcast; candidate-output reuse reduces
-resolver work on forced renders. Mounts/theme changes still require private
-controllers and fresh resolution. Happy-dom is not a browser-layout benchmark,
-the native adapter is not a Fabric/device measurement, and the WeakRef sample is
-not proof of application-wide leak freedom. Existing browser/native acceptance
-profiles remain separate validation.
+- Compare timings only between runs on the same machine, runtime and load. Use
+  a revision argument for a paired comparison rather than comparing with the
+  tables above.
+- The counts (writes, resolver calls, renders, derived entries, reference
+  mismatches) are deterministic and are the stronger evidence; the runners
+  assert them.
+- happy-dom does not perform layout or paint, so React timings exclude browser
+  rendering. The native host is a JavaScript adapter, not a device or Fabric
+  measurement.
+- WeakRef samples cover the disposal workload only; they do not prove that an
+  application cannot retain objects.
+- React runs in its development build. Production-build timings will differ.

@@ -1,0 +1,46 @@
+{
+  "baseline": null,
+  "workload": "scalar-tokens",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "bun": "1.4.2"
+  },
+  "fixture": "Synthetic 42-cell calendar: shared sheet and 42 distinct per-child override scopes; cold 43-part compilation, happy-dom React mounts, SSR/CSS and exported consumer declaration sizes; no browser layout or device measurement.",
+  "results": [
+    {
+      "version": "current",
+      "construction_us": 0.387,
+      "cold_stylesheet_compile_us": 342.824,
+      "shared_matchers": 1,
+      "shared_portable_plans": 1,
+      "first_transition_writes": 42,
+      "repeated_state_writes": 0,
+      "reset_transition_writes": 42,
+      "update_resolver_calls": 84,
+      "react_mount_ms": 3.575,
+      "override_mount_ms": 9.606,
+      "override_update_ms": 3.684,
+      "override_mount_entries": 42,
+      "override_update_entries": 2,
+      "override_mount_factory_calls": 42,
+      "override_update_factory_calls": 2,
+      "ssr_inline_bytes": 3273,
+      "ssr_css_bytes": 6535,
+      "generated_css_bytes": 2959,
+      "mount_renders": 42,
+      "update_renders": 42,
+      "interaction_renders": 0,
+      "disposed_controller_samples": 5000,
+      "retained_disposed_controllers": 0,
+      "note": "WeakRef retention samples disposed controllers after a new job and forced GC; it does not prove application-wide leak freedom. Bun process.memoryUsage().heapUsed is not used.",
+      "typecheck_ms": 505.47,
+      "typecheck_exit": 0,
+      "declaration_emit_exit": 0,
+      "consumer_declaration_bytes": 34343,
+      "declaration_closure_bytes": 225197,
+      "declaration_closure_files": 86,
+      "benchmark_and_typecheck_ms": 2690.83
+    }
+  ]
+}
