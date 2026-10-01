@@ -5,12 +5,14 @@ optional browser panel. It imports only protocol types from the compiler and doe
 not include TypeScript, Node APIs, React, or production Toned runtime code.
 
 The transport connects to the same `DesignProject`, `proposeValueEdit` and checked
-`applyDesignEdit` used by editor/agent tooling. Its query/document/propose/apply
+`applyDesignEdit` used by the language server and CLI. Its query/document/propose/apply
 methods are asynchronous and receive an AbortSignal. The application controls
 source access, authentication, allowed workspaces and persistence. Do not expose a
 write transport on a production site or an unauthenticated network endpoint.
 
 ```ts
+import { mountDesignInspector } from '@toned/compiler/inspector'
+
 const inspector = mountDesignInspector(panel, {
   transport: developmentSourceBridge,
   selection: { uri: sourceUri, owner: 'buttonStyles', part: 'Root' },

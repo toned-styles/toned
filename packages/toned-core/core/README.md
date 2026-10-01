@@ -11,7 +11,7 @@ normalization for each declaration and cascade mode. CSS-condition lowering keep
 its own spelling adapter because symbolic browser conditions differ from runtime
 facts. Matcher preparation/cache ownership lives under `stylesheet/matcher`; the
 controller only requests the prepared matcher. Standalone matcher construction
-still reads its inputs afresh.
+reads its inputs afresh.
 
 Portable plans are shared by both authored and platform-prepared rule identities,
 so compiling a sheet for diagnostics and mounting it do not construct the same
@@ -30,7 +30,7 @@ source or kind comparison needs them. Ordinary variant callbacks do not merge
 base/override defaults, and nested query groups do not clone inherited part maps
 until a composition reference needs that scope. Required source preparation is
 memoized within the authoring call; same-kind checks, override tombstones and
-nested metadata validation remain unchanged.
+nested metadata validation still apply.
 
 A plan has named parts, part kinds, ordered token declarations, and declaration
 origins. It contains no generated class names, selector strings, CSS variable
@@ -60,8 +60,9 @@ const report = renderer.explain(button, {
 
 Origins identify the stylesheet content, part, declaration path, token,
 occurrence, and override layer. File/line/column are not fabricated: runtime
-JavaScript objects do not carry that information. An optional future source
-extractor can attach source locations without changing evaluation semantics.
+JavaScript objects do not carry that information. The optional static source
+index in [`@toned/compiler`](../../toned-compiler/README.md) maps declarations to
+source ranges separately; it does not change evaluation semantics.
 
 Development stylesheet construction reports provable finite subset shadows.
 For example, a later `size(s, m)` declaration shadows an earlier
@@ -99,8 +100,9 @@ Logical padding/margin/inset, border edges and sizes expand
 in declaration order before field conflicts are settled. Physical declarations
 retain physical intent. Layout is part of the immutable build schema: use a
 separately built system for a different direction/mode. CSS supports horizontal
-and vertical modes; the native profile rejects vertical logical layout until its
-host supports writing mode. This does not emulate vertical text layout on native.
+and vertical modes; the native profile rejects vertical logical layout because
+the native host contract has no vertical text/layout engine. Toned does not
+emulate vertical text layout on native.
 
 `dp()` is also accepted for fixed media/container thresholds and web grid tracks.
 It never reads the theme spacing scale; percentage thresholds are rejected.

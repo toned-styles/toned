@@ -4,26 +4,48 @@ This optional client runs the bundled Toned language server alongside TypeScript
 It supplies token completion, source navigation, diagnostics and revision-aware
 literal edit proposals. Source inspection never executes application modules.
 
-From an HQ checkout, run `pnpm --filter toned-vscode package`, then install
-`vendor/toned/editors/vscode/dist/toned-vscode.vsix` with VS Code's **Extensions:
-Install from VSIX** command. Open or reload this workspace. HQ's committed
-`.vscode/settings.json` supplies its source directories and module mappings.
-The VSIX is local; this extension is not yet published to the marketplace.
+## Install
+
+The extension is not published to the marketplace; build a local VSIX from the
+repository root:
+
+```sh
+pnpm --filter toned-vscode package
+```
+
+Install `editors/vscode/dist/toned-vscode.vsix` with VS Code's **Extensions:
+Install from VSIX** command, then open or reload your workspace.
+
+## Configure
+
+Set these options in the workspace's `.vscode/settings.json`:
+
+```json
+{
+  "toned.include": ["src"],
+  "toned.modules": { "@app/*": ["src/*"] }
+}
+```
+
+`toned.include` bounds indexing to relative directories (default `.`), and
+`toned.modules` maps module names (optionally containing one wildcard) to
+relative source paths. Configuration code is never executed. `toned.enabled`
+turns the client off for a workspace folder.
+
+## Use
 
 Use **Toned: Inspect Current Declaration**, **Toned: Show Index Status** and
 **Toned: Restart Language Server** from the command palette. Results appear in
 the Toned output channel. TypeScript remains responsible for general type errors;
 Toned adds knowledge of token vocabularies and declaration ownership.
 
-`toned.include` bounds indexing to relative directories, and `toned.modules`
-maps module names (optionally containing one wildcard) to relative source paths.
-Restarting happens automatically when these settings change. Generated and
+The server restarts automatically when Toned settings change. Generated and
 dependency directories are excluded even if a watcher reports them. At most four
 workspace folders have a server process, each with a 384 MiB V8 heap limit;
 start-up is lazy when a supported document opens. Initialization has a ten-second
 deadline. Restart and deactivation cancel pending initialization and terminate
 and reap the owned server, forcibly if it ignores shutdown. Server indexing/query budgets
-are documented in the compiler package. Full-document synchronization allows
+are documented in the [compiler package](../../packages/toned-compiler/README.md). Full-document synchronization allows
 bounded recovery after an oversized edit; unchanged sources reuse the index.
 
 The extension is disabled in untrusted and virtual workspaces. It uses its own
@@ -34,7 +56,7 @@ bridge is started by this client.
 ## Editor acceptance
 
 The standalone fixture under `fixture/` contains its own system, tokens and sheet;
-it does not require an HQ checkout. With VS Code installed, run:
+it needs no other project. With VS Code installed, run from the repository root:
 
 ```sh
 VSCODE_EXECUTABLE_PATH="/Applications/Visual Studio Code.app/Contents/MacOS/Code" pnpm --filter toned-vscode test:editor
@@ -45,9 +67,8 @@ uses a temporary copy of the fixture and fresh user/extension directories, then
 removes them. It downloads nothing, disables the built-in TypeScript extension
 for this test, and verifies Toned indexing, completion, hover, definition,
 unsaved diagnostics and completion edits in the actual extension host. The
-120-second deadline and process-group cleanup currently require macOS or Linux;
-the extension itself also supports Windows. The HQ repository separately tests
-its real source graph through its own stdio acceptance script.
+120-second deadline and process-group cleanup require macOS or Linux; the
+extension itself also supports Windows.
 
 Unexpected server crashes evict the failed workspace session and show a warning.
 Opening another source document, running a Toned command, or selecting **Restart**

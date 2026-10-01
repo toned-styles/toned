@@ -68,6 +68,11 @@ thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
 negative and nonfinite thresholds are rejected. Legacy `defineSystem(tokens,
 config)` retains its spacing-scale container behavior for migration.
 
+Logical fields map through an explicit, immutable `layout` context that defaults
+to horizontal LTR. CSS output supports the declared direction and writing modes;
+native output rejects vertical writing modes because the native host contract has
+no vertical text layout. See [portable values and logical layout](core/README.md#portable-values-and-logical-layout).
+
 ## Conditions and precedence
 
 The finite builders `q.state`, `q.media`, `q.container(name, step)`,
@@ -89,9 +94,9 @@ const emphasis = ui.stylesheet((q) => ({
 }))
 ```
 
-The earlier standalone `bp`, `cq`, `and`, `or` and `not` builders are isolated in
-`@toned/core/compat`; new declarations use the system-bound `q` methods. Old
-`cq(name).min(number)` values used a system's spacing scale. When migrating to
+The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
+compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
+methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
 `q.container(name, dp(number))`, supply the resolved logical width: 100 legacy
 units at the default 4px base become `dp(400)`. Named steps retain the owning
 system's declared threshold through `q.container(name, 'wide')`.
@@ -115,15 +120,10 @@ axis-builder duplicate guard cannot detect this after object construction.
 Counting query construction would also
 reject valid reuse of one condition in separate parts or larger expressions.
 
-The experimental curried `.variants<Mods>()(factory)`, `q.rules(...)`, and
-`.when(...)` forms are removed. Annotate the single `.variants` callback and put
-compound conditions directly in its returned objects. Existing
-explicit-generic callback and object variant declarations remain compatible.
-The object-predicate types `QueryAtom` and
-`QueryPredicate` are removed; they were never part of a released API. The
-internal `WHEN_RULES` metadata protocol is also removed. Query builders now
-return typed `QueryKey` strings; consumers use those keys in declarations instead
-of assembling predicate objects or attaching conditional-rule metadata.
+Annotate the single `.variants` callback and put compound conditions directly in
+its returned objects. Query builders return typed `QueryKey` strings; use those
+keys in declarations rather than assembling predicate objects. Explicit-generic
+callback and object variant declarations remain compatible.
 
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
@@ -142,20 +142,15 @@ computed keys so arguments are checked before that widening occurs. Place
 platform-specific styles inside the variant's part or condition group: mixing a
 separate top-level platform rule with widened computed variant keys loses the
 key-to-host association needed to validate its raw styles.
-The earlier explicit-generic direct callback and object signatures remain
-compatible; the explicit-generic direct callback cannot catch every excess property.
-**Migration note:** callbacks without explicit method type arguments now use the
-checked overload, including callbacks annotated with the existing `VariantSelector`.
-Previously accepted excess keys are rejected. Keep an extracted factory's result
-literal (for example `return { ... } as const`) so finite token values do not widen
-to `number` or `string`; inline callbacks receive that context automatically.
-Overload errors can mention `VariantsInput`, the final compatibility signature;
-check the callback's declarations and literal values first. The checked signature
-must precede compatibility signatures to provide literal context: moving it last
-widens otherwise valid inline token and fragment values. Removing those signatures
-would break existing callers. This diagnostic limitation remains while those calls
-are supported. The stricter inferred callback behavior is an intentional
-type-checking change.
+The explicit-generic direct callback and object signatures remain compatible;
+the explicit-generic direct callback cannot catch every excess property.
+Callbacks without explicit method type arguments use the checked overload,
+including callbacks annotated with `VariantSelector`, so excess keys are
+rejected. Keep an extracted factory's result literal (for example
+`return { ... } as const`) so finite token values do not widen to `number` or
+`string`; inline callbacks receive that context automatically. Overload errors
+can mention `VariantsInput`, the final compatibility signature; check the
+callback's declarations and literal values first.
 Variant keys are canonical
 literal strings at runtime and in TypeScript, including multi-value selections.
 The matcher keeps a fast unsigned single-word path and uses multiple words beyond
@@ -224,16 +219,17 @@ enumeration order does not invalidate an otherwise identical system. This does
 not reorder emitted CSS or weaken its byte-level artifact fingerprint.
 
 `@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
-explicit optional development tool. The old `dom` entry remains compatible.
+explicit optional development tool. The `@toned/core/dom` entry remains for compatibility.
 The Vite plugin serves `virtual:toned.css`; import it explicitly, supply watched
 `inputs`, and pass the complete system ref with a `sheets` collector, e.g.
 `toned({ system: ui, sheets: () => [button], inputs: ['./button.ts'] })`.
 It delegates to the same build path and exposes the paired manifest through
 `virtual:toned.manifest` (a default export). Both modules share one collection per
-build or watched invalidation. The older raw `system.system` option remains
-compatible, but requires an explicit namespace `id` and condition collector;
-it cannot collect sheets or check their runtime namespace.
-It no longer inserts an extra style node into HTML implicitly.
+build or watched invalidation. Passing a raw `system.system` token dictionary
+remains compatible, but requires an explicit namespace `id` and condition
+collector; it cannot collect sheets or check their runtime namespace.
+The plugin does not insert a style node into HTML; the application imports the
+CSS module.
 
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
 checks the original generated asset's fingerprint before publication; after
@@ -325,10 +321,13 @@ The built adapter preserves local states, media/container queries and boolean
 conditions using precompiled helper gates and fixed utility parameters. It consumes
 the shared ordered field plan, so class-attribute order cannot change a winner.
 Cross-part facts use the mounted host registry. Runtime token/theme values use
-explicit parameter serializers; rendering never compiles or injects CSS. Classes-only
-profiles accept finite runtime choices and reject browser-conditional fields that
-need a parameter channel. Unresolved CSS expression equivalence is deliberately
-rejected: `gap-3` on a rem scale is not established to mean twelve pixels.
+explicit parameter serializers; rendering never compiles or injects CSS. A finite
+class list cannot in general represent arbitrary dynamic values or overlapping
+browser predicates with Toned's ordering; fixed, precompiled parameter utilities
+cover those cases. A strict `classesOnly: true` profile accepts finite runtime
+choices and rejects parameter channels and browser-conditional fields that need
+one. Unprovable CSS expression equivalence is rejected rather than inferred from
+utility names: `gap-3` on a rem scale is not established to mean twelve pixels.
 See [the backend contract](backends/README.md) for capabilities and validation.
 An unbuilt profile is a low-level mapping/formatting helper. Pure renderers and
 mounted hosts reject it until `buildTailwind`/`createTailwindRuntime` binds its
@@ -344,7 +343,7 @@ const compact = ui.t(base, { $style: { minHeight: 24 } })
 ```
 
 Later arguments override earlier token values; raw `$style` fields merge across
-arguments. The earlier `style` spelling and composed `t` results remain
+arguments. The legacy `style` spelling and composed `t` results remain
 accepted. `t()` normalizes its inputs immediately and snapshots raw style fields;
 mutating a caller style object later does not change a retained result. Invalid
 metadata (such as a conditional `$kind` or conflicting kind aliases) throws
@@ -387,8 +386,11 @@ local CSS area names. Numeric placements remain available as area metadata. Cons
 and finite lengths. Hosts validate direct layout parentage and isolate repeated
 grid instances. Multiple occupants intentionally overlap in source order. Grid
 is enabled on web; native use throws a capability error. A web-scoped grid can
-have an ordinary shared/native fallback. No measured JavaScript grid solver is
-installed; native support awaits a verified integrated layout engine.
+have an ordinary shared/native fallback. Native grid is unavailable: a host can
+assign named areas, but not grid's intrinsic track sizing, span resolution,
+baseline alignment and layout integration. No measured JavaScript grid solver is
+installed; native grid requires a real integrated layout engine that passes host
+conformance.
 
 Create complete responsive plans with `message.variant(...)`:
 
@@ -438,8 +440,7 @@ a condition-only grid registration instead of silently skipping host checks.
 
 Tests cover bit boundaries, reference evaluation, zero/conditional properties,
 selector types, suspended React work, ref cleanup, theme updates and owned native
-patches. The HQ integration adds real-browser first-paint and showcase gates.
-A fixture is not certification of a React Native/Fabric device integration.
+patches. A fixture is not certification of a React Native/Fabric device integration.
 
 ## Variant defaults and alpha
 
@@ -478,12 +479,18 @@ the final subscriber leaves. Native relations require `parentOf` and
 require `readState`. Unsupported host capabilities throw named errors.
 
 Use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
-`'@platform.web'` block for CSS selectors or pseudo-elements. Styles use checked
+`'@platform web'` block for CSS selectors or pseudo-elements. Styles use checked
 CSS property types. Each entry has one `&`-anchored selector; comma lists and
-at-rules are rejected as selector keys. Exact DOM
-child syntax such as `& > input:checked` belongs here, distinct from the portable
-registered-part relationship. The generated CSS belongs to the normal build
-artifact, and native resolution must never silently interpret it as native style.
+at-rules are rejected as selector keys. Exact DOM child syntax such as
+`& > input:checked` and arbitrary `:has()` expressions belong here, distinct from
+the portable registered-part relationship. The generated CSS belongs to the
+normal build artifact, and native resolution never interprets it as native style.
+
+`webRules` is a CSS extension, not portable condition algebra. Put state and
+descendant selectors inside its `&`-anchored rules: a portable condition around
+a `$webRules` block is diagnosed. Use registered-part relations for semantics that
+must hold on every platform. Native, inline, PDF and Tailwind profiles reject
+CSS extensions.
 
 For browser-only media semantics, including rem breakpoints and reduced-motion
 preferences, pass explicit media groups. These do not change the fixed-pixel
@@ -522,7 +529,7 @@ const compact = overrideSheet(button, { Root: { padding: null } }, ($) => ({
   [$.size('s')]: { Root: { padding: 4 } },
 }))
 const artifact = buildStyles(ui, { sheets: [button, compact] })
-const web = createWebRenderer(ui, { manifest: artifact.manifest, tokens })
+const web = createWebRenderer(ui, { manifest: artifact.manifest })
 const props = web.resolve(compact, { variants: { size: 's' } })
 ```
 
@@ -585,6 +592,8 @@ validate external theme data before passing it to a renderer. Existing untyped
 Fixed query thresholds can also be colocated at the use site:
 
 ```ts
+import { defineSystem, defineToken, dp } from '@toned/core'
+
 const layout = defineSystem({
   id: 'local-queries',
   tokens: {

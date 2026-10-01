@@ -16,6 +16,7 @@ import { observeAdaptiveContainer } from '@toned/core/adaptive/web'
 import { useAdaptiveVariants } from '@toned/react/adaptive'
 import { createElements } from '@toned/react'
 import type { Variants } from '@toned/core'
+import { ui } from './system'
 
 const adaptive = defineAdaptiveLayout({
   axis: 'layout',
@@ -142,7 +143,8 @@ application's existing platform subscriptions; `nativeAdaptiveLayout(store,
 'viewport')` can translate an independently sized viewport host instead. Cleanup
 of those application-owned subscriptions remains with their owner. The native
 adapter imports no React Native package and does not claim an arbitrary custom
-renderer conforms to Fabric. The acceptance app exercises the pinned Fabric host.
+renderer conforms to Fabric. The [Fabric acceptance app](../../../examples/fabric-acceptance/README.md)
+exercises the pinned Fabric host.
 
 Available width subtracts left/right safe-area insets; available height subtracts
 top/bottom insets and keyboard height. Supply **occlusion of the provided frame**:

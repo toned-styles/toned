@@ -33,12 +33,12 @@ retain their existing CSS channels. A legacy pseudo-only field with no resting
 write retains its old missing fallback (computed-invalid when inactive), including
 its effect on caller classes. Descriptor and advanced-query chains use
 `revert-layer` for an absent resting field. Keeping that distinction avoids silently
-changing existing application paint while moving the architecture to one plan.
+changing existing application paint.
 
-HQ's `scripts/build/toned-css-plan-browser.ts` verifies computed values across three
-viewport sizes, active/hover states, Boolean/container conditions, ancestor channels
-and the legacy pseudo-only fallback. The Tailwind fixture independently compares
-its compiled utility output with the descriptor CSS adapter.
+Browser conformance fixtures verify computed values across three viewport sizes,
+active/hover states, Boolean/container conditions, ancestor channels and the
+legacy pseudo-only fallback. The Tailwind fixture independently compares its
+compiled utility output with the descriptor CSS adapter.
 
 ## Tailwind build and runtime
 
@@ -136,6 +136,7 @@ the same controller without an additional React render.
 | Overlapping rule precedence           | Shared plan order, independent of class order                     |
 | Cross-part/relation facts             | Supplied by the mounted host registry                             |
 | Classes-only browser conditions       | Rejected: arbitrary overlap needs a conditional parameter channel |
+| Classes-only dynamic values           | Rejected by `classesOnly: true`; use parameter utilities          |
 | General utility/shorthand inference   | Rejected: utility names do not establish field equivalence        |
 | Native host                           | Rejected: this output requires CSS utility classes                |
 | Arbitrary web selector/grid extension | Requires an adapter for that extension; no silent fallback        |
@@ -144,11 +145,11 @@ Caller `className` ownership is preserved during patches and cleanup. That does 
 promise an arbitrary caller utility wins a CSS conflict; applications own their CSS
 cascade policy. A class attribute's order has no such meaning.
 
-HQ's `scripts/build/toned-tailwind-browser.ts` is the release conformance fixture:
-it uses actual Tailwind compilation, verifies prefix and rem/pixel mismatches,
-compares first paint against CSS output with JavaScript disabled, and exercises
-media, local state, container, boolean overlaps, dynamic values/themes and lazy
-stylesheets without adding CSS rules. `toned-react/tailwind-built.test.tsx` checks
+The Tailwind browser conformance fixture uses actual Tailwind compilation,
+verifies prefix and rem/pixel mismatches, compares first paint against CSS output
+with JavaScript disabled, and exercises media, local state, container, boolean
+overlaps, dynamic values/themes and lazy stylesheets without adding CSS rules.
+[`tailwind-built.test.tsx`](../../toned-react/tailwind-built.test.tsx) checks
 host-driven class updates, caller ownership and unchanged React render counts.
 
 ## Inline HTML and email
@@ -180,6 +181,6 @@ Alpha-capable atomic rules emit a plain color first, a `color-mix(in oklab, …,
 transparent)` fallback second, and the existing relative-color expression last.
 A browser that cannot parse relative colors retains the canvas or text color;
 with color-mix support it also retains the alpha modifier, including the source
-color's own alpha. Modern rendering keeps its previous final expression. This
+color's own alpha. Browsers with relative-color support use the final expression. This
 fallback contract covers generated atomic rules; raw authored CSS and inline
 conditional expressions retain their own browser requirements.

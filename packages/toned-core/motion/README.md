@@ -6,6 +6,8 @@ styles or classes. `defineAnimations` remains the CSS named-keyframe vocabulary;
 this module provides transitions between committed values on web and native.
 
 ```ts
+import { attachMotion } from '@toned/core/motion'
+
 const motion = attachMotion(host, {
   properties: ['opacity', 'width'],
   transition: { type: 'spring', stiffness: 170, damping: 26 },
@@ -13,7 +15,7 @@ const motion = attachMotion(host, {
   exit: { opacity: 0 },
   reducedMotion: true,
 })
-// Toned variant/state updates now transition these properties without rendering.
+// Toned variant/state updates transition these properties without rendering.
 // Retain host until the exit completes; removing it first cancels the animation.
 if ((await motion.exit()) === 'finished') removeHost()
 motion.dispose()

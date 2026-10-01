@@ -18,7 +18,7 @@ and button shapes. Demo state is local and resets on reload.
 Each component page includes prop controls and source extracted from its TSX
 module at build time. Stylesheets are exported so consumers can apply scoped
 `StyleOverrides` without modifying the component. The live editor accepts a
-bounded JSON subset: named parts, surface/text colours, corner radii, shadows,
+bounded JSON subset: named parts, surface/text colors, corner radii, shadows,
 spacing and opacity. Invalid edits retain the last valid preview. Reset restores
 the original styles without remounting the component. The editor does not execute
 TypeScript, write files, persist changes, or edit variant selectors; the full
@@ -36,7 +36,8 @@ stylesheet remains available to inspect and copy.
 
 ## Development
 
-Use the repository's shared workspace dependencies. Run the docs app from
-`examples/docs` with `pnpm dev`; its gallery imports these component sources.
+Use the repository's shared workspace dependencies. Run the docs app from the
+repository root with `pnpm --filter @examples/docs dev`; its gallery imports
+these component sources.
 Component examples live beside implementations as `*.doc.tsx`. Add a description,
 typed defaults and a composed preview using the helpers in `src/lib/doc.tsx`.

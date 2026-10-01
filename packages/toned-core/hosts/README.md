@@ -1,5 +1,9 @@
 # Host lifecycle boundary
 
+This directory is internal architecture; it is not a public package entry point.
+Native integrations supply a `NativeHostAdapter` (exported from
+`@toned/core/stylesheet`); see [NATIVE-HOSTS.md](../../toned-react/NATIVE-HOSTS.md).
+
 The controller treats attached targets as opaque identities. `HostIntegration`
 supplies committed parent/state reads, topology and viewport subscriptions,
 liveness, attachment, and post-attachment validation. It never returns CSS
@@ -35,5 +39,5 @@ come from committed events rather than a selector reread.
 
 Native contract fixtures prove this boundary with opaque targets whose DOM
 accessors throw. They do not certify a concrete React Native renderer; that
-integration still owns the native commit/reset conformance evidence documented
-in `../../toned-react/NATIVE-HOSTS.md`.
+integration owns the native commit/reset conformance evidence documented in
+[NATIVE-HOSTS.md](../../toned-react/NATIVE-HOSTS.md).

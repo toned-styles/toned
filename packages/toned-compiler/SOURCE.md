@@ -27,7 +27,7 @@ a referenced object. Renderer and TypeScript checks remain necessary.
 Definitions follow indexed named/namespace imports, named and star re-exports,
 stylesheet aliases, and module-level bindings. Hosts can call
 `configureModules(rootUri, mappings)` with explicit exact or single-wildcard module
-paths constrained to their configured workspace root after URL resolution (for example `{"@lib/*":["lib/*"]}`). The server
+paths constrained to their configured workspace root after URL resolution (for example `{"@app/*":["src/*"]}`). The server
 accepts this JSON map through `initializationOptions.toned.modules`; it never executes
 configuration files or implicitly traverses node_modules. Include the token source
 directories in the host's indexed workspace. `tokensForSystem(name, uri)` returns
@@ -35,7 +35,7 @@ the effective known token definitions, preserving their original source location
 `defineCssToken` is recognized alongside `defineToken`; nonliteral value domains
 remain dynamic. Literal members of open domains are suggestions, with
 `valuesComplete: false`; numeric constructors and alpha-channel modifiers do not
-produce false finite-domain warnings. Default-export expressions and generated/dynamic imports still
+produce false finite-domain warnings. Default-export expressions and generated/dynamic imports
 need the owning TypeScript language service or runtime evidence. References remain
 limited to named lexical bindings in the declaring module and direct importers.
 Part names and token field names are not

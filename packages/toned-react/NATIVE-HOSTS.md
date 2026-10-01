@@ -39,7 +39,7 @@ Toned's built JavaScript against real Android hosts. The verified profile is
 This is a versioned application adapter, not a claim that every Fabric release,
 platform or object exposing `setNativeProps` is supported.
 
-The September 26 capabilities run passes **eight automatic scenarios and a real
+The latest acceptance run passes **eight automatic scenarios and a real
 emulator-driven press/release gesture, with 69 assertions**. Native measurements,
 Android drawing paint and hint-colour readback establish the result; requested
 JavaScript patches are not substituted for those observations. The retained
@@ -74,13 +74,12 @@ explicit `NOT_MOUNTED` response and has a bounded deadline.
 
 The verified profile covers the contracts listed above. It does not establish:
 
-- iOS, Paper, other React Native versions or external styling engines. Unistyles
-  is explicitly outside the current work. The inspected host has Android SDK,
-  NDK/CMake and a verified JDK 21 build, but only Apple's Command Line Tools,
-  without the full Xcode/iOS simulator toolchain.
+- iOS, Paper, other React Native versions or external styling engines. Toned
+  ships no Unistyles integration; see [INTEGRATIONS.md](./INTEGRATIONS.md) for
+  composition boundaries.
 - Native relationship topology, virtualized-list recycling, arbitrary semantic
-  state readers, rotation/viewport acceptance, general container-query semantics or
-  native grid. The adaptive test covers its own measured-parent input adapter;
+  state readers, rotation/viewport acceptance, general container-query semantics,
+  UI-thread animation or native grid. The adaptive test covers its own measured-parent input adapter;
   it does not establish those other protocols. Library
   fixture tests cover the declared protocols; each concrete integration needs its
   own native scenarios before advertising those capabilities.
@@ -94,27 +93,25 @@ RN primitive refs provide public node traversal, which can help implement parent
 lookup; traversal alone does not notify the library of committed moves or certify
 portals, recycling and cleanup. The core does not invent a missing observer.
 
-The older [Expo demo](../../examples/expo-app) remains a historical integration
-sketch. It is superseded as the native acceptance target by the pinned app above;
-its obsolete configuration is not used to make support claims. `toned-react`
-continues to have no React Native dependency and ships no View/Text implementation.
+The [Expo demo](../../examples/expo-app) is an integration sketch, not an
+acceptance target; support claims rest only on the pinned app above. `@toned/react`
+has no React Native dependency and ships no View/Text implementation.
 Applications choose their concrete primitives and adapter. Fixtures beside
-`native-host.ts`, `applyStyles.ts` and `native-patches.test.ts` remain useful unit
-coverage, but are distinct from this actual renderer evidence.
+`native-host.ts`, `applyStyles.ts` and `native-patches.test.ts` are unit coverage,
+distinct from this renderer evidence.
 
 ## Native grid
 
-Grid remains rejected on native. The native host must expose a layout engine with
+Native grid is unavailable: grid declarations are rejected on native. The native host must expose a layout engine with
 track and placement mutation in its native measurement lifecycle. Computing a
 parallel JS rectangle layout would violate the selected architecture and diverge
 from intrinsic native text measurement. React context supplies ownership/topology,
 not a replacement layout engine.
 
-The upstream [Yoga grid change](https://github.com/react/yoga/pull/1865) was still
-open when checked on 2026-09-16. It is not an integrated React Native host contract.
-Even after upstream support lands, a host must expose the needed bindings and pass
-track, placement, intrinsic measurement and responsive-update conformance before
-Toned can enable native grid. Web grid remains available independently.
+Upstream Yoga grid work is not an integrated React Native host contract. A host
+must expose the needed bindings and pass track, placement, intrinsic measurement
+and responsive-update conformance before Toned can enable native grid. Web grid
+is available independently.
 
 Native viewport queries require `getViewportWidth` and `subscribeViewport` on
 the host adapter. Widths are logical layout units; changes publish condition facts

@@ -12,10 +12,10 @@ export const cardStyles = stylesheet({
 })
 ```
 
-The base system retains legacy token names and spacing semantics for existing
-applications. Its `typo` values use their historical underscore spelling; newer
-semantic typography values use kebab-case. These are distinct declarations, not
-a global normalization of token values.
+The base system keeps its established token names and spacing semantics for
+existing applications. Its `typo` values use an underscore spelling
+(`heading_3`); the `typography` values use kebab-case (`heading-3`). These are
+distinct tokens; Toned does not normalize one spelling into the other.
 
 Dimension tokens (`width`, `height`, and their minimum/maximum forms) treat
 numbers as base-relative spacing steps and names as `space_<name>` aliases.
@@ -24,12 +24,13 @@ CSS lengths, percentages and expressions such as `2.25rem`, `50%` and
 supported numeric/percentage values and explicitly rejects CSS-only units and
 expressions; a web length is never silently converted into a missing alias.
 
-The exported `system` is the raw token dictionary, alongside `stylesheet` and the
-compatibility `t` helper. New applications that need their own namespace,
-conditions, typed themes or authoritative build manifest should retain the full
-object returned by `defineSystem` as shown in the
+The exported `system` is the raw token dictionary, alongside `stylesheet` and
+`t`, the lightweight token-to-style helper. Applications that need their own
+namespace, conditions, typed themes or authoritative build manifest should keep
+the full object returned by `defineSystem`, as shown in the
 [core guide](../toned-core/README.md). New UI code should use named stylesheet
-parts and explicit React bindings rather than adding ambient `t()` calls.
+parts and explicit React bindings for mounted component state; `t()` does not
+subscribe to providers or React context.
 
 `@toned/systems/defineCssToken` is a compatibility helper for CSS-oriented token
 vocabularies; portable systems should use semantic resolvers and explicit backend

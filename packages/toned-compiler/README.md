@@ -1,9 +1,13 @@
-# Design tools
+# `@toned/compiler`
 
 `@toned/compiler` connects Toned declarations to their source. Its language
-server, inspector and agent-facing operations use the same bounded source index.
-It is optional: normal core/React imports do not load TypeScript, filesystem or
-editor code. Install it as a development dependency alongside Toned.
+server, CLI, inspector and programmatic edit operations use the same bounded
+source index. It is optional: normal core/React imports do not load TypeScript,
+filesystem or editor code. Install it as a development dependency alongside Toned.
+
+Source extraction is not required to build or render styles. Explicit sheet
+inventories passed to `@toned/core/build` remain authoritative for CSS delivery;
+the source index adds editor intelligence, diagnostics and scoped edits on top.
 
 ## Source intelligence
 
@@ -70,8 +74,9 @@ literal-value code actions share the design index. Open-document snapshots
 take precedence over disk. The server requests full-document synchronization:
 this lets it discard oversized text while retaining a bounded open marker, then
 recover on the next valid snapshot without losing unsaved-editor ownership.
-Parsing remains coalesced and restricted to changed documents; this trades
-additional editor-to-server bytes for bounded memory and reliable recovery. Closed files are restored from disk; watched
+Parsing is coalesced and restricted to changed documents; this trades
+additional editor-to-server bytes for bounded memory and reliable recovery.
+Closed files are restored from disk; watched
 file notifications refresh unopened documents. Clients with dynamic file watching
 receive registrations; other clients must send `workspace/didChangeWatchedFiles`.
 Workspace roots are fixed at initialization (restart after changing roots).
@@ -87,7 +92,9 @@ Custom JSON-RPC requests:
 `toned.setValue` is an explicit execute-command operation that asks the editor to
 apply that edit. Open documents carry their editor version; closed documents use
 `version: null` as required by LSP, while the proposal still validates the indexed
-source revision. The editor controls applying closed-file edits. For embedding, `@toned/compiler/lsp` exports
+source revision. The editor controls applying closed-file edits.
+
+For embedding, `@toned/compiler/lsp` exports
 `startLanguageServer({ input, output })`, returning an idempotent `dispose()`.
 Without a transport, `@toned/compiler/language-service` exports
 `DesignLanguageService` and `DesignProject` alone. That entry imports no Node
@@ -104,7 +111,7 @@ imports. During the initial scan they can read an included dependency closure
 (up to 256 files / 1024 candidate reads), while completion remains marked
 incomplete until the workspace scan finishes successfully. Initial, eager and
 watched disk reads share a per-URI queue: at most 128 active files, each with one
-coalesced follow-up read after the active writer settles. Publication rechecks
+coalesced subsequent read after the active writer settles. Publication rechecks
 editor ownership; unsaved buffers always win. Delete notifications read current
 disk state too, so a recreated file wins over an earlier deletion notification.
 Background editor updates yield after eight files or six milliseconds; diagnostics coalesce per
@@ -169,6 +176,3 @@ the remaining race with unrelated external file writers.
 These tools do not replace the build's explicit sheet inventory. Use
 `buildStyles` from `@toned/core/build` and its manifest to deliver CSS, and
 `renderer.explain` to connect contract failures to resolved declaration origins.
-See HQ's `scripts/build/toned-design-browser.ts` for an executable integration
-that edits a real disposable source file, rebuilds its preview, detects stale
-patches and checks adaptive layout, motion and measured counterexamples.

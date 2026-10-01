@@ -1,7 +1,7 @@
-# Toned lint rules
+# `@toned/eslint-plugin`
 
 Optional, syntax-aware rules for ESLint and Oxlint. The package is independent of
-Toned runtime, TypeScript, React, and HQ. One `toned` plugin provides all rules;
+the Toned runtime, TypeScript and React. One `toned` plugin provides all rules;
 React-specific rule names start with `react/`, giving IDs such as
 `toned/react/no-create-elements-in-render`.
 Installation does not enable any rule automatically.
@@ -46,6 +46,7 @@ ref and interaction props:
 ```tsx
 import { createElements, useStyles } from '@toned/react'
 import type { Variants } from '@toned/core'
+import { ui } from './system'
 
 const styles = ui
   .stylesheet({ Root: { $kind: 'pressable', opacity: 1 } })
@@ -54,16 +55,16 @@ const styles = ui
   }))
 const S = createElements(styles)
 
-function Button({ size }) {
+function Button({ size }: { size: 's' | 'l' }) {
   return (
     <S size={size}>
       <S.Root as="button" />
     </S>
   )
 }
-function RawButton() {
+function RawButton({ onClick }: { onClick: () => void }) {
   const s = useStyles(styles)
-  return <button {...s.Root.withProps({ onClick: handleClick })} />
+  return <button {...s.Root.withProps({ onClick })} />
 }
 ```
 
@@ -73,7 +74,7 @@ A standalone `<S.Root />` intentionally uses the family's defaults. `t()`,
 supported. Unknown custom components are not assumed to be hosts. These rules do
 not duplicate stylesheet type errors or compiler semantic diagnostics.
 
-The two policy rules are not part of the recommended configs. An application can
+The two policy rules are not part of the recommended config. An application can
 opt in while a compatibility library continues to support the global API:
 
 ```json
@@ -124,7 +125,9 @@ execution occurs during lint. Dynamic factories, object mutation, nonliteral
 rule fragments, and unconfigured reexports are intentionally outside this syntax
 analysis; the compiler and runtime remain responsible for those cases.
 
-`oxlint --format=json` emits stable rule IDs and source locations for agents.
+`oxlint --format=json` emits stable rule IDs and source locations for automated
+tooling.
 These diagnostics should guide targeted changes, not blind mass replacements.
-Tests invoke the real pinned Oxlint CLI with isolated source/config files. Run
-`pnpm test` in this package after installing the workspace development dependencies.
+Tests invoke the pinned Oxlint CLI with isolated source/config files. Run
+`pnpm --filter @toned/eslint-plugin test` from the repository root after
+installing the workspace dependencies.

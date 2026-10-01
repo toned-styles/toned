@@ -20,7 +20,9 @@ The sheet is an ordinary stylesheet:
 // styles.ts
 import { stylesheet } from './system'
 
-export const card = stylesheet({ Root: { space: 16, surface: 'tint' } })
+export const card = stylesheet({
+  Root: { $kind: 'view', space: 16, surface: 'tint' },
+})
 ```
 
 Each renderer resolves it to concrete properties for its output:
@@ -73,5 +75,5 @@ For browser rendering, CSS generation is a build step. Inventory every styleshee
 
 - [Backend contracts and integration boundaries](../../../../packages/toned-core/backends/README.md)
 - [React providers and host props](../../../../packages/toned-react/README.md)
-- [Native hosts and current evidence](../../../../packages/toned-react/NATIVE-HOSTS.md)
-- [Maintained examples and their status](../../../../examples/README.md)
+- [Native hosts and acceptance evidence](../../../../packages/toned-react/NATIVE-HOSTS.md)
+- [Examples and their status](../../../../examples/README.md)

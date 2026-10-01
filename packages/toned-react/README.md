@@ -147,7 +147,17 @@ axis declared only in a TypeScript type has no runtime representation to inspect
 
 `useStyles(sheet, variants)` returns element prop bags for spreading. Omit the
 second argument when no variant input is required. The second argument is always
-the flat variant map; `variants` and `overrides` remain legal scalar axis names.
+the flat variant map; `variants` and `overrides` are legal scalar axis names.
+
+A bag must be spread whole and last: `{...s.Root}` carries the `ref` that
+attaches the part, so a `ref`, `style` or `className` written before the spread
+is replaced by it. Pass those through `s.Root.withProps({ ref, style })`
+instead, which merges them.
+
+Two parts of one family can be merged onto a single element, for example
+`{...s.Root.with(disabled && s.Disabled)}`. Each part owns its own styles on
+that element, and removing one leaves the other intact. For a state that has a
+fixed set of values, a variant is the simpler declaration.
 
 Compose local changes as a declaration, then consume the resulting sheet through
 any rendering API:
@@ -196,10 +206,11 @@ const s = useStyles(sheet, { active: false })
 Axes with defaults become optional; other required axes remain required. Omitted
 and explicitly `undefined` values select the default. Declared defaults themselves
 must be defined scalar values; `null` never means a variant value. Defaults persist
-through `extend`, computed query groups, and override layers. The existing `useBind` flat modifier
-argument remains unchanged.
+through `extend`, computed query groups, and override layers. `useBind` takes the
+same flat variant argument.
 
-The existing `useBind`, `bind`, and `$scope` APIs remain supported. `useBind` returns
+`useBind`, `bind`, and `$scope` remain supported alongside `createElements`; they
+need no provider. `useBind` returns
 stable component functions and an immutable `$props` map for this render:
 
 ```tsx
@@ -241,8 +252,9 @@ measurements use a stable hierarchical store: nearest same-name containers shado
 ancestors, subscriptions exist only for committed controllers, and width changes
 patch selected declarations without changing a React context value. Measurements
 are selected per mounted host, so repeated parts inside different containers can
-share one element-family provider without sharing the wrong container width. Legacy manual
-`ContainerSizesContext` inputs still participate in ordinary React renders.
+share one element-family provider without sharing the wrong container width. Manual
+`ContainerSizesContext` inputs (a compatibility API) participate in ordinary React
+renders.
 
 Web callback-ref cleanup restores the departing controller's last committed
 declaration before React mutates replacement props. This clears interaction-only
@@ -314,23 +326,13 @@ a native renderer, or a web renderer created with concrete `tokens`. On a web
 renderer using the default custom properties it does not change what generated
 classes read, because a class is shared by every provider.
 
-Two parts of one family can be merged onto a single element, for example
-`{...s.Root.with(disabled && s.Disabled)}`. Each part owns its own styles on
-that element, and removing one leaves the other intact. For a state that has a
-fixed set of values, a variant is still the simpler declaration.
-
-A bag must be spread whole and last: `{...s.Root}` carries the `ref` that
-attaches the part, so a `ref`, `style` or `className` written before the spread
-is replaced by it. Pass those through `s.Root.withProps({ ref, style })`
-instead, which merges them.
-
 `ConfigProvider` and `setConfig` remain compatibility paths for existing host
-integrations. Their low-level flags are legacy tuning, not the new configuration
-contract. Legacy React configurations now carry a context identity; `useStyles`
-reads it through public `useContext`, then gives constructors a pure token snapshot.
-React 18 and 19 use the same mechanism. No private dispatcher access or hooks in
-getters remain. An explicitly supplied pure `getTokens` overrides that legacy
-context binding.
+integrations. Their low-level flags are legacy tuning, not the renderer/provider
+configuration contract. Legacy React configurations carry a context identity;
+`useStyles` reads it through public `useContext`, then gives constructors a pure
+token snapshot. React 18 and 19 use the same mechanism, without private dispatcher
+access or hooks in getters. An explicitly supplied pure `getTokens` overrides that
+legacy context binding.
 
 `TonedProvider` compares the host's fields rather than its wrapper object:
 `host={{ ...web, useStyleOverrideScope }}` preserves bound component identities
@@ -385,39 +387,34 @@ throw at attachment. Native arrays of plain style objects work; resolve numeric
 registered styles with the host's `StyleSheet.flatten` first. Put interaction
 styles in declarations rather than state-dependent `style` callbacks.
 
-Native host fixtures cover patch semantics and cleanup. A separate real Android
-acceptance app verifies the RN 0.86.0/React 19.2.3 Fabric/Hermes profile, including
-native layout, text/placeholder paint, focus, touch, refs, ownership and Suspense.
-Other versions/platforms require their own acceptance. Web grid remains an
-explicit web capability; see the exact native scope below.
-
-Native direct patches now require an explicit `nativeHost` adapter. See
+Native direct patches require an explicit `nativeHost` adapter; a
+`setNativeProps` member alone never enables native support. See
 [NATIVE-HOSTS.md](./NATIVE-HOSTS.md) for the integration contract, ownership
 semantics and the distinction between adapter fixture tests and concrete renderer
-certification. A `setNativeProps` member alone never enables native support.
+certification.
 
-## React version conformance
+Native host fixtures cover patch semantics and cleanup. A separate Android
+acceptance app verifies one pinned profile: React Native 0.86.0, React 19.2.3,
+Fabric/Hermes, Android API 36 arm64. It covers native layout, text/placeholder
+paint, focus, touch, refs, ownership, Suspense, motion on the JavaScript frame
+driver and adaptive layouts from measured parents. It does not certify iOS, other
+versions, native topology or list recycling, UI-thread animation, general native
+container queries or per-frame paint. Grid is a web-only capability; native grid
+is unavailable.
 
-The HQ consumer runs `bun scripts/build/test-toned-react-versions.ts` in CI. It
-installs React 18.3.1 and 19.2.7 into disposable directories outside the checkout,
-using `npm ci --ignore-scripts` and a committed complete lockfile per version at
-`scripts/build/fixtures/toned-react-versions`. It then runs the same guarded commit,
-context, container, element-family, binding and ref fixtures. The package gate also
-builds core and React, checks their emitted declarations and renders standalone/scoped
-`createElements` from the packed JavaScript in Node; no TypeScript source loader is used. Both legs resolve React, React DOM
-and the testing library from their isolated consumer; version sentinels assert
-the actual React and React DOM versions. The isolated React 19 leg is deliberate:
-it verifies the pinned standalone consumer graph independently of HQ's workspace
-React version and dependency resolution.
-Dependency installation happens before tests; test processes and workers retain
-filesystem, credential, service and network isolation.
+## React versions
+
+The package supports React 18 and 19 (`react >= 18`). The same commit, context,
+container, element-family, binding and ref behavior is tested against installed
+React 18 and React 19 releases, and the built JavaScript renders standalone and
+scoped `createElements` parts without a TypeScript source loader.
 
 Callback refs return cleanup functions on React 19. React 18 retains the cleanup
 internally and invokes it through `ref(null)`. Bound parts forward caller refs on
 both versions. Foreign components must forward refs too (`forwardRef` on React 18);
 a component accepting a prop named `ref` only works as such on React 19.
 
-### Portable motion
+## Portable motion
 
 `useMotion` from `@toned/react/motion` attaches transitions through Toned's host
 writer. Keep options stable and pass the returned ref to a Toned part:
@@ -452,7 +449,15 @@ finishes; unmounting cancels it. Frames patch the existing web/native host witho
 React renders. The [motion contract](../toned-core/motion/README.md) lists supported
 properties, reduced-motion sources and the native JS-thread capability boundary.
 
-### Multiple systems in one tree
+## Adaptive layouts
+
+`useAdaptiveVariants(store)` from `@toned/react/adaptive` reads an adaptive layout
+store as a variant bag for `useStyles(sheet, variants)` or a `createElements`
+provider. Only a change of selected layout rerenders its consumers. See the
+[adaptive layout guide](../toned-core/adaptive/README.md) for creating stores from
+web and native measurements.
+
+## Multiple systems in one tree
 
 Use the same provider API for a mixed-system application:
 

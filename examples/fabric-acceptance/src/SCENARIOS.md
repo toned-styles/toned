@@ -19,6 +19,7 @@ acceptance evidence.
 | Variants and refs                | Native width changes on the same mounted host, survives callback-ref replacement, and caller refs release on unmount.                                                                                                                                                                                                                                                                                      |
 | Suspense                         | After a variant render actually suspends, native width stays at the committed value; resolving the promise changes that same host's measured width.                                                                                                                                                                                                                                                        |
 | Portable motion                  | Actual native width, height and alpha prove entry, midpoint interpolation, interruption, removed-field reset, reduced-motion settlement and retained exit. Deterministic frame scheduling drives the real coordinated native writer; host identity and zero extra React commits are checked. Removal clears frames and preference subscriptions. This certifies JS-frame patches, not UI-thread animation. |
+| Adaptive layout                  | Actual Fabric parent measurements select finite row/stack variants; hysteresis and explicit text-scale input are checked, and child host identity and refs are preserved across layout changes.                                                                                                                                                                         |
 | Multiple owners                  | Two controllers change independent dimensions on one actual native View; detaching one leaves the survivor's state and updates working, while the removed width returns to parent stretch.                                                                                                                                                                                                                 |
 
 Measurements retry until the actual native dimensions match (within one logical
@@ -31,8 +32,7 @@ The Suspense case intentionally records one attempted-render witness immediately
 before throwing its pending promise. That attempt cannot be witnessed from an
 effect because it has not committed. This is test instrumentation only: the flag
 does not publish stylesheet state, host writes or application UI state. Its React
-Doctor configuration does not suppress this test instrumentation. The gate is
-created once as a stable Suspense resource, without render-time ref assignment.
+The gate is created once as a stable Suspense resource, without render-time ref assignment.
 The final reporting effect likewise reports completed acceptance evidence to the
 external runner; it does not synchronize application state between components.
 
@@ -45,8 +45,8 @@ assertions, the application supplies
 Android views and returns logical-unit width/height, alpha, and native text/hint
 colors plus focus. Text colour is the first glyph's drawing paint after native
 character spans, because RN Text applies its foreground colour with a span
-rather than the TextView default. Colors are compared as unsigned ARGB integers. This module
-must query the mounted view on Android's UI thread, not echo the JS props or
+rather than the TextView default. Colors are compared as unsigned ARGB integers.
+This module must query the mounted view on Android's UI thread, not echo the JS props or
 Toned adapter's requested patch.
 
 Fabric can expose shadow-tree measurements before its Android mount transaction

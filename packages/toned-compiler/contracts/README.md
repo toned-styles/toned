@@ -7,8 +7,8 @@ Exceeding a limit fails unless `mode: 'sampled'` is explicit. Sampling first cyc
 through every axis value, then fills remaining slots with distinct product indices
 using a deterministic coprime stride. Every declared value appears at least once;
 the budget must be at least the largest axis cardinality, otherwise sampling
-fails explicitly. This is per-axis coverage, neither random nor pairwise coverage. Reports retain exact total cardinality
-as a decimal string, selected count and dimension cardinalities. Empty axes and
+fails explicitly. This is per-axis coverage, neither random nor pairwise coverage.
+Reports retain exact total cardinality as a decimal string, selected count and dimension cardinalities. Empty axes and
 duplicated values are errors. Omitted dimensions contribute no variation.
 
 `verifyContracts` resolves each selected scenario once through the application's
@@ -17,6 +17,8 @@ valid part names from `renderer.explain` output. Findings contain the scenario,
 observations, policy id and declaration origins from the same explanation.
 
 ```ts
+import { createScenarios, verifyContracts } from '@toned/compiler/contracts'
+
 const suite = createScenarios({
   variants: { size: ['s', 'm'] },
   facts: { 'Root:focus-visible': [false, true] },

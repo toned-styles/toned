@@ -13,6 +13,11 @@ Applications should own one bridge per workspace, dispose it on shutdown, and
 configure a smaller file list for a component-specific tool.
 
 ```ts
+import {
+  createSourceBridge,
+  createSourceBridgeHandler,
+} from '@toned/compiler/bridge'
+
 const bridge = await createSourceBridge({
   root: workspaceRoot,
   files: ['src/button.styles.ts', 'src/tokens.ts'],

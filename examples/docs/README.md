@@ -1,37 +1,31 @@
 # Toned documentation
 
-The rendered `CodeBlock` strings are the source of truth for code examples. In
-HQ, `bun scripts/build/test-toned-docs.ts` extracts every block, checks the web
-and portable TypeScript examples, builds client/SSR bundles, and exercises
-prerendering and hydration in a test-owned browser.
+The site at [toned.style](https://toned.style) is built from this directory.
+Run it from the repository root after installing the workspace dependencies:
 
-The extractor lives in
-`scripts/build/__tests__/fixtures/toned-doc-examples.ts`. It supplies bounded
-application context for incomplete fragments, reuses the actual getting-started
-example for shared modules, and classifies CSS and installation commands
-separately. Adding a route or code block fails its inventory until the new
-example has a checked context.
+```sh
+pnpm install
+pnpm --filter @examples/docs dev        # development server
+pnpm --filter @examples/docs build      # client and SSR bundles, then prerendering
+pnpm --filter @examples/docs typecheck
+```
+
+The rendered `CodeBlock` strings are the source of truth for code examples.
+Write each block so that it compiles in the context the page establishes; do not
+duplicate a displayed snippet in a separate test or replace missing
+dependencies with untyped declarations.
 
 Examples keep three layers apart, each in its own titled block (`title` is the
 file name): `styles.ts` for the stylesheet, a component file such as
 `Button.tsx`, and `system.ts` for `defineSystem` plus
 `export const { stylesheet } = ui`; build and renderer setup go in
 `vite.config.ts` and `App.tsx`. A page leads with the layer it teaches and shows
-the system once, later on the page, or links to Getting Started. The
-extractor's `modules` table writes those blocks under the same file names, so
-the other examples on the page import them as shown. Do not duplicate a displayed snippet in a
-separate test or replace missing dependencies with untyped declarations.
+the system once, later on the page, or links to Getting Started. Other examples
+on the page import those blocks by the same file names.
 
-The four native examples compile against the pinned, real React Native
-dependencies in `bun scripts/build/test-toned-fabric.ts --phase prepare`. The
-web docs job reports this separate coverage and does not claim native
-certification. Application-owned host identity functions have explicit typed
-scaffolding; React Native itself is never mocked for this check.
-
-Compilation checks the examples; Fabric device acceptance remains the gate
-for actual mounted native behavior. The native TypeScript 7 process used by
-HQ is outside JavaScript I/O guards, while guarded child runners still prove
-their JavaScript guard installation.
+Native examples are written against real React Native types. Compiling them does
+not certify native behavior; the [Fabric acceptance app](../fabric-acceptance/README.md)
+is the gate for mounted native behavior.
 
 ## Site structure
 
@@ -91,11 +85,12 @@ scoped `<style>`, and renders through `createWebRenderer` — the same path a re
 app takes, so hover, focus and container queries are real CSS. Only the
 visitor's own draft runs; there are no code-carrying share links.
 
-The playground editor is CodeMirror 6 (`playground-editor/codemirror.ts`),
+The playground editor is CodeMirror 6
+(`src/components/playground-editor/codemirror.ts`),
 created in an effect over the same static Shiki-highlighted code the server
 renders, with the same metrics and colours (`codeColors` in `src/highlight.ts`),
 so nothing moves when it mounts. A Web Worker
-(`playground-editor/language/ts.worker.ts`) runs two services over the three
+(`src/components/playground-editor/language/ts.worker.ts`) runs two services over the three
 files. TypeScript's language service checks them against an in-memory project:
 the ES2022 + DOM libs, React's types and the Toned packages' own source, loaded
 as text in lazy chunks (`types-lib`, `types-react`, `types-toned`) that only
@@ -119,10 +114,7 @@ gallery.
 
 Brand assets live in `public/brand`: the folded-T symbol and outlined wordmark
 are SVGs, with no external font or image request. The homepage and playground
-are prerendered alongside the guides. The HQ docs runner checks README snippets,
-the homepage's theme switch and variant controls, global search, mobile
-overflow, reduced motion, guide navigation, syntax highlighting, theme switching
-and the gallery.
+are prerendered alongside the guides.
 
 `/explore` indexes 22 source-backed references, loaded from the package Markdown
 rather than copied into routes. `/learn/$topic` renders them with semantic React
@@ -137,8 +129,8 @@ A section headed `# Next release`, or a version heading without a date, is
 listed as the next release. Conventional-commit headings map onto Added,
 Changed and Fixed. To record a change, edit the package's `CHANGELOG.md`.
 
-`/examples` contains seven interactive examples (`src/components/lab`); `/lab`,
-its former address, forwards there and keeps the hash. Each example is split into the
+`/examples` contains seven interactive examples (`src/components/lab`); `/lab`
+forwards there and keeps the hash. Each example is split into the
 modules a project would have — `*.styles.ts` (declarations), the component, and a
 system or configuration module — and its source panel shows those files as they
 run (`?raw`), one tab per layer, styles first. Where the declaration is the
@@ -148,11 +140,8 @@ one bounded in-memory document with revision-checked edits; it has no filesystem
 network write transport. Source is never evaluated.
 
 The build prerenders every reference and every UI component page, and gives each
-page a title and canonical URL. Code in references is highlighted at render time. The browser fixture verifies adaptive layout changes, reduced motion,
-inline/PDF output, token diagnostics, real geometry contract pass/fail, inspector edit
-round trips, search and mobile overflow. Package reference snippets are documentation;
-the curated introductory snippets and the interactive examples' modules receive
-compilation checks.
+page a title and canonical URL. Code in references is highlighted at render
+time.
 
 ## Theme showcase
 

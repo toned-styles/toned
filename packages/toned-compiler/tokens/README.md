@@ -20,6 +20,8 @@ No unsupported token is silently converted to another type. The input boundary
 rejects executable/non-JSON data, accessors, cycles and excessive structure.
 
 ```ts
+import { exportDtcg, importDtcg, mapDtcgTokens } from '@toned/compiler/tokens'
+
 const library = importDtcg({
   space: {
     $type: 'dimension',

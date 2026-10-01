@@ -2,10 +2,10 @@
 
 Toned can render application-owned components through a part's typed `as` prop
 or the host configuration's `resolveElement`. Those components can integrate
-another styling system. This is an existing composition boundary, not a claim
-that Toned ships a Unistyles backend or has certified a native Unistyles host.
+another styling system. This is a composition boundary: Toned ships no Unistyles
+backend or bridge, and no native Unistyles host is certified.
 
-| Integration                                 | Current contract                                                                                                                                             |
+| Integration                                 | Contract                                                                                                                                                     |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Custom primitive                            | `as={Component}` checks that component's props and forwards the composed host ref. `resolveElement` supplies stable application defaults for semantic kinds. |
 | Foreign style handle                        | Carry it in a separate component prop; consume it inside the primitive. Toned does not interpret arbitrary props as styles.                                  |
@@ -14,7 +14,7 @@ that Toned ships a Unistyles backend or has certified a native Unistyles host.
 
 ## Keep foreign styles opaque
 
-The current `style`/`withProps` path merges plain style fields. It flattens arrays
+The `style`/`withProps` path merges plain style fields. It flattens arrays
 and snapshots caller fields for imperative ownership restoration. Do not put an
 opaque engine handle in that channel, even when its TypeScript shape looks like
 a style object.
@@ -44,7 +44,8 @@ and [web style model](https://www.unistyl.es/v3/references/web-styles/).
 
 ## One owner for each mutable field
 
-Composition does not establish shared imperative ownership. Without a writer
+Each mutable field needs one authoritative writer. Composition does not establish
+shared imperative ownership. Without a writer
 that coordinates both engines, restrict each engine to disjoint fields and do
 not let either engine's recalculation overwrite the other's fields. For example,
 Toned may own spacing while a foreign engine owns text color; their adapters must
@@ -103,13 +104,13 @@ and [`UnistylesRuntime`](https://www.unistyl.es/v3/references/unistyles-runtime/
 getters to observe theme/viewport changes. Read immutable snapshots, subscribe
 after commit, unsubscribe on release, and reconcile updates between render and
 subscription. Carry scoped theme identity explicitly rather than treating the
-global current theme as every subtree's theme. This keeps Toned's existing engine
+global current theme as every subtree's theme. This keeps Toned's own engine
 and does not import opaque style output.
 
 Delegating Toned execution to Unistyles is a larger integration. It needs a
 compiler/registration contract, opaque output handles, a binding lifecycle, one
 owner for writes, and supported mappings for Toned's predicates and variant
-precedence. The current `OutputBackend` receives resolved plain fields and cannot
+precedence. `OutputBackend` receives resolved plain fields and cannot
 alone represent those responsibilities. In particular, the
 [Babel plugin](https://www.unistyl.es/v3/other/babel-plugin/) establishes Unistyles'
 dependency graph, primitive bindings and variant scopes. Wrapping an arbitrary
