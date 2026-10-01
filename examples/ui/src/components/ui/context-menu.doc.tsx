@@ -1,38 +1,46 @@
+import { t } from '@toned/systems/base'
 import { c, doc } from '@/lib/doc.tsx'
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from './context-menu.tsx'
+import { Empty, EmptyDescription, EmptyTitle } from './empty.tsx'
 
 export default doc({
+  description:
+    'A menu that opens where the pointer is, on right click or a long press.',
   components: [
     c({ ContextMenu }, {}),
-    c({ ContextMenuTrigger }, {}),
+    c({ ContextMenuTrigger }, { asChild: true }),
     c({ ContextMenuContent }, {}),
-    c({ ContextMenuItem }, { children: 'Edit' }),
+    c({ ContextMenuItem }, { children: 'Rename' }),
   ],
   preview: (C) => (
     <C.ContextMenu>
       <C.ContextMenuTrigger>
-        <div
-          style={{
-            border: '1px dashed var(--border)',
-            borderRadius: 'var(--radius)',
-            padding: '32px',
-            textAlign: 'center',
-            color: 'var(--muted-foreground)',
-            fontSize: '14px',
-          }}
-        >
-          Right click here
-        </div>
+        <Empty {...t({ maxWidth: '320px' })}>
+          <EmptyTitle>release-notes.md</EmptyTitle>
+          <EmptyDescription>
+            Right-click this area, or press and hold on a touch screen.
+          </EmptyDescription>
+        </Empty>
       </C.ContextMenuTrigger>
       <C.ContextMenuContent>
-        <C.ContextMenuItem>Edit</C.ContextMenuItem>
-        <C.ContextMenuItem>Copy</C.ContextMenuItem>
-        <C.ContextMenuItem>Delete</C.ContextMenuItem>
+        <C.ContextMenuItem>
+          Rename
+          <ContextMenuShortcut>F2</ContextMenuShortcut>
+        </C.ContextMenuItem>
+        <ContextMenuItem>
+          Copy path
+          <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem>Open in a new tab</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem variant="destructive">Delete file</ContextMenuItem>
       </C.ContextMenuContent>
     </C.ContextMenu>
   ),

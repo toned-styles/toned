@@ -25,8 +25,8 @@ function GuideSsr() {
         <li>
           <strong>Server Components:</strong>{' '}
           <code {...s.code}>renderer.resolve(sheet)</code> returns plain props
-          for each part. No hook, context or <code {...s.code}>'use client'</code>{' '}
-          is needed.
+          for each part. No hook, context or{' '}
+          <code {...s.code}>'use client'</code> is needed.
         </li>
         <li>
           <strong>Client Components:</strong>{' '}
@@ -136,8 +136,8 @@ export const renderer = createWebRenderer(ui, { manifest, tokens: {} })`}</CodeB
       <p>
         Use a Client Component when the styles depend on state held in the
         browser. <code {...s.code}>createElements</code> families are client
-        components and can be imported into a Server Component as they are;
-        they need a <code {...s.code}>TonedProvider</code> above them, as in{' '}
+        components and can be imported into a Server Component as they are; they
+        need a <code {...s.code}>TonedProvider</code> above them, as in{' '}
         <a href="/getting-started">Getting Started</a>.
       </p>
       <CodeBlock title="LikeButton.tsx">{`'use client'

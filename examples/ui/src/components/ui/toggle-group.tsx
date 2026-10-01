@@ -5,7 +5,6 @@ import { stylesheet } from '@toned/systems/base'
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
 import * as React from 'react'
 import { toggleStyles } from '@/components/ui/toggle.tsx'
-import { cn } from '@/lib/utils.ts'
 
 export const toggleGroupStyles = stylesheet({
   root: {
@@ -16,15 +15,17 @@ export const toggleGroupStyles = stylesheet({
   },
 })
 
-const ToggleGroupContext = React.createContext<{
-  size?: 'default' | 'sm' | 'lg'
+type ToggleOptions = {
   variant?: 'default' | 'outline'
-  spacing?: number
-}>({
-  size: 'default',
-  variant: 'default',
-  spacing: 0,
-})
+  size?: 'default' | 'sm' | 'lg'
+}
+
+const ToggleGroupContext = React.createContext<
+  ToggleOptions & { pressed: readonly string[] }
+>({ pressed: [] })
+
+const toList = (value: string | string[] | undefined) =>
+  value === undefined || value === '' ? [] : [value].flat()
 
 function ToggleGroup({
   className,
@@ -33,30 +34,64 @@ function ToggleGroup({
   spacing = 0,
   children,
   ...props
-}: React.ComponentProps<typeof ToggleGroupPrimitive.Root> & {
-  variant?: 'default' | 'outline'
-  size?: 'default' | 'sm' | 'lg'
-  spacing?: number
-}) {
+}: React.ComponentProps<typeof ToggleGroupPrimitive.Root> &
+  ToggleOptions & {
+    /** Gap between items, in spacing steps. Items join when it is 0. */
+    spacing?: number
+  }) {
   const s = useStyles(toggleGroupStyles)
+  // The pressed look is a stylesheet variant, so the group mirrors its value.
+  const [internal, setInternal] = React.useState(() =>
+    toList(props.defaultValue),
+  )
+  const pressed = props.value === undefined ? internal : toList(props.value)
+  const context = React.useMemo(
+    () => ({ variant, size, pressed }),
+    [variant, size, pressed],
+  )
+  const shared = {
+    'data-slot': 'toggle-group',
+    'data-variant': variant,
+    'data-size': size,
+    'data-joined': spacing === 0 ? '' : undefined,
+    ...s.root.with({
+      className,
+      style: spacing ? { gap: `calc(${spacing} * var(--base))` } : undefined,
+    }),
+  }
+  const content = (
+    <ToggleGroupContext.Provider value={context}>
+      {children}
+    </ToggleGroupContext.Provider>
+  )
 
+  // Radix types `single` and `multiple` as separate prop sets.
+  if (props.type === 'multiple') {
+    const { onValueChange, ...rest } = props
+    return (
+      <ToggleGroupPrimitive.Root
+        {...shared}
+        {...rest}
+        onValueChange={(value: string[]) => {
+          setInternal(value)
+          onValueChange?.(value)
+        }}
+      >
+        {content}
+      </ToggleGroupPrimitive.Root>
+    )
+  }
+  const { onValueChange, ...rest } = props
   return (
     <ToggleGroupPrimitive.Root
-      data-slot="toggle-group"
-      data-variant={variant}
-      data-size={size}
-      data-spacing={spacing}
-      {...s.root.with({
-        className: cn('group/toggle-group', className),
-        style: {
-          gap: spacing ? `calc(${spacing} * 0.25rem)` : undefined,
-        },
-      })}
-      {...props}
+      {...shared}
+      {...rest}
+      onValueChange={(value: string) => {
+        setInternal(toList(value))
+        onValueChange?.(value)
+      }}
     >
-      <ToggleGroupContext.Provider value={{ variant, size, spacing }}>
-        {children}
-      </ToggleGroupContext.Provider>
+      {content}
     </ToggleGroupPrimitive.Root>
   )
 }
@@ -67,18 +102,17 @@ function ToggleGroupItem({
   disabled,
   variant,
   size,
+  value,
   ...props
-}: React.ComponentProps<typeof ToggleGroupPrimitive.Item> & {
-  variant?: 'default' | 'outline'
-  size?: 'default' | 'sm' | 'lg'
-}) {
+}: React.ComponentProps<typeof ToggleGroupPrimitive.Item> & ToggleOptions) {
   const context = React.useContext(ToggleGroupContext)
-  const resolvedVariant = context.variant || variant || 'default'
-  const resolvedSize = context.size || size || 'default'
+  const resolvedVariant = context.variant ?? variant ?? 'default'
+  const resolvedSize = context.size ?? size ?? 'default'
   const s = useStyles(toggleStyles, {
     variant: resolvedVariant,
     size: resolvedSize,
-    pressed: false,
+    pressed: context.pressed.includes(value),
+    disabled: !!disabled,
   })
 
   return (
@@ -86,16 +120,8 @@ function ToggleGroupItem({
       data-slot="toggle-group-item"
       data-variant={resolvedVariant}
       data-size={resolvedSize}
-      data-spacing={context.spacing}
-      {...s.root.with(disabled && s.disabled).with({
-        className,
-        style: {
-          width: 'auto',
-          minWidth: 0,
-          flexShrink: 0,
-          padding: '0 0.75rem',
-        },
-      })}
+      value={value}
+      {...s.root.with({ className })}
       disabled={disabled}
       {...props}
     >

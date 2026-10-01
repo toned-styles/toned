@@ -32,6 +32,7 @@ function pageLabel(pathname: string) {
       {
         '/': 'Typed styling for React and React Native',
         '/playground': 'Playground',
+        '/themes': 'Themes',
         '/ui': 'Components',
       } as Record<string, string>
     )[pathname] ??
@@ -56,7 +57,11 @@ function RootLayout() {
 
   if (routeIds.includes('/ui')) return <Outlet />
 
-  if (routeIds.includes('/') || routeIds.includes('/playground'))
+  if (
+    routeIds.includes('/') ||
+    routeIds.includes('/playground') ||
+    routeIds.includes('/themes')
+  )
     return (
       <ShowcaseProvider>
         <Outlet />

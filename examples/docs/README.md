@@ -125,3 +125,25 @@ the curated introductory snippets and actual lab modules receive compilation che
 
 This site describes the development branch. Update the reference source revision
 in `src/content/references.ts` and release guidance when publishing these APIs.
+
+## Theme showcase
+
+`/themes` renders one interface in six themes. It has its own system so that
+the site's look does not change with the demo.
+
+- `src/styles/themes/theme.ts` is the theme schema; `themes.ts` holds the six
+  themes; `tokens.ts` defines the tokens with `defineTokenFor<Theme>()`;
+  `system.ts` declares the system with those themes.
+- `src/styles/themes/sheets/` holds the stylesheets. None of them names a theme.
+- `src/styles/themes/vite.ts` builds that system's CSS with `buildStyles`,
+  which writes the declared themes as custom properties. It serves the CSS as
+  `virtual:toned-themes.css`, with the manifest as
+  `virtual:toned-themes.manifest`. `@toned/core/vite` serves a single system,
+  which the site already uses.
+- `src/components/themes/` holds the components. `ReleaseApp` sets
+  `data-theme` on its root, and that attribute is the only thing that changes
+  when the theme is switched.
+
+To add a theme, add an object to `themes` and an entry to `themeList`. The
+type checker lists any field that is missing.
+

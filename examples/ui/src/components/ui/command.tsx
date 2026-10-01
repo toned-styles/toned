@@ -1,6 +1,6 @@
 'use client'
 
-import { useStyles } from '@toned/react'
+import { overrideStyles, StyleOverrides, useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Command as CommandPrimitive } from 'cmdk'
 import { SearchIcon } from 'lucide-react'
@@ -11,61 +11,54 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  dialogStyles,
 } from '@/components/ui/dialog.tsx'
-import { cn } from '@/lib/utils.ts'
 
+/*
+ * cmdk marks the selected and disabled items and renders the group heading
+ * itself, so those rules are keyed on its attributes in styles.css.
+ */
 export const commandStyles = stylesheet({
   root: {
     bgColor: 'elevated',
     textColor: 'default',
-    display: 'flex',
     flexLayout: 'column',
     width: '100%',
-    borderRadius: 'medium',
     height: '100%',
+    borderRadius: 'large',
     overflow: 'hidden',
   },
   inputWrapper: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderColor: 'default',
+    height: '2.75rem',
     paddingX: 3,
-    height: '2.25rem',
-    style: {
-      borderBottom: '1px solid var(--border)',
-    },
+    textColor: 'muted',
+    borderColor: 'default',
+    // No token sets a single edge.
+    style: { borderBottomWidth: 1 },
   },
   input: {
-    display: 'flex',
-    width: '100%',
+    flexGrow: '1',
+    minWidth: 0,
+    height: '100%',
     typo: 'body_small',
-    height: '2.5rem',
-    paddingY: 3,
-    paddingX: 0,
-    style: {
-      background: 'transparent',
-      outline: 'none',
-      border: 'none',
-    },
+    textColor: 'default',
   },
   list: {
-    style: {
-      maxHeight: '300px',
-      overflowX: 'hidden',
-      overflowY: 'auto',
-      scrollPaddingBlock: '0.25rem',
-    },
+    maxHeight: '18rem',
+    overflowX: 'hidden',
+    overflowY: 'auto',
   },
   empty: {
     paddingY: 6,
     typo: 'body_small',
-    style: {
-      textAlign: 'center',
-    },
+    textColor: 'muted',
+    // No token for text alignment.
+    style: { textAlign: 'center' },
   },
   group: {
-    textColor: 'default',
     padding: 1,
     overflow: 'hidden',
   },
@@ -73,36 +66,33 @@ export const commandStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
+    position: 'relative',
     paddingX: 2,
     paddingY: 1.5,
+    borderRadius: 'medium',
     typo: 'body_small',
-    position: 'relative',
     cursor: 'default',
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
-  },
-  itemDisabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
+    // No token: command text is not selectable.
+    style: { userSelect: 'none' },
   },
   separator: {
-    bgColor: 'subtle',
-    height: '1px',
-    marginY: 0,
-    marginX: -1,
+    borderColor: 'default',
+    // No token sets a single edge.
+    style: { borderTopWidth: 1 },
   },
   shortcut: {
+    marginLeft: 'auto',
     textColor: 'muted',
     typo: 'caption',
-    letterSpacing: '0.1em',
-    style: {
-      marginLeft: 'auto',
-    },
   },
 })
+
+// The palette fills the dialog edge to edge, so the dialog drops its padding.
+const commandDialogOverrides = [
+  overrideStyles(dialogStyles, {
+    content: { padding: 0, gap: 0, overflow: 'hidden' },
+  }),
+]
 
 function Command({
   className,
@@ -113,8 +103,7 @@ function Command({
   return (
     <CommandPrimitive
       data-slot="command"
-      className={cn(s.root.className, className)}
-      style={s.root.style}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -134,19 +123,17 @@ function CommandDialog({
   showCloseButton?: boolean
 }) {
   return (
-    <Dialog {...props}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
-      <DialogContent
-        className={cn(className)}
-        style={{ overflow: 'hidden', padding: 0 }}
-        showCloseButton={showCloseButton}
-      >
-        <Command>{children}</Command>
-      </DialogContent>
-    </Dialog>
+    <StyleOverrides value={commandDialogOverrides}>
+      <Dialog {...props}>
+        <DialogContent className={className} showCloseButton={showCloseButton}>
+          <DialogHeader className="sr-only">
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+          <Command>{children}</Command>
+        </DialogContent>
+      </Dialog>
+    </StyleOverrides>
   )
 }
 
@@ -157,16 +144,11 @@ function CommandInput({
   const s = useStyles(commandStyles)
 
   return (
-    <div
-      data-slot="command-input-wrapper"
-      className={s.inputWrapper.className}
-      style={s.inputWrapper.style}
-    >
-      <SearchIcon className="size-4 shrink-0 opacity-50" />
+    <div data-slot="command-input-wrapper" {...s.inputWrapper}>
+      <SearchIcon />
       <CommandPrimitive.Input
         data-slot="command-input"
-        className={cn(s.input.className, className)}
-        style={s.input.style}
+        {...s.input.with({ className })}
         {...props}
       />
     </div>
@@ -182,8 +164,7 @@ function CommandList({
   return (
     <CommandPrimitive.List
       data-slot="command-list"
-      className={cn(s.list.className, className)}
-      style={s.list.style}
+      {...s.list.with({ className })}
       {...props}
     />
   )
@@ -195,12 +176,7 @@ function CommandEmpty({
   const s = useStyles(commandStyles)
 
   return (
-    <CommandPrimitive.Empty
-      data-slot="command-empty"
-      className={s.empty.className}
-      style={s.empty.style}
-      {...props}
-    />
+    <CommandPrimitive.Empty data-slot="command-empty" {...s.empty} {...props} />
   )
 }
 
@@ -213,8 +189,7 @@ function CommandGroup({
   return (
     <CommandPrimitive.Group
       data-slot="command-group"
-      className={cn(s.group.className, className)}
-      style={s.group.style}
+      {...s.group.with({ className })}
       {...props}
     />
   )
@@ -229,8 +204,7 @@ function CommandSeparator({
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
-      className={cn(s.separator.className, className)}
-      style={s.separator.style}
+      {...s.separator.with({ className })}
       {...props}
     />
   )
@@ -242,14 +216,12 @@ function CommandItem({
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Item>) {
   const s = useStyles(commandStyles)
-  const combined = s.item.with(disabled && s.itemDisabled)
 
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
       disabled={disabled}
-      className={cn(combined.className, className)}
-      style={combined.style}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -264,8 +236,7 @@ function CommandShortcut({
   return (
     <span
       data-slot="command-shortcut"
-      className={cn(s.shortcut.className, className)}
-      style={s.shortcut.style}
+      {...s.shortcut.with({ className })}
       {...props}
     />
   )

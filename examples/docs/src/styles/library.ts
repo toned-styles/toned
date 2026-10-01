@@ -90,6 +90,27 @@ export const libraryStyles = stylesheet({
     letterSpacing: '-0.04em',
     lineHeight: 1.1,
   },
+  // The component gallery's showcase.
+  heading: { typo: 'heading_3', textColor: 'default' },
+  cardLink: {
+    display: 'flex',
+    flexLayout: 'column',
+    gap: 2,
+    padding: 5,
+    bgColor: 'elevated',
+    border: 'all',
+    borderColor: 'default',
+    borderRadius: 'xlarge',
+    minWidth: 0,
+    textColor: 'default',
+    // No token: the transition list is specific to this link.
+    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    ':hover': { borderColor: 'action', shadow: 'medium' },
+  },
+  cardLinkTitle: { typo: 'heading_4' },
+  chart: { textColor: 'action', width: '100%' },
+  person: { display: 'flex', alignItems: 'center', gap: 3, minWidth: 0 },
+  check: { display: 'flex', alignItems: 'center', gap: 2.5 },
   muted: { textColor: 'muted', fontSize: '13px', lineHeight: 1.6 },
   divider: { paddingY: 3, border: 'bottom', borderColor: 'default' },
   editor: {

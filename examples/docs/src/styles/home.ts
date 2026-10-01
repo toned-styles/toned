@@ -172,6 +172,12 @@ export const homeStyles = stylesheet({
     gap: 10,
     '@media md': { columns: 'thirds', gap: 12 },
   },
+  // Four cards: two rows of two rather than three and an orphan.
+  FeaturePairs: {
+    display: 'grid',
+    gap: 10,
+    '@media md': { columns: 'even-halves', gap: 12 },
+  },
   Feature: { flexLayout: 'column', gap: 4, minWidth: 0 },
   FeatureIcon: {
     display: 'flex',

@@ -5,144 +5,151 @@ import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react'
 import * as React from 'react'
-import { Button } from '@/components/ui/button.tsx'
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
 } from '@/components/ui/input-group.tsx'
-import { cn } from '@/lib/utils.ts'
 
+/*
+ * The highlighted item, the empty state and the open and close animations are
+ * keyed on Base UI data attributes in styles.css.
+ */
 export const comboboxStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',
-    zIndex: 50,
-    borderRadius: 'medium',
-    shadow: 'medium',
     position: 'relative',
+    zIndex: 50,
+    width: 'var(--anchor-width)',
+    minWidth: '12rem',
+    maxWidth: 'var(--available-width)',
+    maxHeight: '20rem',
+    borderRadius: 'large',
+    borderColor: 'default',
+    borderWidth: 'thin',
+    shadow: 'large',
     overflow: 'hidden',
-    style: {
-      maxHeight: '24rem',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'color-mix(in srgb, var(--foreground) 10%, transparent)',
-    },
+  },
+  positioner: {
+    zIndex: 50,
   },
   list: {
-    overflowY: 'auto',
-    maxHeight:
-      'min(calc(24rem - 2.25rem), calc(var(--available-height) - 2.25rem))',
+    maxHeight: 'min(20rem, var(--available-height))',
     padding: 1,
-    style: {
-      scrollPaddingBlock: '0.25rem',
-    },
+    overflowY: 'auto',
   },
   item: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
-    typo: 'body_small',
     position: 'relative',
     width: '100%',
-    cursor: 'default',
-    paddingTop: 1.5,
-    paddingBottom: 1.5,
-    paddingRight: 8,
+    paddingY: 1.5,
     paddingLeft: 2,
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
-  },
-  itemDisabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
+    paddingRight: 8,
+    borderRadius: 'medium',
+    typo: 'body_small',
+    cursor: 'default',
+    // No token: option text is not selectable.
+    style: { userSelect: 'none' },
   },
   itemIndicator: {
+    position: 'absolute',
+    right: 2,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'absolute',
+    textColor: 'action',
     pointerEvents: 'none',
-    right: '0.5rem',
-    width: '1rem',
-    height: '1rem',
   },
   label: {
     textColor: 'muted',
-    fontSize: '0.75rem',
-    lineHeight: '1rem',
+    typo: 'caption',
+    fontWeight: 500,
     paddingX: 2,
     paddingY: 1.5,
   },
+  // Shown from styles.css when the popup reports an empty list.
   empty: {
+    display: 'none',
+    justifyContent: 'center',
+    width: '100%',
+    paddingY: 4,
     textColor: 'muted',
     typo: 'body_small',
-    display: 'none',
-    width: '100%',
-    justifyContent: 'center',
-    paddingY: 2,
-    style: {
-      textAlign: 'center',
-    },
   },
   separator: {
-    bgColor: 'subtle',
-    height: '1px',
+    borderColor: 'default',
     marginY: 1,
     marginX: -1,
+    // No token sets a single edge.
+    style: { borderTopWidth: 1 },
+  },
+  trigger: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
   },
   triggerIcon: {
     textColor: 'muted',
-    pointerEvents: 'none',
-    width: '1rem',
-    height: '1rem',
   },
   chips: {
-    borderColor: 'default',
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 1.5,
+    minHeight: '2.25rem',
+    paddingX: 2,
+    paddingY: 1.5,
+    bgColor: 'default',
+    borderColor: 'input',
     borderWidth: 'thin',
     borderRadius: 'medium',
     shadow: 'small',
-    display: 'flex',
-    alignItems: 'center',
     typo: 'body_small',
-    minHeight: '2.25rem',
-    flexWrap: 'wrap',
-    gap: 1.5,
-    paddingX: 2.5,
-    paddingY: 1.5,
-    style: {
-      background: 'transparent',
-      backgroundClip: 'padding-box',
-      transition: 'color 0.15s, box-shadow 0.15s',
-    },
+    // No token: the transition list is specific to this control.
+    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    ':focus-within': { borderColor: 'action', shadow: 'focus' },
   },
   chip: {
-    bgColor: 'action_secondary',
-    textColor: 'default',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 'small',
-    width: 'fit-content',
-    fontSize: '0.75rem',
-    fontWeight: 500,
-    height: '1.375rem',
     gap: 1,
-    paddingX: 1.5,
-    style: {
-      whiteSpace: 'nowrap',
-    },
+    width: 'fit-content',
+    height: '1.375rem',
+    paddingLeft: 2,
+    paddingRight: 0.5,
+    bgColor: 'action_secondary',
+    textColor: 'on_action_secondary',
+    borderRadius: 'small',
+    typo: 'caption',
+    fontWeight: 500,
+    // No token for text wrapping.
+    style: { whiteSpace: 'nowrap' },
+  },
+  chipRemove: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '1.125rem',
+    height: '1.125rem',
+    borderRadius: 'small',
+    cursor: 'pointer',
+    opacity: 0.7,
+    ':hover': { opacity: 1 },
+    ':focus-visible': { shadow: 'focus' },
+  },
+  chipRemoveIcon: {
+    width: '0.75rem',
+    height: '0.75rem',
   },
   chipInput: {
+    flexGrow: '1',
+    flexBasis: 0,
     minWidth: '4rem',
-    style: {
-      flex: 1,
-      outline: 'none',
-    },
   },
 })
 
@@ -162,7 +169,7 @@ function ComboboxTrigger({
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
-      className={cn(className)}
+      {...s.trigger.with({ className })}
       {...props}
     >
       {children}
@@ -176,10 +183,11 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
     <ComboboxPrimitive.Clear
       data-slot="combobox-clear"
       render={<InputGroupButton variant="ghost" size="icon-xs" />}
-      className={cn(className)}
+      className={className}
+      aria-label="Clear"
       {...props}
     >
-      <XIcon style={{ pointerEvents: 'none' }} />
+      <XIcon />
     </ComboboxPrimitive.Clear>
   )
 }
@@ -196,7 +204,14 @@ function ComboboxInput({
   showClear?: boolean
 }) {
   return (
-    <InputGroup className={cn(className)} style={{ width: 'auto' }}>
+    // The group is the popup's anchor, so the list matches the field's width.
+    <ComboboxPrimitive.InputGroup
+      render={
+        <InputGroup
+          className={typeof className === 'string' ? className : undefined}
+        />
+      }
+    >
       <ComboboxPrimitive.Input
         render={<InputGroupInput disabled={disabled} />}
         {...props}
@@ -207,16 +222,15 @@ function ComboboxInput({
             size="icon-xs"
             variant="ghost"
             asChild
-            data-slot="input-group-button"
             disabled={disabled}
           >
-            <ComboboxTrigger />
+            <ComboboxTrigger aria-label="Show options" />
           </InputGroupButton>
         )}
         {showClear && <ComboboxClear disabled={disabled} />}
       </InputGroupAddon>
       {children}
-    </InputGroup>
+    </ComboboxPrimitive.InputGroup>
   )
 }
 
@@ -243,20 +257,12 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        style={{ isolation: 'isolate', zIndex: 50 }}
+        {...s.positioner}
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           data-chips={!!anchor}
-          {...s.content.with({
-            className: cn('group/combobox-content', className),
-            style: {
-              width: 'var(--anchor-width)',
-              maxWidth: 'var(--available-width)',
-              minWidth: 'calc(var(--anchor-width) + 1.75rem)',
-              transformOrigin: 'var(--transform-origin)',
-            },
-          })}
+          {...s.content.with({ className })}
           {...props}
         />
       </ComboboxPrimitive.Positioner>
@@ -288,7 +294,7 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       disabled={disabled}
-      {...s.item.with(disabled && s.itemDisabled).with({ className })}
+      {...s.item.with({ className })}
       {...props}
     >
       {children}
@@ -296,9 +302,7 @@ function ComboboxItem({
         data-slot="combobox-item-indicator"
         render={<span {...s.itemIndicator} />}
       >
-        <CheckIcon
-          style={{ pointerEvents: 'none', width: '1rem', height: '1rem' }}
-        />
+        <CheckIcon />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
   )
@@ -308,7 +312,7 @@ function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
   return (
     <ComboboxPrimitive.Group
       data-slot="combobox-group"
-      className={cn(className)}
+      className={className}
       {...props}
     />
   )
@@ -397,11 +401,11 @@ function ComboboxChip({
       {children}
       {showRemove && (
         <ComboboxPrimitive.ChipRemove
-          render={<Button variant="ghost" size="icon-xs" />}
-          style={{ marginLeft: '-0.25rem', opacity: 0.5 }}
           data-slot="combobox-chip-remove"
+          aria-label="Remove"
+          {...s.chipRemove}
         >
-          <XIcon style={{ pointerEvents: 'none' }} />
+          <XIcon {...s.chipRemoveIcon} />
         </ComboboxPrimitive.ChipRemove>
       )}
     </ComboboxPrimitive.Chip>

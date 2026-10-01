@@ -15,21 +15,18 @@ export const cardStyles = stylesheet({
     borderWidth: 'thin',
     paddingY: 6,
     shadow: 'small',
-    style: { borderStyle: 'solid' },
   },
   header: {
-    paddingX: 6,
+    display: 'grid',
     alignItems: 'flex-start',
-    style: {
-      display: 'grid',
-      gridAutoRows: 'min-content',
-      gridTemplateRows: 'auto auto',
-      gap: '8px',
-    },
+    gap: 1.5,
+    paddingX: 6,
+    // No token for grid tracks: an action adds a second, content-sized column.
+    style: { gridTemplateColumns: 'minmax(0, 1fr)' },
   },
   title: {
-    fontWeight: 600,
-    lineHeight: '1',
+    typo: 'heading_4',
+    lineHeight: 1.3,
   },
   description: {
     textColor: 'muted',
@@ -38,6 +35,7 @@ export const cardStyles = stylesheet({
   action: {
     alignSelf: 'flex-start',
     justifySelf: 'flex-end',
+    // No token for grid placement: the action spans the title and description.
     style: {
       gridColumnStart: 2,
       gridRowStart: 1,
@@ -46,10 +44,12 @@ export const cardStyles = stylesheet({
   },
   content: {
     paddingX: 6,
+    typo: 'body_small',
   },
   footer: {
     display: 'flex',
     alignItems: 'center',
+    gap: 2,
     paddingX: 6,
   },
 }).variants(

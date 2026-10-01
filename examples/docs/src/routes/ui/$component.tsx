@@ -1,14 +1,18 @@
 import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DocDescriptor } from '../../../../ui/src/lib/doc.tsx'
 import { ComponentPreview } from '../../components/playground/ComponentPreview.tsx'
 import { DocPreview } from '../../components/playground/DocPreview.tsx'
-import { PropControls } from '../../components/playground/PropControls.tsx'
+import {
+  PropControls,
+  type PropGroup,
+} from '../../components/playground/PropControls.tsx'
 import { StylesheetWorkbench } from '../../components/playground/StylesheetWorkbench.tsx'
 import { componentModules } from '../../lib/component-registry.ts'
 import { playgroundStyles } from '../../styles/playground.ts'
+import { docsStyles } from '../../styles/site.ts'
 
 export const Route = createFileRoute('/ui/$component')({
   component: ComponentPlayground,
@@ -89,7 +93,9 @@ function ComponentPlayground() {
   if (error) {
     return (
       <div {...s.container}>
-        <div {...s.errorBanner}>{error}</div>
+        <div role="alert" {...s.errorBanner}>
+          {error}
+        </div>
       </div>
     )
   }
@@ -97,7 +103,7 @@ function ComponentPlayground() {
   if (!mod || (docs === null && !docDescriptor)) {
     return (
       <div {...s.container}>
-        <div {...s.readOnly}>Loading {name}...</div>
+        <p {...s.loading}>Loading {name}…</p>
       </div>
     )
   }
@@ -118,36 +124,60 @@ function ComponentPlayground() {
   // Fallback: react-docgen-typescript only. A route change or an empty metadata
   // result must not turn an absent primary entry into a render-time crash.
   const primaryDoc = docs?.[0]
-  if (!docs || !primaryDoc)
-    return (
-      <StylesheetWorkbench key={name} name={name} mod={mod}>
-        <p {...s.compoundNotice}>Explore the {name} integration source.</p>
-      </StylesheetWorkbench>
-    )
-  const isCompound = docs.length > 1
+  const isCompound = (docs?.length ?? 0) > 1
 
   return (
     <div {...s.container}>
-      <div>
-        <div {...s.title}>{primaryDoc.displayName}</div>
-        {primaryDoc.description && (
-          <div {...s.description}>{primaryDoc.description}</div>
-        )}
-        {isCompound && (
-          <div {...s.exportBadge}>
-            Exports: {docs.map((d) => d.displayName).join(', ')}
-          </div>
-        )}
-      </div>
-
-      {isCompound ? (
-        <StylesheetWorkbench key={name} name={name} mod={mod}>
-          <CompoundPlayground docs={docs} mod={mod} />
-        </StylesheetWorkbench>
-      ) : (
+      <PageHeader
+        title={pageTitle(name)}
+        description={primaryDoc?.description}
+        exports={isCompound ? docs?.map((d) => d.displayName) : undefined}
+      />
+      {primaryDoc && !isCompound ? (
         <SimplePlayground key={name} name={name} doc={primaryDoc} mod={mod} />
+      ) : (
+        <StylesheetWorkbench key={name} name={name} mod={mod}>
+          <div {...s.preview} data-preview-stage>
+            <p {...s.compoundNotice}>
+              This component has no example yet. Its source is shown alongside.
+            </p>
+          </div>
+        </StylesheetWorkbench>
       )}
     </div>
+  )
+}
+
+/** The page is named after the component file, as the sidebar is. */
+function pageTitle(name: string) {
+  return name
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function PageHeader({
+  title,
+  description,
+  exports,
+}: {
+  title: string
+  description?: string
+  exports?: string[]
+}) {
+  const s = useStyles(playgroundStyles)
+  const d = useStyles(docsStyles)
+  return (
+    <header {...s.header}>
+      <p {...d.Breadcrumb}>
+        <Link to="/ui">Components</Link>
+      </p>
+      <h1 {...s.title}>{title}</h1>
+      {description && <p {...s.description}>{description}</p>}
+      {exports && exports.length > 1 && (
+        <p {...s.exportBadge}>Exports: {exports.join(', ')}</p>
+      )}
+    </header>
   )
 }
 
@@ -261,57 +291,51 @@ function DocPlayground({
     [],
   )
 
-  const primaryName = doc.entries[0].name
   const isCompound = doc.entries.length > 1
+  // The docs module exports every part; the descriptor lists the ones its
+  // example uses.
+  const exported = Object.keys(mod).filter((key) => /^[A-Z]/.test(key))
+
+  const groups = doc.entries.map((entry): PropGroup => {
+    const docgen = docgenByName[entry.name]
+    const props = { ...docgen?.props }
+    for (const [name, value] of Object.entries(entry.defaultProps)) {
+      if (
+        props[name] ||
+        !['string', 'number', 'boolean'].includes(typeof value)
+      )
+        continue
+      props[name] = {
+        name,
+        type: { name: typeof value },
+        required: false,
+        description: '',
+        defaultValue: { value: String(value) },
+      }
+    }
+    return {
+      title: isCompound ? entry.name : undefined,
+      props,
+      values: propStates[entry.name] ?? {},
+      onChange: (prop, value) => updatePropState(entry.name, prop, value),
+    }
+  })
 
   return (
     <div {...s.container}>
-      <div>
-        <h1 {...s.title}>{primaryName}</h1>
-        {doc.description && <p {...s.description}>{doc.description}</p>}
-        {isCompound && (
-          <div {...s.exportBadge}>
-            Exports: {doc.entries.map((e) => e.name).join(', ')}
-          </div>
-        )}
-      </div>
-
-      <StylesheetWorkbench key={name} name={name} mod={mod}>
+      <PageHeader
+        title={pageTitle(name)}
+        description={doc.description}
+        exports={exported}
+      />
+      <StylesheetWorkbench
+        key={name}
+        name={name}
+        mod={mod}
+        controls={<PropControls groups={groups} />}
+      >
         <DocPreview doc={doc} propStates={propStates} />
       </StylesheetWorkbench>
-
-      <div {...s.container}>
-        {doc.entries.map((entry) => {
-          const docgen = docgenByName[entry.name]
-          const props = { ...docgen?.props }
-          for (const [name, value] of Object.entries(entry.defaultProps)) {
-            if (
-              props[name] ||
-              !['string', 'number', 'boolean'].includes(typeof value)
-            )
-              continue
-            props[name] = {
-              name,
-              type: { name: typeof value },
-              required: false,
-              description: '',
-              defaultValue: { value: String(value) },
-            }
-          }
-          if (!Object.keys(props).length) return null
-          return (
-            <PropControls
-              key={entry.name}
-              title={isCompound ? `${entry.name} props` : undefined}
-              props={props}
-              values={propStates[entry.name] ?? {}}
-              onChange={(prop, value) =>
-                updatePropState(entry.name, prop, value)
-              }
-            />
-          )
-        })}
-      </div>
     </div>
   )
 }
@@ -326,7 +350,6 @@ function SimplePlayground({
   doc: ComponentDoc
   mod: Record<string, unknown>
 }) {
-  const s = useStyles(playgroundStyles)
   const Comp = mod[doc.displayName] as React.ComponentType<
     Record<string, unknown>
   > | null
@@ -336,75 +359,25 @@ function SimplePlayground({
   )
 
   return (
-    <>
-      <StylesheetWorkbench key={name} name={name} mod={mod}>
-        <ComponentPreview component={Comp} props={propValues} />
-      </StylesheetWorkbench>
-      <div {...s.container}>
+    <StylesheetWorkbench
+      key={name}
+      name={name}
+      mod={mod}
+      controls={
         <PropControls
-          props={doc.props}
-          values={propValues}
-          onChange={(name, value) =>
-            setPropValues((prev) => ({ ...prev, [name]: value }))
-          }
+          groups={[
+            {
+              props: doc.props,
+              values: propValues,
+              onChange: (name, value) =>
+                setPropValues((prev) => ({ ...prev, [name]: value })),
+            },
+          ]}
         />
-      </div>
-    </>
-  )
-}
-
-/** Multi-export compound component: show props for each sub-component (fallback) */
-function CompoundPlayground({
-  docs,
-}: {
-  docs: ComponentDoc[]
-  mod: Record<string, unknown>
-}) {
-  const s = useStyles(playgroundStyles)
-
-  return (
-    <>
-      <div {...s.preview}>
-        <div {...s.compoundNotice}>
-          <span>
-            This is a composed component with {docs.length} sub-components.
-          </span>
-          <span>
-            Add an <code>@example</code> JSDoc tag to see a live preview.
-          </span>
-        </div>
-      </div>
-      <div {...s.container}>
-        {docs.map((doc) => {
-          const propEntries = Object.entries(doc.props).filter(
-            ([name]) => name !== 'ref' && name !== 'key',
-          )
-          if (propEntries.length === 0) return null
-          return (
-            <div key={doc.displayName} {...s.controls}>
-              <div {...s.controlsTitle}>{doc.displayName} props</div>
-              <div {...s.controlGrid}>
-                {propEntries.map(([name, prop]) => (
-                  <div key={name} {...s.controlRow}>
-                    <span
-                      style={{
-                        fontWeight: 500,
-                        fontSize: '13px',
-                        minWidth: '120px',
-                      }}
-                    >
-                      {name}
-                      {prop.required ? ' *' : ''}
-                    </span>
-                    <span {...s.readOnly}>{prop.type.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </>
+      }
+    >
+      <ComponentPreview component={Comp} props={propValues} />
+    </StylesheetWorkbench>
   )
 }
 

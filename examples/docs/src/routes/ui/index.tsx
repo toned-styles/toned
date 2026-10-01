@@ -1,6 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { overrideStyles, StyleOverrides, useStyles } from '@toned/react'
 import { useMemo, useState } from 'react'
+import {
+  Avatar,
+  AvatarFallback,
+} from '../../../../ui/src/components/ui/avatar.tsx'
 import { Badge } from '../../../../ui/src/components/ui/badge.tsx'
 import {
   Button,
@@ -16,7 +20,9 @@ import {
 } from '../../../../ui/src/components/ui/card.tsx'
 import { Checkbox } from '../../../../ui/src/components/ui/checkbox.tsx'
 import { Input } from '../../../../ui/src/components/ui/input.tsx'
+import { Label } from '../../../../ui/src/components/ui/label.tsx'
 import { Progress } from '../../../../ui/src/components/ui/progress.tsx'
+import { Separator } from '../../../../ui/src/components/ui/separator.tsx'
 import { Switch } from '../../../../ui/src/components/ui/switch.tsx'
 import {
   Tabs,
@@ -24,6 +30,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '../../../../ui/src/components/ui/tabs.tsx'
+import { componentNames } from '../../lib/component-registry.ts'
 import { libraryStyles } from '../../styles/library.ts'
 import { docsStyles } from '../../styles/site.ts'
 
@@ -34,6 +41,21 @@ const tasks = [
   'Ready for the world',
 ]
 const initialMembers = ['Alex Morgan', 'Sam Rivera', 'Jordan Lee']
+const seats = 6
+const pages = [
+  ['button', 'Button', 'Six appearances and eight sizes in one stylesheet.'],
+  ['card', 'Card', 'Density and surface variants across seven parts.'],
+  ['dialog', 'Dialog', 'A modal with focus handling and an exit animation.'],
+  ['select', 'Select', 'A styled list of options with keyboard support.'],
+] as const
+
+const initials = (name: string) =>
+  name
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 
 function LibraryShowcase() {
   const s = useStyles(libraryStyles)
@@ -63,16 +85,15 @@ function LibraryShowcase() {
         <p {...d.Breadcrumb}>Components</p>
         <h1 {...d.Title}>Component gallery</h1>
         <p {...d.Lead}>
-          Fifty-six components built with Toned. The demo below uses several of
-          them together; open any component to read its stylesheet and edit it
-          live.
+          {componentNames.length} components built with Toned. The demo below
+          uses several of them together; open any component to read its
+          stylesheet and edit it live.
         </p>
       </div>
       <div {...s.spread}>
-        <div {...s.row}>
-          <Badge variant="outline">Interactive example</Badge>
-          <span {...s.muted}>Changes stay in this browser session.</span>
-        </div>
+        <span {...s.muted}>
+          The demo is interactive. Changes stay in this browser session.
+        </span>
         <div {...s.row} role="group" aria-label="Showcase appearance">
           <Button
             size="sm"
@@ -97,11 +118,18 @@ function LibraryShowcase() {
       <StyleOverrides value={overrides}>
         <section {...s.panel} aria-label="Orbit workspace demo">
           <div {...s.spread}>
-            <div {...s.stack}>
-              <p {...s.eyebrow}>◒ Orbit / Workspace</p>
-              <h2>Release 2.4</h2>
+            <div {...s.person}>
+              <Avatar size="lg">
+                <AvatarFallback>OW</AvatarFallback>
+              </Avatar>
+              <div>
+                <p {...s.muted}>Orbit workspace</p>
+                <h2 {...s.heading}>Release 2.4</h2>
+              </div>
             </div>
-            <Badge>
+            <Badge
+              variant={completed === tasks.length ? 'default' : 'secondary'}
+            >
               {completed === tasks.length ? 'Ready to launch' : 'In progress'}
             </Badge>
           </div>
@@ -114,14 +142,14 @@ function LibraryShowcase() {
               <div {...s.grid}>
                 <Card density={density}>
                   <CardHeader>
-                    <CardDescription>Weekly momentum</CardDescription>
-                    <CardTitle {...s.metric}>On track</CardTitle>
+                    <CardDescription>Activity this week</CardDescription>
+                    <CardTitle>38 changes merged</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div {...s.stack}>
                       <svg
+                        {...s.chart}
                         viewBox="0 0 480 150"
-                        width="100%"
                         role="img"
                         aria-labelledby="momentum-title"
                       >
@@ -138,12 +166,12 @@ function LibraryShowcase() {
                           >
                             <stop
                               offset="0%"
-                              stopColor="#6464ec"
-                              stopOpacity="0.24"
+                              stopColor="currentColor"
+                              stopOpacity="0.2"
                             />
                             <stop
                               offset="100%"
-                              stopColor="#6464ec"
+                              stopColor="currentColor"
                               stopOpacity="0"
                             />
                           </linearGradient>
@@ -151,7 +179,7 @@ function LibraryShowcase() {
                         <path
                           d="M0 130H480M0 80H480M0 30H480"
                           stroke="currentColor"
-                          opacity="0.08"
+                          opacity="0.12"
                         />
                         <path
                           d="M0 120C40 120 40 100 80 100S120 130 160 95S200 70 240 78S280 40 320 55S360 75 400 35S450 25 480 12V150H0Z"
@@ -160,7 +188,7 @@ function LibraryShowcase() {
                         <path
                           d="M0 120C40 120 40 100 80 100S120 130 160 95S200 70 240 78S280 40 320 55S360 75 400 35S450 25 480 12"
                           fill="none"
-                          stroke="#6464ec"
+                          stroke="currentColor"
                           strokeWidth="3"
                         />
                       </svg>
@@ -171,9 +199,11 @@ function LibraryShowcase() {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Link to="/ui/$component" params={{ component: 'card' }}>
-                      Inspect card stylesheet ↗
-                    </Link>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/ui/$component" params={{ component: 'card' }}>
+                        Open the card stylesheet
+                      </Link>
+                    </Button>
                   </CardFooter>
                 </Card>
                 <Card density={density} appearance="soft">
@@ -191,11 +221,7 @@ function LibraryShowcase() {
                         aria-label="Release milestones"
                       />
                       {tasks.map((task, index) => (
-                        <label
-                          key={task}
-                          htmlFor={`milestone-${index}`}
-                          {...s.row}
-                        >
+                        <div key={task} {...s.check}>
                           <Checkbox
                             id={`milestone-${index}`}
                             checked={done[index]}
@@ -207,8 +233,8 @@ function LibraryShowcase() {
                               )
                             }
                           />
-                          {task}
-                        </label>
+                          <Label htmlFor={`milestone-${index}`}>{task}</Label>
+                        </div>
                       ))}
                     </div>
                   </CardContent>
@@ -229,21 +255,31 @@ function LibraryShowcase() {
               <div {...s.grid}>
                 <Card density={density}>
                   <CardHeader>
-                    <CardTitle>Better together.</CardTitle>
+                    <CardTitle>Team</CardTitle>
                     <CardDescription>
-                      A tiny team with a big idea.
+                      People who can publish this release.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div {...s.stack}>
                       {members.map((member, index) => (
                         <div key={member} {...s.spread}>
-                          <span>{member}</span>
-                          <Badge variant="secondary">
+                          <div {...s.person}>
+                            <Avatar>
+                              <AvatarFallback>
+                                {initials(member)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{member}</span>
+                          </div>
+                          <Badge
+                            variant={index === 0 ? 'secondary' : 'outline'}
+                          >
                             {index === 0 ? 'Owner' : 'Member'}
                           </Badge>
                         </div>
                       ))}
+                      <Separator />
                       <form
                         {...s.stack}
                         onSubmit={(event) => {
@@ -254,30 +290,30 @@ function LibraryShowcase() {
                             setMessage('Already part of this team.')
                             return
                           }
-                          if (members.length >= 6) return
+                          if (members.length >= seats) return
                           setMembers([...members, value])
                           setName('')
                           setMessage(`${value} added to the demo team.`)
                         }}
                       >
-                        <label htmlFor="demo-member" {...s.label}>
-                          Add a teammate
-                        </label>
-                        <Input
-                          id="demo-member"
-                          value={name}
-                          maxLength={40}
-                          placeholder="Teammate’s name"
-                          onChange={(event) => setName(event.target.value)}
-                        />
-                        <Button
-                          type="submit"
-                          disabled={members.length >= 6 || !name.trim()}
-                        >
-                          {members.length >= 6
-                            ? 'Demo team is full'
-                            : 'Add to demo team'}
-                        </Button>
+                        <Label htmlFor="demo-member">Add a teammate</Label>
+                        <div {...s.row}>
+                          <Input
+                            id="demo-member"
+                            value={name}
+                            maxLength={40}
+                            placeholder="Teammate’s name"
+                            onChange={(event) => setName(event.target.value)}
+                          />
+                          <Button
+                            type="submit"
+                            disabled={members.length >= seats || !name.trim()}
+                          >
+                            {members.length >= seats
+                              ? 'Demo team is full'
+                              : 'Add to demo team'}
+                          </Button>
+                        </div>
                         <p {...s.muted} role="status">
                           {message ||
                             'Local demo only. No invitations are sent.'}
@@ -288,17 +324,17 @@ function LibraryShowcase() {
                 </Card>
                 <Card density={density} appearance="outline">
                   <CardHeader>
-                    <CardTitle>A little less noise.</CardTitle>
+                    <CardTitle>Notifications</CardTitle>
                     <CardDescription>
-                      Preferences that feel like part of the product.
+                      Choose which updates this workspace sends.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div {...s.stack}>
                       <div {...s.spread}>
-                        <label htmlFor="demo-notifications">
+                        <Label htmlFor="demo-notifications">
                           Release notifications
-                        </label>
+                        </Label>
                         <Switch
                           id="demo-notifications"
                           checked={notifications}
@@ -307,22 +343,30 @@ function LibraryShowcase() {
                       </div>
                       <p {...s.muted}>
                         {notifications
-                          ? 'You’ll see release updates in this demo.'
-                          : 'Release updates are quiet for now.'}
+                          ? 'Release updates are shown in this demo.'
+                          : 'Release updates are turned off.'}
                       </p>
+                      <Separator />
                       <Progress
                         value={members.length}
-                        max={6}
+                        max={seats}
                         size="sm"
                         aria-label="Demo team seats"
                       />
-                      <p {...s.muted}>{members.length} of 6 demo seats used</p>
+                      <p {...s.muted}>
+                        {members.length} of {seats} demo seats used
+                      </p>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Link to="/ui/$component" params={{ component: 'switch' }}>
-                      Edit the switch stylesheet ↗
-                    </Link>
+                    <Button asChild variant="outline" size="sm">
+                      <Link
+                        to="/ui/$component"
+                        params={{ component: 'switch' }}
+                      >
+                        Open the switch stylesheet
+                      </Link>
+                    </Button>
                   </CardFooter>
                 </Card>
               </div>
@@ -330,37 +374,15 @@ function LibraryShowcase() {
           </Tabs>
         </section>
       </StyleOverrides>
-      <section {...s.grid} aria-label="Explore the building blocks">
-        {[
-          [
-            'button',
-            'Button',
-            'Appearances, sizes and interaction states in a single stylesheet.',
-          ],
-          [
-            'card',
-            'Card',
-            'Switch density and surface treatments across a composed card.',
-          ],
-          [
-            'progress',
-            'Progress',
-            'Custom ranges, accessible values and three track sizes.',
-          ],
-          [
-            'input',
-            'Input',
-            'Read the source and edit tokens live; the field keeps its value.',
-          ],
-        ].map(([component, title, body]) => (
+      <section {...s.grid} aria-label="Component pages to start with">
+        {pages.map(([component, title, body]) => (
           <Link
             key={component}
             to="/ui/$component"
             params={{ component }}
-            {...s.panel}
+            {...s.cardLink}
           >
-            <span {...s.eyebrow}>{component} ↗</span>
-            <h2>{title}</h2>
+            <h2 {...s.cardLinkTitle}>{title}</h2>
             <p {...s.muted}>{body}</p>
           </Link>
         ))}

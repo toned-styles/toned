@@ -13,6 +13,7 @@ export const headerLinks = [
   { to: '/explore', label: 'Capabilities', match: ['/explore', '/learn'] },
   { to: '/lab', label: 'Lab', match: ['/lab'] },
   { to: '/ui', label: 'Components', match: ['/ui'] },
+  { to: '/themes', label: 'Themes', match: ['/themes'] },
   { to: '/playground', label: 'Playground', match: ['/playground'] },
 ] as const
 

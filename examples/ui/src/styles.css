@@ -44,10 +44,16 @@
   --colors_bg_elevated: var(--card);
   --colors_bg_interactive: var(--accent);
   --colors_bg_interactive_subtle: var(--background);
-  --colors_bg_interactive_muted: var(--accent);
+  /* The resting track of a switch or slider. */
+  --colors_bg_interactive_muted: var(--input);
   --colors_bg_action: var(--primary);
   --colors_bg_action_secondary: var(--secondary);
-  --colors_bg_action_subtle: var(--accent);
+  /* A tint of the action colour: progress tracks, selected ranges. */
+  --colors_bg_action_subtle: color-mix(
+    in srgb,
+    var(--primary) 16%,
+    var(--background)
+  );
   --colors_bg_destructive: var(--destructive);
   --colors_bg_important: var(--primary);
   --colors_bg_status_error: var(--destructive);
@@ -130,7 +136,7 @@
     0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow_xlarge:
     0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow_focus: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent);
+  --shadow_focus: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
 
   --typo_font_sans:
     ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
@@ -269,6 +275,65 @@ body {
   color: var(--foreground);
 }
 
+/*
+ * Component preflight. Every rule here has no specificity (`:where`), so any
+ * token class overrides it. Tokens set a border's width and colour; its style
+ * is always solid, and a part without a width token has no border.
+ */
+:where([data-slot]) {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Two type selectors: above a host page's own element reset (`button {
+ * border: … }`), still below every token class.
+ */
+html body :where([data-slot]) {
+  border-width: 0;
+}
+
+:where(
+    button[data-slot],
+    input[data-slot],
+    select[data-slot],
+    textarea[data-slot]
+  ) {
+  font: inherit;
+  color: inherit;
+  background: none;
+}
+
+:where(ol[data-slot], ul[data-slot]) {
+  list-style: none;
+}
+
+:where(a[data-slot]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Icons take the text size unless a part sizes them. */
+:where([data-slot]) svg:where(.lucide) {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+[data-slot] {
+  border-style: solid;
+}
+
+/*
+ * Each interactive part draws its own focus ring with
+ * `':focus-visible': { shadow: 'focus' }`, so the browser outline is removed.
+ */
+[data-slot]:focus-visible {
+  outline: none;
+}
+
 /* Screen reader only utility */
 .sr-only {
   position: absolute;
@@ -282,6 +347,24 @@ body {
   border-width: 0;
 }
 
+/*
+ * Reduced motion: state changes apply at once. Inline transitions need
+ * !important to be overridden. The spinner keeps turning: it is the only
+ * sign that work is in progress.
+ */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot]:not([data-slot="spinner"]),
+  [data-slot]:not([data-slot="spinner"])::before,
+  [data-slot]:not([data-slot="spinner"])::after {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides inline transitions. */
+    transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides inline animations. */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides inline animations. */
+    animation-iteration-count: 1 !important;
+  }
+}
+
 /* ================================================================
    Keyframe Animations
    ================================================================ */
@@ -290,75 +373,89 @@ body {
   from {
     opacity: 0;
   }
-  to {
-    opacity: 1;
-  }
 }
 
 @keyframes fade-out {
-  from {
-    opacity: 1;
-  }
   to {
     opacity: 0;
   }
 }
 
-@keyframes slide-in-from-top {
+/* Popovers, menus and tooltips: grow from the side they are anchored to. */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* Dialogs keep the translate that centres them while they scale. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+}
+
+@keyframes slide-from-top {
   from {
     transform: translateY(-100%);
   }
-  to {
-    transform: translateY(0);
-  }
 }
 
-@keyframes slide-in-from-bottom {
+@keyframes slide-from-bottom {
   from {
     transform: translateY(100%);
   }
-  to {
-    transform: translateY(0);
-  }
 }
 
-@keyframes slide-in-from-left {
+@keyframes slide-from-left {
   from {
     transform: translateX(-100%);
   }
-  to {
-    transform: translateX(0);
-  }
 }
 
-@keyframes slide-in-from-right {
+@keyframes slide-from-right {
   from {
     transform: translateX(100%);
   }
+}
+
+@keyframes slide-to-top {
   to {
-    transform: translateX(0);
+    transform: translateY(-100%);
   }
 }
 
-@keyframes zoom-in {
-  from {
-    transform: translate(-50%, -50%) scale(0.95);
-    opacity: 0;
-  }
+@keyframes slide-to-bottom {
   to {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
+    transform: translateY(100%);
   }
 }
 
-@keyframes zoom-out {
-  from {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
+@keyframes slide-to-left {
   to {
-    transform: translate(-50%, -50%) scale(0.95);
-    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slide-to-right {
+  to {
+    transform: translateX(100%);
   }
 }
 
@@ -374,6 +471,24 @@ body {
 @keyframes accordion-up {
   from {
     height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@keyframes collapsible-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height);
   }
   to {
     height: 0;
@@ -404,52 +519,31 @@ body {
   }
 }
 
-@keyframes collapsible-down {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--radix-collapsible-content-height);
-  }
-}
-
-@keyframes collapsible-up {
-  from {
-    height: var(--radix-collapsible-content-height);
-  }
-  to {
-    height: 0;
-  }
-}
-
 /* ================================================================
-   Button
+   Structural rules
+
+   A component's own values are tokens in its stylesheet. The rules below
+   cover what a stylesheet cannot say: a state that a headless primitive
+   reports as a data attribute, a relation between parts (`:has`, a child's
+   position), and pseudo-elements.
    ================================================================ */
 
-[data-slot="button"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
+/* ---------------- Fields ---------------- */
 
-[data-slot="button"] svg {
-  pointer-events: none;
-  flex-shrink: 0;
-}
-
-/* ================================================================
-   Input
-   ================================================================ */
-
-[data-slot="input"]::placeholder {
+[data-slot="input"]::placeholder,
+[data-slot="textarea"]::placeholder,
+[data-slot="input-group-control"]::placeholder,
+[data-slot="command-input"]::placeholder,
+[data-slot="combobox-chip-input"]::placeholder {
   color: var(--muted-foreground);
+  opacity: 1;
 }
 
-[data-slot="input"]:focus-visible {
+/* A control inside a group or a palette has no ring: its container draws it. */
+[data-slot="input-group-control"]:focus-visible,
+[data-slot="command-input"]:focus-visible,
+[data-slot="combobox-chip-input"]:focus-visible {
   outline: none;
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent);
 }
 
 [data-slot="input"]::-webkit-file-upload-button {
@@ -465,152 +559,112 @@ body {
   height: 100%;
 }
 
-/* ================================================================
-   Textarea
-   ================================================================ */
-
-[data-slot="textarea"]::placeholder {
-  color: var(--muted-foreground);
+/* A label next to a disabled control. */
+:has(> [data-slot="input"]:disabled) > [data-slot="label"],
+:has(> [data-slot="checkbox"]:disabled) > [data-slot="label"],
+:has(> [data-slot="switch"]:disabled) > [data-slot="label"],
+:has(> [data-slot="radio-group-item"]:disabled) > [data-slot="label"] {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
-[data-slot="textarea"]:focus-visible {
-  outline: none;
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent);
+[data-slot="field"]:has([aria-invalid="true"]) [data-slot="field-label"] {
+  color: var(--destructive);
 }
 
-/* ================================================================
-   Select
-   ================================================================ */
-
-[data-slot="select-trigger"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
+[data-slot="input-group"]:has([aria-invalid="true"]) {
+  border-color: var(--destructive);
 }
 
-[data-slot="select-trigger"][data-state="open"] svg:last-child {
-  transform: rotate(180deg);
-}
-
-[data-slot="select-item"]:focus {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-[data-slot="select-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-/* ================================================================
-   Checkbox
-   ================================================================ */
-
-[data-slot="checkbox"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* ================================================================
-   Radio Group
-   ================================================================ */
-
-[data-slot="radio-group-item"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
+/* A block addon stacks above or below the control. */
+[data-slot="input-group"]:has(> [data-align^="block"]) {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 [data-slot="radio-group-item"][data-state="checked"] {
   border-color: var(--primary);
 }
 
-[data-slot="radio-group-indicator"] {
-  display: none;
+[data-slot="select-trigger"][data-placeholder] {
+  color: var(--muted-foreground);
 }
 
-[data-slot="radio-group-item"][data-state="checked"]
-  [data-slot="radio-group-indicator"] {
-  display: flex;
+[data-slot="select-trigger"][data-state="open"] [data-slot="select-icon"] {
+  transform: rotate(180deg);
 }
 
-/* ================================================================
-   Switch
-   ================================================================ */
-
-[data-slot="switch"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
+/* Slots share their edges; only the group's outer corners are rounded. */
+[data-slot="input-otp-slot"]:not(:first-child) {
+  margin-inline-start: -1px;
 }
 
-[data-slot="switch"][data-state="checked"] [data-slot="switch-thumb"] {
-  transform: translateX(calc(100% - 2px));
+[data-slot="input-otp-slot"]:first-child {
+  border-start-start-radius: var(--radius_medium);
+  border-end-start-radius: var(--radius_medium);
 }
 
-/* ================================================================
-   Label
-   ================================================================ */
-
-/* When label's associated control is disabled */
-:has(> [data-slot="input"]:disabled) > [data-slot="label"],
-:has(> [data-slot="checkbox"]:disabled) > [data-slot="label"],
-:has(> [data-slot="switch"]:disabled) > [data-slot="label"] {
-  cursor: not-allowed;
-  opacity: 0.7;
+[data-slot="input-otp-slot"]:last-child {
+  border-start-end-radius: var(--radius_medium);
+  border-end-end-radius: var(--radius_medium);
 }
 
-/* ================================================================
-   Toggle
-   ================================================================ */
+/* ---------------- Joined groups ---------------- */
 
-[data-slot="toggle"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
+[data-slot="button-group"] > :not(:first-child),
+[data-slot="toggle-group"][data-joined] > :not(:first-child) {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
 }
 
-[data-slot="toggle"] svg {
-  pointer-events: none;
-  flex-shrink: 0;
+[data-slot="button-group"] > :not(:last-child),
+[data-slot="toggle-group"][data-joined] > :not(:last-child) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
 }
 
-/* ================================================================
-   Toggle Group
-   ================================================================ */
-
-[data-slot="toggle-group"] > [data-slot="toggle-group-item"]:not(:first-child) {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+/* Neighbours overlap by one pixel so their borders read as a single line. */
+[data-slot="button-group"] > :not(:first-child),
+[data-slot="toggle-group"][data-joined][data-variant="outline"]
+  > :not(:first-child) {
+  margin-inline-start: -1px;
 }
 
-[data-slot="toggle-group"] > [data-slot="toggle-group-item"]:not(:last-child) {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+[data-slot="button-group"] > :is(:hover, :focus-visible),
+[data-slot="toggle-group"] > :is(:hover, :focus-visible, [data-state="on"]) {
+  position: relative;
+  z-index: 1;
 }
 
-/* ================================================================
-   Accordion
-   ================================================================ */
-
-[data-slot="accordion-trigger"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-  border-radius: calc(var(--radius) - 2px);
+[data-slot="button-group"][data-orientation="vertical"] > :not(:first-child) {
+  margin-inline-start: 0;
+  margin-block-start: -1px;
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+  border-end-start-radius: var(--radius_medium);
 }
 
-[data-slot="accordion-trigger"] svg {
-  transition: transform 200ms;
+[data-slot="button-group"][data-orientation="vertical"] > :not(:last-child) {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+  border-start-end-radius: var(--radius_medium);
 }
+
+[data-slot="button-group"][data-orientation="vertical"]
+  > :not(:first-child):not(:last-child) {
+  border-radius: 0;
+}
+
+/* Grouped avatars overlap, each ringed in the page colour. */
+[data-slot="avatar-group"] > :not(:first-child) {
+  margin-inline-start: -0.5rem;
+}
+
+[data-slot="avatar-group"] > * {
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+/* ---------------- Disclosure ---------------- */
 
 [data-slot="accordion-trigger"][data-state="open"] svg {
   transform: rotate(180deg);
@@ -624,546 +678,9 @@ body {
   animation: accordion-up 200ms ease-out;
 }
 
-/* ================================================================
-   Tabs
-   ================================================================ */
-
-[data-slot="tabs-trigger"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
+[data-slot="collapsible-content"] {
+  overflow: hidden;
 }
-
-[data-slot="tabs-trigger"][data-state="active"] {
-  color: var(--foreground);
-}
-
-/* Background variant active state */
-[data-slot="tabs-list"]:not([data-variant="line"])
-  [data-slot="tabs-trigger"][data-state="active"] {
-  background-color: var(--background);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-}
-
-/* Line variant active state */
-[data-slot="tabs-list"][data-variant="line"]
-  [data-slot="tabs-trigger"][data-state="active"] {
-  box-shadow: inset 0 -2px 0 var(--foreground);
-}
-
-/* ================================================================
-   Dialog
-   ================================================================ */
-
-[data-slot="dialog-overlay"][data-state="open"] {
-  animation: fade-in 150ms ease-out;
-}
-
-[data-slot="dialog-overlay"][data-state="closed"] {
-  animation: fade-out 150ms ease-in;
-}
-
-[data-slot="dialog-content"][data-state="open"] {
-  animation: zoom-in 150ms ease-out;
-}
-
-[data-slot="dialog-content"][data-state="closed"] {
-  animation: zoom-out 150ms ease-in;
-}
-
-[data-slot="dialog-close"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* ================================================================
-   Sheet
-   ================================================================ */
-
-[data-slot="sheet-overlay"][data-state="open"] {
-  animation: fade-in 150ms ease-out;
-}
-
-[data-slot="sheet-overlay"][data-state="closed"] {
-  animation: fade-out 150ms ease-in;
-}
-
-[data-slot="sheet-content"][data-state="open"][data-side="top"] {
-  animation: slide-in-from-top 200ms ease-out;
-}
-
-[data-slot="sheet-content"][data-state="open"][data-side="bottom"] {
-  animation: slide-in-from-bottom 200ms ease-out;
-}
-
-[data-slot="sheet-content"][data-state="open"][data-side="left"] {
-  animation: slide-in-from-left 200ms ease-out;
-}
-
-[data-slot="sheet-content"][data-state="open"][data-side="right"] {
-  animation: slide-in-from-right 200ms ease-out;
-}
-
-[data-slot="sheet-content"][data-state="closed"] {
-  animation: fade-out 150ms ease-in;
-}
-
-[data-slot="sheet-close"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* Hide close button on mobile sidebar */
-[data-slot="sidebar"] [data-slot="sheet-content"] > button {
-  display: none;
-}
-
-/* ================================================================
-   Drawer
-   ================================================================ */
-
-[data-slot="drawer-overlay"][data-state="open"] {
-  animation: fade-in 150ms ease-out;
-}
-
-[data-slot="drawer-overlay"][data-state="closed"] {
-  animation: fade-out 150ms ease-in;
-}
-
-/* ================================================================
-   Alert Dialog
-   ================================================================ */
-
-[data-slot="alert-dialog-overlay"][data-state="open"] {
-  animation: fade-in 150ms ease-out;
-}
-
-[data-slot="alert-dialog-overlay"][data-state="closed"] {
-  animation: fade-out 150ms ease-in;
-}
-
-[data-slot="alert-dialog-content"][data-state="open"] {
-  animation: zoom-in 150ms ease-out;
-}
-
-[data-slot="alert-dialog-content"][data-state="closed"] {
-  animation: zoom-out 150ms ease-in;
-}
-
-/* ================================================================
-   Dropdown Menu
-   ================================================================ */
-
-[data-slot="dropdown-menu-content"] {
-  animation: fade-in 100ms ease-out;
-}
-
-[data-slot="dropdown-menu-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="dropdown-menu-item"][data-variant="destructive"][data-highlighted] {
-  background-color: var(--destructive);
-  color: oklch(0.985 0 0);
-}
-
-[data-slot="dropdown-menu-checkbox-item"]:focus,
-[data-slot="dropdown-menu-checkbox-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="dropdown-menu-radio-item"]:focus,
-[data-slot="dropdown-menu-radio-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="dropdown-menu-sub-trigger"][data-highlighted],
-[data-slot="dropdown-menu-sub-trigger"][data-state="open"] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-/* ================================================================
-   Context Menu
-   ================================================================ */
-
-[data-slot="context-menu-content"] {
-  animation: fade-in 100ms ease-out;
-}
-
-[data-slot="context-menu-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="context-menu-item"][data-variant="destructive"][data-highlighted] {
-  background-color: var(--destructive);
-  color: oklch(0.985 0 0);
-}
-
-[data-slot="context-menu-checkbox-item"]:focus,
-[data-slot="context-menu-checkbox-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="context-menu-radio-item"]:focus,
-[data-slot="context-menu-radio-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="context-menu-sub-trigger"][data-highlighted],
-[data-slot="context-menu-sub-trigger"][data-state="open"] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-/* ================================================================
-   Menubar
-   ================================================================ */
-
-[data-slot="menubar-trigger"][data-state="open"] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-[data-slot="menubar-content"] {
-  animation: fade-in 100ms ease-out;
-}
-
-[data-slot="menubar-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="menubar-item"][data-variant="destructive"][data-highlighted] {
-  background-color: var(--destructive);
-  color: oklch(0.985 0 0);
-}
-
-[data-slot="menubar-checkbox-item"]:focus,
-[data-slot="menubar-checkbox-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="menubar-radio-item"]:focus,
-[data-slot="menubar-radio-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-[data-slot="menubar-sub-trigger"][data-highlighted],
-[data-slot="menubar-sub-trigger"][data-state="open"] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  outline: none;
-}
-
-/* ================================================================
-   Popover
-   ================================================================ */
-
-[data-slot="popover-content"][data-state="open"] {
-  animation: fade-in 100ms ease-out;
-}
-
-[data-slot="popover-content"][data-state="closed"] {
-  animation: fade-out 100ms ease-in;
-}
-
-/* ================================================================
-   Tooltip
-   ================================================================ */
-
-[data-slot="tooltip-content"][data-state="delayed-open"] {
-  animation: fade-in 100ms ease-out;
-}
-
-[data-slot="tooltip-content"][data-state="closed"] {
-  animation: fade-out 100ms ease-in;
-}
-
-/* ================================================================
-   Command
-   ================================================================ */
-
-[data-slot="command-item"][data-selected="true"],
-[data-slot="command-item"][aria-selected="true"] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-[data-slot="command-item"] svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-/* ================================================================
-   Combobox
-   ================================================================ */
-
-[data-slot="combobox-content"] {
-  animation: fade-in 100ms ease-out;
-}
-
-[data-slot="combobox-item"][data-highlighted] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-/* Empty list when no items match but has items */
-[data-slot="combobox-empty"] {
-  display: flex !important;
-}
-
-[data-slot="combobox-list"]:has([data-slot="combobox-item"])
-  [data-slot="combobox-empty"] {
-  display: none !important;
-}
-
-/* ================================================================
-   Breadcrumb
-   ================================================================ */
-
-/* ================================================================
-   Badge (variant colors via data-variant)
-   ================================================================ */
-
-[data-slot="badge"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* ================================================================
-   Table
-   ================================================================ */
-
-[data-slot="table-row"][data-state="selected"] {
-  background-color: var(--muted);
-}
-
-/* ================================================================
-   Slider
-   ================================================================ */
-
-[data-slot="slider-thumb"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* ================================================================
-   Calendar
-   ================================================================ */
-
-/* Today indicator */
-.rdp-today .rdp-day_button {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-/* Selected day */
-[data-selected-single="true"] .rdp-day_button,
-[data-selected-single="true"] {
-  background-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-}
-
-/* Range start/end */
-[data-range-start="true"],
-[data-range-end="true"] {
-  background-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  border-radius: calc(var(--radius) - 2px);
-}
-
-/* Range middle */
-[data-range-middle="true"] {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  border-radius: 0;
-}
-
-/* Day button hover */
-.rdp-day_button:hover {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-/* Outside days */
-.rdp-outside {
-  opacity: 0.5;
-}
-
-/* Disabled days */
-.rdp-disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* ================================================================
-   Navigation Menu
-   ================================================================ */
-
-[data-slot="navigation-menu-trigger"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-[data-slot="navigation-menu-trigger"][data-state="open"] svg:last-child {
-  transform: rotate(180deg);
-}
-
-[data-slot="navigation-menu-link"]:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* ================================================================
-   Carousel
-   ================================================================ */
-
-[data-slot="carousel"] button:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--background),
-    0 0 0 4px var(--ring);
-}
-
-/* ================================================================
-   Input OTP
-   ================================================================ */
-
-[data-slot="input-otp-slot"]:first-child {
-  border-top-left-radius: calc(var(--radius) - 2px);
-  border-bottom-left-radius: calc(var(--radius) - 2px);
-}
-
-[data-slot="input-otp-slot"]:last-child {
-  border-top-right-radius: calc(var(--radius) - 2px);
-  border-bottom-right-radius: calc(var(--radius) - 2px);
-}
-
-/* ================================================================
-   Resizable
-   ================================================================ */
-
-[data-slot="resizable-handle"][data-panel-group-direction="vertical"] {
-  flex-direction: column;
-}
-
-[data-slot="resizable-handle"][data-panel-group-direction="vertical"]
-  [data-slot="resizable-handle-grip"] {
-  transform: rotate(90deg);
-}
-
-[data-slot="resizable-handle"]:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ring);
-}
-
-/* ================================================================
-   Native Select
-   ================================================================ */
-
-[data-slot="native-select"]:focus-visible {
-  outline: none;
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent);
-}
-
-/* ================================================================
-   Input Group
-   ================================================================ */
-
-[data-slot="input-group"]:focus-within {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 30%, transparent);
-}
-
-[data-slot="input-group"]:has([aria-invalid="true"]) {
-  border-color: var(--destructive);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--destructive) 20%, transparent);
-}
-
-/* ================================================================
-   Button Group
-   ================================================================ */
-
-[data-slot="button-group"] > *:not(:first-child) {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-[data-slot="button-group"] > *:not(:last-child) {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-[data-slot="button-group"][data-orientation="vertical"] > *:not(:first-child) {
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-left-radius: initial;
-}
-
-[data-slot="button-group"][data-orientation="vertical"] > *:not(:last-child) {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  border-top-right-radius: initial;
-}
-
-/* ================================================================
-   Field
-   ================================================================ */
-
-[data-slot="field"]:has([aria-invalid="true"]) [data-slot="field-label"] {
-  color: var(--destructive);
-}
-
-/* ================================================================
-   Alert
-   ================================================================ */
-
-[data-slot="alert"] svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-[data-slot="alert"][data-variant="destructive"] svg {
-  color: var(--destructive);
-}
-
-/* ================================================================
-   Collapsible
-   ================================================================ */
 
 [data-slot="collapsible-content"][data-state="open"] {
   animation: collapsible-down 200ms ease-out;
@@ -1173,13 +690,382 @@ body {
   animation: collapsible-up 200ms ease-out;
 }
 
-/* ================================================================
-   Pagination
-   ================================================================ */
+/* ---------------- Tabs ---------------- */
 
-/* ================================================================
-   Chart
-   ================================================================ */
+[data-slot="tabs-trigger"][data-state="active"] {
+  color: var(--foreground);
+}
+
+[data-slot="tabs-trigger"][data-variant="default"][data-state="active"] {
+  background-color: var(--background);
+  box-shadow: var(--shadow_small);
+}
+
+/* The line variant marks the active tab on the list's bottom edge. */
+[data-slot="tabs-trigger"][data-variant="line"] {
+  margin-block-end: -1px;
+  border-block-end: 2px solid transparent;
+}
+
+[data-slot="tabs-trigger"][data-variant="line"][data-state="active"] {
+  border-block-end-color: var(--primary);
+}
+
+[data-slot="tabs"][data-orientation="vertical"] [data-slot="tabs-list"] {
+  flex-direction: column;
+  align-items: stretch;
+  height: fit-content;
+}
+
+/* ---------------- Alert ---------------- */
+
+[data-slot="alert"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* A leading icon takes a column of its own beside the title and description. */
+[data-slot="alert"]:has(> svg) {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.75rem;
+}
+
+[data-slot="alert"] > svg {
+  grid-row: 1 / span 2;
+  margin-block-start: 0.125rem;
+}
+
+[data-slot="alert"]:has(> svg) > :not(svg) {
+  grid-column: 2;
+}
+
+[data-slot="alert"][data-variant="destructive"]
+  [data-slot="alert-description"] {
+  color: color-mix(in srgb, var(--destructive) 85%, var(--foreground));
+}
+
+/* ---------------- Table ---------------- */
+
+[data-slot="table-body"] [data-slot="table-row"]:not(:last-child) {
+  border-block-end-width: 1px;
+}
+
+[data-slot="table-row"][data-state="selected"] {
+  background-color: var(--muted);
+}
+
+/* ---------------- Overlays ---------------- */
+
+:is(
+    [data-slot="dialog-overlay"],
+    [data-slot="alert-dialog-overlay"],
+    [data-slot="sheet-overlay"],
+    [data-slot="drawer-overlay"]
+  )[data-state="open"] {
+  animation: fade-in 150ms ease-out;
+}
+
+:is(
+    [data-slot="dialog-overlay"],
+    [data-slot="alert-dialog-overlay"],
+    [data-slot="sheet-overlay"],
+    [data-slot="drawer-overlay"]
+  )[data-state="closed"] {
+  animation: fade-out 150ms ease-in;
+}
+
+:is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"]
+  )[data-state="open"] {
+  animation: dialog-in 180ms ease-out;
+}
+
+:is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"]
+  )[data-state="closed"] {
+  animation: dialog-out 130ms ease-in;
+}
+
+[data-slot="sheet-content"][data-state="open"][data-side="top"] {
+  animation: slide-from-top 250ms ease-out;
+}
+
+[data-slot="sheet-content"][data-state="open"][data-side="bottom"] {
+  animation: slide-from-bottom 250ms ease-out;
+}
+
+[data-slot="sheet-content"][data-state="open"][data-side="left"] {
+  animation: slide-from-left 250ms ease-out;
+}
+
+[data-slot="sheet-content"][data-state="open"][data-side="right"] {
+  animation: slide-from-right 250ms ease-out;
+}
+
+[data-slot="sheet-content"][data-state="closed"][data-side="top"] {
+  animation: slide-to-top 200ms ease-in;
+}
+
+[data-slot="sheet-content"][data-state="closed"][data-side="bottom"] {
+  animation: slide-to-bottom 200ms ease-in;
+}
+
+[data-slot="sheet-content"][data-state="closed"][data-side="left"] {
+  animation: slide-to-left 200ms ease-in;
+}
+
+[data-slot="sheet-content"][data-state="closed"][data-side="right"] {
+  animation: slide-to-right 200ms ease-in;
+}
+
+/* Hide the close button on the mobile sidebar. */
+[data-slot="sidebar"] [data-slot="sheet-close"] {
+  display: none;
+}
+
+/* The drawer library reports the edge it opens from. */
+[data-slot="drawer-content"][data-vaul-drawer-direction="bottom"] {
+  inset: auto 0 0;
+  max-height: 85vh;
+  border-block-start-width: 1px;
+  border-start-start-radius: var(--radius_xlarge);
+  border-start-end-radius: var(--radius_xlarge);
+}
+
+[data-slot="drawer-content"][data-vaul-drawer-direction="top"] {
+  inset: 0 0 auto;
+  max-height: 85vh;
+  border-block-end-width: 1px;
+  border-end-start-radius: var(--radius_xlarge);
+  border-end-end-radius: var(--radius_xlarge);
+}
+
+[data-slot="drawer-content"][data-vaul-drawer-direction="left"] {
+  inset: 0 auto 0 0;
+  width: min(85%, 24rem);
+  border-inline-end-width: 1px;
+}
+
+[data-slot="drawer-content"][data-vaul-drawer-direction="right"] {
+  inset: 0 0 0 auto;
+  width: min(85%, 24rem);
+  border-inline-start-width: 1px;
+}
+
+/* Only a drawer that opens from the bottom shows a drag handle. */
+[data-slot="drawer-content"]:not([data-vaul-drawer-direction="bottom"])
+  [data-slot="drawer-handle"] {
+  display: none;
+}
+
+/* ---------------- Popups ---------------- */
+
+:is(
+    [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="tooltip-content"],
+    [data-slot="select-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"],
+    [data-slot="menubar-content"],
+    [data-slot="menubar-sub-content"]
+  ) {
+  transform-origin: var(--radix-popper-transform-origin);
+}
+
+:is(
+    [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="tooltip-content"],
+    [data-slot="select-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"],
+    [data-slot="menubar-content"],
+    [data-slot="menubar-sub-content"]
+  ):is(
+    [data-state="open"],
+    [data-state="delayed-open"],
+    [data-state="instant-open"]
+  ) {
+  animation: pop-in 120ms ease-out;
+}
+
+:is(
+    [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="tooltip-content"],
+    [data-slot="select-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"]
+  )[data-state="closed"] {
+  animation: pop-out 100ms ease-in;
+}
+
+/*
+ * A menubar menu has no exit animation: while one menu is still animating
+ * out, the next one takes focus, which the first reads as a dismissal and
+ * closes the whole bar.
+ */
+
+/* Base UI marks the start and end of a popup's transition instead. */
+[data-slot="combobox-content"] {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+[data-slot="combobox-content"]:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+[data-slot="navigation-menu-viewport"][data-state="open"] {
+  animation: pop-in 150ms ease-out;
+}
+
+[data-slot="navigation-menu-viewport"][data-state="closed"] {
+  animation: pop-out 120ms ease-in;
+}
+
+/* ---------------- Menus and lists ---------------- */
+
+/* The item under the pointer or the keyboard cursor. */
+:is(
+    [data-slot="select-item"],
+    [data-slot="combobox-item"],
+    [data-slot="dropdown-menu-item"],
+    [data-slot="dropdown-menu-checkbox-item"],
+    [data-slot="dropdown-menu-radio-item"],
+    [data-slot="dropdown-menu-sub-trigger"],
+    [data-slot="context-menu-item"],
+    [data-slot="context-menu-checkbox-item"],
+    [data-slot="context-menu-radio-item"],
+    [data-slot="context-menu-sub-trigger"],
+    [data-slot="menubar-item"],
+    [data-slot="menubar-checkbox-item"],
+    [data-slot="menubar-radio-item"],
+    [data-slot="menubar-sub-trigger"]
+  ):is([data-highlighted], [data-state="open"]) {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+:is(
+    [data-slot="dropdown-menu-item"],
+    [data-slot="context-menu-item"],
+    [data-slot="menubar-item"]
+  )[data-variant="destructive"][data-highlighted] {
+  background-color: color-mix(in srgb, var(--destructive) 12%, transparent);
+  color: var(--destructive);
+}
+
+:is(
+    [data-slot="select-item"],
+    [data-slot="combobox-item"],
+    [data-slot="dropdown-menu-item"],
+    [data-slot="dropdown-menu-checkbox-item"],
+    [data-slot="dropdown-menu-radio-item"],
+    [data-slot="dropdown-menu-sub-trigger"],
+    [data-slot="context-menu-item"],
+    [data-slot="context-menu-checkbox-item"],
+    [data-slot="context-menu-radio-item"],
+    [data-slot="context-menu-sub-trigger"],
+    [data-slot="menubar-item"],
+    [data-slot="menubar-checkbox-item"],
+    [data-slot="menubar-radio-item"],
+    [data-slot="menubar-sub-trigger"]
+  )[data-disabled] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+[data-slot="menubar-trigger"]:is(
+    :hover,
+    :focus-visible,
+    [data-highlighted],
+    [data-state="open"]
+  ) {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* The empty message shows only when the popup reports no matching items. */
+[data-slot="combobox-content"][data-empty] [data-slot="combobox-empty"] {
+  display: flex;
+}
+
+[data-slot="command-item"][data-selected="true"] {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+[data-slot="command-item"][data-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+[data-slot="command-item"] svg {
+  color: var(--muted-foreground);
+}
+
+/* cmdk renders the group heading itself. */
+[data-slot="command-group"] [cmdk-group-heading] {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+[data-slot="navigation-menu-trigger"][data-state="open"] {
+  background-color: var(--accent);
+}
+
+/* A link placed straight in the bar matches the triggers beside it. */
+[data-slot="navigation-menu-list"]
+  > [data-slot="navigation-menu-item"]
+  > [data-slot="navigation-menu-link"] {
+  justify-content: center;
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  font-weight: 500;
+}
+
+[data-slot="navigation-menu-trigger"][data-state="open"] svg {
+  transform: rotate(180deg);
+}
+
+/* ---------------- Resizable ---------------- */
+
+/* A wider, invisible hit area around the one-pixel handle. */
+[data-slot="resizable-handle"]::after {
+  content: "";
+  position: absolute;
+  inset: 0 -0.25rem;
+}
+
+[data-slot="resizable-handle"][aria-orientation="horizontal"] {
+  width: 100%;
+  height: 1px;
+}
+
+[data-slot="resizable-handle"][aria-orientation="horizontal"]::after {
+  inset: -0.25rem 0;
+}
+
+[data-slot="resizable-handle"][aria-orientation="horizontal"]
+  [data-slot="resizable-handle-grip"] {
+  transform: rotate(90deg);
+}
+
+/* ---------------- Chart ---------------- */
 
 [data-slot="chart"] .recharts-cartesian-axis-tick text {
   fill: var(--muted-foreground);
@@ -1187,6 +1073,15 @@ body {
 
 [data-slot="chart"] .recharts-cartesian-grid line {
   stroke: var(--border);
+}
+
+[data-slot="chart"] .recharts-rectangle.recharts-tooltip-cursor {
+  fill: var(--muted);
+}
+
+[data-slot="chart"] :is(.recharts-surface, .recharts-wrapper):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* ================================================================
@@ -1332,19 +1227,6 @@ body {
   opacity: 0.5;
 }
 
-[data-slot="sidebar-menu-button"][data-active="true"] {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
-  font-weight: 500;
-}
-
-/* Outline variant hover */
-[data-slot="sidebar-menu-button"][data-variant="outline"]:hover {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
-  box-shadow: 0 0 0 1px var(--sidebar-accent);
-}
-
 /* Sidebar menu button SVG sizing */
 [data-slot="sidebar-menu-button"] svg {
   width: 1rem;
@@ -1360,8 +1242,8 @@ body {
 }
 
 /* When there's a menu-action, add right padding */
-.group\/menu-item:has([data-slot="sidebar-menu-action"])
-[data-slot="sidebar-menu-button"] {
+[data-slot="sidebar-menu-item"]:has([data-slot="sidebar-menu-action"])
+  [data-slot="sidebar-menu-button"] {
   padding-right: 2rem;
 }
 
@@ -1419,8 +1301,9 @@ body {
     opacity: 0;
   }
 
-  .group\/menu-item:hover [data-slot="sidebar-menu-action"][data-show-on-hover],
-  .group\/menu-item:focus-within
+  [data-slot="sidebar-menu-item"]:hover
+    [data-slot="sidebar-menu-action"][data-show-on-hover],
+  [data-slot="sidebar-menu-item"]:focus-within
     [data-slot="sidebar-menu-action"][data-show-on-hover],
   [data-slot="sidebar-menu-action"][data-show-on-hover][data-state="open"] {
     opacity: 1;
@@ -1440,11 +1323,6 @@ body {
 [data-slot="sidebar-menu-sub-button"][aria-disabled="true"] {
   pointer-events: none;
   opacity: 0.5;
-}
-
-[data-slot="sidebar-menu-sub-button"][data-active="true"] {
-  background-color: var(--sidebar-accent);
-  color: var(--sidebar-accent-foreground);
 }
 
 [data-slot="sidebar-menu-sub-button"] svg {

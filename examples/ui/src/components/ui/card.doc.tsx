@@ -1,3 +1,4 @@
+import { t } from '@toned/systems/base'
 import { c, doc } from '@/lib/doc.tsx'
 import { Button } from './button.tsx'
 import {
@@ -11,26 +12,26 @@ import {
 
 export default doc({
   description:
-    'One family, seven parts. Density flows through the whole card; appearance changes the surface without changing its contents.',
+    'A surface that groups related content. Density sets the spacing of every part at once; appearance changes the surface.',
   components: [
     c({ Card }, { density: 'comfortable', appearance: 'elevated' }),
     c({ CardHeader }, {}),
-    c({ CardTitle }, { children: 'Ship something beautiful' }),
+    c({ CardTitle }, { children: 'Release 2.4' }),
     c(
       { CardDescription },
-      { children: 'Your next release deserves a thoughtful interface.' },
+      { children: 'Scheduled for Thursday. Two checks are still running.' },
     ),
     c(
       { CardContent },
       {
         children:
-          'Compose headers, actions and footers. Every part has a named, editable stylesheet rule.',
+          'A card composes a header, content and a footer. Each part is a named rule in one stylesheet.',
       },
     ),
     c({ CardFooter }, {}),
   ],
   preview: (C) => (
-    <C.Card style={{ width: '100%', maxWidth: '420px' }}>
+    <C.Card {...t({ width: '100%', maxWidth: '400px' })}>
       <C.CardHeader>
         <C.CardTitle />
         <C.CardDescription />
@@ -38,6 +39,7 @@ export default doc({
       <C.CardContent />
       <C.CardFooter>
         <Button>View release</Button>
+        <Button variant="ghost">Dismiss</Button>
       </C.CardFooter>
     </C.Card>
   ),

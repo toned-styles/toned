@@ -3,33 +3,32 @@ import { stylesheet } from '@toned/systems/base'
 import { Popover as PopoverPrimitive } from 'radix-ui'
 import type * as React from 'react'
 
+// The open and close animations are keyed on `data-state` in styles.css.
 export const popoverStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     zIndex: 50,
-    borderRadius: 'medium',
+    flexLayout: 'column',
+    gap: 3,
+    width: '18rem',
+    padding: 4,
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 4,
-    shadow: 'medium',
-    width: '18rem',
-    style: {
-      outline: 'none',
-      transformOrigin: 'var(--radix-popover-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    shadow: 'large',
+    typo: 'body_small',
   },
   header: {
     flexLayout: 'column',
     gap: 1,
-    typo: 'body_small',
   },
   title: {
-    fontWeight: 500,
+    typo: 'label_small',
   },
   description: {
     textColor: 'muted',
+    typo: 'body_small',
   },
 })
 

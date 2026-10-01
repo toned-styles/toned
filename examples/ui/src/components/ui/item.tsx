@@ -1,50 +1,25 @@
+import type { Variants } from '@toned/core'
 import { useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Slot } from 'radix-ui'
 import type * as React from 'react'
 import { Separator } from '@/components/ui/separator.tsx'
-import { cn } from '@/lib/utils.ts'
 
 export const itemStyles = stylesheet({
   group: {
-    display: 'flex',
     flexLayout: 'column',
   },
   root: {
     display: 'flex',
     alignItems: 'center',
-    borderRadius: 'medium',
-    typo: 'body_small',
     flexWrap: 'wrap',
-    style: {
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'transparent',
-      transition: 'color 0.1s',
-      outline: 'none',
-    },
-  },
-  rootDefault: {
-    style: {
-      background: 'transparent',
-    },
-  },
-  rootOutline: {
-    borderColor: 'default',
-  },
-  rootMuted: {
-    style: {
-      background: 'color-mix(in srgb, var(--muted) 50%, transparent)',
-    },
-  },
-  sizeDefault: {
-    padding: 4,
-    gap: 4,
-  },
-  sizeSm: {
-    paddingX: 4,
-    paddingY: 3,
-    gap: 2.5,
+    width: '100%',
+    borderRadius: 'large',
+    typo: 'body_small',
+    textColor: 'default',
+    // No token: the transition list is specific to this part.
+    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    ':focus-visible': { shadow: 'focus' },
   },
   media: {
     display: 'flex',
@@ -53,58 +28,23 @@ export const itemStyles = stylesheet({
     gap: 2,
     flexShrink: '0',
   },
-  mediaIcon: {
-    bgColor: 'action_secondary',
-    borderColor: 'default',
-    borderWidth: 'thin',
-    borderRadius: 'small',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    style: {
-      width: '2rem',
-      height: '2rem',
-    },
-  },
-  mediaImage: {
-    borderRadius: 'small',
-    overflow: 'hidden',
-    style: {
-      width: '2.5rem',
-      height: '2.5rem',
-    },
-  },
   content: {
-    display: 'flex',
     flexLayout: 'column',
-    gap: 1,
-    style: {
-      flex: 1,
-    },
+    gap: 0.5,
+    flexGrow: '1',
+    flexBasis: 0,
+    minWidth: 0,
   },
   title: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    typo: 'body_small',
-    fontWeight: 500,
-    style: {
-      width: 'fit-content',
-      lineHeight: '1.4',
-    },
+    width: 'fit-content',
+    typo: 'label_small',
   },
   description: {
     textColor: 'muted',
     typo: 'body_small',
-    fontWeight: 400,
-    overflow: 'hidden',
-    style: {
-      lineHeight: '1.5',
-      textWrap: 'balance',
-      display: '-webkit-box',
-      WebkitLineClamp: 2,
-      WebkitBoxOrient: 'vertical',
-    },
   },
   actions: {
     display: 'flex',
@@ -116,11 +56,52 @@ export const itemStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 2,
-    style: {
-      flexBasis: '100%',
-    },
+    width: '100%',
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      variant: 'default' | 'outline' | 'muted'
+      size: 'default' | 'sm'
+      media: 'default' | 'icon' | 'image'
+    }>,
+  ) => ({
+    [$.variant('outline')]: {
+      root: {
+        bgColor: 'elevated',
+        borderColor: 'default',
+        borderWidth: 'thin',
+      },
+    },
+    [$.variant('muted')]: {
+      root: { bgColor: 'muted' },
+    },
+    [$.size('default')]: {
+      root: { padding: 4, gap: 4 },
+    },
+    [$.size('sm')]: {
+      root: { paddingX: 3, paddingY: 2.5, gap: 3 },
+    },
+    [$.media('icon')]: {
+      media: {
+        bgColor: 'action_secondary',
+        textColor: 'on_action_secondary',
+        width: '2rem',
+        height: '2rem',
+        borderRadius: 'medium',
+      },
+    },
+    [$.media('image')]: {
+      media: {
+        width: '2.5rem',
+        height: '2.5rem',
+        borderRadius: 'medium',
+        overflow: 'hidden',
+      },
+    },
+  }),
+  { defaults: { variant: 'default', size: 'default', media: 'default' } },
+)
 
 function ItemGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(itemStyles)
@@ -129,24 +110,15 @@ function ItemGroup({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       role="list"
       data-slot="item-group"
-      {...s.group.with({ className: cn('group/item-group', className) })}
+      {...s.group.with({ className })}
       {...props}
     />
   )
 }
 
-function ItemSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof Separator>) {
+function ItemSeparator(props: React.ComponentProps<typeof Separator>) {
   return (
-    <Separator
-      data-slot="item-separator"
-      orientation="horizontal"
-      className={cn(className)}
-      style={{ marginTop: 0, marginBottom: 0 }}
-      {...props}
-    />
+    <Separator data-slot="item-separator" orientation="horizontal" {...props} />
   )
 }
 
@@ -162,30 +134,14 @@ function Item({
   asChild?: boolean
 }) {
   const Comp = asChild ? Slot.Root : 'div'
-  const s = useStyles(itemStyles)
-
-  const variantStyles =
-    variant === 'outline'
-      ? s.rootOutline
-      : variant === 'muted'
-        ? s.rootMuted
-        : s.rootDefault
-
-  const sizeStyles = size === 'sm' ? s.sizeSm : s.sizeDefault
+  const s = useStyles(itemStyles, { variant, size })
 
   return (
     <Comp
       data-slot="item"
       data-variant={variant}
       data-size={size}
-      className={cn(
-        'group/item',
-        s.root.className,
-        variantStyles.className,
-        sizeStyles.className,
-        className,
-      )}
-      style={{ ...s.root.style, ...variantStyles.style, ...sizeStyles.style }}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -198,21 +154,13 @@ function ItemMedia({
 }: React.ComponentProps<'div'> & {
   variant?: 'default' | 'icon' | 'image'
 }) {
-  const s = useStyles(itemStyles)
-
-  const variantStyle =
-    variant === 'icon'
-      ? s.mediaIcon
-      : variant === 'image'
-        ? s.mediaImage
-        : s.media
+  const s = useStyles(itemStyles, { media: variant })
 
   return (
     <div
       data-slot="item-media"
       data-variant={variant}
-      className={cn(s.media.className, variantStyle.className, className)}
-      style={{ ...s.media.style, ...variantStyle.style }}
+      {...s.media.with({ className })}
       {...props}
     />
   )
