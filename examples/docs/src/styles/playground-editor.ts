@@ -89,12 +89,15 @@ export const playgroundEditorStyles = stylesheet({
     paddingTop: 3,
     '@media md': { flexWrap: 'nowrap', paddingX: 4 },
   },
+  // Wraps on a phone: with a wide fallback font the controls do not fit a row.
   ToolbarGroup: {
     display: 'flex',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 2,
     minWidth: 0,
-    '@media md': { gap: 3 },
+    maxWidth: '100%',
+    '@media md': { flexWrap: 'nowrap', gap: 3 },
   },
   Title: {
     $kind: 'text',
@@ -119,10 +122,13 @@ export const playgroundEditorStyles = stylesheet({
     textStyle: 'caption',
     weight: 'semibold',
     text: 'muted',
+    minWidth: 0,
+    maxWidth: '100%',
   },
   Select: {
     ...control,
     paddingRight: 8,
+    minWidth: 0,
     maxWidth: '100%',
     '@platform web': { $style: chevron(10) },
   },
