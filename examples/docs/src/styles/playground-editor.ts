@@ -133,14 +133,6 @@ export const playgroundEditorStyles = stylesheet({
     borderTone: 'accent',
     ':hover': { fill: 'accent-strong' },
   },
-  StudioLink: {
-    display: 'none',
-    textStyle: 'caption',
-    weight: 'semibold',
-    wrap: 'nowrap',
-    text: 'accent',
-    '@media lg': { display: 'inline' },
-  },
   Pill: {
     $kind: 'text',
     display: 'inline-flex',
