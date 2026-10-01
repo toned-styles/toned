@@ -336,11 +336,14 @@ html[data-gallery-theme-scope][data-theme="pixel"]
    and wide soft shadows. Text stays dark and solid. */
 html[data-gallery-theme-scope][data-theme="glass"]
 :is([data-gallery-themed], body > :not([id="root"])) {
+  /* One blue hue with a single warm glow, as in the theme showcase: enough for
+     the glass to refract without turning into a rainbow. Kept light so dark
+     text on the translucent panes stays well above its contrast floor. */
   --g-stage:
-    radial-gradient(60% 70% at 6% 4%, #b3c6ff 0, transparent 62%),
-    radial-gradient(52% 62% at 98% 8%, #ffc4d6 0, transparent 64%),
-    radial-gradient(62% 72% at 90% 100%, #b0deff 0, transparent 62%),
-    radial-gradient(56% 66% at 2% 98%, #cfc0ff 0, transparent 62%), #dfe5f6;
+    radial-gradient(42% 46% at 14% 20%, #e6f1ff 0, transparent 70%),
+    radial-gradient(40% 52% at 86% 16%, #9fb9f6 0, transparent 72%),
+    radial-gradient(48% 54% at 74% 96%, #ffdcc6 0, transparent 70%),
+    linear-gradient(160deg, #c6d9f9 0%, #abc2f2 55%, #bfc5f4 100%);
   --g-stage-line: rgb(255 255 255 / 0.8);
 
   --base: 4px;
