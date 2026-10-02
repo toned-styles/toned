@@ -1,6 +1,6 @@
 'use client'
 
-import { overrideStyles, StyleOverrides, useStyles } from '@toned/react'
+import { StyleOverrides, useStyles } from '@toned/react'
 import { stylesheet } from '@toned/systems/base'
 import { Command as CommandPrimitive } from 'cmdk'
 import { SearchIcon } from 'lucide-react'
@@ -90,7 +90,7 @@ export const commandStyles = stylesheet({
 
 // The palette fills the dialog edge to edge, so the dialog drops its padding.
 const commandDialogOverrides = [
-  overrideStyles(dialogStyles, {
+  dialogStyles.extend({
     content: { padding: 0, gap: 0, overflow: 'hidden' },
   }),
 ]
