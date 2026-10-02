@@ -75,3 +75,18 @@ for (const useClassName of [false, true])
     expect(read().color).toBe('red')
     expect(read().cursor).toBe('')
   })
+
+test('with() refuses a stylesheet key instead of passing it to the host', () => {
+  function Probe() {
+    const s = useStyles(sheet)
+    return (
+      <div
+        {...s.Root.with({ $style: { transform: 'none' } } as unknown as {
+          style: object
+        })}
+      />
+    )
+  }
+  setConfig(web)
+  expect(() => render(<Probe />)).toThrow(/"\$style" is a stylesheet key/)
+})

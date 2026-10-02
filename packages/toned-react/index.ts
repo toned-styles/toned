@@ -50,6 +50,12 @@ import { styleView } from './style-view.ts'
 import { useTokenConfig } from './token-config.ts'
 
 /**
+ * `$`-prefixed keys such as `$style` belong to the stylesheet language. Passed
+ * to `with()` they would reach the host as an attribute and style nothing.
+ */
+type NoStylesheetKeys = { [K in `$${string}`]?: never }
+
+/**
  * Props returned for each element in a stylesheet.
  * Includes known properties (style, className) plus dynamic attributes.
  */
@@ -70,7 +76,13 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
    * must still satisfy a consumer whose `value` is required — with() merges
    * className/style/ref/handlers and passes everything else through.
    */
-  with: <P extends Record<string, unknown> | false | null | undefined>(
+  with: <
+    P extends
+      | (Record<string, unknown> & NoStylesheetKeys)
+      | false
+      | null
+      | undefined,
+  >(
     props: P,
   ) => ElementProps<S> &
     (P extends Record<string, unknown>
@@ -79,7 +91,9 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   /** Explicit host-prop composition; `with` is its compatibility alias. */
   withProps: <As extends HostElement = 'div'>(
     props:
-      | (ComponentPropsWithRef<As> & { [K in `data-${string}`]?: unknown })
+      | (ComponentPropsWithRef<As> & {
+          [K in `data-${string}`]?: unknown
+        } & NoStylesheetKeys)
       | false
       | null
       | undefined,
