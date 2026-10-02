@@ -11,11 +11,14 @@ test('workspace options bound directory scope without accepting escaping paths',
   expect(
     parseWorkspaceOptions({
       toned: {
-        include: ['lib/ui', 'app/hq'],
+        include: ['lib/ui', 'app/web'],
         modules: { '@lib/*': ['lib/*'] },
       },
     }),
-  ).toEqual({ include: ['lib/ui', 'app/hq'], modules: { '@lib/*': ['lib/*'] } })
+  ).toEqual({
+    include: ['lib/ui', 'app/web'],
+    modules: { '@lib/*': ['lib/*'] },
+  })
   for (const include of [
     ['../outside'],
     ['/tmp'],
@@ -29,7 +32,7 @@ test('workspace options bound directory scope without accepting escaping paths',
 
 test('the same scope selects traversal, source files and watched updates', () => {
   const root = 'file:///repo',
-    include = ['lib/ui', 'app/hq']
+    include = ['lib/ui', 'app/web']
   expect(includesWorkspaceDirectory(root, 'file:///repo/lib', include)).toBe(
     true,
   )

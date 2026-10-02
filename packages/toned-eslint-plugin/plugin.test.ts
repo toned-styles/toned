@@ -15,7 +15,8 @@ const cliBatchBudget = cliTimeout * 2 + 5_000
 
 const exec = promisify(execFile)
 const here = dirname(fileURLToPath(import.meta.url))
-// HQ embeds Toned two levels down; standalone Toned also resolves its own executable.
+// Resolve through the package, not a fixed path: an embedding workspace and
+// standalone Toned install oxlint at different depths.
 const binary = join(
   dirname(createRequire(import.meta.url).resolve('oxlint')),
   '..',

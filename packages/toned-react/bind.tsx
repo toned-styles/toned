@@ -94,6 +94,7 @@ function buildBoundElement(
       if (!subscribe) return instance.mount()
       instance.validateHosts()
     }, [instance])
+    // oxlint-disable-next-line react/refs -- the forwarded ref is passed to the host, never read during render.
     return createElement(PartHost, {
       instance,
       part: key,
@@ -116,9 +117,9 @@ export function reflectBags(
         `[toned] Bound part ${key} has no prop accessor; available parts: ${Object.getOwnPropertyNames(Object.getPrototypeOf(instance)).join(', ')}`,
       )
     Object.assign(comp, bag)
-    // Non-enumerable, matching the bag's own `with`: a plain assignment made
-    // it enumerable on the COMPONENT, so `{...s.El}` leaked a `with` function
-    // into DOM props (React warns and drops it).
+    // Non-enumerable, matching the bag's own `with`: a plain assignment would
+    // make it enumerable on the COMPONENT, so `{...s.El}` would leak a `with`
+    // function into DOM props (React warns and drops it).
     for (const name of ['with', 'withProps'])
       Object.defineProperty(comp, name, {
         value: bag.with,
@@ -148,7 +149,8 @@ export function bind(styles: StylesheetLike): Record<string, BoundElement> {
  * The general form: same arguments as `useStyles` (mods in the hook call), one
  * resolution shared with it, but returns COMPONENTS. Element identities are
  * stable across renders (the map is keyed on the stylesheet, built once); mods
- * flow anew because the components read the live resolution through a ref.
+ * flow anew because the components subscribe to the committed resolution, and
+ * `$scope` passes a render's own snapshot to them through context.
  */
 export function useBind(
   styles: StylesheetLike,
@@ -164,8 +166,6 @@ export function useBind(
 
   const config = useRuntimeConfig(styles)
   // The candidate is the initial snapshot only; later candidates publish below.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // oxlint-disable-next-line react/exhaustive-deps -- stylesheet/config own the component family; instance only seeds it, subsequent candidates publish at commit.
   const store = useMemo(() => {
     const store = {
       current: instance,
@@ -188,6 +188,7 @@ export function useBind(
     // A stylesheet owns the stable component family; candidates publish only
     // in the layout effect below. React discards this memo with an abandoned
     // stylesheet switch instead of mutating the committed family's ref.
+    // oxlint-disable-next-line react/exhaustive-deps -- `styles` and `config` key the family; `instance` only seeds it and later candidates publish in the layout effect.
   }, [styles, config])
   useLayoutEffect(() => {
     store.current = instance
@@ -206,12 +207,12 @@ export function useBind(
   Object.freeze(props)
   return {
     ...store.map,
-    $props: props as any,
+    $props: props as unknown as BoundElement,
     $scope: ((children: ReactNode) =>
       createElement(
         store.context.Provider,
         { value: instance },
         children,
-      )) as any,
+      )) as unknown as BoundElement,
   }
 }

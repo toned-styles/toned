@@ -1,4 +1,5 @@
 import { type Config, getConfig, type Tokens } from '@toned/core'
+import type { OutputBackend } from '@toned/core/backends'
 import { getStylesheetPlan } from '@toned/core/stylesheet'
 import { immutableSnapshot } from '@toned/core/utils'
 import {
@@ -22,6 +23,7 @@ const RendererRegistryContext = createContext<ReadonlyMap<
 > | null>(null)
 function useStableScopeHook(hook: Config['useStyleOverrideScope']) {
   const installed = useRef(hook)
+  // oxlint-disable-next-line react/refs -- an invariant check against the first mounted hook; the ref is never written after initialization.
   if (installed.current !== hook)
     throw new Error(
       'Toned runtime: useStyleOverrideScope must remain the same hook while mounted; give the provider a new key, or remount legacy consumers after setConfig, to install a different host scope hook',
@@ -76,7 +78,7 @@ export type ReactHost = Pick<
 >
 export type ReactRenderer = Readonly<{
   system: object
-  backend: import('@toned/core/backends').OutputBackend
+  backend: OutputBackend
   tokens: Tokens
   validate(sheet: object): void
 }>
@@ -132,9 +134,9 @@ export function TonedProvider({
     matchStyleOverrideScope,
   } = host
   useStableScopeHook(useStyleOverrideScope)
-  // oxlint-disable-next-line react/exhaustive-deps -- any changed host capability invalidates its cached renderer configurations
   const cache = useMemo(
     () => new WeakMap<object, Config>(),
+    // oxlint-disable-next-line react/exhaustive-deps -- any changed host capability invalidates its cached renderer configurations.
     [
       platform,
       getProps,

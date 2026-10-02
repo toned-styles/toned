@@ -1,7 +1,26 @@
 {
   "name": "@toned/compiler",
   "version": "0.1.0",
+  "description": "Source index, language server, CLI and source-editing tools for Toned declarations.",
+  "keywords": [
+    "codemod",
+    "design-tokens",
+    "dtcg",
+    "language-server",
+    "lsp",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-compiler"
+  },
   "bin": {
     "toned": "./cli.ts",
     "toned-lsp": "./lsp/cli.ts"
@@ -24,12 +43,13 @@
     "linkDirectory": false
   },
   "scripts": {
+    "prepublishOnly": "bun run build",
     "build": "bun --bun -e 'import(`@toned-config/build`)'"
   },
   "dependencies": {
     "@noble/hashes": "2.4.0",
     "@toned/core": "workspace:~",
-    "typescript": "6.0.3",
+    "typescript": "~6.0.3",
     "vscode-languageserver": "10.1.2",
     "vscode-languageserver-textdocument": "1.0.15"
   },

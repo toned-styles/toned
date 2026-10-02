@@ -9,7 +9,7 @@ import { bind, useBind } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
 const originalConfig = getConfig()
-// useClassName so bound elements carry a toned class (as lib/ui installs it).
+// useClassName so bound elements carry a toned class (as a design-system package would install it).
 setConfig({ ...reactWebConfig, useClassName: true, getTokens: () => ({}) })
 afterAll(() => setConfig(originalConfig))
 
@@ -151,6 +151,7 @@ describe('as — the per-render element override', () => {
       HTMLElement,
       { className?: string; 'data-x'?: string }
     >((props, ref) => {
+      // oxlint-disable-next-line react/globals -- the test records what this render observed.
       seen = props
       return <section {...props} ref={ref} />
     })
@@ -185,7 +186,9 @@ describe('useBind (hook, mods in the call)', () => {
     let stableAcrossMods = true
     function View({ tone }: { tone: 'a' | 'b' }) {
       const s = useBind(styles, { tone })
+      // oxlint-disable-next-line react/globals -- the test records what this render observed.
       if (firstRoot === undefined) firstRoot = s.Root
+      // oxlint-disable-next-line react/globals -- the test records what this render observed.
       else if (s.Root !== firstRoot) stableAcrossMods = false
       return (
         <s.Root data-slot="r">

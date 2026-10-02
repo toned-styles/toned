@@ -100,7 +100,7 @@ export function FamilyContracts() {
   // @ts-expect-error new parts are components, not mutable prop bags
   Plain.Container.with({ className: 'outer' })
   // @ts-expect-error the family does not expose a hook's prop snapshot
-  Plain.$props
+  void Plain.$props
 
   return [
     standalone,

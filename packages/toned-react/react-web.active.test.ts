@@ -1,8 +1,8 @@
-// Focused coverage for the web :active reconciler (issue #2). Runs without a DOM
-// or React: `./config.ts` (which imports react) is mocked away, `document`/
-// `window` are stubbed with listener-recording fakes, and the real getProps
-// handlers are driven against a lightweight Base mock. The full DOM-level
-// interaction suite lives in the stacked react test PR.
+// Focused coverage for the web :active reconciler. Runs without a DOM or React:
+// `./config.ts` (which imports react) is mocked away, `document`/`window` are
+// stubbed with listener-recording fakes, and the real getProps handlers are
+// driven against a lightweight Base mock. DOM-level interaction coverage lives
+// in the React rendering tests.
 
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
@@ -27,7 +27,8 @@ function fakeEventTarget() {
       listeners[type]?.delete(fn)
     },
     dispatch(type: string) {
-      for (const fn of [...(listeners[type] ?? [])]) fn()
+      // Snapshot, as the DOM does: a listener may unsubscribe while dispatching.
+      for (const fn of Array.from(listeners[type] ?? [])) fn()
     },
     count(type: string) {
       return listeners[type]?.size ?? 0
@@ -105,7 +106,7 @@ describe('react-web :active reconciler', () => {
     props.onMouseDown({ button: 0, currentTarget: { isConnected: true } })
 
     // The release happens outside the window: no mouseup is delivered, but blur
-    // fires. Previously the mouseup listener (and :active) leaked here.
+    // fires, and must release the mouseup listener and :active.
     win.dispatch('blur')
 
     expect(base.anyElementActive('box', ':active')).toBe(false)

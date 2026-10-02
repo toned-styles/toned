@@ -2,17 +2,39 @@
   "name": "@toned/eslint-plugin",
   "version": "0.1.0",
   "description": "Optional import-aware Toned and React rules for ESLint and Oxlint.",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "oxlint",
+    "react",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-eslint-plugin"
+  },
   "files": [
     "analysis.js",
     "rules.js",
     "index.js",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./index.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "vitest run"

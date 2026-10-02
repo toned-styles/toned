@@ -1,8 +1,5 @@
 #!/usr/bin/env node
-import {
-  createConnection,
-  ProposedFeatures,
-} from 'vscode-languageserver/node'
+import { createConnection, ProposedFeatures } from 'vscode-languageserver/node'
 
 import { registerLanguageServer } from './server.ts'
 

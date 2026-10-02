@@ -1,12 +1,26 @@
 {
   "name": "@toned/core",
   "version": "0.6.0",
+  "description": "Typed design tokens, named parts and variants for platform- and framework-agnostic styling.",
+  "keywords": [
+    "css",
+    "design-system",
+    "design-tokens",
+    "react-native",
+    "styling",
+    "toned",
+    "typescript"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
-  "author": "Kenzhaev Artur",
+  "author": "Artur Kenzhaev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/core"
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-core"
   },
   "type": "module",
   "exports": {

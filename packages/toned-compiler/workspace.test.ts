@@ -13,7 +13,7 @@ import {
 } from './workspace.ts'
 
 vi.mock('node:fs/promises', async (original) => {
-  const actual = await original<typeof import('node:fs/promises')>()
+  const actual = await original<typeof fs>()
   return {
     ...actual,
     open: vi.fn(actual.open),
@@ -21,8 +21,7 @@ vi.mock('node:fs/promises', async (original) => {
     readdir: vi.fn(actual.readdir),
   }
 })
-const actualFs =
-  await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+const actualFs = await vi.importActual<typeof fs>('node:fs/promises')
 beforeEach(() => {
   vi.mocked(fs.open).mockImplementation(actualFs.open)
   vi.mocked(fs.opendir).mockImplementation(actualFs.opendir)

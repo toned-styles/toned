@@ -3,6 +3,7 @@ import { version } from 'react'
 /** React 18 detaches through ref(null); React 19 also accepts returned cleanup. */
 export const supportsRefCleanup = Number.parseInt(version, 10) >= 19
 
+// oxlint-disable-next-line typescript/no-explicit-any -- host prop bags are forwarded to arbitrary host components and refs, whose value types are open.
 type AnyValue = any
 
 function flattenHostStyle(value: AnyValue): Record<string, AnyValue> {

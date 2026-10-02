@@ -4,15 +4,15 @@
  * produces a union type that is too complex to represent") if the override
  * typing ever crosses a token's value union with itself again.
  *
- * The regression it pins: `ValidateDeclaration` answered every leaf with the
- * token's whole value union. A generic helper call inside the rules is
+ * The failure it guards against: a generic helper call inside the rules is
  * contextually typed before `Rules` is inferred, when the leaves it sees are
- * the constraint's own value union, so each became `Values & (Values | null)`
- * — crossed member by member. With `alphaChannel` that is 2N × 2N, and TS2590
- * fired at ~160 colours: a real palette.
+ * the constraint's own value union. If `ValidateDeclaration` answers every
+ * leaf with the token's whole value union, each becomes
+ * `Values & (Values | null)` — crossed member by member. With `alphaChannel`
+ * that is 2N × 2N, and TS2590 fires at ~160 colours: a real palette.
  *
  * 1,000 colours here (2,001 leaf members with the alpha form and `null`), six
- * times past where the quadratic version broke.
+ * times past where a quadratic typing breaks.
  */
 import { defineSystem, defineToken } from '@toned/core'
 

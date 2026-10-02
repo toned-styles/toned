@@ -23,10 +23,10 @@ export const overflowY = defineCssToken('overflowY', [
 const paddingValues = [
   new Number(),
   // The common steps of the 4px scale, enumerated as literals so static CSS
-  // generation (`dom/generate.ts`) can emit an atomic class for each and the
+  // generation (`@toned/core/dom`) can emit an atomic class for each and the
   // runtime resolves them by className instead of an inline style. The boxed
   // Number above still covers any other value dynamically — an off-scale
-  // number simply resolves inline, exactly as every number did before.
+  // number simply resolves inline.
   0,
   0.5,
   1,
@@ -248,10 +248,9 @@ export const marginRight = defineCssToken(
 
 /*
  * The LOGICAL inline margins, which flip with writing direction where the
- * physical pair above does not. Same scale, same unit; declared because an
- * overlapped avatar stack pulls its children together on the inline axis and
- * had no token for it, so the value rode a raw-style escape with the base
- * arithmetic written out by hand.
+ * physical pair above does not. Same scale, same unit; an overlapped avatar
+ * stack, for example, pulls its children together on the inline axis without
+ * a raw-style escape that writes the base arithmetic out by hand.
  */
 export const marginInlineStart = defineCssToken(
   'marginInlineStart',

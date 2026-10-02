@@ -127,6 +127,7 @@ describe('StyleOverrides', () => {
     let seen = ''
     const Probe = () => {
       const s = useStyles(styles)
+      // oxlint-disable-next-line react/globals -- the test records what this render observed.
       seen = (s.Root as { className?: string }).className ?? ''
       return null
     }
@@ -349,9 +350,8 @@ describe('StyleOverrides + .variants()', () => {
 /*
  * Two DIFFERENT tokens writing the SAME property. Equal specificity, so
  * without reconciliation the winner is the order they happen to sit in the
- * generated stylesheet — which is why call sites were writing the value as a
- * raw inline style to make it deterministic. The override's declaration is
- * moved there automatically now; the base token keeps the side it still owns.
+ * generated stylesheet. The override's declaration moves to an inline style
+ * so it wins deterministically; the base token keeps the side it still owns.
  */
 describe('StyleOverrides + overlapping CSS properties', () => {
   const { stylesheet: sizing } = defineSystem({

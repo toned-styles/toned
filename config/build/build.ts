@@ -53,9 +53,16 @@ const transformPkg = async () => {
   const {
     scripts: _scripts,
     devDependencies: _devDeps,
-    publishConfig: _publishConfig,
+    publishConfig: {
+      directory: _directory,
+      linkDirectory: _linkDirectory,
+      ...publishConfig
+    } = {},
     ...pkg
   } = await Bun.file('package.json').json()
+  // The published manifest keeps registry settings such as `access`; only the
+  // workspace's directory redirection is dropped.
+  if (Object.keys(publishConfig).length) pkg.publishConfig = publishConfig
 
   if (pkg.exports) {
     await copyExportedStyles(pkg.exports)
@@ -111,5 +118,6 @@ await removeTestArtifacts(dist)
 await $`cp README.md ${dist}`
 await transformPkg()
 await $`cp ${licenseLocation} ${dist}`
-// NOTE: for some reason, npmignore isn't respected on publish by pnpm
+// Build info is not package content. Remove it explicitly: pnpm publish does
+// not apply .npmignore to this directory.
 await $`rm -rf ${path.join(dist, 'tsconfig.tsbuildinfo')}`

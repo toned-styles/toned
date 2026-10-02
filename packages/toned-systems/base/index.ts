@@ -35,8 +35,6 @@ export const { system, stylesheet, t } = defineSystem(
     ...layout,
     ...shadow,
     ...sizes,
-
-    // ...rules
   },
   config,
 )

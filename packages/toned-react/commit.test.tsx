@@ -44,6 +44,7 @@ for (const bound of [false, true])
       const styles = useStyles(sheet, { on })
       const parts = useBind(sheet, { on })
       if (on) {
+        // oxlint-disable-next-line react/globals -- the test records that the suspended render ran.
         attempted = true
         throw blocker
       }
@@ -72,9 +73,10 @@ for (const bound of [false, true])
 
 test('a committed theme updates an unchanged matching rule', () => {
   const Theme = React.createContext({ ink: 'red' })
+  const useThemeTokens = () => React.useContext(Theme)
   setConfig({
     ...web,
-    getTokens: () => React.useContext(Theme),
+    getTokens: useThemeTokens,
     useClassName: false,
     mediaMode: false,
   })

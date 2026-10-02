@@ -1,12 +1,25 @@
 {
   "name": "@toned/react",
   "version": "0.4.0",
+  "description": "React bindings for Toned on the web and React Native.",
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "react",
+    "react-native",
+    "styling",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
-  "author": "Kenzhaev Artur",
+  "author": "Artur Kenzhaev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/react"
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-react"
   },
   "type": "module",
   "exports": {

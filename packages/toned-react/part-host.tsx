@@ -81,7 +81,7 @@ function renderHost({
 }
 
 /** Container measurement updates a stable store directly, without rerendering
- * the subtree. Its lifecycle and host props are shared by old and new bindings. */
+ * the subtree. useBind, bind and createElements share its lifecycle and host props. */
 function MeasuredPartHost({
   instance,
   part,
@@ -137,7 +137,7 @@ function MeasuredPartHost({
  * What a web intrinsic IMPLIES about the element's nature, for the native
  * fallback: `as="h2"` names a text element, so native renders the Text
  * primitive, not the default View. Only tags whose implication is
- * unambiguous are mapped; a declared `$$type` always wins over inference,
+ * unambiguous are mapped; a declared `$kind` always wins over inference,
  * and anything unmapped falls back to it (default 'view'). `button`/`a` are
  * deliberately NOT mapped to 'pressable': press behavior must be declared,
  * never inferred from a tag.

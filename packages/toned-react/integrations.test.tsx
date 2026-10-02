@@ -229,7 +229,9 @@ test('a native fixture wrapper preserves an ordered opaque style layer and disjo
     { style: unknown[]; onPressIn?: () => void; onPressOut?: () => void }
   >(function FixtureTarget(props, ref) {
     layers.push(props.style)
+    // oxlint-disable-next-line react/globals -- the test captures the handlers the host received to invoke them later.
     press = props.onPressIn
+    // oxlint-disable-next-line react/globals -- the test captures the handlers the host received to invoke them later.
     releasePress = props.onPressOut
     React.useLayoutEffect(() => {
       Object.assign(host.style, props.style[0])

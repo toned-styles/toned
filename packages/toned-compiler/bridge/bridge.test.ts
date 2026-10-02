@@ -9,7 +9,7 @@ import type { DesignChange } from '../model.ts'
 import { createSourceBridge, type SourceBridge } from './index.ts'
 
 vi.mock('node:fs/promises', async (original) => {
-  const actual = await original<typeof import('node:fs/promises')>()
+  const actual = await original<typeof fs>()
   return { ...actual, rename: vi.fn(actual.rename) }
 })
 
@@ -182,9 +182,7 @@ test('operation queues are bounded and cancellation after replacement begins rep
   await reading
   const proposal = await propose(2),
     abort = new AbortController()
-  const original = (
-    await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
-  ).rename
+  const original = (await vi.importActual<typeof fs>('node:fs/promises')).rename
   vi.mocked(fs.rename).mockImplementationOnce(async (...args) => {
     abort.abort()
     return original(...args)

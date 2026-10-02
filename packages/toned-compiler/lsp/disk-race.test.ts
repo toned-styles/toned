@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Connection } from 'vscode-languageserver/node'
 
+import type * as WorkspaceModule from '../workspace.ts'
 import { loadWorkspace, readWorkspaceFile } from '../workspace.ts'
 import { WorkspaceDiskQueue } from './disk-queue.ts'
 import { registerLanguageServer } from './server.ts'
 import { DesignLanguageService } from './service.ts'
 
 vi.mock('../workspace.ts', async (original) => ({
-  ...(await original<typeof import('../workspace.ts')>()),
+  ...(await original<typeof WorkspaceModule>()),
   loadWorkspace: vi.fn(),
   readWorkspaceFile: vi.fn(),
 }))

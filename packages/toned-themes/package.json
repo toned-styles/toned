@@ -1,12 +1,24 @@
 {
   "name": "@toned/themes",
   "version": "0.2.0",
+  "description": "Theme values for the @toned/systems base vocabulary.",
+  "keywords": [
+    "css-variables",
+    "design-tokens",
+    "shadcn",
+    "theme",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
-  "author": "Kenzhaev Artur",
+  "author": "Artur Kenzhaev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/themes"
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-themes"
   },
   "type": "module",
   "exports": {

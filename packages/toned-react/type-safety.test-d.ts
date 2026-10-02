@@ -31,19 +31,19 @@ const varianted = system
 
 export function Plain() {
   const s = useStyles(plain)
-  s.container.className
-  s.label.style
+  void s.container.className
+  void s.label.style
   s.container.with({ className: 'x' })
   // @ts-expect-error — no such element was declared
-  s.nope
+  void s.nope
   return null
 }
 
 export function Varianted() {
   const s = useStyles(varianted, { tone: 'calm' })
-  s.root.className
+  void s.root.className
   // @ts-expect-error — no such element was declared
-  s.typo
+  void s.typo
   return null
 }
 
@@ -61,15 +61,15 @@ export function BoundPlain() {
   const s = useBind(plain)
   s.container.with({ className: 'x' })
   // @ts-expect-error — no such element was declared
-  s.nope
+  void s.nope
   return null
 }
 
 export function BoundVarianted() {
   const s = useBind(varianted, { tone: 'calm' })
-  s.root
+  void s.root
   // @ts-expect-error — no such element was declared
-  s.typo
+  void s.typo
   return null
 }
 
@@ -105,14 +105,14 @@ export function ModlessBind() {
   const { container } = bind(plain)
   container.with({ className: 'x' })
   // @ts-expect-error — no such element was declared
-  bind(plain).nope
+  void bind(plain).nope
   return null
 }
 
 /*
  * `overrideStyles` says what the stylesheet says, about the elements the
- * target declared. Each `@ts-expect-error` below is a rule that used to be
- * unenforceable, because a sheet exported for overriding was type-erased.
+ * target declared. Each `@ts-expect-error` below holds because a sheet
+ * exported for overriding keeps its declared type.
  */
 const overridable = system
   .stylesheet({ root: { bgColor: 'base' }, icon: { bgColor: 'accent' } })

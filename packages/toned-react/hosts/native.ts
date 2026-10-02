@@ -5,7 +5,7 @@ import { attachPart } from '../attach-part.ts'
 import { addWith, supportsRefCleanup } from '../host-props.ts'
 import type { ReactHost } from '../runtime-config.ts'
 
-// oxlint-disable-next-line typescript/no-explicit-any -- ignore
+// oxlint-disable-next-line typescript/no-explicit-any -- host elements, events and caller props are platform-specific at this adapter boundary.
 type AnyValue = any
 
 type Ref = AnyValue
@@ -130,7 +130,7 @@ function getProps(this: Base, elementKey: string, conditions?: HostConditions) {
 // host passed to TonedProvider.
 function resolveElement(type?: string): never {
   throw new Error(
-    `Native element families need a host resolveElement (got $$type ${JSON.stringify(
+    `Native element families need a host resolveElement (got $kind ${JSON.stringify(
       type,
     )}). Pass resolveElement and nativeHost through the TonedProvider host before the first bound component renders — ` +
       'map view→View, text→Text, image→Image and pressable→Pressable from the selected renderer. ' +

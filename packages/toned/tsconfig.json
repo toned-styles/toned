@@ -9,9 +9,6 @@
     }
   ],
   "compilerOptions": {
-    "types": [
-      "node",
-      "bun"
-    ]
+    "types": ["node", "bun"]
   }
 }

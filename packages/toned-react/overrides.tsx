@@ -19,8 +19,8 @@ import { useRuntimeConfig } from './runtime-config.ts'
  * The mechanism is identity-keyed and deliberately knows nothing about paths,
  * zones or names: an entry pairs the SHEET OBJECT with a partial rules object,
  * and a sheet matches an entry by `===`. Which entries are provided WHERE is
- * the integration's job — a host that addresses parts of the tree (symbiote's
- * `Zone`, a router, a theme scope) renders `<StyleOverrides value={…}>` with
+ * the integration's job — a host that addresses parts of the tree (a zone, a
+ * router, a theme scope) renders `<StyleOverrides value={…}>` with
  * whatever it decided applies at that point. Core stays a context and a merge.
  *
  * Resolution: entries accumulate outer→inner (nesting concatenates), and a
@@ -49,7 +49,7 @@ export interface StyleOverrideEntry {
   /**
    * When set, the entry applies only where the config's ambient scope matches
    * (config.useStyleOverrideScope + matchStyleOverrideScope — the host
-   * integration's channel; the haelo host feeds symbiote's zone path).
+   * integration's channel; a host can feed it a zone or route path, for example).
    */
   readonly scope?: string
 }
@@ -138,9 +138,9 @@ interface DerivedCache {
  * merely because React rendered them in alternating order. Weak sheet keys and
  * a finite limit bound retained derived plans, providers and token configs. */
 const derivedCache = new WeakMap<object, DerivedCache[]>()
-// A six-week Calendar has 42 sibling override scopes. The acceptance fixture
-// proves 32 thrashes all 42 on a two-cell update; 64 retains the working set
-// while keeping historical providers/configs bounded per source sheet.
+// A six-week calendar has 42 sibling override scopes: a limit of 32 thrashes
+// all 42 on a two-cell update, while 64 retains the working set and keeps
+// historical providers/configs bounded per source sheet.
 const MAX_DERIVATIONS = 64
 function remember(sheet: object, value: DerivedCache) {
   const entries = derivedCache.get(sheet) ?? []

@@ -36,6 +36,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * The Vite plugin no longer adds a style element to the HTML; import `virtual:toned.css`. Injecting styles at runtime is a development helper in `@toned/core/dev/inject`.
 * Type checking a stylesheet costs less: parts are validated once against a shape shared by every sheet of a system.
 * Token names in the build manifest are compared in name order, so a bundler that reorders module exports does not invalidate an unchanged system.
+* The types are checked against TypeScript 5.9, 6 and 7; TypeScript 5.9 is the minimum supported version.
 
 ### Fixed
 

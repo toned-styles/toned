@@ -13,7 +13,7 @@ const { positionals } = parseArgs({
 
 const [filepath, output] = positionals
 
-assert(filepath && output, 'filepath and output are requried')
+assert(filepath && output, 'filepath and output are required')
 
 const tokens = (await import(path.join(process.cwd(), filepath))) as {
   default: Tokens

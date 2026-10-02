@@ -105,8 +105,10 @@ export function createElements(sheet: StylesheetLike) {
         const instance = useContext(Context)
         const hostProps = ref ? { ...props, ref } : props
         return instance
-          ? createElement(PartHost, { instance, part, props: hostProps })
-          : createElement(Standalone, { props: hostProps })
+          ? // oxlint-disable-next-line react/refs -- the forwarded ref is passed to the host, never read during render.
+            createElement(PartHost, { instance, part, props: hostProps })
+          : // oxlint-disable-next-line react/refs -- the forwarded ref is passed to the host, never read during render.
+            createElement(Standalone, { props: hostProps })
       },
     )
     Component.displayName = `TonedElements.${part}`

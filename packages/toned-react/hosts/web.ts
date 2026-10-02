@@ -5,7 +5,7 @@ import { attachPart } from '../attach-part.ts'
 import { addWith, supportsRefCleanup } from '../host-props.ts'
 import type { ReactHost } from '../runtime-config.ts'
 
-// oxlint-disable-next-line typescript/no-explicit-any -- ignore
+// oxlint-disable-next-line typescript/no-explicit-any -- host elements, events and caller props are platform-specific at this adapter boundary.
 type AnyValue = any
 
 type Ref = AnyValue
@@ -57,8 +57,8 @@ function getProps(this: Base, elementKey: string, conditions?: HostConditions) {
       // A press can end anywhere — including outside the window, where no
       // `mouseup` is delivered. Reconcile `:active` on a document release, a
       // pointer cancel, or a window blur, and remove all three the moment one
-      // fires. This replaces the previous per-press `mouseup` listener, which
-      // leaked (and left the element stuck `:active`) on an off-window release.
+      // fires. A per-press `mouseup` listener alone would leak (and leave the
+      // element stuck `:active`) on an off-window release.
       if (typeof document === 'undefined') return
       let stopTracking: (() => void) | undefined
       const endPress = () => {
@@ -94,9 +94,9 @@ function getProps(this: Base, elementKey: string, conditions?: HostConditions) {
   return addWith(result)
 }
 
-// The default web element for each `$$type`. A host (e.g. haelo-primitives)
-// overrides `resolveElement` to render its own View/Text/Image/Pressable
-// instead.
+// The default web element for each `$kind`. A host (e.g. a design-system
+// package) overrides `resolveElement` to render its own
+// View/Text/Image/Pressable instead.
 const WEB_ELEMENT_BY_TYPE: Record<string, 'div' | 'span' | 'img' | 'button'> = {
   view: 'div',
   text: 'span',

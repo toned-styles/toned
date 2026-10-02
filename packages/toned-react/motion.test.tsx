@@ -51,6 +51,7 @@ test('committed part ref enters and retains its host until exit completes', asyn
     const [present, setPresent] = useState(true)
     const motion = useMotion(options)
     return present ? (
+      // oxlint-disable-next-line react/refs -- motion.ref is a callback ref passed to the host, never read during render.
       <S.Root ref={motion.ref} data-testid="panel" aria-label={label}>
         <button
           type="button"
@@ -127,6 +128,7 @@ test('same-host React ref handoff retains motion and does not replay entry', () 
   function App({ label }: { label: string }) {
     const motion = useMotion(options)
     return (
+      // oxlint-disable-next-line react/refs -- motion.ref is a callback ref passed to the host, never read during render.
       <S.Root ref={motion.ref} data-testid="panel">
         {label}
       </S.Root>

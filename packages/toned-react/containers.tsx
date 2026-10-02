@@ -1,5 +1,7 @@
 import { createContext } from 'react'
 
+import type { ContainerSizesStore } from './container-store.ts'
+
 /**
  * Measured inline sizes (px) of the container roots above this point of the
  * tree, by container name — the RUNTIME carrier of the `@container` lookup.
@@ -17,6 +19,6 @@ export const ContainerSizesContext = createContext<Record<string, number>>({})
 
 /** Stable runtime measurement scope; updates notify committed controllers. */
 export const ContainerStoreContext = createContext<{
-  store: import('./container-store.ts').ContainerSizesStore
+  store: ContainerSizesStore
   legacy: Record<string, number>
 } | null>(null)

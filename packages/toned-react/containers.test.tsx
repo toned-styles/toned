@@ -200,6 +200,7 @@ test('measurements update committed styles during Suspense and survive its later
   try {
     function Child() {
       const [on, setOn] = React.useState(false)
+      // oxlint-disable-next-line react/globals -- the test drives this component's state from outside the tree.
       select = setOn
       const s = useBind(measured, { on })
       if (on && !ready) throw pending

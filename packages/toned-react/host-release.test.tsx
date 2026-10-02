@@ -80,7 +80,7 @@ for (const bound of [false, true]) {
     expect(target.style.color).toBe('purple')
     expect(target.style.opacity).toBe('0.5')
     // React never declared the interaction-only width, so its prop
-    // diff cannot remove them. Ref cleanup must restore the old declaration.
+    // diff cannot remove it. Ref cleanup must restore the prior declaration.
     expect(target.style.width).toBe('')
   })
 }

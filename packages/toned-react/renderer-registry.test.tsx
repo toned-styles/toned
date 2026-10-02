@@ -191,6 +191,7 @@ test('suspended provider themes never publish into committed component-family up
   }
   function App() {
     const [state, update] = useState({ ink: 'red', blocked: false })
+    // oxlint-disable-next-line react/globals -- the test drives this component's state from outside the tree.
     set = update
     return (
       <Suspense fallback={<span>pending</span>}>

@@ -14,6 +14,7 @@ export {
 } from './runtime-config.ts'
 
 import {
+  type Config,
   type EditorOnly,
   type ModType,
   type OverrideRulesContext,
@@ -61,9 +62,9 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   /**
    * Merge host props onto this element. Token overrides belong in overrideStyles().
    *
-   * Implemented by `addWith` in react-web.ts / react-native.ts, so it exists
-   * only when one of those configs is installed — `@toned/react/config` alone
-   * has no `getProps` and yields bare elements with no `with`.
+   * Implemented by `addWith` through the web and native hosts' `getProps`, so
+   * it exists only when a host is installed — `@toned/react/config` alone has
+   * no `getProps` and yields bare elements with no `with`.
    *
    * The return type CARRIES the passed props: `{...s.root.with({ value })}`
    * must still satisfy a consumer whose `value` is required — with() merges
@@ -90,7 +91,7 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
  * runtime interactions for an element (react-web: mouse/focus; react-native:
  * press/hover/focus). Spread them; do not rely on their presence — css pseudo
  * mode attaches none. Typed explicitly rather than through an index signature
- * so `s.el.anything` stopped silently typing as `any`.
+ * so `s.el.anything` does not silently type as `any`.
  */
 type InteractionHandlerProps = Partial<{
   // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
@@ -126,21 +127,12 @@ type StylesheetLike = {
 }
 
 /**
- * Extract element types from a Stylesheet generic.
- * Uses conditional type inference to pull out the element record T
- * from the Stylesheet<S, T, M> intersection, avoiding index signature pollution.
- */
-/**
  * Recover a stylesheet's generic parameters from its phantom brand.
  *
  * Matching `S extends Stylesheet<any, infer T, any>` does NOT work: Stylesheet
- * expands to an intersection containing a mapped type, which TypeScript cannot
- * infer back through. The brand is a plain property, so it can.
- */
-/*
- * Recovered from the phantom rather than by matching `Stylesheet<…>`: the
- * stylesheet type is self-referential through StylesheetWithVariants, and that
- * defeats inference through the generic reference.
+ * expands to an intersection containing a mapped type and is self-referential
+ * through StylesheetWithVariants, which defeats inference through the generic
+ * reference. The brand is a plain property, so it can be inferred.
  */
 type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
 
@@ -178,7 +170,7 @@ type VariantArgs<S> = [InferMods<S>] extends [never]
  * Hook to use a stylesheet in a React component.
  *
  * @param stylesheet - The stylesheet created with `stylesheet()` or `stylesheet().variants()`
- * @param state - Optional state object for variant selection
+ * @param args - The variant state; required when the stylesheet has axes without defaults
  * @returns An object with element keys that can be spread onto React elements
  *
  * @example
@@ -196,10 +188,9 @@ export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
   mods?: object,
 ) {
-  const sourceSheet = stylesheet
   // Declared local composition belongs in overrideSheet(); ambient entries
   // target this exact sheet identity and apply after its authored layers.
-  stylesheet = useOverriddenSheet(stylesheet)
+  const sheet = useOverriddenSheet(stylesheet)
   const legacySizes = useContext(ContainerSizesContext)
   const containerScope = useContext(ContainerStoreContext)
   const readSizes = useCallback(
@@ -212,17 +203,19 @@ export function useStyles<T extends StylesheetLike>(
     [containerScope, legacySizes],
   )
   const containerSizes = readSizes()
-  const committed = useRef<any>(null)
-  const config = useTokenConfig(useRuntimeConfig(stylesheet))
-  useMemo(
-    () => (config as any)[VALIDATE_SHEET]?.(stylesheet),
-    [config, stylesheet],
+  const committed = useRef<{ stylesheet: object; candidate: unknown } | null>(
+    null,
   )
+  const config: Config & { [VALIDATE_SHEET]?: (sheet: object) => void } =
+    useTokenConfig(useRuntimeConfig(sheet))
+  // oxlint-disable-next-line react/void-use-memo -- renderer validation diagnoses an unsupported sheet by throwing; memoized so it runs once per renderer and sheet identity.
+  useMemo(() => config[VALIDATE_SHEET]?.(sheet), [config, sheet])
   // A candidate is private to this render. In particular a suspended render
   // cannot publish mods, refs, subscriptions, or token values to the live tree.
-  const candidate = stylesheet[SYMBOL_INIT](config, mods)
+  const candidate = sheet[SYMBOL_INIT](config, mods)
   candidate.prepare?.(
-    committed.current?.stylesheet === sourceSheet
+    // oxlint-disable-next-line react/refs -- reads, never writes, the committed candidate so this render can carry its state forward; publication happens in the layout effect.
+    committed.current?.stylesheet === stylesheet
       ? committed.current.candidate
       : undefined,
   )
@@ -232,7 +225,7 @@ export function useStyles<T extends StylesheetLike>(
     candidate.matchStyles()
   }
   useLayoutEffect(() => {
-    committed.current = { stylesheet: sourceSheet, candidate }
+    committed.current = { stylesheet, candidate }
     const unmount = candidate.mount?.()
     const syncMeasurements = () => {
       const conditions = candidate.conditionState?.(readSizes())
@@ -249,14 +242,14 @@ export function useStyles<T extends StylesheetLike>(
       unsubscribe?.()
       unmount?.()
     }
-  }, [candidate, sourceSheet, containerScope, readSizes])
+  }, [candidate, stylesheet, containerScope, readSizes])
   return styleView(candidate)
 }
 
 /**
  * A bound element component (`<s.Root/>`).
  *
- * Without `as`, it renders the primitive its `$$type` selects through the
+ * Without `as`, it renders the primitive its `$kind` selects through the
  * config's `resolveElement`. The host element is configuration, unknown
  * statically, so that signature's props stay open.
  *
@@ -268,10 +261,10 @@ export function useStyles<T extends StylesheetLike>(
  * and silently pass.
  *
  * `const` keeps `as="div"` inferred as the literal 'div'. Without it the
- * literal is widened to `string` whenever the host's `JSX.IntrinsicElements`
+ * literal widens to `string` whenever the host's `JSX.IntrinsicElements`
  * carries a PATTERN key — React Three Fiber's `ThreeElements` is keyed
- * `Uncapitalize<string>` — and `ComponentPropsWithRef<string>` is `{}`, so any
- * child or host prop was rejected and callers had to write `as="div"`.
+ * `Uncapitalize<string>` — and `ComponentPropsWithRef<string>` is `{}`, which
+ * would reject every child and host prop.
  */
 type BoundCallable = {
   <const As extends HostElement>(
@@ -282,7 +275,7 @@ type BoundCallable = {
 
 /**
  * A bound stylesheet: each declared element becomes a component that renders the
- * primitive its `$$type` selects (via the config's `resolveElement`) — or the
+ * primitive its `$kind` selects (via the config's `resolveElement`) — or the
  * `as` target — with the resolved styles applied, and ALSO carries the raw
  * prop-bag (`.with`/`.style`/`.className`) for escape-hatch spreading. Keys are
  * exactly the declared elements — `s.Nope` is a compile error, not `any`.
@@ -300,7 +293,7 @@ export type ElementsOf<T> = ((
 ) => ReactElement) & { [K in keyof InferElements<T>]: BoundCallable }
 
 type ReservedElementName =
-  | keyof Function
+  | keyof CallableFunction
   // oxlint-disable-next-line typescript/no-wrapper-object-types -- the Object interface lists the prototype members a part name would shadow; `keyof object` is never.
   | keyof Object
   // Legacy Object.prototype members also satisfy the runtime `part in Elements`

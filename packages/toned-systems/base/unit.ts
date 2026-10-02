@@ -1,10 +1,8 @@
 import { defineUnit } from '@toned/core'
 
-// TODO: move to configuration level
-// oxlint-disable-next-line typescript/no-wrapper-object-types -- instance is expected
+// oxlint-disable-next-line typescript/no-wrapper-object-types -- accepts boxed values as well as primitives; both are coerced below.
 export const SpaceUnit = defineUnit<Number | String>((value, tokens) => {
-  // @ts-expect-error
-  const base = tokens.base
+  const base = tokens['base']
 
   if (typeof value === 'string') {
     return tokens[`space_${value}`]

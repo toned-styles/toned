@@ -51,8 +51,8 @@ test('a built utility backend patches cross-part host facts without rendering or
       },
     ],
   })
-  // This fixture isolates the React host contract. The release browser fixture
-  // independently compiles the real Tailwind implementation and checks its CSS.
+  // This fixture isolates the React host contract with a stub compiler; it
+  // does not check the CSS a real Tailwind compilation generates.
   const built = await buildTailwind(system, profile, {
     sheets: [sheet],
     tokens: {},

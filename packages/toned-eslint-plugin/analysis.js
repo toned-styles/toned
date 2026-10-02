@@ -13,7 +13,7 @@
  */
 /**
  * Keep this projection outside the recursive resolver: returning callee.bag
- * directly makes its inferred return type recursively index itself in Biome.
+ * directly makes the resolver's inferred return type reference itself.
  * @param {{ bag: PartBag }} binding
  * @returns {PartBag}
  */

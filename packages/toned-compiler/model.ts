@@ -1,3 +1,5 @@
+import type { StaticModule } from './static-source.ts'
+
 /** Serializable protocol shared by editor, agent and visual tooling. Offsets are UTF-16. */
 export type DesignValue =
   | null
@@ -58,7 +60,7 @@ export interface DesignDiagnostic {
   readonly span: SourceSpan
 }
 export interface DesignDocument {
-  readonly module?: import('./static-source.ts').StaticModule
+  readonly module?: StaticModule
   readonly uri: string
   readonly version: number
   readonly revision: string
