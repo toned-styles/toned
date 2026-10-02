@@ -110,7 +110,7 @@ export function ModlessBind() {
 }
 
 /*
- * `overrideStyles` says what the stylesheet says, about the elements the
+ * `extend` says what the stylesheet says, about the elements the
  * target declared. Each `@ts-expect-error` below holds because a sheet
  * exported for overriding keeps its declared type.
  */

@@ -112,7 +112,7 @@ export type ModType = Record<string, string | boolean | number>
  * (`:focus-visible`, `:focus-within`, and the cross-element channels) cannot
  * drift out of the type. StylesheetInput is used as a CONSTRAINT, which does
  * no excess property checking, so a missing state would go unnoticed there and
- * surface only in `overrideStyles`, which checks its rules exactly.
+ * surface only in `extend`, which checks its rules exactly.
  */
 export type Pseudo = PseudoState | CssOnlyPseudoState
 
@@ -431,9 +431,9 @@ type IsCrossElementKey<
  * One element's rules, exactly as `StylesheetInput` accepts them.
  *
  * The single source for "what may be written about an element": the authoring
- * surface below and `overrideStyles`' rules type both use THIS, so the two
+ * surface below and `extend`'s rules type both use THIS, so the two
  * cannot drift. Re-deriving the pseudo and breakpoint arguments at a second
- * site would let overrides reject `:focus-visible` and `@field-group/md`
+ * site would let an extension reject `:focus-visible` and `@field-group/md`
  * while the stylesheet accepts them.
  */
 export type AuthoredElementStyle<
@@ -1388,7 +1388,7 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   /*
    * Element name → the ELEMENT TYPE it declared, and nothing more.
    *
-   * `overrideStyles` reads this to type its rules, and it needs two things
+   * `extend` reads this to type its rules, and it needs two things
    * from each element: that the name exists, and which `$$type` constrains
    * its tokens. It reconstructs `AuthoredElementStyle` from those on demand,
    * so the two surfaces cannot drift while the brand stays small — recording

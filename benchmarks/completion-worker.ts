@@ -270,19 +270,20 @@ function DayScope({ day, selected }: { day: number; selected: boolean }) {
   const value = React.useMemo(() => {
     overrideEntries++
     return [
-      binding
-        .overrideStyles(sheet, {
+      sheet.extend(
+        {
           Root: {
             offset: day,
             ...fixtureStyle(day),
             shade: selected ? 'selected' : day % 7 === 0 ? 'disabled' : 'rest',
             ':hover': { shade: selected ? 'selected' : 'rest' },
           },
-        })
-        .variants(($: any) => {
+        },
+        ($: any) => {
           overrideFactoryCalls++
           return { [$.selected(true)]: { Root: { shade: 'selected' } } }
-        }),
+        },
+      ),
     ]
   }, [day, selected])
   return React.createElement(

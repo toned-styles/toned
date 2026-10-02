@@ -92,7 +92,7 @@ export type OverrideSheetRules<T> =
  * system. Validation is separate — ValidateDeclaration against
  * OverrideSheetRules. Using OverrideSheetRules as the contextual type (or the
  * constraint) re-derived the whole nullable rules tree against each call's
- * literal: ~10k instantiations per `overrideStyles` call on a dialog sheet.
+ * literal: ~10k instantiations per `extend` call on a dialog sheet.
  */
 export type OverrideRulesContext<T> =
   Meta<T> extends {
