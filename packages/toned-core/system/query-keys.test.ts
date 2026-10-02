@@ -239,9 +239,7 @@ describe('computed query keys', () => {
     expect(native(sheet, {})['gap']).toBe(0)
     expect(native(sheet, { [fact]: true })['gap']).toBe(2)
     expect(
-      native(sheet.extend({ Root: { gap: 4 } }), { [fact]: true })[
-        'gap'
-      ],
+      native(sheet.extend({ Root: { gap: 4 } }), { [fact]: true })['gap'],
     ).toBe(4)
     const matcher = new StyleMatcher(getStylesheetPlan(sheet).rules, {
       sourceOrder: true,

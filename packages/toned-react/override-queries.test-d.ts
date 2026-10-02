@@ -1,10 +1,5 @@
 /** Pure and ambient override authoring share one checked declaration vocabulary. */
-import {
-  defineSystem,
-  defineToken,
-  type Variants,
-} from '@toned/core'
-
+import { defineSystem, defineToken, type Variants } from '@toned/core'
 
 const ui = defineSystem({
   id: 'override-query-types',
@@ -32,22 +27,25 @@ sheet.extend((q) => ({
   },
   [q.platform('web')]: { Root: { $style: { position: 'sticky' } } },
 }))
-sheet.extend((q) => ({
-  Root: { opacity: null, [q.not(q.state('hover'))]: { opacity: 0 } },
-  [q.all(q.media('wide'), q.part('Root').state('hover'))]: {
-    Label: { $style: { fontSize: 18 } },
-  },
-  [q.platform('native')]: { Root: { $style: { elevation: 2 } } },
-}), ($, q) => ({
-  [$('shared')]: { Label: { $style: { fontSize: 16 } } },
-  [$.active(true)]: {
-    $compose: 'shared',
-    [q.platform('web')]: { Root: { $style: { cursor: 'pointer' } } },
+sheet.extend(
+  (q) => ({
+    Root: { opacity: null, [q.not(q.state('hover'))]: { opacity: 0 } },
     [q.all(q.media('wide'), q.part('Root').state('hover'))]: {
-      Root: { opacity: 1 },
+      Label: { $style: { fontSize: 18 } },
     },
-  },
-}))
+    [q.platform('native')]: { Root: { $style: { elevation: 2 } } },
+  }),
+  ($, q) => ({
+    [$('shared')]: { Label: { $style: { fontSize: 16 } } },
+    [$.active(true)]: {
+      $compose: 'shared',
+      [q.platform('web')]: { Root: { $style: { cursor: 'pointer' } } },
+      [q.all(q.media('wide'), q.part('Root').state('hover'))]: {
+        Root: { opacity: 1 },
+      },
+    },
+  }),
+)
 sheet.extend({}, ($, q) => ({
   [$('shared')]: { Label: { $style: { fontSize: 16 } } },
   [$.active(true)]: {

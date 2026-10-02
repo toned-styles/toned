@@ -412,9 +412,10 @@ test('scope hooks read nested contexts and provider replacement requires an expl
     return prefix + '/' + React.useContext(Scope)
   }
   const scoped = { ...config, useStyleOverrideScope: useScope }
-  const entry = { sheet: sheet.extend(
-    { Root: { opacity: 0 } },
-), scope: 'inside' }
+  const entry = {
+    sheet: sheet.extend({ Root: { opacity: 0 } }),
+    scope: 'inside',
+  }
   function View() {
     const s = useStyles(sheet)
     return <div {...s.Root} data-testid="scope-host" />

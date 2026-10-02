@@ -100,10 +100,7 @@ export function StyleOverrides({
   children?: ReactNode
 }) {
   const outer = useContext(StyleOverridesContext)
-  const merged = useMemo(
-    () => [...outer, ...normalise(value)],
-    [outer, value],
-  )
+  const merged = useMemo(() => [...outer, ...normalise(value)], [outer, value])
   return createElement(
     StyleOverridesContext.Provider,
     { value: merged },

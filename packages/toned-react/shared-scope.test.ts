@@ -1,9 +1,5 @@
 import type { Variants } from '@toned/core'
-import {
-  defineSystem,
-  getConfig,
-  SYMBOL_INIT,
-} from '@toned/core'
+import { defineSystem, getConfig, SYMBOL_INIT } from '@toned/core'
 import { defineGrid, fr } from '@toned/core/grid'
 import type { Base } from '@toned/core/stylesheet'
 import { expect, test } from 'vitest'

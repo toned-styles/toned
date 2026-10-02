@@ -116,9 +116,9 @@ test.each(['$kind', '$$type'])(
   'override metadata %s is rejected before merging or composition',
   (key) => {
     for (const value of [null, undefined, 'view', 'text']) {
-      expect(() =>
-        sheet.extend({ Root: { [key]: value } } as never),
-      ).toThrow('static part kind')
+      expect(() => sheet.extend({ Root: { [key]: value } } as never)).toThrow(
+        'static part kind',
+      )
       for (const condition of ['Root:hover', 'Root~:hover']) {
         expect(() =>
           sheet.extend({
@@ -156,7 +156,7 @@ test('plain override variants do not merge composition source defaults', () => {
   ).toEqual({ opacity: 1 })
 })
 
-test('an extension wins over the sheet\'s variants; its own variant rules win over both', () => {
+test("an extension wins over the sheet's variants; its own variant rules win over both", () => {
   const native = createNativeRenderer(ui, { tokens: {} })
   const resolve = (target: typeof sheet, active: boolean) =>
     native.resolve(target, { variants: { active } }).Root.style
