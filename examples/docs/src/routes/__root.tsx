@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
+import { createRootRoute, Match, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 import { useEffect, useRef } from 'react'
 
@@ -45,6 +45,29 @@ function pageLabel(pathname: string) {
   )
 }
 
+/**
+ * The matched page, in place of the router's `<Outlet />`.
+ *
+ * `<Outlet />` wraps the root's child in a Suspense boundary, and React
+ * hydrates a boundary after the page around it. The header is then live while
+ * the page body is not: navigating from it in that window (search, a header
+ * link) changes the matches under the unhydrated body, whose router component
+ * reads a match that no longer exists and throws. React recovers by rendering
+ * on the client, but logs the error. No route here is lazy, so the boundary
+ * buys nothing; without it the whole page hydrates in one pass.
+ */
+function Page() {
+  const page = useRouterState({
+    select: (state) => ({
+      missing: Boolean(state.matches[0]?._notFound),
+      routeId: state.matches[1]?.routeId,
+    }),
+    structuralSharing: true,
+  })
+  if (page.missing) return <NotFound />
+  return page.routeId ? <Match routeId={page.routeId} /> : null
+}
+
 function RootLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname.replace(/(.)\/$/, '$1'),
@@ -56,7 +79,7 @@ function RootLayout() {
     document.title = `Toned — ${pageLabel(pathname)}`
   }, [pathname])
 
-  if (routeIds.includes('/ui')) return <Outlet />
+  if (routeIds.includes('/ui')) return <Page />
 
   if (
     routeIds.includes('/') ||
@@ -65,7 +88,7 @@ function RootLayout() {
   )
     return (
       <ShowcaseProvider>
-        <Outlet />
+        <Page />
       </ShowcaseProvider>
     )
 
@@ -118,7 +141,7 @@ function DocsLayout({ pathname }: { pathname: string }) {
           <div {...(widePages.has(pathname) ? s.Wide : s.Article)}>
             {place && <p {...s.Breadcrumb}>{place.section}</p>}
             <div id="docs-article">
-              <Outlet />
+              <Page />
             </div>
             <Pager prev={place?.prev} next={place?.next} />
           </div>
