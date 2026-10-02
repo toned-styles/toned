@@ -1,10 +1,5 @@
 import type { Variants } from '@toned/core'
-import {
-  defineSystem,
-  getConfig,
-  overrideSheet,
-  SYMBOL_INIT,
-} from '@toned/core'
+import { defineSystem, getConfig, SYMBOL_INIT } from '@toned/core'
 import { defineGrid, fr } from '@toned/core/grid'
 import type { Base } from '@toned/core/stylesheet'
 import { expect, test } from 'vitest'
@@ -116,12 +111,12 @@ test('ownership is structural even when a variant-dependent relationship is inac
 
 test('override additions and removals determine the effective ownership contract', () => {
   const base = system.stylesheet({ Root: {}, Label: {} })
-  const added = overrideSheet(base, {
+  const added = base.extend({
     'Root:hover': { Label: { $style: { opacity: 0.5 } } },
   })
   expect(standaloneScopeRequirement(controller(base), 'Label')).toBeUndefined()
   expect(standaloneScopeRequirement(controller(added), 'Root')).toBeDefined()
-  const removed = overrideSheet(added, {
+  const removed = added.extend({
     'Root:hover': { Label: { $style: { opacity: null } } },
   })
   expect(
@@ -143,7 +138,7 @@ test('effective grid owner and area registrations require scope, unrelated parts
   expect(standaloneScopeRequirement(instance, 'Root')).toMatch(/\$grid/)
   expect(standaloneScopeRequirement(instance, 'Body')).toMatch(/\$area/)
   expect(standaloneScopeRequirement(instance, 'Independent')).toBeUndefined()
-  const removed = overrideSheet(sheet, {
+  const removed = sheet.extend({
     Root: { '@platform web': { $grid: null } },
     Body: { '@platform web': { $area: null } },
   })

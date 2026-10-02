@@ -26,13 +26,19 @@ export type {
   EditorOnly,
 } from './types/editor-mode.ts'
 export {
+  type DerivationStep,
+  derivationOf,
+  derivationSteps,
+} from './stylesheet/derivations.ts'
+export {
+  type ExtensionRules,
+  type ExtensionVariants,
   type NullableOverride,
   type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
   type OverrideVariantContext,
-  overrideSheet,
-} from './stylesheet/overrideSheet.ts'
+} from './stylesheet/extension.ts'
 export type { SystemDefinition, SystemOptions } from './system/definers.ts'
 export type {
   Palette,

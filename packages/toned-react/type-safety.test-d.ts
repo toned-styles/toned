@@ -7,9 +7,9 @@
  * error, not a silent `any`.
  */
 import type { Variants } from '@toned/core'
-import { alpha, defineSystem, defineToken, overrideSheet } from '@toned/core'
+import { alpha, defineSystem, defineToken } from '@toned/core'
 
-import { bind, overrideStyles, useBind, useStyles } from './index.ts'
+import { bind, useBind, useStyles } from './index.ts'
 
 const bgColor = defineToken({
   values: ['base', 'accent'] as const,
@@ -110,7 +110,7 @@ export function ModlessBind() {
 }
 
 /*
- * `overrideStyles` says what the stylesheet says, about the elements the
+ * `extend` says what the stylesheet says, about the elements the
  * target declared. Each `@ts-expect-error` below holds because a sheet
  * exported for overriding keeps its declared type.
  */
@@ -121,40 +121,40 @@ const overridable = system
   }))
 
 // Base rules: the nested blocks the stylesheet accepts, an override accepts.
-overrideStyles(overridable, {
+overridable.extend({
   root: { bgColor: 'accent', ':hover': { bgColor: 'base' } },
 })
 
 // @ts-expect-error — an element the sheet never declared
-overrideStyles(overridable, { nope: { bgColor: 'base' } })
+overridable.extend({ nope: { bgColor: 'base' } })
 
 // @ts-expect-error — a value the token does not have
-overrideStyles(overridable, { root: { bgColor: 'nope' } })
+overridable.extend({ root: { bgColor: 'nope' } })
 
 // Variants: the sheet's own axes, replacing a matcher or adding one.
-overrideStyles(overridable, {}).variants(($) => ({
+overridable.extend({}, ($) => ({
   [$.size('sm')]: { root: { bgColor: 'base' } },
   [$.size('lg')]: { icon: { ':hover': { bgColor: 'accent' } } },
 }))
 
-overrideStyles(overridable, {}).variants(($) => ({
+overridable.extend({}, ($) => ({
   // @ts-expect-error — a value the axis does not have
   [$.size('xl')]: { root: { bgColor: 'base' } },
 }))
 
-overrideStyles(overridable, {}).variants(($) => {
+overridable.extend({}, ($) => {
   // @ts-expect-error — an axis the sheet does not declare
   $.tone('quiet')
   return {}
 })
 
 // @ts-expect-error — an unknown element inside a matcher
-overrideStyles(overridable, {}).variants(($) => ({
+overridable.extend({}, ($) => ({
   [$.size('sm')]: { nope: { bgColor: 'base' } },
 }))
 
 // @ts-expect-error — a bad token value inside a matcher
-overrideStyles(overridable, {}).variants(($) => ({
+overridable.extend({}, ($) => ({
   [$.size('sm')]: { root: { bgColor: 'nope' } },
 }))
 
@@ -177,20 +177,20 @@ export function TypedHostProps() {
 }
 
 // Override factories share the same finite query builder and check inferred keys.
-overrideStyles(overridable, (q) => ({
+overridable.extend((q) => ({
   root: { [q.state('hover')]: { bgColor: 'base' } },
 }))
-overrideStyles(overridable, {}).variants(($, q) => ({
+overridable.extend({}, ($, q) => ({
   [$.size('sm')]: { root: { [q.state('hover')]: { bgColor: 'accent' } } },
 }))
 // @ts-expect-error override variants reject a token typo beside a computed atom
-overrideStyles(overridable, {}).variants(($, q) => ({
+overridable.extend({}, ($, q) => ({
   [$.size('sm')]: {
     root: { [q.state('hover')]: { bgColor: 'accent' }, bgClor: 'base' },
   },
 }))
 // @ts-expect-error override factories reject extra token keys
-overrideStyles(overridable, (q) => ({
+overridable.extend((q) => ({
   root: { [q.state('hover')]: { bgColor: 'base' }, bgClor: 'base' },
 }))
 
@@ -211,7 +211,7 @@ export function CompletionContracts() {
   // @ts-expect-error declarations are composed before calling the hook
   useStyles(defaultedSheet, { variants: { tone: 'quiet' }, overrides: {} })
   // @ts-expect-error unknown declared override part
-  overrideSheet(defaultedSheet, { Missing: {} })
+  defaultedSheet.extend({ Missing: {} })
 
   // Platform vocabulary widens, but the declared element kind still applies.
   const portableSystem = defineSystem({
@@ -231,7 +231,7 @@ export function CompletionContracts() {
     Root: { $kind: 'text', '@platform.web': { $style: { fontSize: '1rem' } } },
   })
 
-  const derived = overrideSheet(defaultedSheet, { Root: { bgColor: null } })
+  const derived = defaultedSheet.extend({ Root: { bgColor: null } })
   useStyles(derived, { tone: 'quiet' })
   // @ts-expect-error composition preserves required axes
   useStyles(derived)
@@ -277,8 +277,7 @@ export function CompletionContracts() {
   })
 
   // Authoritative composition is available to pure server/build code too.
-  const pureOverride = overrideSheet(
-    defaultedSheet,
+  const pureOverride = defaultedSheet.extend(
     { Root: { bgColor: null } },
     ($) => ({
       [$.tone('quiet')]: { Root: { bgColor: 'base' } },
@@ -286,13 +285,13 @@ export function CompletionContracts() {
   )
   useStyles(pureOverride, { tone: 'quiet' })
   // @ts-expect-error unknown override part
-  overrideSheet(defaultedSheet, { Missing: {} })
-  overrideSheet(defaultedSheet, {}, ($) => ({
+  defaultedSheet.extend({ Missing: {} })
+  defaultedSheet.extend({}, ($) => ({
     // @ts-expect-error unknown variant value in pure override
     [$.tone('missing')]: { Root: {} },
   }))
   // @ts-expect-error unknown token in pure override variant
-  overrideSheet(defaultedSheet, {}, ($) => ({
+  defaultedSheet.extend({}, ($) => ({
     [$.tone('quiet')]: { Root: { bogus: true } },
   }))
 

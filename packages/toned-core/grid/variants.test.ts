@@ -3,7 +3,6 @@ import { expect, test } from 'vitest'
 import { buildStyles } from '../build/index.ts'
 import { defineSystem } from '../index.ts'
 import { createWebRenderer } from '../server/index.ts'
-import { overrideSheet } from '../stylesheet/overrideSheet.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { Variants } from '../types/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -164,7 +163,7 @@ test('grid and area null overrides remove generated geometry before materializat
     Root: { '@platform web': { $grid: grid } },
     Body: { '@platform web': { $area: grid.area('body') } },
   })
-  const removed = overrideSheet(base, {
+  const removed = base.extend({
     Root: { '@platform web': { $grid: null } },
     Body: { '@platform web': { $area: null } },
   })
@@ -186,11 +185,11 @@ test('authoritative layers may add unconditional grid registrations and replace 
     Root: { '@platform web': { $grid: first } },
     Body: {},
   })
-  const added = overrideSheet(base, {
+  const added = base.extend({
     Body: { '@platform web': { $area: first.area('body') } },
   })
   expect(() => buildStyles(ui, { sheets: [added] })).not.toThrow()
-  const replaced = overrideSheet(added, {
+  const replaced = added.extend({
     Root: { '@platform web': { $grid: second } },
     Body: { '@platform web': { $area: second.area('body') } },
   })
@@ -218,6 +217,6 @@ test('removing a grid registration cannot leave its conditional layout behind', 
     Root: { '@platform web': { $grid: first, '@media wide': { $grid: wide } } },
   })
   expect(() =>
-    overrideSheet(base, { Root: { '@platform web': { $grid: null } } }),
+    base.extend({ Root: { '@platform web': { $grid: null } } }),
   ).toThrow('unconditional registration')
 })

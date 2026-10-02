@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { overrideStyles, StyleOverrides, useStyles } from '@toned/react'
+import { StyleOverrides, useStyles } from '@toned/react'
 import { useMemo, useState } from 'react'
 
 import {
@@ -75,7 +75,7 @@ function LibraryShowcase() {
   const completed = done.filter(Boolean).length
   const overrides = useMemo(
     () => [
-      overrideStyles(buttonStyles, {
+      buttonStyles.extend({
         root: { borderRadius: rounded ? 'full' : 'medium' },
       }),
     ],

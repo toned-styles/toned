@@ -1,11 +1,5 @@
 'use client'
 
-import type { QueryBuilder } from '@toned/core/system'
-import type {
-  ExtractNamedStyles,
-  ValidateDeclaration,
-} from '@toned/core/types/stylesheet'
-
 export {
   ConfigProvider,
   type ReactHost,
@@ -15,15 +9,8 @@ export {
 
 import {
   type Config,
-  type EditorOnly,
-  type ModType,
-  type OverrideRulesContext,
-  type OverrideSheetRules,
-  type OverrideSheetVariantRules,
-  type OverrideVariantContext,
   SYMBOL_INIT,
   type TokenStyleDeclaration,
-  type VariantSelector,
 } from '@toned/core'
 import {
   type ComponentPropsWithRef,
@@ -40,11 +27,7 @@ import {
 import { bind as _bind, useBind as _useBind } from './bind.tsx'
 import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
 import { createElements as _createElements } from './create-elements.tsx'
-import {
-  overrideStyles as _overrideStyles,
-  type StyleOverrideEntry,
-  useOverriddenSheet,
-} from './overrides.tsx'
+import { useOverriddenSheet } from './overrides.tsx'
 import { useRuntimeConfig, VALIDATE_SHEET } from './runtime-config.ts'
 import { styleView } from './style-view.ts'
 import { useTokenConfig } from './token-config.ts'
@@ -66,7 +49,7 @@ type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
   /** Present so React re-attaches interaction state on commit — safe to spread. */
   ref?: (node: unknown) => void
   /**
-   * Merge host props onto this element. Token overrides belong in overrideStyles().
+   * Merge host props onto this element. Token overrides belong in the stylesheet or an extension of it.
    *
    * Implemented by `addWith` through the web and native hosts' `getProps`, so
    * it exists only when a host is installed — `@toned/react/config` alone has
@@ -202,8 +185,7 @@ export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
   mods?: object,
 ) {
-  // Declared local composition belongs in overrideSheet(); ambient entries
-  // target this exact sheet identity and apply after its authored layers.
+  // An ancestor's StyleOverrides may swap this sheet for one derived from it.
   const sheet = useOverriddenSheet(stylesheet)
   const legacySizes = useContext(ContainerSizesContext)
   const containerScope = useContext(ContainerStoreContext)
@@ -348,105 +330,17 @@ export const bind = _bind as <T extends StylesheetLike>(
   stylesheet: T,
 ) => BoundElementsOf<T>
 
-/** Pure and ambient overrides share the same nullable declaration vocabulary. */
-export type StyleOverrideRules<T extends StylesheetLike> = OverrideSheetRules<T>
-/** Kept as a public compatibility alias; call-site validation infers exact names. */
-export type StyleOverrideVariantRules<
-  T extends StylesheetLike,
-  Named extends string = string,
-> = OverrideSheetVariantRules<T, Named>
-
-/**
- * An override entry, with the stylesheet's own `.variants()` on it.
- *
- * `$` is built from the TARGET sheet's axes, so an override selects on what
- * the component already passes to `useBind` — there are no new axes to
- * invent, and one that could be invented would be dead code that type-checks.
- * A matcher the sheet declared is replaced; one it did not is added.
- */
-type OverrideSystem<T> =
-  InferMeta<T> extends {
-    system: infer S extends TokenStyleDeclaration
-  }
-    ? S
-    : TokenStyleDeclaration
-type OverrideParts<T> =
-  InferMeta<T> extends { elements: infer E } ? keyof E & string : string
-export interface OverrideEntry<
-  T extends StylesheetLike,
-> extends StyleOverrideEntry {
-  variants<const Rules extends Record<string, unknown>>(
-    callback: (
-      selector: VariantSelector<
-        InferMods<T> extends ModType ? InferMods<T> : never
-      >,
-      q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-    ) => EditorOnly<
-      | Rules
-      | Record<
-          string,
-          OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Rules>>>
-        >,
-      Rules
-    > &
-      ValidateDeclaration<
-        NoInfer<Rules>,
-        Record<
-          string,
-          OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Rules>>>
-        >,
-        OverrideSystem<T>,
-        OverrideParts<T>
-      >,
-  ): OverrideEntry<T>
-}
-
-export const overrideStyles = _overrideStyles as <
-  T extends StylesheetLike,
-  const Rules extends Record<string, unknown>,
->(
-  sheet: T,
-  /*
-   * Contextually typed by OverrideRulesContext (shared element shapes);
-   * validated by ValidateDeclaration against the full rules type. The rules
-   * type as the constraint re-derived itself against each call's literal.
-   * The callback is validated through a separate `NoInfer` signature so that
-   * TypeScript before 7 still infers `Rules` from its return value.
-   */
-  rules:
-    | (((
-        q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-      ) => EditorOnly<Rules | NoInfer<OverrideRulesContext<T>>, Rules>) &
-        NoInfer<
-          (
-            q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
-          ) => ValidateDeclaration<
-            Rules,
-            StyleOverrideRules<T>,
-            OverrideSystem<T>,
-            OverrideParts<T>
-          >
-        >)
-    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
-        ValidateDeclaration<
-          Rules,
-          StyleOverrideRules<T>,
-          OverrideSystem<T>,
-          OverrideParts<T>
-        >),
-  opts?: { scope?: string },
-) => OverrideEntry<T>
-
 export { ContainerSizesContext } from './containers.tsx'
-export type { StyleOverrideEntry } from './overrides.tsx'
+export { registerRenderer, type ServerRenderer } from './server-registry.ts'
+export type { StyleOverride } from './overrides.tsx'
 export { StyleOverrides } from './overrides.tsx'
 
 /**
- * An EXPORTABLE stylesheet type for override targeting. A full sheet's
- * inferred type can exceed TypeScript's declaration-emit limits (TS7056), so
- * a module exporting its sheet for `overrideStyles` annotates with this —
- * trading per-element rule typing at foreign call sites for an emittable
- * declaration. Inside the owning module, `typeof <sheet>` stays fully typed.
+ * An EXPORTABLE stylesheet type. A full sheet's inferred type can exceed
+ * TypeScript's declaration-emit limits (TS7056), so a module exporting its
+ * sheet for others to `extend` annotates with this — trading per-element rule
+ * typing at foreign call sites for an emittable declaration. Inside the owning
+ * module, `typeof <sheet>` stays fully typed.
  */
 export type OverridableStylesheet = StylesheetLike
 

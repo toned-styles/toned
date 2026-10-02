@@ -23,7 +23,10 @@
   },
   "type": "module",
   "exports": {
-    ".": "./index.ts",
+    ".": {
+      "react-server": "./index.server.ts",
+      "default": "./index.ts"
+    },
     "./config": "./config.ts",
     "./config.native": "./config.native.ts",
     "./config.18": "./config.18.ts",
@@ -33,8 +36,12 @@
     "./context.native": "./context.native.ts",
     "./react-web": "./react-web.ts",
     "./react-native": "./react-native.ts",
-    "./style-types.web": { "types": "./style-types.web.ts" },
-    "./style-types.universal": { "types": "./style-types.universal.ts" },
+    "./style-types.web": {
+      "types": "./style-types.web.ts"
+    },
+    "./style-types.universal": {
+      "types": "./style-types.universal.ts"
+    },
     "./motion": "./motion.tsx",
     "./adaptive": "./adaptive.tsx",
     "./hosts/web": "./hosts/web.ts",
