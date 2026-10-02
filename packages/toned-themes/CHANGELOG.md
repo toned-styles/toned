@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0](https://github.com/toned-styles/toned/compare/%40toned%2Fthemes%400.2.0...%40toned%2Fthemes%401.0.0) (2026-10-02)
+
+### Features
+
+* consume packages from source, namespace internal config ([b84ca59](https://github.com/toned-styles/toned/commit/b84ca59e7b39df71f18bd9da0d3785cfc4b89748))
+
 # Next release
 
 ### Added

@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0](https://github.com/toned-styles/toned/compare/%40toned%2Fsystems%400.3.0...%40toned%2Fsystems%401.0.0) (2026-10-02)
+
+### Bug Fixes
+
+* remove the phantom with(), add flexBasis, stop methods posing as elements ([5891af1](https://github.com/toned-styles/toned/commit/5891af161045b5fc69847ea3839d66690326138c))
+* **systems:** inset tokens pass CSS lengths and expressions through ([cc25282](https://github.com/toned-styles/toned/commit/cc25282aa4f527b3aa86a6604c988d0a1a8d1790))
+
+### Features
+
+* consume packages from source, namespace internal config ([b84ca59](https://github.com/toned-styles/toned/commit/b84ca59e7b39df71f18bd9da0d3785cfc4b89748))
+* **core+systems+react:** dimensional enumeration, animation timing, css-only group hover, tighter element props ([92e06a9](https://github.com/toned-styles/toned/commit/92e06a9f6c2c62b0515e0618dbeebc1b057cbdfb))
+* **core:** string breakpoint values (rem scales), and applyState preserves foreign classes ([4e81d09](https://github.com/toned-styles/toned/commit/4e81d099cbf1331f8151a63a2a2f3c03bf947b45))
+* static-CSS affordances for utility-framework hosts ([4a07f48](https://github.com/toned-styles/toned/commit/4a07f48d9c302cd0110ef475537e83fe197aed61))
+* **systems:** 'fit-content' as an enumerated size value ([4f65fe4](https://github.com/toned-styles/toned/commit/4f65fe4d21ff1d968438a2b80dcb7e8391621e48))
+* **systems:** 'max-content' joins the enumerated size keywords (navigation-menu's max-w-max/w-max) ([de70545](https://github.com/toned-styles/toned/commit/de7054568da47e2062a0150aaa32ee461603f381))
+* **systems:** 32 joins the enumerated spacing scale (basis-32 parity) ([8c96669](https://github.com/toned-styles/toned/commit/8c966697a0ab5b75807ab891bf5febdcc11af18c))
+* **systems:** export SpaceUnit from the base entry ([ae54b02](https://github.com/toned-styles/toned/commit/ae54b02d7a6e5ca89b62c96b6427d0687e643029))
+* **systems:** the logical inline margins ([fba1d78](https://github.com/toned-styles/toned/commit/fba1d7899cd550c603fd37feba062129fe5179dc))
+
 # Next release
 
 ### Added

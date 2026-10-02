@@ -3,6 +3,67 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0](https://github.com/toned-styles/toned/compare/%40toned%2Fcore%400.6.0...%40toned%2Fcore%401.0.0) (2026-10-02)
+
+### Bug Fixes
+
+* **core:** breakpoint chains kebab-case the key, matching generate's toggles ([1f5b5c7](https://github.com/toned-styles/toned/commit/1f5b5c7c451c74ac89e8506af83a404fe99a653c))
+* **core:** bridge fallbacks preserve inheritance — inherited properties fall back to inherit, not initial ([9d72e8c](https://github.com/toned-styles/toned/commit/9d72e8c5058feff61f02db302aede3ddd203b16f))
+* **core:** chain values reach class fidelity; resting fallback crosses tokens ([8d01815](https://github.com/toned-styles/toned/commit/8d018155d268ab562401ef4d5c55ddfe556102bb))
+* **core:** descendant bridges compile class-scoped; with() carries passed props ([e4f7448](https://github.com/toned-styles/toned/commit/e4f7448739babb9769975c13986f03d498099d85))
+* **core:** extend() beats variant values for the properties it names ([b856f58](https://github.com/toned-styles/toned/commit/b856f584aab5f2f27e1c0361f8725e24970ccbd1))
+* **core:** keep the caller's scope intact for every scoped selector ([a02be1f](https://github.com/toned-styles/toned/commit/a02be1f0a292b05a7b33916473268b3b371e98f2))
+* **core:** media-only values chain OPEN, and t() carries nested pseudo/breakpoint blocks ([543f600](https://github.com/toned-styles/toned/commit/543f600e496ef228bd4f914d6c57dbfb78704fd5))
+* **core:** multiply the source alpha channel instead of replacing it ([f3eee32](https://github.com/toned-styles/toned/commit/f3eee32e7e01e0a9975ec6e291a6c26e8ef74cf6))
+* **core:** refuse theme values a class cannot apply; export namespaceCss ([1f4afe6](https://github.com/toned-styles/toned/commit/1f4afe6671597b1f1eabcafca5af15df4cc81c8e))
+* **core:** the sibling and focus-within channels reach the painted property ([fe2ccb7](https://github.com/toned-styles/toned/commit/fe2ccb73b52a8932ca4ff8538b451579b23aa499))
+* **core:** two parts of one family can share an element ([e5ac3a9](https://github.com/toned-styles/toned/commit/e5ac3a99893b5776b4379adf93c110d1e5551eeb))
+* **review:** ResolveContext.platform defaults to web; resolveElement resolves lazily ([4026832](https://github.com/toned-styles/toned/commit/40268328a72dd679517f8a530f9210bb041e1ded))
+* type-safety restored, container numbers ride the base scale, initMedia string queries ([e191e4b](https://github.com/toned-styles/toned/commit/e191e4b5288dc9f3dd0c8d576d3edf7d6249718f))
+* **types:** an override may say what the stylesheet says ([e2b02be](https://github.com/toned-styles/toned/commit/e2b02beb151104d2795da7838f894c27662b8ca0))
+* **types:** infer query-builder callbacks on TypeScript 5.9 and 6 ([1c4bd90](https://github.com/toned-styles/toned/commit/1c4bd903be2f68509bcbd166b6cbcd11b9a4885c))
+* **types:** keep variants inferable after making them chainable ([3abb5ac](https://github.com/toned-styles/toned/commit/3abb5ac1fcb216895a838663225eb6270d881f63))
+* **types:** make a stylesheet's generics recoverable, restore with() ([ae5e532](https://github.com/toned-styles/toned/commit/ae5e532170a25690218629db70a6684ffc3d7f5a))
+* **types:** make the type surface describe what the runtime actually does ([c51d84c](https://github.com/toned-styles/toned/commit/c51d84c5fb8ef854cc2879ffe62cac0522bedd15))
+
+### Features
+
+* consume packages from source, namespace internal config ([b84ca59](https://github.com/toned-styles/toned/commit/b84ca59e7b39df71f18bd9da0d3785cfc4b89748))
+* **core+react:** bridges — styling CSS alone cannot reach from the style attribute ([df3beee](https://github.com/toned-styles/toned/commit/df3beee6b18a89e15bf1c2563cea2ff6f7c4c096))
+* **core+react:** media raw-style chains + useStyles type contracts ([9696814](https://github.com/toned-styles/toned/commit/96968140b5995b460b186367ee046bce76256863))
+* **core+react:** platform keys, host-tunable style type, $$type-constrained tokens ([921ad7a](https://github.com/toned-styles/toned/commit/921ad7a24250abecb389b4eed8cb427698d52dde))
+* **core+systems+react:** dimensional enumeration, animation timing, css-only group hover, tighter element props ([92e06a9](https://github.com/toned-styles/toned/commit/92e06a9f6c2c62b0515e0618dbeebc1b057cbdfb))
+* **core:** compound state+pseudo keys — ':open:hover' with AND semantics in css chain mode ([a461b48](https://github.com/toned-styles/toned/commit/a461b482c870378becb53e820eb5549e7dfd27a9))
+* **core:** condition breakpoints — a parenthesised value is a raw media condition ([b66697a](https://github.com/toned-styles/toned/commit/b66697ae02efe2075af7af07f82d95c8d9298cdb))
+* **core:** cross-element state channel — 'source:<state>' → descendant ([a07f0c7](https://github.com/toned-styles/toned/commit/a07f0c7ec64610e12efca3f46c4aa50e90e877e4))
+* **core:** declared states — static attribute/pseudo selectors, the breakpoint analogue ([34eadba](https://github.com/toned-styles/toned/commit/34eadba0085daff3822a763a8164ebc41056661a))
+* **core:** defineAnimations — named, system-compiled motion ([a72f7d7](https://github.com/toned-styles/toned/commit/a72f7d772598f33e1c0733520506fe6145af6980))
+* **core:** definePalette + generatePalette — first-class themes ([0dedc9a](https://github.com/toned-styles/toned/commit/0dedc9a4a0725da575cb5831a29ba510f271fd8d))
+* **core:** elementDescriptors() — runtime element list with $$type for bindings ([953936b](https://github.com/toned-styles/toned/commit/953936b7c5b3b44d2e98977507e4136f040d4b8a))
+* **core:** generate() takes a scope selector so two systems share one page ([47178e6](https://github.com/toned-styles/toned/commit/47178e68ab9b3b0703a67008476dbcafd14ff161))
+* **core:** inherit — the third $types state, a text token legal on a View ([c1a159a](https://github.com/toned-styles/toned/commit/c1a159a23ee7e4cd1cf34b4fda05b899e04d9f51))
+* **core:** instance sharing + loud failure modes ([3aea5ec](https://github.com/toned-styles/toned/commit/3aea5ec59c0efa64369ee3d491ffc59d3b81f167))
+* **core:** per-platform token resolve — resolve(value, tokens, { platform }) ([0679217](https://github.com/toned-styles/toned/commit/067921770ff1c3b2bec967465a7df64deb11e0fd))
+* **core:** responsive atomic classes — breakpoint overrides for opted tokens compile to media-scoped classes ([a15984e](https://github.com/toned-styles/toned/commit/a15984eb8c7da6d73ff56b8ffc1fe6956af9cf3f))
+* **core:** sibling-source and focus-within channels ([5dca0a2](https://github.com/toned-styles/toned/commit/5dca0a2ac84db89a7360b8b63782339bbeeaf116))
+* **core:** string breakpoint values (rem scales), and applyState preserves foreign classes ([4e81d09](https://github.com/toned-styles/toned/commit/4e81d099cbf1331f8151a63a2a2f3c03bf947b45))
+* **core:** the alpha modifier, hover gating, focus-visible, alpha-aware override chains ([98607f2](https://github.com/toned-styles/toned/commit/98607f2b140573dcd5f9df896b4eb1ddd9bbc101))
+* **core:** the build writes a system's declared themes ([ef6f4ba](https://github.com/toned-styles/toned/commit/ef6f4baff01b013876a1fe650195221aab1341be))
+* **core:** token pseudoRules — the one sanctioned pseudo-element channel ([303738a](https://github.com/toned-styles/toned/commit/303738a9dbf3f2d30cc695c1bc5d4907b22efe5a))
+* cross-platform container queries — [@container](https://github.com/container) var toggles on web, measured providers at runtime ([12e57cb](https://github.com/toned-styles/toned/commit/12e57cb63669e9c3e91ca66aad5ab873bc3178c3))
+* **overrides:** .variants() — an override says what a declaration says ([fdbe5ad](https://github.com/toned-styles/toned/commit/fdbe5ad664782aad97e9ae3cc0d24fdf9389db7f))
+* **overrides:** two tokens writing one property no longer tie ([61640dd](https://github.com/toned-styles/toned/commit/61640dd00196482423eef1418dfb5216d6dfe83c))
+* **react:** resolveElement config seam — $$type → host element (web default; native deferred) ([67b3b06](https://github.com/toned-styles/toned/commit/67b3b06825b26fc7bc1405d12b41de9310c2db29))
+* **react:** scoped style overrides — the pluggable ambient-scope channel ([dd8c0ff](https://github.com/toned-styles/toned/commit/dd8c0ffcb57e8388aa7d1b458f067460729a6311))
+* **react:** typed 'as' on bound elements; pressable joins the $$type vocabulary ([1242e65](https://github.com/toned-styles/toned/commit/1242e6565ee0267ea0b317ea96d2015893c2cf2a))
+* static-CSS affordances for utility-framework hosts ([4a07f48](https://github.com/toned-styles/toned/commit/4a07f48d9c302cd0110ef475537e83fe197aed61))
+* the ':rtl' runtime seam — getDirection on the config answers every <element>:rtl mod ([65bfca9](https://github.com/toned-styles/toned/commit/65bfca9e0f7daed931e57dd12116d597206029b1))
+* the condition algebra — ad-hoc container widths, and/or/not, one grammar behind every @-key ([6cc15d7](https://github.com/toned-styles/toned/commit/6cc15d7fc563ca193ab3ea8e0333b661a68eaebe))
+
+### Performance Improvements
+
+* **types:** the brand records element KINDS, not element rules ([a3de732](https://github.com/toned-styles/toned/commit/a3de732d567e2937f22d96668edc5159ca39b770))
+
 # Next release
 
 ### Added

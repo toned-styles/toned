@@ -1,6 +1,18 @@
 # Change Log
 
 All notable changes to this project will be documented in this file.
+See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
+
+# 1.0.0 (2026-10-02)
+
+### Features
+
+* consume packages from source, namespace internal config ([b84ca59](https://github.com/toned-styles/toned/commit/b84ca59e7b39df71f18bd9da0d3785cfc4b89748))
+* restructure the monorepo ([7571b9c](https://github.com/toned-styles/toned/commit/7571b9c1e54c282e27d553d47e55bdd3972a8d7f))
+
+# Change Log
+
+All notable changes to this project will be documented in this file.
 
 # 0.1.0
 
