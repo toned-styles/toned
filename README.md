@@ -5,7 +5,9 @@
 <h1 align="center">Typed styling for design systems</h1>
 
 <p align="center">
-  Define your tokens once. Toned builds them into styles for the web, React Native, email and PDF, and TypeScript checks every value.
+  Define tokens once.
+  <br />
+  Toned builds them into type-safe styles for the web, React Native, email, PDF, and other targets.
   <br />
   Platform-agnostic and framework-agnostic.
 </p>
