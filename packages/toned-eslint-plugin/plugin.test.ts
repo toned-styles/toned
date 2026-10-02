@@ -332,7 +332,7 @@ const names = (diagnostics: Diagnostic[]) =>
 }
 
 {
-  const source = `import {defineSystem,overrideSheet} from '@toned/core';const ui=defineSystem(tokens);const s=ui.stylesheet(q=>({Root:{[q.all(q.state('hover'),q.media('wide'))]:{style:{opacity:1}},[dynamic]:{style:'opaque'}}}));overrideSheet(s,q=>({Root:{[q.platform('native')]:{style:{opacity:0}}}}),($,q)=>({[$.size('s')]:{Root:{[q.state('hover')]:{style:{opacity:0}}}}}))`
+  const source = `import {defineSystem} from '@toned/core';const ui=defineSystem(tokens);const s=ui.stylesheet(q=>({Root:{[q.all(q.state('hover'),q.media('wide'))]:{style:{opacity:1}},[dynamic]:{style:'opaque'}}}));s.extend(q=>({Root:{[q.platform('native')]:{style:{opacity:0}}}}),($,q)=>({[$.size('s')]:{Root:{[q.state('hover')]:{style:{opacity:0}}}}}))`
   const resultFixture = fixture(
     { 'queries.ts': source },
     { 'toned/prefer-canonical-declarations': 'warn' },

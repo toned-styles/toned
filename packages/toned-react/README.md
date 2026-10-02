@@ -159,36 +159,46 @@ Two parts of one family can be merged onto a single element, for example
 that element, and removing one leaves the other intact. For a state that has a
 fixed set of values, a variant is the simpler declaration.
 
-Compose local changes as a declaration, then consume the resulting sheet through
-any rendering API:
+Compose local changes as a declaration with `sheet.extend`, then consume the
+resulting sheet through any rendering API:
 
 ```tsx
-import { overrideSheet } from '@toned/core'
-
 // Module scope: a reusable declaration, also available to CSS build collection.
-const compactStyles = overrideSheet(buttonStyles, { Root: { padding: 2 } })
+const compactStyles = buttonStyles.extend({ Root: { padding: 2 } })
 
 const s = useStyles(compactStyles, { size, variant })
 // Or createElements(compactStyles), or renderer.resolve(compactStyles, ...).
 ```
 
-`overrideSheet` preserves parts, variant types and defaults. It adds an authoritative
-layer: its base values beat earlier matching variants, and its own conditional
-rules specialize that layer. Use `sheet.extend` instead when changing defaults
-that the original variants should still override. `null` removes the inherited
-declaration at the same rule path; `undefined` leaves it unchanged. Removing a
-base token does not erase a separate variant declaration: target that variant
-with the third `overrideSheet` argument when it should also be removed.
+`extend` keeps the sheet's parts, variant types and defaults, and restyles
+existing parts only. Its rules sit above the sheet's variants: a value it sets
+wins even where a variant of the original matches. The optional second argument,
+`($, q) => ({ [$.size('s')]: { … } })`, adds variant rules over the sheet's own
+axes, and those win over everything. `null` removes the inherited declaration at
+the same rule path; `undefined` leaves it unchanged. Removing a base token does
+not erase a separate variant declaration: name that variant in the second
+argument when it should also be removed.
 
-Use `StyleOverrides` and `overrideStyles(sheet, rules).variants(...)` when an
-ancestor needs to customize a child's existing stylesheet without changing that
-child. These entries match the **exact sheet object**, not its derivation ancestry,
-and apply after its declared layers. An entry targeting `buttonStyles` does not
-also target `compactStyles`; target the derived sheet explicitly where needed.
-Keep reusable declarations outside rendering and include them in build collection
-when they introduce CSS structure. For dynamic choices, prefer variants or select
-among declared sheets. There is no hook-level override argument or extra local
-precedence tier.
+Use `StyleOverrides` when an ancestor needs to restyle a child's existing
+stylesheet without changing that child. It takes the same derived sheets:
+
+```tsx
+const toolbarOverrides = [buttonStyles.extend({ Root: { paddingX: 2 } })]
+
+<StyleOverrides value={toolbarOverrides}>
+  <Button />
+</StyleOverrides>
+```
+
+A component below that calls `useStyles(buttonStyles)` resolves the derived
+sheet. An entry applies to the sheet it was derived from, so one made from
+`buttonStyles` does not reach a component that renders `compactStyles`. Nested
+providers stack and the later entry wins. `{ sheet: derived, scope: 'calendar/day' }`
+limits an entry to where the host's ambient scope matches. Passing a sheet that
+was not derived throws. Keep the list outside rendering, or memoised, and
+include derived sheets in build collection when they introduce CSS structure.
+For dynamic choices, prefer variants or select among declared sheets. There is
+no hook-level override argument or extra local precedence tier.
 
 The checked factory accepts defaults as its second argument:
 
@@ -230,14 +240,13 @@ backwards into a hook, and `$kind` does not name a concrete host component. Use
 exposes unknown style fields; the selected host supplies precise prop/style/ref
 types. It merges ordinary props, inline styles,
 classes, handlers, and callback/object refs, including React 19 cleanup. Semantic
-tokens belong in declarations or `overrideStyles`. The broad `.with` spelling
+tokens belong in declarations or an `extend`. The broad `.with` spelling
 remains a compatibility alias.
 
-Use `StyleOverrides` with `overrideStyles(sheet, rules)` to add complete precedence
-layers. An override's defaults beat earlier variants; its own matching conditions
-then specialize it. Ordinary `sheet.extend(rules)` derives new defaults while
-retaining the original variants' precedence. Neither construction reads ambient
-theme values or probes resolvers. Token property collisions resolve from ordered
+Each `sheet.extend(rules)` given to `StyleOverrides` adds a complete precedence
+layer. Its base rules beat earlier variants; its own matching conditions then
+specialise it. Deriving a sheet does not read ambient theme values or probe
+resolvers. Token property collisions resolve from ordered
 operations using the committed render's tokens. Derived override plans use a
 bounded 64-entry LRU per source sheet; alternating sibling provider sequences
 reuse their plans rather than replacing one global cache slot.

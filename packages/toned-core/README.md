@@ -518,14 +518,18 @@ and comments. This is a CSS-only extension, unavailable to document/native backe
 For exported inferred sheets, `import type { WEB_RULES } from '@toned/core'`
 lets TypeScript name the opaque brand during declaration emit.
 
-## Pure authoritative overrides
+## Deriving a sheet with `extend`
 
-`overrideSheet(sheet, rules, variants?)` creates an immutable higher-priority
-layer without React, provider context or token reads. It preserves the sheet's
-part kinds, axes and defaults, and accepts the same typed query builders.
+`sheet.extend(rules, variants?)` is the one way to derive a stylesheet. It
+returns a new immutable sheet without React, provider context or token reads,
+and keeps the sheet's part kinds, axes and defaults. Its rules sit in a layer
+above the sheet's variants, so what the extension says wins even where a
+variant of the original matches. `rules` is an object or a callback over the
+sheet's query builder. The optional second argument adds variant rules over
+the axes the sheet already has, and those win over everything.
 
 ```ts
-const compact = overrideSheet(button, { Root: { padding: null } }, ($) => ({
+const compact = button.extend({ Root: { padding: null } }, ($) => ({
   [$.size('s')]: { Root: { padding: 4 } },
 }))
 const artifact = buildStyles(ui, { sheets: [button, compact] })
@@ -535,11 +539,11 @@ const props = web.resolve(compact, { variants: { size: 's' } })
 
 Collect derived sheets before building when they introduce conditions or other
 CSS structure. Pure/native renderers resolve these layers directly; React hooks
-and element families consume the derived sheet, while ambient React scopes use
-the same composition operation. `null` removes an
-inherited leaf at that exact path before matching; it does not erase a separate
-variant declaration. `extend` remains ordinary derivation instead of an
-authoritative override layer.
+and element families consume the derived sheet, and React's `StyleOverrides`
+takes the same derived sheet. `null` removes an inherited leaf at that exact
+path before matching; it does not erase a separate variant declaration.
+`extend` restyles the parts a sheet has: naming a part it lacks is a type error
+and a runtime error, and a part's `$kind` cannot change.
 
 ### Theme schemas in token authoring
 

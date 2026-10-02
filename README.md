@@ -282,8 +282,8 @@ not an umbrella API.
 ## Editor mode
 
 Part of Toned's typing exists only for editor completions: the vocabulary that
-contextually types a `.variants()` callback, `overrideStyles` / `overrideSheet`
-rules and the blocks nested inside them. Diagnostics never depend on it, so a
+contextually types a `.variants()` callback, `extend` rules
+and the blocks nested inside them. Diagnostics never depend on it, so a
 batch check skips it. The switch is automatic and needs no setup:
 
 - **Editors: on.** A language server loads a referenced project's _source_

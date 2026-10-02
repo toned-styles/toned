@@ -24,7 +24,6 @@ const apiNames = [
   'defineSystem',
   'stylesheet',
   'createStylesheet',
-  'overrideSheet',
   'createElements',
   'useStyles',
   'setConfig',
@@ -172,16 +171,15 @@ export function createAnalysis(context, options = {}) {
           (callee?.kind === 'api' &&
             callee.name === 'stylesheet' &&
             index === 0) ||
+          // extend(q => rules, ($, q) => variants): the rules callback takes
+          // the query builder first, the variants callback takes it second.
           (callee?.kind === 'sheet-method' &&
             callee.name === 'extend' &&
-            index === 0) ||
+            ((call.arguments[0] === fn && index === 0) ||
+              (call.arguments[1] === fn && index === 1))) ||
           (callee?.kind === 'sheet-method' &&
             callee.name === 'variants' &&
-            index === 1) ||
-          (callee?.kind === 'api' &&
-            callee.name === 'overrideSheet' &&
-            ((call.arguments[1] === fn && index === 0) ||
-              (call.arguments[2] === fn && index === 1)))
+            index === 1)
         )
           result = { kind: 'query' }
       }
@@ -223,8 +221,7 @@ export function createAnalysis(context, options = {}) {
       if (callee?.kind === 'sheet-method') return { kind: 'sheet' }
       if (callee?.kind !== 'api') return null
       if (callee.name === 'defineSystem') return { kind: 'system' }
-      if (['stylesheet', 'overrideSheet'].includes(callee.name))
-        return { kind: 'sheet' }
+      if (callee.name === 'stylesheet') return { kind: 'sheet' }
       if (callee.name === 'useStyles') return { kind: 'bags', origin: node }
       if (callee.name === 'createElements') return { kind: 'family' }
     }
@@ -293,12 +290,9 @@ export function declarations(call, analysis, visit) {
   let inputs
   if (callee?.kind === 'api' && callee.name === 'stylesheet')
     inputs = [call.arguments[0]]
-  else if (callee?.kind === 'api' && callee.name === 'overrideSheet')
-    inputs = [call.arguments[1], call.arguments[2]]
-  else if (
-    callee?.kind === 'sheet-method' &&
-    ['extend', 'variants'].includes(callee.name)
-  )
+  else if (callee?.kind === 'sheet-method' && callee.name === 'extend')
+    inputs = [call.arguments[0], call.arguments[1]]
+  else if (callee?.kind === 'sheet-method' && callee.name === 'variants')
     inputs = [call.arguments[0]]
   else return
   let remaining = 4096
