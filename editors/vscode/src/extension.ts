@@ -14,7 +14,7 @@ type Session = {
   server: OwnedServer
 }
 const sessions = new Map<string, Session>()
-let output: vscode.OutputChannel
+let output: vscode.LogOutputChannel
 let stopping = false
 let context: vscode.ExtensionContext
 let lifecycle = Promise.resolve()
@@ -166,7 +166,7 @@ function restart() {
 export async function activate(extension: vscode.ExtensionContext) {
   context = extension
   stopping = false
-  output = vscode.window.createOutputChannel('Toned')
+  output = vscode.window.createOutputChannel('Toned', { log: true })
   context.subscriptions.push(
     output,
     vscode.workspace.onDidOpenTextDocument((document) => {

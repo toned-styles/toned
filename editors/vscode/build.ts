@@ -1,4 +1,4 @@
-import { chmod, copyFile, mkdir } from 'node:fs/promises'
+import { copyFile, mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -18,16 +18,13 @@ for (const name of ['extension', 'server', 'extension-test']) {
 }
 await copyFile(`${root}../../LICENSE`, `${root}LICENSE`)
 
-// vscode-languageclient's bundled POSIX fallback resolves this beside extension.cjs.
-const terminate = `${root}dist/terminateProcess.sh`
+// The package's exports map hides its licence file, so find it from the entry.
 await copyFile(
   fileURLToPath(
-    import.meta.resolve('vscode-languageclient/lib/node/terminateProcess.sh'),
+    new URL(
+      '../../License.txt',
+      import.meta.resolve('vscode-languageclient/node'),
+    ),
   ),
-  terminate,
-)
-await chmod(terminate, 0o755)
-await copyFile(
-  fileURLToPath(import.meta.resolve('vscode-languageclient/License.txt')),
   `${root}dist/vscode-languageclient-LICENSE.txt`,
 )
