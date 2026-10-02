@@ -2,11 +2,9 @@
 import {
   defineSystem,
   defineToken,
-  overrideSheet,
   type Variants,
 } from '@toned/core'
 
-import { overrideStyles } from './index.ts'
 
 const ui = defineSystem({
   id: 'override-query-types',
@@ -27,20 +25,20 @@ const sheet = ui
     [$.active(true)]: { Root: { opacity: 1 } },
   }))
 
-overrideSheet(sheet, (q) => ({
+sheet.extend((q) => ({
   Root: { opacity: null, [q.not(q.state('hover'))]: { opacity: 0 } },
   [q.all(q.media('wide'), q.part('Root').state('hover'))]: {
     Label: { $style: { fontSize: 18 } },
   },
   [q.platform('web')]: { Root: { $style: { position: 'sticky' } } },
 }))
-overrideStyles(sheet, (q) => ({
+sheet.extend((q) => ({
   Root: { opacity: null, [q.not(q.state('hover'))]: { opacity: 0 } },
   [q.all(q.media('wide'), q.part('Root').state('hover'))]: {
     Label: { $style: { fontSize: 18 } },
   },
   [q.platform('native')]: { Root: { $style: { elevation: 2 } } },
-})).variants(($, q) => ({
+}), ($, q) => ({
   [$('shared')]: { Label: { $style: { fontSize: 16 } } },
   [$.active(true)]: {
     $compose: 'shared',
@@ -50,7 +48,7 @@ overrideStyles(sheet, (q) => ({
     },
   },
 }))
-overrideSheet(sheet, {}, ($, q) => ({
+sheet.extend({}, ($, q) => ({
   [$('shared')]: { Label: { $style: { fontSize: 16 } } },
   [$.active(true)]: {
     $compose: 'shared',
@@ -62,61 +60,61 @@ overrideSheet(sheet, {}, ($, q) => ({
 }))
 
 // @ts-expect-error compound root rules only target known parts
-overrideSheet(sheet, (q) => ({
+sheet.extend((q) => ({
   [q.all(q.media('wide'))]: { Missing: { opacity: 0 } },
 }))
 // @ts-expect-error the ambient API uses the same part validation
-overrideStyles(sheet, (q) => ({
+sheet.extend((q) => ({
   [q.all(q.media('wide'))]: { Missing: { opacity: 0 } },
 }))
 // @ts-expect-error sheet-level compound keys cannot use implicit local state
-overrideSheet(sheet, (q) => ({
+sheet.extend((q) => ({
   [q.all(q.state('hover'))]: { Root: { opacity: 0 } },
 }))
 // @ts-expect-error ambient sheet-level keys likewise require a named source part
-overrideStyles(sheet, (q) => ({
+sheet.extend((q) => ({
   [q.not(q.state('hover'))]: { Root: { opacity: 0 } },
 }))
 // @ts-expect-error a view's portable style cannot gain text-only properties
-overrideStyles(sheet, { Root: { $style: { fontSize: 20 } } })
+sheet.extend({ Root: { $style: { fontSize: 20 } } })
 // @ts-expect-error a compound platform predicate does not widen portable style
-overrideSheet(sheet, (q) => ({
+sheet.extend((q) => ({
   [q.all(q.platform('web'))]: { Root: { $style: { cursor: 'pointer' } } },
 }))
 // @ts-expect-error unknown names cannot be composed by pure overrides
-overrideSheet(sheet, {}, ($) => ({
+sheet.extend({}, ($) => ({
   [$.active(true)]: { $compose: 'missing', Root: { opacity: 0 } },
 }))
 // @ts-expect-error unknown names cannot be composed by ambient overrides
-overrideStyles(sheet, {}).variants(($) => ({
+sheet.extend({}, ($) => ({
   [$.active(true)]: { $compose: 'missing', Root: { opacity: 0 } },
 }))
 // @ts-expect-error nullable style leaves do not make composition metadata nullable
-overrideSheet(sheet, {}, ($) => ({
+sheet.extend({}, ($) => ({
   [$.active(true)]: { $compose: null, Root: { opacity: 0 } },
 }))
 // @ts-expect-error nullable style leaves do not make ambient composition nullable
-overrideStyles(sheet, {}).variants(($) => ({
+sheet.extend({}, ($) => ({
   [$.active(true)]: { $compose: null, Root: { opacity: 0 } },
 }))
 
 // @ts-expect-error base part metadata cannot be removed by an override
-overrideSheet(sheet, { Root: { $kind: null } })
+sheet.extend({ Root: { $kind: null } })
 // @ts-expect-error even the same kind is not an override declaration
-overrideSheet(sheet, { Root: { $kind: 'view' } })
+sheet.extend({ Root: { $kind: 'view' } })
 // @ts-expect-error conditional overrides cannot change static part metadata
-overrideSheet(sheet, { Root: { 'Root:hover': { $kind: 'text' } } })
+sheet.extend({ Root: { 'Root:hover': { $kind: 'text' } } })
 // @ts-expect-error legacy metadata cannot be removed through ambient overrides
-overrideStyles(sheet, { Root: { $$type: null } })
+sheet.extend({ Root: { $$type: null } })
 // @ts-expect-error metadata presence is rejected even when its value is undefined
-overrideStyles(sheet, { Root: { $kind: undefined } })
+sheet.extend({ Root: { $kind: undefined } })
 // @ts-expect-error named override fragments do not own part metadata
-overrideSheet(sheet, {}, ($) => ({ [$('named')]: { Root: { $kind: 'view' } } }))
+sheet.extend({}, ($) => ({ [$('named')]: { Root: { $kind: 'view' } } }))
 
-overrideStyles(sheet, { 'Root~:open': { Label: { $style: { fontSize: 14 } } } })
-overrideSheet(sheet, { 'Root~:hover': { Root: { opacity: 0 } } })
+sheet.extend({ 'Root~:open': { Label: { $style: { fontSize: 14 } } } })
+sheet.extend({ 'Root~:hover': { Root: { opacity: 0 } } })
 // @ts-expect-error sibling channels still validate the declared source state
-overrideStyles(sheet, { 'Root~:missing': { Label: { opacity: 0 } } })
+sheet.extend({ 'Root~:missing': { Label: { opacity: 0 } } })
 
 // Object-valued tokens are opaque to declaration metadata validation.
 const payload = {
@@ -135,13 +133,13 @@ const payloadSystem = defineSystem({
   },
 })
 const payloadSheet = payloadSystem.stylesheet({ Root: { payload } })
-overrideSheet(payloadSheet, { Root: { payload } })
-overrideStyles(payloadSheet, { Root: { payload } })
-overrideSheet(payloadSheet, {
+payloadSheet.extend({ Root: { payload } })
+payloadSheet.extend({ Root: { payload } })
+payloadSheet.extend({
   // @ts-expect-error opacity remains checked against the token's authored object shape
   Root: { payload: { ...payload, opacity: 'wrong' } },
 })
-overrideSheet(payloadSheet, {
+payloadSheet.extend({
   Root: {
     payload: { $kind: null, $$type: null, $compose: null, opacity: 0.5 },
   },

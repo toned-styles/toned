@@ -12,7 +12,6 @@ import type {
   VariantEditorDef,
   VariantStyleDef,
 } from '../types/stylesheet.ts'
-import { APPLY_OVERRIDE } from './rule-protocol.ts'
 import type { VariantSelector } from './variantSelector.ts'
 
 /** Null removes an inherited leaf at this exact declaration path. */
@@ -124,62 +123,47 @@ export type OverrideSheetVariantRules<T, Named extends string = never> =
       >
     : Record<string, unknown>
 
-/** Pure authoritative composition, shared by server resolution and React scopes.
- * Construct the derived sheet before build collection when it adds CSS structure. */
-export function overrideSheet<
-  T extends object,
-  const Rules extends Record<string, unknown>,
-  const Variants extends Record<string, unknown> = {},
->(
-  sheet: T,
+/**
+ * The rules an extension may pass: the sheet's own vocabulary, with nullable
+ * leaves, as an object or as a callback over the sheet's query builder.
+ */
+export type ExtensionRules<T, Rules extends Record<string, unknown>> =
   // The callback is validated through a separate `NoInfer` signature so that
   // TypeScript before 7 still infers `Rules` from its return value.
-  rules:
-    | (((
-        q: QueryBuilder<System<T>, Parts<T>>,
-      ) => EditorOnly<Rules | NoInfer<OverrideRulesContext<T>>, Rules>) &
-        NoInfer<
-          (
-            q: QueryBuilder<System<T>, Parts<T>>,
-          ) => ValidateDeclaration<
-            Rules,
-            OverrideSheetRules<T>,
-            System<T>,
-            Parts<T>
-          >
-        >)
-    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
-        ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>),
-  variants?: (
-    $: VariantSelector<Mods<T>>,
-    q: QueryBuilder<System<T>, Parts<T>>,
-  ) => EditorOnly<
-    | Variants
-    | Record<
-        string,
-        OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Variants>>>
-      >,
-    Variants
-  > &
-    ValidateDeclaration<
-      NoInfer<Variants>,
-      Record<
-        string,
-        OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Variants>>>
-      >,
-      System<T>,
-      Parts<T>
+  | (((
+      q: QueryBuilder<System<T>, Parts<T>>,
+    ) => EditorOnly<Rules | NoInfer<OverrideRulesContext<T>>, Rules>) &
+      NoInfer<
+        (
+          q: QueryBuilder<System<T>, Parts<T>>,
+        ) => ValidateDeclaration<
+          Rules,
+          OverrideSheetRules<T>,
+          System<T>,
+          Parts<T>
+        >
+      >)
+  | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
+      ValidateDeclaration<Rules, OverrideSheetRules<T>, System<T>, Parts<T>>)
+
+/** An extension's variant rules, over the axes the sheet already declares. */
+export type ExtensionVariants<T, Variants extends Record<string, unknown>> = (
+  $: VariantSelector<Mods<T>>,
+  q: QueryBuilder<System<T>, Parts<T>>,
+) => EditorOnly<
+  | Variants
+  | Record<
+      string,
+      OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Variants>>>
     >,
-): T
-export function overrideSheet(
-  sheet: object,
-  rules: unknown,
-  variants?: unknown,
-): object {
-  const apply = (sheet as Record<symbol, unknown>)[APPLY_OVERRIDE]
-  if (typeof apply !== 'function')
-    throw new Error(
-      'Toned overrideSheet: expected a Toned stylesheet with override-layer support',
-    )
-  return apply.call(sheet, rules, variants)
-}
+  Variants
+> &
+  ValidateDeclaration<
+    NoInfer<Variants>,
+    Record<
+      string,
+      OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Variants>>>
+    >,
+    System<T>,
+    Parts<T>
+  >

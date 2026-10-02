@@ -16,7 +16,6 @@
  */
 import { defineSystem, defineToken } from '@toned/core'
 
-import { overrideStyles } from './index.ts'
 
 type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 type Colour = `c${Digit}${Digit}${Digit}`
@@ -48,29 +47,29 @@ const sheet = system.stylesheet({
 const web = <const T extends Record<string, string>>($style: T) =>
   ({ '@platform web': { $style } }) as const
 
-overrideStyles(sheet, {
+sheet.extend({
   Root: web({ overflow: 'hidden' }),
   Body: { gap: 6 },
 })
-overrideStyles(sheet, { Body: web({ gap: '0.25rem' }) })
-overrideStyles(sheet, (q) => ({
+sheet.extend({ Body: web({ gap: '0.25rem' }) })
+sheet.extend((q) => ({
   Root: web({ overflow: 'hidden' }),
   Body: { [q.state('hover')]: { bgColor: 'c500/40' } },
 }))
-overrideStyles(sheet, { Body: { textColor: 'c042/75', bgColor: null } })
+sheet.extend({ Body: { textColor: 'c042/75', bgColor: null } })
 
 // Strictness survives the scale: every leaf is still checked.
-overrideStyles(sheet, {
+sheet.extend({
   Root: web({ overflow: 'hidden' }),
   // @ts-expect-error — not a colour the token declares
   Body: { textColor: 'c1000' },
 })
 // @ts-expect-error — the alpha form of an undeclared colour
-overrideStyles(sheet, { Body: { bgColor: 'x000/50' } })
-overrideStyles(sheet, {
+sheet.extend({ Body: { bgColor: 'x000/50' } })
+sheet.extend({
   Root: web({ overflow: 'hidden' }),
   // @ts-expect-error — a token the system does not have
   Body: { txtColor: 'c000' },
 })
 // @ts-expect-error — a part the sheet never declared
-overrideStyles(sheet, { Nope: web({ overflow: 'hidden' }) })
+sheet.extend({ Nope: web({ overflow: 'hidden' }) })

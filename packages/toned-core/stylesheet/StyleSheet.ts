@@ -49,6 +49,7 @@ import {
 } from './controller-plan.ts'
 import { sharedMatcher } from './matcher/sharedMatcher.ts'
 import { type ContainerSizes, MountedFamily } from './mounted-family.ts'
+import { recordDerivation } from './derivations.ts'
 import { assertOverrideMetadata } from './overrideValidation.ts'
 import { registerStylesheetPlan } from './plans.ts'
 import { type Relation, relationFactKey } from './relations.ts'
@@ -194,6 +195,25 @@ function compositionDefaults(
   )
 }
 
+/** A root key that scopes rules (a condition, a state, a named variant)
+ * rather than naming a part. */
+const isScopeKey = (key: string) =>
+  key.startsWith('@') ||
+  key.startsWith('[') ||
+  key.startsWith('$named$_') ||
+  key.includes(':')
+
+/** An extension restyles the parts a sheet has; it does not add any. */
+function assertKnownParts(extension: AnyValue, parts: ReadonlySet<string>) {
+  if (!extension || typeof extension !== 'object') return
+  for (const key of Object.keys(extension)) {
+    if (key === '$compose' || isScopeKey(key) || parts.has(key)) continue
+    throw new Error(
+      `Toned: extend() restyles the parts a sheet has, and "${key}" is not one of them (${[...parts].join(', ')}). Declare a new part in its own stylesheet.`,
+    )
+  }
+}
+
 export function createStylesheet<
   S extends TokenStyleDeclaration,
   _Mods extends ModType,
@@ -265,6 +285,52 @@ export function createStylesheet<
     })
   }
 
+  const derive = (
+    extensionRules: AnyValue,
+    variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
+    nextDefaults: Readonly<Record<string, unknown>> = defaults,
+  ): AnyValue => {
+    const extension = normalizeDeclarations(
+      typeof extensionRules === 'function'
+        ? extensionRules(ref.q)
+        : extensionRules,
+    )
+    const parts = elementNamesOf(rules)
+    assertKnownParts(extension, parts)
+    assertOverrideMetadata(extension, parts)
+    const authoredVariants = variantsArg?.(
+      createVariantSelector([], { rejectDuplicates: true }),
+      ref.q,
+    )
+    assertOverrideMetadata(authoredVariants, parts)
+    const variants = authoredVariants
+      ? processVariantRules(
+          authoredVariants,
+          () => compositionDefaults(rules, [...overrideLayers, extension]),
+          ref.id ? 'view' : undefined,
+        )
+      : undefined
+    const layer = mergeRules(extension, normalizeDeclarations(variants))
+    const derived = createStylesheet<S, _Mods, T>(
+      ref,
+      rules,
+      variantRules,
+      [...overrideLayers, layer],
+      nextDefaults,
+    )
+    recordDerivation(derived, {
+      from: stylesheet,
+      // A snapshot: a later change to the caller's object must not reach a replay.
+      rules:
+        typeof extensionRules === 'function'
+          ? extensionRules
+          : immutableSnapshot(extensionRules),
+      ...(variantsArg ? { variants: variantsArg } : {}),
+      ...(nextDefaults === defaults ? {} : { defaults: nextDefaults }),
+    })
+    return derived
+  }
+
   const hasDefaults = Object.keys(defaults).length > 0
   const stylesheet = Object.assign({
     [SYMBOL_REF]: ref,
@@ -292,81 +358,33 @@ export function createStylesheet<
       variantsArg: AnyValue,
       variantOptions?: { defaults?: Record<string, unknown> },
     ): AnyValue => {
+      const callback =
+        typeof variantsArg === 'function' ? variantsArg : () => variantsArg
+      const nextDefaults = { ...defaults, ...variantOptions?.defaults }
+      // A derived sheet's variants are written after its extension, so they
+      // join the top layer rather than the base table underneath it.
+      if (overrideLayers.length) return derive({}, callback, nextDefaults)
       const variants = mergeOverrideVariants(
         variantRules,
-        typeof variantsArg === 'function' ? variantsArg : () => variantsArg,
+        callback,
         () => compositionDefaults(rules, overrideLayers),
         ref.q,
         ref.id ? 'view' : undefined,
       )
-      return createStylesheet<S, M, T>(ref, rules, variants, overrideLayers, {
-        ...defaults,
-        ...variantOptions?.defaults,
-      })
-    },
-    // Ordinary derivation changes defaults; existing matching variants retain
-    // their normal precedence over those defaults.
-    extend: (
-      extensionRules: AnyValue,
-      variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
-    ) => {
-      const extension = normalizeDeclarations(
-        typeof extensionRules === 'function'
-          ? extensionRules(ref.q)
-          : extensionRules,
-      )
-      const extendedRules = deepMerge(rules as AnyValue, extension)
-      const variants = variantsArg
-        ? mergeOverrideVariants(
-            variantRules,
-            variantsArg,
-            () => compositionDefaults(extendedRules, overrideLayers),
-            ref.q,
-            ref.id ? 'view' : undefined,
-          )
-        : variantRules
-      return createStylesheet<S, _Mods, AnyValue>(
-        ref,
-        extendedRules,
-        variants,
-        overrideLayers,
-        defaults,
-      )
-    },
-    // Subtree/instance override application is a separate, complete precedence
-    // layer. No resolver probes or ambient theme reads occur during authoring.
-    [APPLY_OVERRIDE]: (
-      extensionRules: AnyValue,
-      variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
-    ) => {
-      const extension = normalizeDeclarations(
-        typeof extensionRules === 'function'
-          ? extensionRules(ref.q)
-          : extensionRules,
-      )
-      const parts = elementNamesOf(rules)
-      assertOverrideMetadata(extension, parts)
-      const authoredVariants = variantsArg?.(
-        createVariantSelector([], { rejectDuplicates: true }),
-        ref.q,
-      )
-      assertOverrideMetadata(authoredVariants, parts)
-      const variants = authoredVariants
-        ? processVariantRules(
-            authoredVariants,
-            () => compositionDefaults(rules, [...overrideLayers, extension]),
-            ref.id ? 'view' : undefined,
-          )
-        : undefined
-      const layer = mergeRules(extension, normalizeDeclarations(variants))
-      return createStylesheet<S, _Mods, T>(
+      return createStylesheet<S, M, T>(
         ref,
         rules,
-        variantRules,
-        [...overrideLayers, layer],
-        defaults,
+        variants,
+        overrideLayers,
+        nextDefaults,
       )
     },
+    // Derivation is one verb. The extension is a complete precedence layer
+    // above everything the sheet already says, its variants included: what is
+    // written last wins. No resolver probes or ambient theme reads occur
+    // during authoring.
+    extend: derive,
+    [APPLY_OVERRIDE]: derive,
   })
 
   if (!IS_PRODUCTION && ref.id) {

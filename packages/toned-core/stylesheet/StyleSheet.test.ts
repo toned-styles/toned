@@ -6,7 +6,7 @@ import type { Config, TokenSystem } from '../types/index.ts'
 import type { Variants } from '../types/stylesheet.ts'
 import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
-import { overrideSheet } from './overrideSheet.ts'
+import { RULE_LAYERS } from './rule-protocol.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
 import {
@@ -152,17 +152,17 @@ describe('createStylesheet', () => {
       }).variants(($: Variants<Mods>) => ({
         [$.size('sm')]: { target: {} },
       }))
-      const first = overrideSheet(sheet, {
+      const first = sheet.extend({
         source: { bgColor: 'red', paddingX: null },
       })
       const composed = ($: Variants<Mods>) => ({
         [$.size('sm')]: { target: { $compose: 'source' as const } },
       })
-      const withoutRadius = overrideSheet(first, {
+      const withoutRadius = first.extend({
         source: { borderRadius: null },
       })
       for (const derived of [
-        overrideSheet(first, { source: { borderRadius: null } }, composed),
+        first.extend({ source: { borderRadius: null } }, composed),
         withoutRadius.variants(composed),
         withoutRadius.extend({}, composed),
       ]) {
@@ -199,7 +199,7 @@ describe('createStylesheet', () => {
   })
 
   describe('extend method', () => {
-    test('extend changes defaults while variants retain their precedence', () => {
+    test('an extension is a layer above the variants, and its base is untouched', () => {
       const rules = { container: { bgColor: 'base' } }
       const sheet = createStylesheet(mockTokenSystem, rules).variants({
         '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
@@ -211,9 +211,14 @@ describe('createStylesheet', () => {
         { getProps() {}, getTokens: () => ({}), tokens: {} } as any,
         {},
       )
+      // The sheet's own table is intact; the extension sits in a layer that
+      // resolves after it, so it wins over a matching variant too.
       expect(base.rules['[size=icon]'].container.bgColor).toBe('blue')
       expect(base.rules['[size=icon]'].container.textColor).toBe('black')
-      expect(base.rules.container.bgColor).toBe('green')
+      expect(base.rules.container.bgColor).toBe('base')
+      expect(base.rules[RULE_LAYERS]).toEqual([
+        { container: { bgColor: 'green' } },
+      ])
     })
 
     test('explicit override layers beat matching variants without rewriting their declarations', () => {
@@ -267,7 +272,6 @@ describe('createStylesheet', () => {
       const extended = stylesheet
         .extend({
           container: { bgColor: 'blue' },
-          label: { textColor: 'white' },
         })
         .variants({
           '[size=sm]': { container: { paddingX: 2 } },

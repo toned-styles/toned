@@ -4,7 +4,6 @@ import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
 import { buildStyles } from '../build/index.ts'
 import { compilePlan, foldOperations, resolvePlan } from '../core/plan.ts'
 import { dp } from '../core/values.ts'
-import { overrideSheet } from '../stylesheet/overrideSheet.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import { relationFactKey } from '../stylesheet/relations.ts'
 import { StyleMatcher } from '../stylesheet/StyleMatcher.ts'
@@ -112,7 +111,7 @@ describe('computed query keys', () => {
       .variants(($: Variants<{ size: 's' | 'l' }>) => ({
         [$.size('s')]: { Root: { gap: 1 } },
       }))
-    const sheet = overrideSheet(base, {}, ($, q) => {
+    const sheet = base.extend({}, ($, q) => {
       const small = $.size('s')
       return {
         [q.all(small, q.platform('native'))]: { Root: { gap: 2 } },
@@ -171,7 +170,7 @@ describe('computed query keys', () => {
       .variants(($: Variants<{ size: 's' | 'l' }>) => ({
         [$.size('s')]: { Root: { gap: 1 } },
       }))
-    const sheet = overrideSheet(base, {}, ($, q) => ({
+    const sheet = base.extend({}, ($, q) => ({
       [q.all($.size('s'), q.platform('native'))]: {
         Root: { gap: 3, $style: { opacity: 0.25 } },
       },
@@ -240,7 +239,7 @@ describe('computed query keys', () => {
     expect(native(sheet, {})['gap']).toBe(0)
     expect(native(sheet, { [fact]: true })['gap']).toBe(2)
     expect(
-      native(overrideSheet(sheet, { Root: { gap: 4 } }), { [fact]: true })[
+      native(sheet.extend({ Root: { gap: 4 } }), { [fact]: true })[
         'gap'
       ],
     ).toBe(4)
