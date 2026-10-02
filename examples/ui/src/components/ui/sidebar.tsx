@@ -521,7 +521,7 @@ function SidebarProvider({
           data-slot="sidebar-wrapper"
           {...s.wrapper.with({
             className,
-            $style: {
+            style: {
               '--sidebar-width': SIDEBAR_WIDTH,
               '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
               ...style,
@@ -571,7 +571,7 @@ function Sidebar({
           data-slot="sidebar"
           data-mobile="true"
           {...s.mobileSidebarContent.with({
-            $style: {
+            style: {
               '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties,
           })}
@@ -602,7 +602,7 @@ function Sidebar({
         data-slot="sidebar-container"
         {...s.sidebarContainer.with({
           className,
-          $style: {
+          style: {
             ...(side === 'left' ? { left: 0 } : { right: 0 }),
             ...(variant === 'floating' || variant === 'inset'
               ? { padding: '0.5rem' }
