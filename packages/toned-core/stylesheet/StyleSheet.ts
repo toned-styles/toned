@@ -47,9 +47,9 @@ import {
   controllerPlan,
   evaluateControllerConditions,
 } from './controller-plan.ts'
+import { recordDerivation } from './derivations.ts'
 import { sharedMatcher } from './matcher/sharedMatcher.ts'
 import { type ContainerSizes, MountedFamily } from './mounted-family.ts'
-import { recordDerivation } from './derivations.ts'
 import { assertOverrideMetadata } from './overrideValidation.ts'
 import { registerStylesheetPlan } from './plans.ts'
 import { type Relation, relationFactKey } from './relations.ts'

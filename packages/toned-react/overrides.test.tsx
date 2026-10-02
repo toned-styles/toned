@@ -46,9 +46,7 @@ describe('StyleOverrides', () => {
       )
     }
     const { container } = render(
-      <StyleOverrides
-        value={[styles.extend({ Root: { cur: 'grab' } })]}
-      >
+      <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
         <Probe />
       </StyleOverrides>,
     )
@@ -71,9 +69,7 @@ describe('StyleOverrides', () => {
       return <s.Root data-slot="r" />
     }
     const { container } = render(
-      <StyleOverrides
-        value={[other.extend({ Root: { cur: 'text' } })]}
-      >
+      <StyleOverrides value={[other.extend({ Root: { cur: 'text' } })]}>
         <Probe />
       </StyleOverrides>,
     )
@@ -89,12 +85,8 @@ describe('StyleOverrides', () => {
       return <s.Root data-slot="r" />
     }
     const { container } = render(
-      <StyleOverrides
-        value={[styles.extend({ Root: { cur: 'grab' } })]}
-      >
-        <StyleOverrides
-          value={[styles.extend({ Root: { cur: 'text' } })]}
-        >
+      <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
+        <StyleOverrides value={[styles.extend({ Root: { cur: 'text' } })]}>
           <Probe />
         </StyleOverrides>
       </StyleOverrides>,
@@ -112,9 +104,7 @@ describe('StyleOverrides', () => {
     }
     const { container } = render(
       <>
-        <StyleOverrides
-          value={[styles.extend({ Root: { cur: 'grab' } })]}
-        >
+        <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
           <Probe slot="in" />
         </StyleOverrides>
         <Probe slot="out" />
@@ -138,9 +128,7 @@ describe('StyleOverrides', () => {
       return null
     }
     render(
-      <StyleOverrides
-        value={[styles.extend({ Root: { cur: 'grab' } })]}
-      >
+      <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
         <Probe />
       </StyleOverrides>,
     )
@@ -160,12 +148,11 @@ describe('StyleOverrides', () => {
         return <s.Root data-slot={slot} />
       }
       const entries = [
-        { sheet: styles.extend(
-          { Root: { cur: 'grab' } },
-), scope: 'checkout' },
-        { sheet: styles.extend(
-          { Root: { cur: 'text' } },
-), scope: 'checkout/summary' },
+        { sheet: styles.extend({ Root: { cur: 'grab' } }), scope: 'checkout' },
+        {
+          sheet: styles.extend({ Root: { cur: 'text' } }),
+          scope: 'checkout/summary',
+        },
       ]
       const { container } = render(
         <StyleOverrides value={entries}>
@@ -421,9 +408,11 @@ test('an extension snapshots its rules, so a later change by the caller does not
   const derived = sheet.extend(rules)
   rules.Root.gap = 0
   const step = derivationOf(derived)
-  expect((step?.rules as typeof rules).Root.gap).toBe(4)
+  if (!step) throw new Error('expected a derivation step')
+  const recorded = step.rules as typeof rules
+  expect(recorded.Root.gap).toBe(4)
   expect(Object.isFrozen(step)).toBe(true)
-  expect(Object.isFrozen((step?.rules as typeof rules).Root)).toBe(true)
+  expect(Object.isFrozen(recorded.Root)).toBe(true)
 })
 
 test('StyleOverrides refuses a sheet that is not derived', () => {

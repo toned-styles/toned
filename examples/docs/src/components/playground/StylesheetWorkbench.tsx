@@ -1,8 +1,4 @@
-import {
-  type StyleOverride,
-  StyleOverrides,
-  useStyles,
-} from '@toned/react'
+import { type StyleOverride, StyleOverrides, useStyles } from '@toned/react'
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import type { SheetSource } from 'virtual:component-docs/*'
 

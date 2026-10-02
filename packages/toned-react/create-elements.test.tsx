@@ -8,11 +8,7 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
 import { createElements as runtimeCreateElements } from './create-elements.tsx'
-import {
-  ConfigProvider,
-  createElements,
-  StyleOverrides,
-} from './index.ts'
+import { ConfigProvider, createElements, StyleOverrides } from './index.ts'
 import web from './react-web.ts'
 
 const original = { ...getConfig() }

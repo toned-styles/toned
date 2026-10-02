@@ -8,11 +8,7 @@ import type { Window } from 'happy-dom'
 import * as React from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 
-import {
-  ConfigProvider,
-  createElements,
-  StyleOverrides,
-} from './index.ts'
+import { ConfigProvider, createElements, StyleOverrides } from './index.ts'
 import web from './react-web.ts'
 
 afterEach(() => {

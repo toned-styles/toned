@@ -18,8 +18,8 @@ function GuideOverrides() {
         <code {...s.code}>sheet.extend(rules, variants?)</code>. It returns a
         new sheet and leaves the original as it was. Use the new sheet in a
         component of your own, or give it to{' '}
-        <code {...s.code}>StyleOverrides</code> to restyle components you do
-        not own inside one subtree.
+        <code {...s.code}>StyleOverrides</code> to restyle components you do not
+        own inside one subtree.
       </p>
       <p>
         The examples change the button from{' '}

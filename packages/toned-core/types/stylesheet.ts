@@ -1188,15 +1188,14 @@ export type VariantsCallback<
 export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
-  /** The axes declared so far. Carried so `extend` can hand them back rather
-   * than collapsing to `never`, which would stop an override from
-   * selecting on the axes its target sheet already has. */
-  Mods extends ModType = never,
+  /** The axes declared so far. `extend` reads them from the sheet's own
+   * type, so this only keeps the parameter list stable for its callers. */
+  _Mods extends ModType = never,
   Kinds extends Record<Elements, ElementType | undefined> = Record<
     Elements,
     undefined
   >,
-  Defaults extends object = {},
+  _Defaults extends object = {},
 > {
   /**
    * Define variants with a reusable selector annotation. The declared parts
