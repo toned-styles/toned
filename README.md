@@ -43,7 +43,8 @@ Native and Server Components.
   does not compile.
 - **Build time.** CSS is generated when you build. Nothing is injected at render.
 - **SSR and Server Components.** Server-rendered and static pages need no style
-  runtime, and Server Components resolve styles without hooks.
+  runtime, and `useStyles` and `createElements` work unchanged in Server
+  Components.
 - **Cross-platform.** One stylesheet resolves for the web, React Native, email
   and PDF, with explicit platform blocks where a platform needs its own styles.
 
