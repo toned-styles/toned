@@ -60,7 +60,7 @@ function Progress({
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
         {...s.indicator.with({
-          $style: { transform: `translateX(-${100 - percent}%)` },
+          style: { transform: `translateX(-${100 - percent}%)` },
         })}
       />
     </ProgressPrimitive.Root>
