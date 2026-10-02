@@ -1,37 +1,24 @@
-import '@expo/match-media'
-import '@toned/themes/shadcn/config.css'
-import './toned.config.ts'
-import { defineContext, TokensContext } from '@toned/react/context'
-import shadcn from '@toned/themes/shadcn/config'
-import * as ScreenOrientation from 'expo-screen-orientation'
+import { ui } from '@examples/shared'
+import { createNativeRenderer } from '@toned/core/server'
+import { TonedProvider } from '@toned/react'
 import { StatusBar } from 'expo-status-bar'
-import { useEffect } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 import Card from './Card'
+import { host } from './host'
+import { tokens } from './tokens'
 
-const ctx = defineContext(shadcn)
-
-const Main = () => {
-  useEffect(() => {
-    const unlockScreenOerientation = async () => {
-      await ScreenOrientation.unlockAsync()
-    }
-    unlockScreenOerientation()
-  }, [])
-
-  return (
-    <View style={styles.container}>
-      <TokensContext.Provider value={ctx}>
-        <Card />
-      </TokensContext.Provider>
-      <StatusBar style="auto" />
-    </View>
-  )
-}
+const renderer = createNativeRenderer(ui, { tokens })
 
 export default function App() {
-  return <Main />
+  return (
+    <TonedProvider renderer={renderer} host={host}>
+      <View style={styles.container}>
+        <Card />
+        <StatusBar style="auto" />
+      </View>
+    </TonedProvider>
+  )
 }
 
 const styles = StyleSheet.create({

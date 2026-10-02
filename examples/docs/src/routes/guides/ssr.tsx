@@ -41,9 +41,9 @@ function GuideSsr() {
       </h2>
       <p>
         Pass the complete system returned by{' '}
-        <code {...s.code}>defineSystem</code>
-        and every sheet, including lazy routes. The raw token dictionary alone
-        does not carry a stylesheet inventory or system namespace.
+        <code {...s.code}>defineSystem</code> and every sheet, including lazy
+        routes. The raw token dictionary alone does not carry a stylesheet
+        inventory or system namespace.
       </p>
       <p>
         <code {...s.code}>system.ts</code> and{' '}
@@ -133,7 +133,7 @@ export function SaveButton({ size }: { size: 's' | 'm' }) {
 import { createWebRenderer } from '@toned/core/server'
 import { ui } from './system.ts'
 
-export const renderer = createWebRenderer(ui, { manifest, tokens: {} })`}</CodeBlock>
+export const renderer = createWebRenderer(ui, { manifest })`}</CodeBlock>
       <p>
         Use a Client Component when the styles depend on state held in the
         browser. <code {...s.code}>createElements</code> families are client
@@ -165,11 +165,11 @@ export function LikeButton() {
         <code {...s.code}>@toned/core/server</code> can resolve part props
         without importing React, reading browser globals or mounting hosts.
         React SSR uses the separate React binding. Module-level{' '}
-        <code {...s.code}>createElements</code>
-        creates stable component identities without reading host configuration.
+        <code {...s.code}>createElements</code> creates stable component
+        identities without reading host configuration.
       </p>
       <p>
-        <code {...s.code}>@toned/core/dev/inject</code> remains an explicit
+        <code {...s.code}>@toned/core/dev/inject</code> is an explicit
         development helper. It is not the production or SSR delivery path.
       </p>
     </article>

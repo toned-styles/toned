@@ -6,8 +6,10 @@ export const skeletonStyles = stylesheet({
     bgColor: 'skeleton',
     borderRadius: 'medium',
     // No token: the pulse keyframes live in styles.css.
-    style: {
-      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+    '@platform web': {
+      $style: {
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
     },
   },
 })

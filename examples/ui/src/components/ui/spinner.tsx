@@ -8,8 +8,10 @@ export const spinnerStyles = stylesheet({
     height: '1rem',
     flexShrink: '0',
     // No token: the spin keyframes live in styles.css.
-    style: {
-      animation: 'spin 1s linear infinite',
+    '@platform web': {
+      $style: {
+        animation: 'spin 1s linear infinite',
+      },
     },
   },
 })

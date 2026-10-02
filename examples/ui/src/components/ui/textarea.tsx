@@ -17,13 +17,15 @@ export const textareaStyles = stylesheet({
     paddingY: 2,
     // 16px on small screens, so iOS does not zoom the page on focus.
     typo: 'body_medium',
-    '@md': { typo: 'body_small' },
+    '@media md': { typo: 'body_small' },
     shadow: 'small',
     // No tokens: the field grows with its content and resizes vertically.
-    style: {
-      fieldSizing: 'content',
-      resize: 'vertical',
-      transition: 'border-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        fieldSizing: 'content',
+        resize: 'vertical',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':focus-visible': { borderColor: 'action', shadow: 'focus' },
   },

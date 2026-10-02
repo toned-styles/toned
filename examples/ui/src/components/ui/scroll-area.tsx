@@ -13,14 +13,14 @@ export const scrollAreaStyles = stylesheet({
     width: '100%',
     height: '100%',
     // No token: the viewport follows the root's corners.
-    style: { borderRadius: 'inherit' },
+    '@platform web': { $style: { borderRadius: 'inherit' } },
     ':focus-visible': { shadow: 'focus' },
   },
   scrollbar: {
     display: 'flex',
     padding: 0.5,
     // No tokens: dragging the bar must not scroll the page or select text.
-    style: { touchAction: 'none', userSelect: 'none' },
+    '@platform web': { $style: { touchAction: 'none', userSelect: 'none' } },
   },
   thumb: {
     position: 'relative',

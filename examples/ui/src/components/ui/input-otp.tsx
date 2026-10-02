@@ -37,7 +37,9 @@ export const inputOtpStyles = stylesheet({
     typo: 'label_medium',
     shadow: 'small',
     // No token: the transition list is specific to this part.
-    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    },
   },
   caret: {
     position: 'absolute',
@@ -46,14 +48,16 @@ export const inputOtpStyles = stylesheet({
     justifyContent: 'center',
     pointerEvents: 'none',
     // No token for the inset shorthand.
-    style: { inset: 0 },
+    '@platform web': { $style: { inset: 0 } },
   },
   caretBar: {
     bgColor: 'emphasized',
     height: '1.125rem',
     width: '1px',
     // No token: the blink keyframes live in styles.css.
-    style: { animation: 'caret-blink 1s steps(1) infinite' },
+    '@platform web': {
+      $style: { animation: 'caret-blink 1s steps(1) infinite' },
+    },
   },
   separator: {
     display: 'flex',

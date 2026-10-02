@@ -7,11 +7,7 @@
     "dev": "NODE_PATH=node_modules bun --watch render.ts"
   },
   "dependencies": {
-    "@examples/shared": "workspace:*",
     "@toned/core": "workspace:*",
-    "@toned/react": "workspace:*",
-    "@toned/systems": "workspace:*",
-    "@toned/themes": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-email": "^6.11.0"
@@ -21,8 +17,6 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "react-native": "catalog:",
-    "react-native-web": "catalog:",
     "typescript": "catalog:"
   }
 }

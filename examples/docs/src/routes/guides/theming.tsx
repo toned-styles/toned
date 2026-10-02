@@ -205,18 +205,19 @@ export const themeCss = generateThemes(ui)`}</CodeBlock>
         <code {...s.code}>@toned/themes</code> ships values for them. Import the
         theme's stylesheet once:
       </p>
-      <CodeBlock title="toned.config.ts">{`import '@toned/themes/shadcn/config.css'`}</CodeBlock>
+      <CodeBlock title="main.tsx">{`import '@toned/themes/shadcn/config.css'`}</CodeBlock>
       <p>The file sets one property per token value:</p>
       <CodeBlock>{`/* @toned/themes/shadcn/config.css (simplified) */
 :root {
-  --colors_bg_default: hsl(0 0% 100%);
-  --colors_text_default: hsl(222.2 84% 4.9%);
-  --colors_bg_action: hsl(222.2 47.4% 11.2%);
-  --colors_text_on_action: hsl(210 40% 98%);
-  --colors_bg_muted: hsl(210 40% 96.1%);
-  --radius_small: 4px;
-  --radius_medium: 6px;
-  --radius_large: 8px;
+  --colors_base_50: hsl(0 0% 100%);
+  --colors_base_950: hsl(240 10% 3.9%);
+  --colors_bg_default: var(--colors_base_50);
+  --colors_text_default: var(--colors_base_950);
+  --colors_bg_action: hsl(240 5.9% 10%);
+  --colors_text_on_action: hsl(0 0% 100%);
+  --radius_small: 0.25rem;
+  --radius_medium: 0.5rem;
+  --radius_large: 0.75rem;
   /* ... */
 }`}</CodeBlock>
 
@@ -224,12 +225,13 @@ export const themeCss = generateThemes(ui)`}</CodeBlock>
         Dark mode
       </h3>
       <p>
-        The shadcn theme includes dark values under a{' '}
-        <code {...s.code}>.dark</code> class. Add or remove the class on the{' '}
-        <code {...s.code}>{'<html>'}</code> element; the stylesheets do not
-        change.
+        The packaged theme sets light values on <code {...s.code}>:root</code>{' '}
+        only. For dark mode, set the same properties under a selector of your
+        own, such as a <code {...s.code}>.dark</code> class, and add or remove
+        it on the <code {...s.code}>{'<html>'}</code> element; the stylesheets
+        do not change.
       </p>
-      <CodeBlock>{`/* Dark mode overrides */
+      <CodeBlock>{`/* dark.css: imported after the packaged theme */
 .dark {
   --colors_bg_default: hsl(222.2 84% 4.9%);
   --colors_text_default: hsl(210 40% 98%);

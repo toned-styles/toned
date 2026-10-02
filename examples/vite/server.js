@@ -23,6 +23,7 @@ let vite
 if (!isProduction) {
   const { createServer } = await import('vite')
   vite = await createServer({
+    configLoader: 'runner',
     server: { middlewareMode: true },
     appType: 'custom',
     base,

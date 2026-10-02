@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 
 import { CodeBlock } from '../../components/CodeBlock.tsx'
@@ -76,7 +76,7 @@ import { styles } from './styles.ts'
 import { ui } from './system.ts'
 
 const artifact = buildStyles(ui, { sheets: [styles] })
-const renderer = createWebRenderer(ui, { manifest: artifact.manifest, tokens: {} })
+const renderer = createWebRenderer(ui, { manifest: artifact.manifest })
 const props = renderer.resolve(styles)`}</CodeBlock>
       <p>
         The <code {...s.code}>system</code> property is the raw token
@@ -88,10 +88,15 @@ const props = renderer.resolve(styles)`}</CodeBlock>
         Compatibility
       </h2>
       <p>
-        The older <code {...s.code}>defineSystem(tokens, config)</code> form and
-        <code {...s.code}>t</code> utility remain available for existing
-        consumers. New components should use named sheets and explicit bindings
-        rather than introduce new ambient inline-token calls.
+        The two-argument <code {...s.code}>defineSystem(tokens, config)</code>{' '}
+        form creates a system without a namespace. It composes vocabularies that
+        read unprefixed custom properties, such as{' '}
+        <code {...s.code}>@toned/systems/base</code> (see the{' '}
+        <Link to="/guides/react-web">React web guide</Link>), and keeps its
+        spacing-scale container steps for existing consumers. The{' '}
+        <code {...s.code}>t</code> utility remains available too. New components
+        should use named sheets and explicit bindings rather than introduce new
+        ambient inline-token calls.
       </p>
     </article>
   )

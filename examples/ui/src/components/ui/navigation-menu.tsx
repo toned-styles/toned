@@ -38,7 +38,9 @@ export const navMenuStyles = stylesheet({
     textColor: 'default',
     cursor: 'pointer',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { bgColor: 'subtle' },
     ':focus-visible': { shadow: 'focus' },
   },
@@ -47,14 +49,14 @@ export const navMenuStyles = stylesheet({
     height: '0.75rem',
     textColor: 'muted',
     // The open state rotates the icon from styles.css.
-    style: { transition: 'transform 0.2s' },
+    '@platform web': { $style: { transition: 'transform 0.2s' } },
   },
   content: {
     top: 0,
     left: 0,
     width: '100%',
     padding: 2,
-    '@md': { position: 'absolute', width: 'auto' },
+    '@media md': { position: 'absolute', width: 'auto' },
   },
   viewportWrapper: {
     position: 'absolute',
@@ -77,11 +79,13 @@ export const navMenuStyles = stylesheet({
     height: 'var(--radix-navigation-menu-viewport-height)',
     width: '100%',
     // No tokens: the panel grows from the bar and resizes between menus.
-    style: {
-      transformOrigin: 'top center',
-      transition: 'width 0.2s, height 0.2s',
+    '@platform web': {
+      $style: {
+        transformOrigin: 'top center',
+        transition: 'width 0.2s, height 0.2s',
+      },
     },
-    '@md': { width: 'var(--radix-navigation-menu-viewport-width)' },
+    '@media md': { width: 'var(--radix-navigation-menu-viewport-width)' },
   },
   link: {
     flexLayout: 'column',
@@ -91,7 +95,9 @@ export const navMenuStyles = stylesheet({
     typo: 'body_small',
     textColor: 'default',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { bgColor: 'subtle' },
     ':focus-visible': { shadow: 'focus' },
   },
@@ -113,7 +119,7 @@ export const navMenuStyles = stylesheet({
     height: '0.5rem',
     width: '0.5rem',
     // No token for transforms: a rotated square reads as an arrow.
-    style: { transform: 'rotate(45deg)' },
+    '@platform web': { $style: { transform: 'rotate(45deg)' } },
   },
 })
 

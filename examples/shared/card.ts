@@ -1,16 +1,17 @@
-import { stylesheet } from '@toned/systems/base'
+import { ui } from './system.ts'
 
-export const styles = stylesheet({
-  container: {
-    textColor: 'on_action',
+export const cardStyles = ui.stylesheet((q) => ({
+  Root: {
     bgColor: 'default',
     alignItems: 'flex-start',
     flexLayout: 'column',
+    gap: 2,
+    padding: 4,
   },
-  code: { textColor: 'destructive' },
-  'code:hover': {
-    code: {
-      textColor: 'default',
-    },
+  Hint: { $kind: 'text', textColor: 'status_info' },
+  Code: {
+    $kind: 'text',
+    textColor: 'destructive',
+    [q.state('hover')]: { textColor: 'default' },
   },
-})
+}))

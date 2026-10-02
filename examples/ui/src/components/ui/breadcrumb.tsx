@@ -12,7 +12,7 @@ export const breadcrumbStyles = stylesheet({
     gap: 1.5,
     typo: 'body_small',
     flexWrap: 'wrap',
-    '@sm': { gap: 2 },
+    '@media sm': { gap: 2 },
   },
   item: {
     display: 'inline-flex',
@@ -22,7 +22,9 @@ export const breadcrumbStyles = stylesheet({
   link: {
     borderRadius: 'small',
     // No token: the transition list is specific to this part.
-    style: { transition: 'color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { textColor: 'default' },
     ':focus-visible': { shadow: 'focus' },
   },

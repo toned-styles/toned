@@ -60,7 +60,7 @@ export const fieldStyles = stylesheet({
     flexGrow: '1',
     borderColor: 'default',
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   fieldError: {
     textColor: 'destructive',
@@ -89,7 +89,7 @@ export const fieldStyles = stylesheet({
       field: {
         flexLayout: 'column',
         gap: 2,
-        '@md': { flexLayout: 'row', alignItems: 'flex-start', gap: 3 },
+        '@media md': { flexLayout: 'row', alignItems: 'flex-start', gap: 3 },
       },
     },
     [$.legend('legend')]: { legend: { typo: 'heading_4' } },

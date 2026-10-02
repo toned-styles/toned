@@ -27,9 +27,11 @@ export const tabsStyles = stylesheet({
     typo: 'label_small',
     cursor: 'pointer',
     // No tokens for text wrapping or transitions.
-    style: {
-      whiteSpace: 'nowrap',
-      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':hover': { textColor: 'default' },
     ':focus-visible': { shadow: 'focus' },
@@ -60,7 +62,7 @@ export const tabsStyles = stylesheet({
         gap: 4,
         borderColor: 'default',
         // No token sets a single edge.
-        style: { borderBottomWidth: 1 },
+        $style: { borderBottomWidth: 1 },
       },
       trigger: { height: '2.25rem', paddingX: 0.5 },
     },

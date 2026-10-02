@@ -38,7 +38,7 @@ export const commandStyles = stylesheet({
     textColor: 'muted',
     borderColor: 'default',
     // No token sets a single edge.
-    style: { borderBottomWidth: 1 },
+    $style: { borderBottomWidth: 1 },
   },
   input: {
     flexGrow: '1',
@@ -57,7 +57,7 @@ export const commandStyles = stylesheet({
     typo: 'body_small',
     textColor: 'muted',
     // No token for text alignment.
-    style: { textAlign: 'center' },
+    '@platform web': { $style: { textAlign: 'center' } },
   },
   group: {
     padding: 1,
@@ -74,12 +74,12 @@ export const commandStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: command text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   separator: {
     borderColor: 'default',
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   shortcut: {
     marginLeft: 'auto',

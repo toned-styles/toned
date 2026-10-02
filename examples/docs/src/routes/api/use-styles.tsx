@@ -127,7 +127,7 @@ function Card({ children }: { children: React.ReactNode }) {
       </h3>
       <p>
         For stylesheets with variants, pass the variant state as the second
-        argument. The hook will update whenever the state changes:
+        argument. The styles follow the state whenever it changes:
       </p>
       <CodeBlock>{`function NavLink({ href, label, isActive }: {
   href: string; label: string; isActive: boolean

@@ -133,10 +133,9 @@ function Option({
 }) {
   const s = useStyles(searchStyles, { active })
   return (
-    // oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- focus stays in the combobox input; options are reached through aria-activedescendant
-    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- the combobox input handles the keyboard
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- focus stays in the combobox input, which handles the keyboard; options are reached through aria-activedescendant
     <div
-      tabIndex={0}
+      tabIndex={-1}
       id={id}
       role="option"
       aria-selected={active}
@@ -398,11 +397,13 @@ export function SearchPalette({
         if (event.target === event.currentTarget) onClose(true)
       }}
     >
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the dialog's key handler keeps Tab within the modal and closes it on Escape */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Search the documentation"
         // A part's prop bag carries its own ref; `withProps` merges ours in.
+        // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
         {...s.Panel.withProps<'div'>({ ref: panelRef })}
         onKeyDown={onPanelKey}
       >
@@ -425,6 +426,7 @@ export function SearchPalette({
             enterKeyHint="go"
             placeholder="Search docs, APIs and components"
             value={query}
+            // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
             {...s.Input.withProps<'input'>({ ref: inputRef })}
             onChange={(event) => {
               setQuery(event.target.value)
@@ -445,6 +447,7 @@ export function SearchPalette({
           id={listId}
           role="listbox"
           aria-label="Search results"
+          // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
           {...s.List.withProps<'div'>({ ref: listRef })}
         >
           {sections.map((section) => {

@@ -36,7 +36,9 @@ export const menubarStyles = stylesheet({
     textColor: 'default',
     cursor: 'default',
     // No token: menu text is not selectable.
-    style: { userSelect: 'none', transition: 'background-color 0.15s' },
+    '@platform web': {
+      $style: { userSelect: 'none', transition: 'background-color 0.15s' },
+    },
   },
   content: {
     bgColor: 'elevated',
@@ -63,7 +65,7 @@ export const menubarStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: menu text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   checkboxItem: {
     display: 'flex',
@@ -77,7 +79,7 @@ export const menubarStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: menu text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   indicator: {
     display: 'flex',
@@ -106,7 +108,7 @@ export const menubarStyles = stylesheet({
     marginY: 1,
     marginX: -1,
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   shortcut: {
     marginLeft: 'auto',

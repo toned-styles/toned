@@ -13,7 +13,7 @@ export const drawerStyles = stylesheet({
     position: 'fixed',
     zIndex: 50,
     // No token for the inset shorthand.
-    style: { inset: 0 },
+    '@platform web': { $style: { inset: 0 } },
   },
   content: {
     bgColor: 'elevated',

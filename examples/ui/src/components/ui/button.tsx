@@ -16,10 +16,12 @@ const buttonStyles = stylesheet({
     shadow: 'small',
     cursor: 'pointer',
     // No tokens for text wrapping or transitions.
-    style: {
-      whiteSpace: 'nowrap' as const,
-      transition:
-        'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s',
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition:
+          'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s',
+      },
     },
     ':focus-visible': { shadow: 'focus' },
   },
@@ -93,7 +95,7 @@ const buttonStyles = stylesheet({
         textColor: 'action',
         shadow: 'none',
         // No token for the underline offset.
-        style: { textUnderlineOffset: '4px' },
+        '@platform web': { $style: { textUnderlineOffset: '4px' } },
         ':hover': { textDecoration: 'underline' },
       },
     },

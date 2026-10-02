@@ -15,6 +15,7 @@ import * as tonedReact from '@toned/react'
 import * as tonedBase from '@toned/systems/base'
 import * as React from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
+import type * as TypeScriptModule from 'typescript'
 
 import type {
   Axis,
@@ -37,7 +38,7 @@ import {
   MAX_FILE_CHARS,
 } from './types.ts'
 
-type TypeScript = typeof import('typescript')
+type TypeScript = typeof TypeScriptModule
 
 /** Everything user code may import. Anything else is a friendly error. */
 const modules: Record<ImportableModule | 'react/jsx-runtime', unknown> = {

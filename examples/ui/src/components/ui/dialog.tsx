@@ -12,7 +12,7 @@ export const dialogStyles = stylesheet({
     position: 'fixed',
     zIndex: 50,
     // No token for the inset shorthand.
-    style: { inset: 0 },
+    '@platform web': { $style: { inset: 0 } },
   },
   content: {
     bgColor: 'elevated',
@@ -31,8 +31,8 @@ export const dialogStyles = stylesheet({
     top: '50%',
     left: '50%',
     // No token for transforms: centres the panel on its top-left anchor.
-    style: { transform: 'translate(-50%, -50%)' },
-    '@sm': { maxWidth: '30rem' },
+    '@platform web': { $style: { transform: 'translate(-50%, -50%)' } },
+    '@media sm': { maxWidth: '30rem' },
   },
   close: {
     position: 'absolute',
@@ -47,8 +47,10 @@ export const dialogStyles = stylesheet({
     textColor: 'muted',
     cursor: 'pointer',
     // No token: the transition list is specific to this part.
-    style: {
-      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':hover': { bgColor: 'subtle', textColor: 'default' },
     ':focus-visible': { shadow: 'focus' },
@@ -61,7 +63,7 @@ export const dialogStyles = stylesheet({
   footer: {
     flexLayout: 'column-reverse',
     gap: 2,
-    '@sm': { flexLayout: 'row', justifyContent: 'flex-end' },
+    '@media sm': { flexLayout: 'row', justifyContent: 'flex-end' },
   },
   title: {
     typo: 'heading_4',

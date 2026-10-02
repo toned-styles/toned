@@ -151,7 +151,7 @@ import { webHost } from '@toned/react/hosts/web'
 import { Button } from './Button.tsx'
 import { ui } from './system.ts'
 
-const renderer = createWebRenderer(ui, { manifest, tokens: {} })
+const renderer = createWebRenderer(ui, { manifest })
 
 export function App() {
   return (
@@ -163,7 +163,8 @@ export function App() {
       <CodeBlock title="env.d.ts">{`/// <reference types="vite/client" />
 declare module 'virtual:toned.css' {}
 declare module 'virtual:toned.manifest' {
-  const manifest: import('@toned/core/build').BuildManifest
+  import type { BuildManifest } from '@toned/core/build'
+  const manifest: BuildManifest
   export default manifest
 }`}</CodeBlock>
       <p>

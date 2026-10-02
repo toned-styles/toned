@@ -28,16 +28,18 @@ export const selectStyles = stylesheet({
     shadow: 'small',
     cursor: 'pointer',
     // No tokens for text wrapping or transitions.
-    style: {
-      whiteSpace: 'nowrap' as const,
-      transition: 'border-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':focus-visible': { borderColor: 'action', shadow: 'focus' },
   },
   icon: {
     textColor: 'muted',
     // The open state rotates the icon from styles.css.
-    style: { transition: 'transform 0.15s' },
+    '@platform web': { $style: { transition: 'transform 0.15s' } },
   },
   content: {
     bgColor: 'elevated',
@@ -69,7 +71,7 @@ export const selectStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: option text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   itemIndicator: {
     position: 'absolute',
@@ -90,7 +92,7 @@ export const selectStyles = stylesheet({
     marginY: 1,
     marginX: -1,
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   scrollButton: {
     display: 'flex',

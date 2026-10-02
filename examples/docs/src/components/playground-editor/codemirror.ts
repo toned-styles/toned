@@ -114,7 +114,7 @@ const popup = {
   color: brand.body,
 }
 
-/** CodeMirror's own internals, in the site's palette and the old metrics. */
+/** CodeMirror's own internals, in the site's palette and metrics. */
 const theme = EditorView.theme({
   '&': {
     height: '100%',

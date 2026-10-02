@@ -17,10 +17,12 @@ export const inputStyles = stylesheet({
     paddingY: 1,
     // 16px on small screens, so iOS does not zoom the page on focus.
     typo: 'body_medium',
-    '@md': { typo: 'body_small' },
+    '@media md': { typo: 'body_small' },
     shadow: 'small',
     // No token: the transition list is specific to this control.
-    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    },
     ':focus-visible': { borderColor: 'action', shadow: 'focus' },
   },
 }).variants(

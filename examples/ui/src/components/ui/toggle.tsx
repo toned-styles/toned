@@ -18,9 +18,11 @@ const toggleStyles = stylesheet({
     textColor: 'default',
     cursor: 'pointer',
     // No tokens for text wrapping or transitions.
-    style: {
-      whiteSpace: 'nowrap',
-      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':hover': { bgColor: 'subtle' },
     ':focus-visible': { shadow: 'focus' },

@@ -13,7 +13,7 @@ export const sheetStyles = stylesheet({
     position: 'fixed',
     zIndex: 50,
     // No token for the inset shorthand.
-    style: { inset: 0 },
+    '@platform web': { $style: { inset: 0 } },
   },
   content: {
     bgColor: 'elevated',
@@ -38,8 +38,10 @@ export const sheetStyles = stylesheet({
     textColor: 'muted',
     cursor: 'pointer',
     // No token: the transition list is specific to this part.
-    style: {
-      transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':hover': { bgColor: 'subtle', textColor: 'default' },
     ':focus-visible': { shadow: 'focus' },
@@ -73,7 +75,7 @@ export const sheetStyles = stylesheet({
         bottom: 0,
         width: '85%',
         maxWidth: '24rem',
-        style: { borderLeftWidth: 1 },
+        $style: { borderLeftWidth: 1 },
       },
     },
     [$.side('left')]: {
@@ -83,14 +85,14 @@ export const sheetStyles = stylesheet({
         bottom: 0,
         width: '85%',
         maxWidth: '24rem',
-        style: { borderRightWidth: 1 },
+        $style: { borderRightWidth: 1 },
       },
     },
     [$.side('top')]: {
-      content: { top: 0, left: 0, right: 0, style: { borderBottomWidth: 1 } },
+      content: { top: 0, left: 0, right: 0, $style: { borderBottomWidth: 1 } },
     },
     [$.side('bottom')]: {
-      content: { bottom: 0, left: 0, right: 0, style: { borderTopWidth: 1 } },
+      content: { bottom: 0, left: 0, right: 0, $style: { borderTopWidth: 1 } },
     },
   }),
   { defaults: { side: 'right' } },

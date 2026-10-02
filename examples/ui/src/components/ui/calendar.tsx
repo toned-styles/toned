@@ -42,7 +42,9 @@ export const calendarStyles = stylesheet({
     textColor: 'muted',
     cursor: 'pointer',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { bgColor: 'subtle', textColor: 'default' },
     ':focus-visible': { shadow: 'focus' },
   },
@@ -57,7 +59,7 @@ export const calendarStyles = stylesheet({
   },
   grid: {
     // No token for table layout.
-    style: { borderCollapse: 'collapse' },
+    '@platform web': { $style: { borderCollapse: 'collapse' } },
   },
   weekday: {
     width: '2.25rem',
@@ -69,7 +71,7 @@ export const calendarStyles = stylesheet({
   day: {
     padding: 0,
     // No token for text alignment.
-    style: { textAlign: 'center' },
+    '@platform web': { $style: { textAlign: 'center' } },
   },
   dayButton: {
     display: 'inline-flex',
@@ -81,7 +83,9 @@ export const calendarStyles = stylesheet({
     typo: 'body_small',
     cursor: 'pointer',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { bgColor: 'subtle' },
     ':focus-visible': { shadow: 'focus' },
   },
@@ -229,6 +233,7 @@ function CalendarDayButton({
       type="button"
       data-slot="calendar-day"
       data-day={day.isoDate}
+      // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
       {...s.dayButton.with({ ref, className })}
       {...props}
     />

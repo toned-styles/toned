@@ -19,7 +19,7 @@ const badgeStyles = stylesheet({
     fontWeight: 500,
     overflow: 'hidden',
     // No token for text wrapping.
-    style: { whiteSpace: 'nowrap' as const },
+    '@platform web': { $style: { whiteSpace: 'nowrap' } },
     ':focus-visible': { shadow: 'focus' },
   },
 }).variants(
@@ -59,7 +59,7 @@ const badgeStyles = stylesheet({
         textColor: 'action',
         textDecoration: 'underline',
         // No token for the underline offset.
-        style: { textUnderlineOffset: '4px' },
+        $style: { textUnderlineOffset: '4px' },
       },
     },
   }),

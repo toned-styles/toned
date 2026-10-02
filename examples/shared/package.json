@@ -5,11 +5,12 @@
   "type": "module",
   "main": "index.ts",
   "dependencies": {
-    "@toned/systems": "workspace:*",
-    "@toned/themes": "workspace:*"
+    "@toned/core": "workspace:*",
+    "@toned/systems": "workspace:*"
   },
   "devDependencies": {
     "@toned-config/typescript": "workspace:*",
+    "csstype": "^3.2.3",
     "typescript": "catalog:"
   }
 }

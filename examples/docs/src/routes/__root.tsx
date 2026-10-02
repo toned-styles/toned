@@ -31,7 +31,7 @@ function pageLabel(pathname: string) {
     locate(pathname)?.label ??
     (
       {
-        '/': 'Typed styling for React and React Native',
+        '/': 'Typed styling for design systems',
         '/playground': 'Playground',
         '/themes': 'Themes',
         '/ui': 'Components',

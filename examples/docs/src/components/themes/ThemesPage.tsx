@@ -49,7 +49,9 @@ export function ThemesPage() {
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(storageKey)
-      if (saved && saved in themes) setTheme(saved as ThemeName)
+      if (saved && saved in themes)
+        // oxlint-disable-next-line react/set-state-in-effect -- applies a stored choice after hydration so the first client render matches the server's
+        setTheme(saved as ThemeName)
     } catch {
       // Storage can be unavailable; the default theme stays.
     }

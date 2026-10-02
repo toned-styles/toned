@@ -1,6 +1,8 @@
 declare module 'virtual:toned-themes.css'
 
 declare module 'virtual:toned-themes.manifest' {
-  const manifest: import('@toned/core/build').BuildManifest
+  import type { BuildManifest } from '@toned/core/build'
+
+  const manifest: BuildManifest
   export default manifest
 }

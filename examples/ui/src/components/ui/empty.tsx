@@ -15,12 +15,14 @@ export const emptyStyles = stylesheet({
     borderWidth: 'thin',
     borderRadius: 'large',
     // No tokens for a dashed edge or centred, balanced text.
-    style: {
-      borderStyle: 'dashed',
-      textAlign: 'center',
-      textWrap: 'balance',
+    '@platform web': {
+      $style: {
+        borderStyle: 'dashed',
+        textAlign: 'center',
+        textWrap: 'balance',
+      },
     },
-    '@md': { padding: 10 },
+    '@media md': { padding: 10 },
   },
   header: {
     flexLayout: 'column',

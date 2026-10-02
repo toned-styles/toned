@@ -50,8 +50,8 @@ function ApiMediaQueries() {
       </p>
       <p>
         <code {...s.code}>'@media md'</code> can also be written as the builder
-        call <code {...s.code}>[q.media('md')]</code> or as the earlier short
-        key <code {...s.code}>'@md'</code>; all three declare the same rule.
+        call <code {...s.code}>[q.media('md')]</code>, and the compatibility
+        short key <code {...s.code}>'@md'</code> declares the same rule.
         Container and platform conditions follow the same pattern. See{' '}
         <Link to="/api/conditions">Conditions and selectors</Link> for every
         form.
@@ -135,9 +135,11 @@ function Panel() {
   return <div {...t({ paddingX: 2, '@media md': { paddingX: 4 } })} />
 }`}</CodeBlock>
       <p>
-        Inline blocks require <code {...s.code}>mediaMode: 'css'</code> -- see
-        below. They are also one level deep, so the root-level and variant forms
-        shown above apply to stylesheets only.
+        <code {...s.code}>t</code> is the compatibility inline helper: it reads
+        the installed configuration, and its blocks compile to CSS custom
+        properties, so they apply only to web output with CSS media enabled.
+        They are also one level deep, so the root-level and variant forms shown
+        above apply to stylesheets only.
       </p>
       <p>
         Give the property a base value, as <code {...s.code}>paddingX: 2</code>{' '}
@@ -170,49 +172,54 @@ export const ui = defineSystem({
 })`}</CodeBlock>
 
       <h2 {...s.h2} id="media-modes">
-        Media Modes
+        How Breakpoints Apply
       </h2>
       <p>
-        The <code {...s.code}>mediaMode</code> option in your config controls
-        how responsive styles are applied:
+        The renderer given to <code {...s.code}>TonedProvider</code> decides how
+        a breakpoint is evaluated; the stylesheet is the same everywhere.
       </p>
 
       <h3 {...s.h3} id="css-mode">
-        CSS Mode
+        Web
       </h3>
       <p>
-        When <code {...s.code}>mediaMode: 'css'</code>, breakpoint overrides are
-        compiled into real CSS <code {...s.code}>@media</code> rules. This is
-        the recommended mode for web projects as it uses native browser
-        capabilities and avoids JavaScript overhead:
+        A web renderer uses the CSS generated at build time, where each
+        breakpoint is a real <code {...s.code}>@media</code> rule. Matching
+        happens in the browser, with no JavaScript listener or React render:
       </p>
-      <CodeBlock title="toned.config.ts">{`setConfig(
-  defineConfig({
-    ...reactConfig,
-    useClassName: true,
-    useMedia: true,
-    mediaMode: 'css',
-    pseudoMode: 'css',
-  }),
-)`}</CodeBlock>
+      <CodeBlock title="App.tsx">{`import 'virtual:toned.css'
+import manifest from 'virtual:toned.manifest'
+import { createWebRenderer } from '@toned/core/server'
+import { TonedProvider } from '@toned/react'
+import { webHost } from '@toned/react/hosts/web'
+import { ui } from './system.ts'
+
+const renderer = createWebRenderer(ui, { manifest })
+
+export function App({ children }: { children: React.ReactNode }) {
+  return (
+    <TonedProvider renderer={renderer} host={webHost}>
+      {children}
+    </TonedProvider>
+  )
+}`}</CodeBlock>
 
       <h3 {...s.h3} id="javascript-mode">
-        JavaScript Mode
+        React Native
       </h3>
       <p>
-        When <code {...s.code}>mediaMode</code> is not set to{' '}
-        <code {...s.code}>'css'</code>, breakpoints in a{' '}
-        <strong>stylesheet</strong> are evaluated at runtime using JavaScript{' '}
-        <code {...s.code}>window.matchMedia</code>. This mode is useful for
-        React Native or environments where CSS media queries are not available.
+        A native renderer evaluates a <strong>stylesheet</strong>&apos;s
+        breakpoints against the viewport width the native host reports, and
+        patches the mounted hosts when it changes. See the{' '}
+        <Link to="/guides/react-native">React Native guide</Link> for the host
+        capabilities this needs.
       </p>
       <p>
-        Inline <code {...s.code}>t</code> blocks have no runtime equivalent:
-        they compile to CSS custom properties, which only a browser reads. Under
-        any mode other than <code {...s.code}>'css'</code> an inline{' '}
-        <code {...s.code}>@</code> block is dropped, the base token value still
-        applies, and a development-only warning explains why. Where you need
-        responsive styling on React Native, use{' '}
+        Inline <code {...s.code}>t</code> blocks have no native equivalent: they
+        compile to CSS custom properties, which only a browser reads. Without
+        CSS media an inline <code {...s.code}>@</code> block is dropped, the
+        base token value still applies, and a development-only warning explains
+        why. Where you need responsive styling on React Native, use{' '}
         <Link to="/api/stylesheet">stylesheet</Link> with{' '}
         <Link to="/api/use-styles">useStyles</Link> instead.
       </p>

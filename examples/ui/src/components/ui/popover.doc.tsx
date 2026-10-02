@@ -40,7 +40,7 @@ export default doc({
             alignItems: 'center',
             gap: 2,
             // No token for grid tracks: a label column and a field column.
-            style: { gridTemplateColumns: '4rem 1fr' },
+            '@platform web': { $style: { gridTemplateColumns: '4rem 1fr' } },
           })}
         >
           <Label htmlFor="popover-width">Width</Label>

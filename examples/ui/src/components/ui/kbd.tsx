@@ -20,7 +20,7 @@ export const kbdStyles = stylesheet({
     fontWeight: 500,
     pointerEvents: 'none',
     // No token: key names are not selectable text.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   group: {
     display: 'inline-flex',

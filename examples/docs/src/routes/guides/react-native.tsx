@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
 
 import { CodeBlock } from '../../components/CodeBlock.tsx'
@@ -17,8 +17,8 @@ function GuideReactNative() {
       <p>
         Toned shares portable declarations and resolves native style fields.
         Your application supplies its renderer, concrete primitives and an
-        explicit host adapter. Importing the native configuration alone does not
-        establish a working or certified React Native integration.
+        explicit host adapter. The native host module alone does not establish a
+        working or certified React Native integration.
       </p>
 
       <h2 {...s.h2} id="1-define-portable-parts">
@@ -70,7 +70,7 @@ export const { stylesheet } = ui`}</CodeBlock>
 import { Dimensions, Image, Pressable, Text, View } from 'react-native'
 import { defineReactNativeHost } from '@toned/core/stylesheet'
 import type { ReactHost } from '@toned/react'
-import native from '@toned/react/react-native'
+import { nativeHost as native } from '@toned/react/hosts/native'
 import { isApplicationFabricHost, appReactNativeVersion } from './host-identity'
 
 const adapter = defineReactNativeHost({
@@ -105,14 +105,13 @@ export const host: ReactHost = {
       <h2 {...s.h2} id="3-install-a-renderer-and-render-the-parts">
         3. Install a renderer and render the parts
       </h2>
-      <CodeBlock title="App.tsx">{`import { nativeBackend } from '@toned/core/backends'
-import { createRenderer } from '@toned/core/server'
+      <CodeBlock title="App.tsx">{`import { createNativeRenderer } from '@toned/core/server'
 import { createElements, TonedProvider } from '@toned/react'
 import { host } from './host'
 import { cardStyles } from './styles'
 import { ui } from './system'
 
-const renderer = createRenderer(ui, { backend: nativeBackend, tokens: {} })
+const renderer = createNativeRenderer(ui, { tokens: {} })
 const Card = createElements(cardStyles)
 
 export default function App() {
@@ -156,9 +155,14 @@ export default function App() {
       <p>
         Grid remains a web capability. Named-area ownership alone cannot
         implement intrinsic native track sizing or span placement. A native grid
-        needs an integrated layout engine and its own acceptance tests. The
-        older Expo demo has not yet established that acceptance or certified a
-        concrete Fabric renderer.
+        needs an integrated layout engine and its own acceptance tests. The Expo
+        example is an integration sketch: it does not certify a concrete Fabric
+        renderer. The separate Fabric acceptance app verifies one pinned Android
+        profile; see the{' '}
+        <Link to="/learn/$topic" params={{ topic: 'native' }}>
+          native hosts reference
+        </Link>
+        .
       </p>
       <p>
         Opaque styles from other engines must use an explicit primitive adapter

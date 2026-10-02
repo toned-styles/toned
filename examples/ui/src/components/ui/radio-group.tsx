@@ -23,7 +23,9 @@ export const radioGroupStyles = stylesheet({
     shadow: 'small',
     cursor: 'pointer',
     // No token: the transition list is specific to this control.
-    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { borderColor: 'action' },
     ':focus-visible': { shadow: 'focus' },
   },

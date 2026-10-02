@@ -51,7 +51,7 @@ export default doc({
         borderRadius: 'large',
         // The sidebar is fixed to the viewport. A transform makes this frame
         // its containing block, so the demo stays inside the preview.
-        style: { minHeight: 0, transform: 'translateZ(0)' },
+        $style: { minHeight: 0, transform: 'translateZ(0)' },
       })}
     >
       <C.Sidebar>

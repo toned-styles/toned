@@ -24,7 +24,9 @@
   },
   "include": ["src"],
   "references": [
-    { "path": "../../packages/toned-compiler" },
+    {
+      "path": "../../packages/toned-compiler"
+    },
     {
       "path": "../../packages/toned-core"
     },

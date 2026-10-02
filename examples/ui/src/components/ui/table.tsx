@@ -15,25 +15,27 @@ export const tableStyles = stylesheet({
     typo: 'body_small',
     textColor: 'default',
     // No tokens for table layout.
-    style: { borderCollapse: 'collapse', captionSide: 'bottom' },
+    '@platform web': {
+      $style: { borderCollapse: 'collapse', captionSide: 'bottom' },
+    },
   },
   header: {
     borderColor: 'default',
     // No token sets a single edge.
-    style: { borderBottomWidth: 1 },
+    $style: { borderBottomWidth: 1 },
   },
   footer: {
     bgColor: 'muted',
     borderColor: 'default',
     fontWeight: 500,
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   // The line between rows and the selected state are rules in styles.css.
   row: {
     borderColor: 'default',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s' },
+    '@platform web': { $style: { transition: 'background-color 0.15s' } },
     ':hover': { bgColor: 'muted' },
   },
   head: {
@@ -43,19 +45,23 @@ export const tableStyles = stylesheet({
     typo: 'caption',
     fontWeight: 500,
     // No tokens for cell alignment or text wrapping.
-    style: {
-      textAlign: 'left',
-      verticalAlign: 'middle',
-      whiteSpace: 'nowrap' as const,
+    '@platform web': {
+      $style: {
+        textAlign: 'left',
+        verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
+      },
     },
   },
   cell: {
     paddingX: 3,
     paddingY: 2.5,
     // No tokens for cell alignment or text wrapping.
-    style: {
-      verticalAlign: 'middle',
-      whiteSpace: 'nowrap' as const,
+    '@platform web': {
+      $style: {
+        verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
+      },
     },
   },
   caption: {

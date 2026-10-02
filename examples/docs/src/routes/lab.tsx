@@ -29,7 +29,7 @@ function Moved() {
     <article>
       <h1 {...d.Title}>This page has moved</h1>
       <p {...d.Lead}>
-        The interactive examples are now at{' '}
+        The interactive examples are at{' '}
         <Link to="/examples" {...d.MetaLink}>
           /examples
         </Link>

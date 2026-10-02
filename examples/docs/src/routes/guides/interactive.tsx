@@ -16,9 +16,8 @@ function GuideInteractive() {
       <p>
         Toned supports hover, focus, and active states using colon-prefixed keys
         -- inside a stylesheet element definition, or inline with{' '}
-        <code {...s.code}>t</code>. On the web with{' '}
-        <code {...s.code}>pseudoMode: 'css'</code>, these work entirely through
-        CSS with no JavaScript event listeners.
+        <code {...s.code}>t</code>. On the web they compile to CSS at build time
+        and need no JavaScript event listeners.
       </p>
 
       <h2 {...s.h2} id="element-level-pseudo-classes">
@@ -169,13 +168,12 @@ function Tag() {
 }`}</CodeBlock>
       <p>
         Cross-element relationships and variant selection in the examples above
-        require a stylesheet. This compatibility t helper requires{' '}
-        <code {...s.code}>pseudoMode: 'css'</code> (and{' '}
-        <code {...s.code}>mediaMode: 'css'</code> for the{' '}
-        <code {...s.code}>@</code> form), because they compile to the custom
-        property chains described below. Under any other mode the block is
-        dropped, the base token value still applies, so use the explicit
-        renderer APIs for new integrations.
+        require a stylesheet. <code {...s.code}>t</code> is a compatibility
+        helper that reads the installed configuration; its state and{' '}
+        <code {...s.code}>@</code> blocks compile to the custom property chains
+        described below, so they need web output with CSS states and media
+        enabled. Otherwise the block is dropped and the base token value still
+        applies. New integrations use stylesheets with an explicit renderer.
       </p>
 
       <h2 {...s.h2} id="react-native">
@@ -204,7 +202,9 @@ function Tag() {
       </h2>
       <p>
         On the web, interactive styles use the CSS "space toggle" technique. The
-        system declares a custom property for each pseudo-state:
+        system declares a custom property for each pseudo-state. A system with
+        an <code {...s.code}>id</code> prefixes these names with it, as in{' '}
+        <code {...s.code}>--app-toned_hover</code>:
       </p>
       <CodeBlock>{`html {
   --toned_hover: initial;   /* "off" */
@@ -212,17 +212,20 @@ function Tag() {
   --toned_active: initial;
 }`}</CodeBlock>
       <p>
-        When an element is hovered, a cascade rule flips the variable from{' '}
-        <code {...s.code}>initial</code> (off) to an empty value (on):
+        When an element is hovered on a device that can hover, a cascade rule
+        flips the variable from <code {...s.code}>initial</code> (off) to an
+        empty value (on):
       </p>
-      <CodeBlock>{`/* Activate on the hovered element */
-._:hover { --toned_hover: ; }
+      <CodeBlock>{`@media (hover: hover) {
+  /* Activate on the hovered element */
+  ._:hover { --toned_hover: ; }
 
-/* Reset for children so hover doesn't leak down */
-._:hover ._ { --toned_hover: initial; }
+  /* Reset for children so hover doesn't leak down */
+  ._:hover ._ { --toned_hover: initial; }
 
-/* Re-activate for nested elements that are themselves hovered */
-._:hover ._:hover { --toned_hover: ; }`}</CodeBlock>
+  /* Re-activate for nested elements that are themselves hovered */
+  ._:hover ._:hover { --toned_hover: ; }
+}`}</CodeBlock>
       <p>
         Token values then reference this variable in a{' '}
         <code {...s.code}>var()</code> fallback chain. When the variable is{' '}

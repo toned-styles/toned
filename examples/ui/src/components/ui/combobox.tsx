@@ -54,7 +54,7 @@ export const comboboxStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: option text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   itemIndicator: {
     position: 'absolute',
@@ -86,7 +86,7 @@ export const comboboxStyles = stylesheet({
     marginY: 1,
     marginX: -1,
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   trigger: {
     display: 'inline-flex',
@@ -112,7 +112,9 @@ export const comboboxStyles = stylesheet({
     shadow: 'small',
     typo: 'body_small',
     // No token: the transition list is specific to this control.
-    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    },
     ':focus-within': { borderColor: 'action', shadow: 'focus' },
   },
   chip: {
@@ -129,7 +131,7 @@ export const comboboxStyles = stylesheet({
     typo: 'caption',
     fontWeight: 500,
     // No token for text wrapping.
-    style: { whiteSpace: 'nowrap' },
+    '@platform web': { $style: { whiteSpace: 'nowrap' } },
   },
   chipRemove: {
     display: 'inline-flex',
@@ -415,7 +417,8 @@ function ComboboxChip({
 
 function ComboboxChipsInput({
   className,
-  children,
+  // The chip input renders no children of its own.
+  children: _children,
   ...props
 }: ComboboxPrimitive.Input.Props) {
   const s = useStyles(comboboxStyles)

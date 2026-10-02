@@ -129,6 +129,7 @@ export function Search() {
       <button
         type="button"
         // The part's prop bag carries its own ref; `withProps` merges ours in.
+        // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
         {...s.Trigger.withProps<'button'>({ ref: triggerRef })}
         aria-label="Search"
         aria-haspopup="dialog"

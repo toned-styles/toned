@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ComponentDoc, PropDoc } from 'virtual:component-docs/*'
 
 import type { DocDescriptor } from '../../../../ui/src/lib/doc.tsx'
@@ -19,21 +19,29 @@ export const Route = createFileRoute('/ui/$component')({
   component: ComponentPlayground,
 })
 
+type Loaded = {
+  name: string
+  docs: ComponentDoc[] | null
+  mod: Record<string, unknown> | null
+  descriptor: DocDescriptor | null
+  error: string | null
+}
+
 function ComponentPlayground() {
   const { component: name } = Route.useParams()
   const s = useStyles(playgroundStyles)
 
-  const [docs, setDocs] = useState<ComponentDoc[] | null>(null)
-  const [mod, setMod] = useState<Record<string, unknown> | null>(null)
-  const [docDescriptor, setDocDescriptor] = useState<DocDescriptor | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // What the last load produced, for the component it loaded. A different
+  // route parameter reads as loading until its own result arrives.
+  const [loaded, setLoaded] = useState<Loaded | null>(null)
+  const current = loaded?.name === name ? loaded : null
+  const docs = current?.docs ?? null
+  const mod = current?.mod ?? null
+  const docDescriptor = current?.descriptor ?? null
+  const error = current?.error ?? null
 
   useEffect(() => {
     let active = true
-    setDocs(null)
-    setMod(null)
-    setDocDescriptor(null)
-    setError(null)
 
     const loadDocs = async () => {
       const { loaders } = await import('virtual:component-docs/index')
@@ -60,31 +68,27 @@ function ComponentPlayground() {
     Promise.all([loadDocs(), componentModules[name]?.(), loadDocDescriptor()])
       .then(([docData, modData, descriptor]) => {
         if (!active) return
-        setDocDescriptor(descriptor ?? null)
-        setMod(modData ?? null)
-
-        // If we have a doc descriptor, we don't require react-docgen data
-        if (descriptor) {
-          setDocs(
+        setLoaded({
+          name,
+          // A doc descriptor does not require react-docgen data.
+          docs:
             docData?.filter((d: ComponentDoc) =>
               /^[A-Z]/.test(d.displayName),
             ) ?? [],
-          )
-          return
-        }
-
-        if (!docData || docData.length === 0) {
-          setDocs([])
-          return
-        }
-        const componentDocs = docData.filter((d: ComponentDoc) =>
-          /^[A-Z]/.test(d.displayName),
-        )
-
-        setDocs(componentDocs)
+          mod: modData ?? null,
+          descriptor: descriptor ?? null,
+          error: null,
+        })
       })
       .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : String(err))
+        if (!active) return
+        setLoaded({
+          name,
+          docs: null,
+          mod: null,
+          descriptor: null,
+          error: err instanceof Error ? err.message : String(err),
+        })
       })
     return () => {
       active = false
@@ -140,7 +144,7 @@ function ComponentPlayground() {
         <StylesheetWorkbench key={name} name={name} mod={mod}>
           <div {...s.preview} data-preview-stage data-gallery-themed>
             <p {...s.compoundNotice}>
-              This component has no example yet. Its source is shown alongside.
+              This component has no example. Its source is shown alongside.
             </p>
           </div>
         </StylesheetWorkbench>
@@ -246,12 +250,11 @@ function DocPlayground({
   }
 
   // Build defaults once for URL diffing
-  const defaultsRef = useRef<Record<string, Record<string, unknown>>>({})
-  if (Object.keys(defaultsRef.current).length === 0) {
-    for (const entry of doc.entries) {
-      defaultsRef.current[entry.name] = { ...entry.defaultProps }
-    }
-  }
+  const [defaults] = useState(() =>
+    Object.fromEntries(
+      doc.entries.map((entry) => [entry.name, { ...entry.defaultProps }]),
+    ),
+  )
 
   // Initialize prop states: defaults merged with URL overrides
   const [propStates, setPropStates] = useState<
@@ -279,8 +282,8 @@ function DocPlayground({
 
   // Sync prop states to URL
   useEffect(() => {
-    writePropsToUrl(propStates, defaultsRef.current)
-  }, [propStates])
+    writePropsToUrl(propStates, defaults)
+  }, [propStates, defaults])
 
   const updatePropState = useCallback(
     (componentName: string, prop: string, value: unknown) => {

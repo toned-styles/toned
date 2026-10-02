@@ -161,9 +161,12 @@ export const flatCard = baseCard.extend({
   },
 })`}</CodeBlock>
       <p>
-        The same blocks are accepted by the inline <code {...s.code}>t</code>{' '}
-        utility -- see <Link to="/api/define-system">defineSystem</Link> --
-        though the root-level and cross-element forms remain stylesheet-only.
+        The inline <code {...s.code}>t</code> compatibility helper accepts the
+        same blocks (see{' '}
+        <Link to="/api/media-queries" hash="using-breakpoints-inline">
+          Media Queries
+        </Link>
+        ), though the root-level and cross-element forms remain stylesheet-only.
       </p>
     </article>
   )

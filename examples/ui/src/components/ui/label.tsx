@@ -10,7 +10,7 @@ export const labelStyles = stylesheet({
     gap: 2,
     typo: 'label_small',
     // No token: double-clicking a label should not select its text.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
 })
 

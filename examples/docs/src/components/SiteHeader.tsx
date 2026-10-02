@@ -50,16 +50,17 @@ export function SiteHeader({ menu }: { menu?: ReactNode }) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const [open, setOpen] = useState(false)
+  // The drawer stays open only on the page it was opened on, so navigating
+  // closes it; Escape closes it too.
+  const [openOn, setOpenOn] = useState<string | null>(null)
+  const open = openOn === pathname
   const drawerId = useId()
   const d = useStyles(docsStyles, { drawer: open ? 'open' : undefined })
 
-  // Navigating closes the drawer; Escape closes it too.
-  useEffect(() => setOpen(false), [pathname])
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) =>
-      event.key === 'Escape' && setOpen(false)
+      event.key === 'Escape' && setOpenOn(null)
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
@@ -97,7 +98,7 @@ export function SiteHeader({ menu }: { menu?: ReactNode }) {
               aria-expanded={open}
               aria-controls={drawerId}
               aria-label={open ? 'Close menu' : 'Open menu'}
-              onClick={() => setOpen((value) => !value)}
+              onClick={() => setOpenOn(open ? null : pathname)}
             >
               <svg
                 aria-hidden="true"

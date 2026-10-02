@@ -59,7 +59,7 @@ export const carouselStyles = stylesheet({
     flexShrink: '0',
     flexGrow: '0',
     // No token: each slide takes the full width of the viewport.
-    style: { flexBasis: '100%' },
+    $style: { flexBasis: '100%' },
   },
   navButton: {
     position: 'absolute',
@@ -79,14 +79,14 @@ export const carouselStyles = stylesheet({
       content: { marginLeft: -4 },
       item: { paddingLeft: 4 },
       // No token for transforms: centres the button on the slide's edge.
-      navButton: { top: '50%', style: { transform: 'translateY(-50%)' } },
+      navButton: { top: '50%', $style: { transform: 'translateY(-50%)' } },
     },
     [$.orientation('vertical')]: {
       content: { flexLayout: 'column', marginTop: -4 },
       item: { paddingTop: 4 },
       navButton: {
         left: '50%',
-        style: { transform: 'translateX(-50%) rotate(90deg)' },
+        $style: { transform: 'translateX(-50%) rotate(90deg)' },
       },
     },
     [$.orientation('horizontal').side('previous')]: {
@@ -159,6 +159,7 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
+    // oxlint-disable-next-line react/set-state-in-effect -- reads the initial scroll state from the carousel API this effect subscribes to
     onSelect(api)
     api.on('reInit', onSelect)
     api.on('select', onSelect)

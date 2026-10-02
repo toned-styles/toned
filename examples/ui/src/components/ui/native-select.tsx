@@ -23,9 +23,11 @@ export const nativeSelectStyles = stylesheet({
     shadow: 'small',
     cursor: 'pointer',
     // No tokens: hides the browser's own arrow; the transition list is specific.
-    style: {
-      appearance: 'none',
-      transition: 'border-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        appearance: 'none',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':focus-visible': { borderColor: 'action', shadow: 'focus' },
   },
@@ -36,7 +38,7 @@ export const nativeSelectStyles = stylesheet({
     top: '50%',
     right: 3,
     // No token for transforms: centres the icon on the field's height.
-    style: { transform: 'translateY(-50%)' },
+    '@platform web': { $style: { transform: 'translateY(-50%)' } },
   },
 }).variants(
   (

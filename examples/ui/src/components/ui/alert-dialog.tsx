@@ -14,7 +14,7 @@ export const alertDialogStyles = stylesheet({
     position: 'fixed',
     zIndex: 50,
     // No token for the inset shorthand.
-    style: { inset: 0 },
+    '@platform web': { $style: { inset: 0 } },
   },
   content: {
     bgColor: 'elevated',
@@ -33,8 +33,8 @@ export const alertDialogStyles = stylesheet({
     top: '50%',
     left: '50%',
     // No token for transforms: centres the panel on its top-left anchor.
-    style: { transform: 'translate(-50%, -50%)' },
-    '@sm': { maxWidth: '28rem' },
+    '@platform web': { $style: { transform: 'translate(-50%, -50%)' } },
+    '@media sm': { maxWidth: '28rem' },
   },
   header: {
     flexLayout: 'column',
@@ -43,7 +43,7 @@ export const alertDialogStyles = stylesheet({
   footer: {
     flexLayout: 'column-reverse',
     gap: 2,
-    '@sm': { flexLayout: 'row', justifyContent: 'flex-end' },
+    '@media sm': { flexLayout: 'row', justifyContent: 'flex-end' },
   },
   title: {
     typo: 'heading_4',
@@ -67,8 +67,8 @@ export const alertDialogStyles = stylesheet({
 }).variants(
   ($: Variants<{ size: 'default' | 'sm' }>) => ({
     [$.size('sm')]: {
-      content: { '@sm': { maxWidth: '20rem' } },
-      footer: { '@sm': { justifyContent: 'stretch' } },
+      content: { '@media sm': { maxWidth: '20rem' } },
+      footer: { '@media sm': { justifyContent: 'stretch' } },
     },
   }),
   { defaults: { size: 'default' } },

@@ -1,15 +1,20 @@
 import './index.css'
-import '../toned.config.ts'
-import { t } from '@toned/systems/base'
+import { TonedProvider, useStyles } from '@toned/react'
+import { webHost } from '@toned/react/hosts/web'
 import { lazy, Suspense } from 'react'
 
-// Works also with SSR as expected
+import { renderer } from './renderer.ts'
+import { pageStyles } from './styles.ts'
+
+// Lazy components stream during SSR; their sheets are part of the CSS build.
 const Card = lazy(() => import('./Card.tsx'))
 
-function App() {
+function Page() {
+  const s = useStyles(pageStyles)
+
   return (
-    <main>
-      <h1 {...t({ typo: 'heading_1' })}>Vite + React</h1>
+    <main {...s.Root}>
+      <h1 {...s.Title}>Vite + React</h1>
 
       <Suspense fallback={<p>Loading card component...</p>}>
         <Card />
@@ -18,4 +23,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <TonedProvider renderer={renderer} host={webHost}>
+      <Page />
+    </TonedProvider>
+  )
+}

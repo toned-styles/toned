@@ -19,7 +19,9 @@ export const itemStyles = stylesheet({
     typo: 'body_small',
     textColor: 'default',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':focus-visible': { shadow: 'focus' },
   },
   media: {

@@ -33,7 +33,9 @@ export const paginationStyles = stylesheet({
     textColor: 'default',
     cursor: 'pointer',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { bgColor: 'subtle' },
     ':focus-visible': { shadow: 'focus' },
   },
@@ -48,7 +50,7 @@ export const paginationStyles = stylesheet({
   // On narrow screens the previous and next links show their icon only.
   prevNextText: {
     display: 'none',
-    '@sm': { display: 'block' },
+    '@media sm': { display: 'block' },
   },
 }).variants(
   ($: Variants<{ active: boolean }>) => ({
@@ -103,6 +105,7 @@ type PaginationLinkProps = {
 function PaginationLink({
   className,
   isActive = false,
+  children,
   ...props
 }: PaginationLinkProps) {
   const s = useStyles(paginationStyles, { active: isActive })
@@ -114,7 +117,9 @@ function PaginationLink({
       data-active={isActive}
       {...s.link.with({ className })}
       {...props}
-    />
+    >
+      {children}
+    </a>
   )
 }
 

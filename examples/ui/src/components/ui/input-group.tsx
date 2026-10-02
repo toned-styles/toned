@@ -25,7 +25,9 @@ export const inputGroupStyles = stylesheet({
     borderRadius: 'medium',
     shadow: 'small',
     // No token: the transition list is specific to this control.
-    style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
+    },
     ':focus-within': { borderColor: 'action', shadow: 'focus' },
   },
   // The control has no border of its own: the group draws it.
@@ -45,7 +47,7 @@ export const inputGroupStyles = stylesheet({
     typo: 'label_small',
     cursor: 'text',
     // No token: addon text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   text: {
     textColor: 'muted',
@@ -64,17 +66,17 @@ export const inputGroupStyles = stylesheet({
     // No token for flex order: an addon sits before or after the control
     // whatever its position in the markup.
     [$.align('inline-start')]: {
-      addon: { paddingLeft: 3, style: { order: -1 } },
+      addon: { paddingLeft: 3, '@platform web': { $style: { order: -1 } } },
     },
     [$.align('inline-end')]: {
-      addon: { paddingRight: 2, style: { order: 1 } },
+      addon: { paddingRight: 2, '@platform web': { $style: { order: 1 } } },
     },
     [$.align('block-start')]: {
       addon: {
         width: '100%',
         paddingX: 3,
         paddingTop: 2.5,
-        style: { order: -1 },
+        '@platform web': { $style: { order: -1 } },
       },
     },
     [$.align('block-end')]: {
@@ -82,7 +84,7 @@ export const inputGroupStyles = stylesheet({
         width: '100%',
         paddingX: 2,
         paddingBottom: 2,
-        style: { order: 1 },
+        '@platform web': { $style: { order: 1 } },
       },
     },
     [$.multiline(true)]: {
@@ -90,7 +92,7 @@ export const inputGroupStyles = stylesheet({
         minHeight: '4rem',
         paddingY: 2.5,
         // No tokens: the field grows with its content and is not resized by hand.
-        style: { fieldSizing: 'content', resize: 'none' },
+        '@platform web': { $style: { fieldSizing: 'content', resize: 'none' } },
       },
     },
   }),

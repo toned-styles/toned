@@ -11,14 +11,14 @@ export const avatarStyles = stylesheet({
     flexShrink: '0',
     borderRadius: 'full',
     // No token: initials are not selectable text.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   image: {
     width: '100%',
     height: '100%',
     borderRadius: 'full',
     // No token for image fitting.
-    style: { objectFit: 'cover' },
+    '@platform web': { $style: { objectFit: 'cover' } },
   },
   fallback: {
     bgColor: 'action_secondary',
@@ -40,7 +40,7 @@ export const avatarStyles = stylesheet({
     height: '0.625rem',
     borderRadius: 'full',
     // No token: a ring in the page colour separates the dot from the avatar.
-    style: { boxShadow: '0 0 0 2px var(--background)' },
+    '@platform web': { $style: { boxShadow: '0 0 0 2px var(--background)' } },
   },
   // Overlap and rings for grouped avatars are structural rules in styles.css.
   group: {

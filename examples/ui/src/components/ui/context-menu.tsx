@@ -38,7 +38,7 @@ export const contextMenuStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: menu text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   checkboxItem: {
     display: 'flex',
@@ -52,7 +52,7 @@ export const contextMenuStyles = stylesheet({
     typo: 'body_small',
     cursor: 'default',
     // No token: menu text is not selectable.
-    style: { userSelect: 'none' },
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   indicator: {
     display: 'flex',
@@ -81,7 +81,7 @@ export const contextMenuStyles = stylesheet({
     marginY: 1,
     marginX: -1,
     // No token sets a single edge.
-    style: { borderTopWidth: 1 },
+    $style: { borderTopWidth: 1 },
   },
   shortcut: {
     marginLeft: 'auto',

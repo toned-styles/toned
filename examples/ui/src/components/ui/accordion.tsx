@@ -11,7 +11,7 @@ export const accordionStyles = stylesheet({
   item: {
     borderColor: 'default',
     // No token sets a single edge.
-    style: { borderBottomWidth: 1 },
+    $style: { borderBottomWidth: 1 },
   },
   header: {
     display: 'flex',
@@ -28,14 +28,16 @@ export const accordionStyles = stylesheet({
     textColor: 'default',
     cursor: 'pointer',
     // No token for text alignment or transitions.
-    style: { textAlign: 'left', transition: 'box-shadow 0.15s' },
+    '@platform web': {
+      $style: { textAlign: 'left', transition: 'box-shadow 0.15s' },
+    },
     ':hover': { textDecoration: 'underline' },
     ':focus-visible': { shadow: 'focus' },
   },
   triggerIcon: {
     textColor: 'muted',
     // The open state rotates the icon from styles.css.
-    style: { transition: 'transform 0.2s' },
+    '@platform web': { $style: { transition: 'transform 0.2s' } },
   },
   content: {
     typo: 'body_small',

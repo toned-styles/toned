@@ -29,7 +29,7 @@ declare module 'virtual:component-docs/*' {
 }
 
 declare module 'virtual:component-docs/index' {
-  import type { ComponentDoc } from 'virtual:component-docs/*'
+  import type { ComponentDoc, SheetSource } from 'virtual:component-docs/*'
 
   export const names: string[]
   export const loaders: Record<
@@ -37,12 +37,14 @@ declare module 'virtual:component-docs/index' {
     () => Promise<{
       default: ComponentDoc[]
       source: string
-      sheets: import('virtual:component-docs/*').SheetSource[]
+      sheets: SheetSource[]
     }>
   >
 }
 
 declare module 'virtual:toned.manifest' {
-  const manifest: import('@toned/core/build').BuildManifest
+  import type { BuildManifest } from '@toned/core/build'
+
+  const manifest: BuildManifest
   export default manifest
 }

@@ -24,7 +24,9 @@ export const resizableStyles = stylesheet({
     width: '1px',
     bgColor: 'interactive_muted',
     // No token: the transition list is specific to this part.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':hover': { bgColor: 'action' },
     ':focus-visible': { bgColor: 'action', shadow: 'focus' },
   },

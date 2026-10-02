@@ -22,7 +22,7 @@ export const cardStyles = stylesheet({
     gap: 1.5,
     paddingX: 6,
     // No token for grid tracks: an action adds a second, content-sized column.
-    style: { gridTemplateColumns: 'minmax(0, 1fr)' },
+    '@platform web': { $style: { gridTemplateColumns: 'minmax(0, 1fr)' } },
   },
   title: {
     typo: 'heading_4',
@@ -36,10 +36,12 @@ export const cardStyles = stylesheet({
     alignSelf: 'flex-start',
     justifySelf: 'flex-end',
     // No token for grid placement: the action spans the title and description.
-    style: {
-      gridColumnStart: 2,
-      gridRowStart: 1,
-      gridRowEnd: 'span 2',
+    '@platform web': {
+      $style: {
+        gridColumnStart: 2,
+        gridRowStart: 1,
+        gridRowEnd: 'span 2',
+      },
     },
   },
   content: {

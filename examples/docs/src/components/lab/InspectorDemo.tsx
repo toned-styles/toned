@@ -49,7 +49,10 @@ export function InspectorDemo() {
       <p role="status" {...s.muted}>
         {status}
       </p>
-      <div {...s.inspector.with({ ref: container })} />
+      <div
+        // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
+        {...s.inspector.with({ ref: container })}
+      />
       {source && (
         <details open>
           <summary>Current in-memory source</summary>

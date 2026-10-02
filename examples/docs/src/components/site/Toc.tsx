@@ -95,11 +95,9 @@ export function Toc({ containerId }: { containerId: string }) {
   }, [containerId])
 
   useEffect(() => {
+    // Without headings nothing renders, so a stale `active` is never shown.
     const first = headings[0]
-    if (!first) {
-      setActive('')
-      return
-    }
+    if (!first) return
     // The active section is the last heading scrolled above the fold line.
     let frame = 0
     const update = () => {

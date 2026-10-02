@@ -10,9 +10,11 @@ export const sliderStyles = stylesheet({
     display: 'flex',
     alignItems: 'center',
     // No tokens: the pointer drags the thumb instead of scrolling or selecting.
-    style: {
-      touchAction: 'none',
-      userSelect: 'none',
+    '@platform web': {
+      $style: {
+        touchAction: 'none',
+        userSelect: 'none',
+      },
     },
   },
   track: {
@@ -38,7 +40,7 @@ export const sliderStyles = stylesheet({
     shadow: 'small',
     cursor: 'grab',
     // No token: the transition list is specific to this control.
-    style: { transition: 'box-shadow 0.15s' },
+    '@platform web': { $style: { transition: 'box-shadow 0.15s' } },
     ':active': { cursor: 'grabbing' },
     ':focus-visible': { shadow: 'focus' },
   },

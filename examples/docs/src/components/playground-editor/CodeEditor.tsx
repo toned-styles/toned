@@ -3,6 +3,7 @@ import {
   type Ref,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -54,7 +55,11 @@ export function CodeEditor({
   const controller = useRef<EditorController | null>(null)
   const [mounted, setMounted] = useState(false)
   const latest = useRef({ file, files, onChange, client })
-  latest.current = { file, files, onChange, client }
+  // Editor callbacks read the latest props; the commit updates them before
+  // any effect or event can run.
+  useLayoutEffect(() => {
+    latest.current = { file, files, onChange, client }
+  })
 
   useImperativeHandle(ref, () => ({
     reveal: (line, column) => controller.current?.reveal(line, column),
@@ -144,7 +149,10 @@ export function CodeEditor({
           </pre>
         </div>
       )}
-      <div {...s.EditorHost.withProps({ ref: host })} />
+      <div
+        // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
+        {...s.EditorHost.withProps({ ref: host })}
+      />
     </div>
   )
 }

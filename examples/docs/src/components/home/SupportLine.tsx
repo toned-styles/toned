@@ -45,7 +45,7 @@ export function SupportLine() {
   return (
     <div {...s.Support}>
       <p id="support-label" {...s.SupportLabel}>
-        Available today
+        Also supported
       </p>
       <Platforms />
       <section

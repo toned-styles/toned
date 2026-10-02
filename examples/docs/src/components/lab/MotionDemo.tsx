@@ -32,7 +32,11 @@ function AnimatedShape({
   return (
     <>
       <Motion expanded={expanded}>
-        <Motion.Root ref={motion.ref} aria-label="Animated violet shape" />
+        <Motion.Root
+          // oxlint-disable-next-line react/refs -- `motion.ref` is the callback ref returned by useMotion, not a ref object read during render
+          ref={motion.ref}
+          aria-label="Animated violet shape"
+        />
       </Motion>
       <button
         type="button"

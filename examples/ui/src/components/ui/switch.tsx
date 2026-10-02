@@ -16,7 +16,9 @@ export const switchStyles = stylesheet({
     bgColor: 'interactive_muted',
     cursor: 'pointer',
     // No token: the transition list is specific to this control.
-    style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
+    },
     ':focus-visible': { shadow: 'focus' },
   },
   thumb: {
@@ -29,7 +31,7 @@ export const switchStyles = stylesheet({
     pointerEvents: 'none',
     // No token: the thumb slides when its inline-start margin changes, which
     // also mirrors it in right-to-left layouts.
-    style: { transition: 'margin 0.15s' },
+    '@platform web': { $style: { transition: 'margin 0.15s' } },
   },
 }).variants(
   (

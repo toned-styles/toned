@@ -43,7 +43,7 @@ if (!rootEl) throw new Error('Missing documentation application root')
 if (rootEl.firstElementChild) {
   // Tell TanStack Router this is an SSR-hydrated page so Matches uses
   // SafeFragment instead of Suspense, matching the server-rendered tree.
-  ;(router as any).ssr = true
+  Object.assign(router, { ssr: true })
   // Wait for router to load the current route before hydrating,
   // matching what the server does in entry-server.tsx.
   router.load().then(() => {

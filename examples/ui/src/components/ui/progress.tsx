@@ -21,7 +21,7 @@ export const progressStyles = stylesheet({
     width: '100%',
     borderRadius: 'full',
     // No token: the fill slides to its new value.
-    style: { transition: 'transform 200ms ease' },
+    '@platform web': { $style: { transition: 'transform 200ms ease' } },
   },
 }).variants(
   ($: Variants<{ size: 'sm' | 'md' | 'lg' }>) => ({
@@ -60,7 +60,7 @@ function Progress({
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
         {...s.indicator.with({
-          style: { transform: `translateX(-${100 - percent}%)` },
+          $style: { transform: `translateX(-${100 - percent}%)` },
         })}
       />
     </ProgressPrimitive.Root>

@@ -22,9 +22,11 @@ export const checkboxStyles = stylesheet({
     shadow: 'small',
     cursor: 'pointer',
     // No token: the transition list is specific to this control.
-    style: {
-      transition:
-        'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+    '@platform web': {
+      $style: {
+        transition:
+          'background-color 0.15s, border-color 0.15s, box-shadow 0.15s',
+      },
     },
     ':hover': { borderColor: 'action' },
     ':focus-visible': { shadow: 'focus' },
@@ -38,7 +40,7 @@ export const checkboxStyles = stylesheet({
     width: '0.75rem',
     height: '0.75rem',
     // No token: a heavier stroke keeps the mark legible at 12px.
-    style: { strokeWidth: 3 },
+    '@platform web': { $style: { strokeWidth: 3 } },
   },
 }).variants(
   ($: Variants<{ checked: boolean; disabled: boolean }>) => ({

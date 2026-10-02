@@ -17,7 +17,7 @@ export const chartStyles = stylesheet({
     typo: 'caption',
     textColor: 'muted',
     // No token for aspect ratio.
-    style: { aspectRatio: '16 / 9' },
+    '@platform web': { $style: { aspectRatio: '16 / 9' } },
   },
   tooltip: {
     display: 'grid',
@@ -69,7 +69,7 @@ export const chartStyles = stylesheet({
     textColor: 'default',
     fontWeight: 500,
     // No token for tabular figures.
-    style: { fontVariantNumeric: 'tabular-nums' },
+    '@platform web': { $style: { fontVariantNumeric: 'tabular-nums' } },
   },
   legend: {
     display: 'flex',
@@ -223,6 +223,10 @@ function ChartTooltipContent({
   nameKey,
   labelKey,
 }: React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+  // Recharts passes these to custom content; it reads them from its context.
+  Partial<
+    Pick<RechartsPrimitive.TooltipContentProps, 'active' | 'payload' | 'label'>
+  > &
   React.ComponentProps<'div'> & {
     hideLabel?: boolean
     hideIndicator?: boolean
@@ -268,7 +272,11 @@ function ChartTooltipContent({
 
             return (
               <ChartTooltipRow
-                key={item.dataKey}
+                key={
+                  typeof item.dataKey === 'function'
+                    ? index
+                    : (item.dataKey ?? index)
+                }
                 indicator={indicator}
                 color={hideIndicator ? undefined : indicatorColor}
                 icon={itemConfig?.icon}
@@ -338,7 +346,10 @@ function ChartLegendContent({
   verticalAlign = 'bottom',
   nameKey,
 }: React.ComponentProps<'div'> &
-  Pick<RechartsPrimitive.LegendProps, 'payload' | 'verticalAlign'> & {
+  Pick<
+    RechartsPrimitive.DefaultLegendContentProps,
+    'payload' | 'verticalAlign'
+  > & {
     hideIcon?: boolean
     nameKey?: string
   }) {

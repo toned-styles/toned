@@ -20,20 +20,27 @@ type BoundaryProps = {
   onError: (error: Error) => void
 }
 
-class RenderBoundary extends Component<BoundaryProps, { error: Error | null }> {
-  override state = { error: null as Error | null }
+type BoundaryState = { error: Error | null; resetKey: string }
+
+class RenderBoundary extends Component<BoundaryProps, BoundaryState> {
+  override state: BoundaryState = { error: null, resetKey: this.props.resetKey }
 
   static getDerivedStateFromError(error: unknown) {
     return { error: error instanceof Error ? error : new Error(String(error)) }
   }
 
-  override componentDidCatch(error: Error, _info: ErrorInfo) {
-    this.props.onError(error)
+  // A new key clears a caught error before the retry renders.
+  static getDerivedStateFromProps(
+    props: BoundaryProps,
+    state: BoundaryState,
+  ): Partial<BoundaryState> | null {
+    return props.resetKey === state.resetKey
+      ? null
+      : { error: null, resetKey: props.resetKey }
   }
 
-  override componentDidUpdate(previous: BoundaryProps) {
-    if (this.state.error && previous.resetKey !== this.props.resetKey)
-      this.setState({ error: null })
+  override componentDidCatch(error: Error, _info: ErrorInfo) {
+    this.props.onError(error)
   }
 
   override render() {

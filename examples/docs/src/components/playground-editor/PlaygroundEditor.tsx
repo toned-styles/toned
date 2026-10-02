@@ -424,6 +424,7 @@ export function PlaygroundEditor() {
   useEffect(() => {
     const draft = readDraft()
     if (draft) {
+      // oxlint-disable-next-line react/set-state-in-effect -- browser storage is read after hydration so the first client render matches the server's
       setPresetId(draft.preset)
       setFiles(draft.files)
       setRevision((current) => current + 1)
@@ -664,6 +665,7 @@ export function PlaygroundEditor() {
       </div>
 
       <div
+        // oxlint-disable-next-line react/refs -- passes the ref object to the prop-bag merger; `.current` is not read during render
         {...s.Workspace.withProps({
           ref: workspace,
           style: {

@@ -162,12 +162,11 @@ const buttonStyles = stylesheet({
         and friends.
       </p>
       <p>
-        When <code {...s.code}>mediaMode</code> is set to{' '}
-        <code {...s.code}>'css'</code> in your config, these generate real CSS{' '}
-        <code {...s.code}>@media</code> rules. In JavaScript mode a stylesheet
-        evaluates them at runtime, while inline <code {...s.code}>t</code>{' '}
-        blocks -- which compile to CSS custom properties and have no runtime
-        equivalent -- are dropped with a development-only warning. See{' '}
+        With a web renderer these are real CSS <code {...s.code}>@media</code>{' '}
+        rules, generated at build time. A native renderer evaluates a
+        stylesheet&apos;s breakpoints against the host&apos;s viewport. Inline{' '}
+        <code {...s.code}>t</code> blocks compile to CSS custom properties and
+        apply to web output only. See{' '}
         <Link to="/api/media-queries">Media Queries</Link>.
       </p>
 

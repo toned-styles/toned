@@ -34,7 +34,7 @@ const SIDEBAR_KEYBOARD_SHORTCUT = 'b'
 /*
  * The sidebar has its own surface colours (`--sidebar`, `--sidebar-accent`,
  * ...), which the base system has no tokens for, so they are written as
- * variables in `style`. Collapsed and off-canvas states are keyed on data
+ * variables in `$style`. Collapsed and off-canvas states are keyed on data
  * attributes in styles.css.
  */
 export const sidebarStyles = stylesheet({
@@ -47,18 +47,22 @@ export const sidebarStyles = stylesheet({
     display: 'flex',
     flexLayout: 'column',
     height: '100%',
-    style: {
-      width: 'var(--sidebar-width)',
-      background: 'var(--sidebar)',
-      color: 'var(--sidebar-foreground)',
+    '@platform web': {
+      $style: {
+        width: 'var(--sidebar-width)',
+        background: 'var(--sidebar)',
+        color: 'var(--sidebar-foreground)',
+      },
     },
   },
   mobileSidebarContent: {
-    style: {
-      width: 'var(--sidebar-width)',
-      padding: 0,
-      background: 'var(--sidebar)',
-      color: 'var(--sidebar-foreground)',
+    '@platform web': {
+      $style: {
+        width: 'var(--sidebar-width)',
+        padding: 0,
+        background: 'var(--sidebar)',
+        color: 'var(--sidebar-foreground)',
+      },
     },
   },
   mobileSidebarInner: {
@@ -68,16 +72,20 @@ export const sidebarStyles = stylesheet({
     width: '100%',
   },
   sidebarOuter: {
-    style: {
-      color: 'var(--sidebar-foreground)',
+    '@platform web': {
+      $style: {
+        color: 'var(--sidebar-foreground)',
+      },
     },
   },
   sidebarGap: {
     position: 'relative',
-    style: {
-      width: 'var(--sidebar-width)',
-      background: 'transparent',
-      transition: 'width 200ms linear',
+    '@platform web': {
+      $style: {
+        width: 'var(--sidebar-width)',
+        background: 'transparent',
+        transition: 'width 200ms linear',
+      },
     },
   },
   sidebarContainer: {
@@ -86,9 +94,11 @@ export const sidebarStyles = stylesheet({
     display: 'none',
     top: 0,
     bottom: 0,
-    style: {
-      width: 'var(--sidebar-width)',
-      transition: 'left 200ms linear, right 200ms linear, width 200ms linear',
+    '@platform web': {
+      $style: {
+        width: 'var(--sidebar-width)',
+        transition: 'left 200ms linear, right 200ms linear, width 200ms linear',
+      },
     },
   },
   sidebarInner: {
@@ -96,8 +106,10 @@ export const sidebarStyles = stylesheet({
     flexLayout: 'column',
     height: '100%',
     width: '100%',
-    style: {
-      background: 'var(--sidebar)',
+    '@platform web': {
+      $style: {
+        background: 'var(--sidebar)',
+      },
     },
   },
   trigger: {
@@ -111,28 +123,34 @@ export const sidebarStyles = stylesheet({
     width: '1rem',
     top: 0,
     bottom: 0,
-    style: {
-      inset: '0',
-      transform: 'translateX(-50%)',
-      transition: 'all 150ms linear',
+    '@platform web': {
+      $style: {
+        inset: '0',
+        transform: 'translateX(-50%)',
+        transition: 'all 150ms linear',
+      },
     },
   },
   inset: {
     position: 'relative',
     display: 'flex',
     width: '100%',
-    style: {
-      flex: '1',
-      flexDirection: 'column',
-      background: 'var(--background)',
+    '@platform web': {
+      $style: {
+        flex: '1',
+        flexDirection: 'column',
+        background: 'var(--background)',
+      },
     },
   },
   input: {
     height: '2rem',
     width: '100%',
-    style: {
-      background: 'var(--background)',
-      boxShadow: 'none',
+    '@platform web': {
+      $style: {
+        background: 'var(--background)',
+        boxShadow: 'none',
+      },
     },
   },
   header: {
@@ -149,7 +167,7 @@ export const sidebarStyles = stylesheet({
   },
   separator: {
     marginX: 2,
-    style: {
+    $style: {
       width: 'auto',
       borderColor: 'var(--sidebar-border)',
     },
@@ -160,8 +178,10 @@ export const sidebarStyles = stylesheet({
     gap: 2,
     minHeight: 0,
     overflowY: 'auto',
-    style: {
-      flex: '1',
+    '@platform web': {
+      $style: {
+        flex: '1',
+      },
     },
   },
   group: {
@@ -182,9 +202,11 @@ export const sidebarStyles = stylesheet({
     fontWeight: 500,
     paddingLeft: 2,
     paddingRight: 2,
-    style: {
-      color: 'color-mix(in srgb, var(--sidebar-foreground) 70%, transparent)',
-      transition: 'margin 200ms linear, opacity 200ms linear',
+    '@platform web': {
+      $style: {
+        color: 'color-mix(in srgb, var(--sidebar-foreground) 70%, transparent)',
+        transition: 'margin 200ms linear, opacity 200ms linear',
+      },
     },
   },
   groupAction: {
@@ -200,11 +222,13 @@ export const sidebarStyles = stylesheet({
       bgColor: 'subtle',
       textColor: 'subtle',
     },
-    style: {
-      aspectRatio: '1',
-      padding: 0,
-      color: 'var(--sidebar-foreground)',
-      transition: 'transform 150ms',
+    '@platform web': {
+      $style: {
+        aspectRatio: '1',
+        padding: 0,
+        color: 'var(--sidebar-foreground)',
+        transition: 'transform 150ms',
+      },
     },
   },
   groupContent: {
@@ -218,16 +242,20 @@ export const sidebarStyles = stylesheet({
     width: '100%',
     minWidth: 0,
     gap: 1,
-    style: {
-      listStyle: 'none',
-      padding: 0,
-      margin: 0,
+    '@platform web': {
+      $style: {
+        listStyle: 'none',
+        padding: 0,
+        margin: 0,
+      },
     },
   },
   menuItem: {
     position: 'relative',
-    style: {
-      listStyle: 'none',
+    '@platform web': {
+      $style: {
+        listStyle: 'none',
+      },
     },
   },
   menuButton: {
@@ -240,13 +268,15 @@ export const sidebarStyles = stylesheet({
     borderRadius: 'medium',
     typo: 'body_small',
     cursor: 'pointer',
-    style: {
-      textAlign: 'left',
-      color: 'var(--sidebar-foreground)',
-      transition:
-        'background-color 150ms, width 200ms, height 200ms, padding 200ms',
+    '@platform web': {
+      $style: {
+        textAlign: 'left',
+        color: 'var(--sidebar-foreground)',
+        transition:
+          'background-color 150ms, width 200ms, height 200ms, padding 200ms',
+      },
     },
-    ':hover': { style: { backgroundColor: 'var(--sidebar-accent)' } },
+    ':hover': { $style: { backgroundColor: 'var(--sidebar-accent)' } },
   },
   menuAction: {
     borderRadius: 'medium',
@@ -261,11 +291,13 @@ export const sidebarStyles = stylesheet({
       bgColor: 'subtle',
       textColor: 'subtle',
     },
-    style: {
-      aspectRatio: '1',
-      padding: 0,
-      color: 'var(--sidebar-foreground)',
-      transition: 'transform 150ms',
+    '@platform web': {
+      $style: {
+        aspectRatio: '1',
+        padding: 0,
+        color: 'var(--sidebar-foreground)',
+        transition: 'transform 150ms',
+      },
     },
   },
   menuBadge: {
@@ -282,10 +314,12 @@ export const sidebarStyles = stylesheet({
     right: '0.25rem',
     paddingLeft: 1,
     paddingRight: 1,
-    style: {
-      fontVariantNumeric: 'tabular-nums',
-      userSelect: 'none',
-      color: 'var(--sidebar-foreground)',
+    '@platform web': {
+      $style: {
+        fontVariantNumeric: 'tabular-nums',
+        userSelect: 'none',
+        color: 'var(--sidebar-foreground)',
+      },
     },
   },
   menuSkeleton: {
@@ -296,7 +330,7 @@ export const sidebarStyles = stylesheet({
     gap: 2,
     paddingLeft: 2,
     paddingRight: 2,
-    style: {},
+    $style: {},
   },
   menuSub: {
     display: 'flex',
@@ -307,16 +341,20 @@ export const sidebarStyles = stylesheet({
     paddingX: 2.5,
     marginY: 0,
     marginX: 3.5,
-    style: {
-      transform: 'translateX(1px)',
-      borderLeft: '1px solid var(--sidebar-border)',
-      listStyle: 'none',
+    '@platform web': {
+      $style: {
+        transform: 'translateX(1px)',
+        borderLeft: '1px solid var(--sidebar-border)',
+        listStyle: 'none',
+      },
     },
   },
   menuSubItem: {
     position: 'relative',
-    style: {
-      listStyle: 'none',
+    '@platform web': {
+      $style: {
+        listStyle: 'none',
+      },
     },
   },
   menuSubButton: {
@@ -329,12 +367,14 @@ export const sidebarStyles = stylesheet({
     paddingX: 2,
     borderRadius: 'medium',
     typo: 'body_small',
-    style: {
-      transform: 'translateX(-1px)',
-      color: 'var(--sidebar-foreground)',
-      transition: 'background-color 150ms',
+    '@platform web': {
+      $style: {
+        transform: 'translateX(-1px)',
+        color: 'var(--sidebar-foreground)',
+        transition: 'background-color 150ms',
+      },
     },
-    ':hover': { style: { backgroundColor: 'var(--sidebar-accent)' } },
+    ':hover': { $style: { backgroundColor: 'var(--sidebar-accent)' } },
   },
 }).variants(
   (
@@ -349,24 +389,30 @@ export const sidebarStyles = stylesheet({
     [$.size('lg')]: { menuButton: { height: '3rem' } },
     [$.variant('outline')]: {
       menuButton: {
-        style: {
-          backgroundColor: 'var(--background)',
-          boxShadow: '0 0 0 1px var(--sidebar-border)',
+        '@platform web': {
+          $style: {
+            backgroundColor: 'var(--background)',
+            boxShadow: '0 0 0 1px var(--sidebar-border)',
+          },
         },
       },
     },
     [$.active(true)]: {
       menuButton: {
         fontWeight: 500,
-        style: {
-          backgroundColor: 'var(--sidebar-accent)',
-          color: 'var(--sidebar-accent-foreground)',
+        '@platform web': {
+          $style: {
+            backgroundColor: 'var(--sidebar-accent)',
+            color: 'var(--sidebar-accent-foreground)',
+          },
         },
       },
       menuSubButton: {
-        style: {
-          backgroundColor: 'var(--sidebar-accent)',
-          color: 'var(--sidebar-accent-foreground)',
+        '@platform web': {
+          $style: {
+            backgroundColor: 'var(--sidebar-accent)',
+            color: 'var(--sidebar-accent-foreground)',
+          },
         },
       },
     },
@@ -475,7 +521,7 @@ function SidebarProvider({
           data-slot="sidebar-wrapper"
           {...s.wrapper.with({
             className,
-            style: {
+            $style: {
               '--sidebar-width': SIDEBAR_WIDTH,
               '--sidebar-width-icon': SIDEBAR_WIDTH_ICON,
               ...style,
@@ -525,7 +571,7 @@ function Sidebar({
           data-slot="sidebar"
           data-mobile="true"
           {...s.mobileSidebarContent.with({
-            style: {
+            $style: {
               '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties,
           })}
@@ -556,7 +602,7 @@ function Sidebar({
         data-slot="sidebar-container"
         {...s.sidebarContainer.with({
           className,
-          style: {
+          $style: {
             ...(side === 'left' ? { left: 0 } : { right: 0 }),
             ...(variant === 'floating' || variant === 'inset'
               ? { padding: '0.5rem' }
@@ -905,10 +951,14 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<'div'> & {
   showIcon?: boolean
 }) {
-  // Random width between 50 to 90%.
+  // A width between 50 and 90%, varied per instance but stable across server
+  // and client renders.
+  const id = React.useId()
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+    let hash = 0
+    for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+    return `${(hash % 40) + 50}%`
+  }, [id])
 
   const s = useStyles(sidebarStyles)
 

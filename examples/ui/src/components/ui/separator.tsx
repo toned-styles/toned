@@ -13,10 +13,10 @@ export const separatorStyles = stylesheet({
   ($: Variants<{ orientation: 'horizontal' | 'vertical' }>) => ({
     // No token sets a single edge, so the one-pixel line is written directly.
     [$.orientation('horizontal')]: {
-      root: { width: '100%', style: { borderTopWidth: 1 } },
+      root: { width: '100%', $style: { borderTopWidth: 1 } },
     },
     [$.orientation('vertical')]: {
-      root: { alignSelf: 'stretch', style: { borderLeftWidth: 1 } },
+      root: { alignSelf: 'stretch', $style: { borderLeftWidth: 1 } },
     },
   }),
   { defaults: { orientation: 'horizontal' } },

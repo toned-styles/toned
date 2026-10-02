@@ -30,6 +30,7 @@ export function useLanguage(files: SourceFiles, enabled: boolean) {
     try {
       created = new LanguageClient(setStatus)
     } catch (error) {
+      // oxlint-disable-next-line react/set-state-in-effect -- reports a failure to start the external worker this effect owns
       setStatus({
         kind: 'failed',
         message: error instanceof Error ? error.message : String(error),
@@ -49,6 +50,7 @@ export function useLanguage(files: SourceFiles, enabled: boolean) {
     const oversized = fileNames.filter(
       (file) => !client.update(file, files[file]),
     )
+    // oxlint-disable-next-line react/set-state-in-effect -- the worker reports which files it refused; that answer exists only after this sync
     setSkipped((previous) =>
       previous.join() === oversized.join() ? previous : oversized,
     )
