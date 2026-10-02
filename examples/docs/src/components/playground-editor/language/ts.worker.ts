@@ -37,6 +37,8 @@ import type {
 } from './protocol.ts'
 
 type TS = typeof TypeScript
+/** One entry of a package's `exports` map: a file, or files by condition. */
+type ExportTarget = string | { default?: string }
 
 const scope = self as unknown as {
   postMessage(message: FromWorker): void
@@ -103,14 +105,24 @@ async function start(): Promise<Engine> {
   ])
   const snapshots = new Map<string, TypeScript.IScriptSnapshot>()
 
-  // Each Toned package's `exports` map, exactly as a bundler would read it.
+  // Each Toned package's `exports` map, as a browser bundler would read it.
   const packageExports = new Map<string, Record<string, string>>()
   for (const name of ['core', 'react', 'systems']) {
     const manifest = library.get(`/node_modules/@toned/${name}/package.json`)
     if (manifest)
       packageExports.set(
         name,
-        (JSON.parse(manifest) as { exports: Record<string, string> }).exports,
+        Object.fromEntries(
+          Object.entries(
+            (JSON.parse(manifest) as { exports: Record<string, ExportTarget> })
+              .exports,
+          ).flatMap(([entry, target]) => {
+            // A conditional export: the browser build is the default one. A
+            // types-only entry has no default and nothing to import.
+            const file = typeof target === 'string' ? target : target.default
+            return file ? [[entry, file]] : []
+          }),
+        ),
       )
   }
 
