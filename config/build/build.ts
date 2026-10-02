@@ -19,6 +19,10 @@ const toDistTarget = (value: unknown): unknown => {
   if (typeof value === 'string') {
     return value.replace(/\.tsx?$/, '.js')
   }
+  if (isTypeOnlyExport(value)) {
+    const base = value.types.replace(/\.ts$/, '')
+    return { types: `${base}.d.ts`, default: `${base}.js` }
+  }
   if (Array.isArray(value)) return value.map(toDistTarget)
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -26,6 +30,41 @@ const toDistTarget = (value: unknown): unknown => {
     )
   }
   return value
+}
+
+/**
+ * An export written as `{ "types": "./name.ts" }` is a declaration-only module:
+ * it augments types and has no runtime. Such modules are kept out of the
+ * package's TypeScript project (two of them may augment the same interface),
+ * so the compiler emits nothing for them and they are shipped here instead.
+ */
+const isTypeOnlyExport = (value: unknown): value is { types: string } =>
+  typeof value === 'object' &&
+  value !== null &&
+  Object.keys(value).length === 1 &&
+  typeof (value as { types?: unknown }).types === 'string' &&
+  (value as { types: string }).types.endsWith('.ts')
+
+/** Ship each declaration-only module as its source plus an empty module. */
+async function emitTypeOnlyExports(exports: unknown): Promise<void> {
+  if (!exports || typeof exports !== 'object') return
+  for (const value of Object.values(exports)) {
+    if (!isTypeOnlyExport(value)) continue
+    const base = value.types.replace(/\.ts$/, '')
+    await copyFile(path.join(cwd, value.types), path.join(dist, `${base}.d.ts`))
+    await Bun.write(path.join(dist, `${base}.js`), 'export {}\n')
+  }
+}
+
+/** Every file the published export map names must exist in the package. */
+async function assertExportTargets(value: unknown, key = 'exports') {
+  if (typeof value === 'string') {
+    if (!value.includes('*') && !(await Bun.file(path.join(dist, value)).exists()))
+      throw new Error(`Export ${key} points at ${value}, which was not built`)
+  } else if (value && typeof value === 'object') {
+    for (const [name, target] of Object.entries(value))
+      await assertExportTargets(target, `${key} > ${name}`)
+  }
 }
 
 /** TypeScript emits modules, not stylesheets. Copy only CSS explicitly exposed
@@ -66,7 +105,9 @@ const transformPkg = async () => {
 
   if (pkg.exports) {
     await copyExportedStyles(pkg.exports)
+    await emitTypeOnlyExports(pkg.exports)
     pkg.exports = toDistTarget(pkg.exports)
+    await assertExportTargets(pkg.exports)
   }
 
   if (pkg.bin) {
