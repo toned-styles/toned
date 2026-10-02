@@ -1,5 +1,5 @@
-// Note: Media handling could be made configurable for SSR/custom implementations
-// Currently uses window.matchMedia directly which works for web and expo-media
+// Web viewport facts read window.matchMedia (and stay inert without a window);
+// native hosts use media.native.ts.
 
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
@@ -15,9 +15,8 @@ export const initMedia = <S extends TokenStyleDeclaration>(
       ...additional,
     } as Record<string, number | string>).map(
       // A number is px; a string length passes through as-is (appending px to
-      // '30rem' produced the invalid '30rempx' — every rem breakpoint was
-      // silently dead in runtime mode); a parenthesised string is a raw
-      // condition and IS the query.
+      // '30rem' would produce the invalid '30rempx'); a parenthesised string is
+      // a raw condition and IS the query.
       ([key, value]) => [
         key,
         w?.matchMedia(
@@ -62,8 +61,7 @@ export const initMedia = <S extends TokenStyleDeclaration>(
   return mediaEmitter
 }
 
-// oxlint-disable-next-line typescript/no-explicit-any -- generic emitter requires flexible value types
-class Emitter<T extends Record<string, any>> {
+class Emitter<T extends Record<string, unknown>> {
   private listeners = new Set<(data: Partial<T>) => void>()
 
   data: T

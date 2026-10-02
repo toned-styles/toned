@@ -18,34 +18,29 @@ declare const _symStyle: unique symbol
 declare const _symAccess: unique symbol
 
 /** Symbol used to reference the parent TokenSystem from styled objects */
-// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_REF: typeof _symRef = Symbol.for(
   '@toned/core/SYMBOL_REF',
-) as any
+) as typeof _symRef
 
 /** Symbol used for lazy stylesheet initialization */
-// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_INIT: typeof _symInit = Symbol.for(
   '@toned/core/SYMBOL_INIT',
-) as any
+) as typeof _symInit
 
 /** Symbol used to store variant definitions */
-// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_VARIANTS: typeof _symVariants = Symbol.for(
   '@toned/core/SYMBOL_VARIANTS',
-) as any
+) as typeof _symVariants
 
 /** Symbol used to store style values in t() results */
-// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_STYLE: typeof _symStyle = Symbol.for(
   '@toned/core/SYMBOL_STYLE',
-) as any
+) as typeof _symStyle
 
 /** Symbol used for accessing ref and value from styled objects */
-// oxlint-disable-next-line typescript/no-explicit-any -- bridging Symbol.for() to unique symbol type
 export const SYMBOL_ACCESS: typeof _symAccess = Symbol.for(
   '@toned/core/SYMBOL_ACCESS',
-) as any
+) as typeof _symAccess
 
 /** Immutable declared variant defaults, shared by mounted and pure resolution. */
 export const SYMBOL_DEFAULTS = Symbol.for('@toned/core/SYMBOL_DEFAULTS')

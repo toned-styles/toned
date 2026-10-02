@@ -366,10 +366,7 @@ describe('generate', () => {
     test('skips values that are boxed Number instances', () => {
       const result = generate({
         spacing: {
-          values: [
-            'sm',
-            new Number(999) as any,
-          ],
+          values: ['sm', new Number(999) as any],
           resolve: (value: string | number) => ({
             padding: typeof value === 'number' ? `${value}px` : '4px',
           }),
@@ -383,10 +380,7 @@ describe('generate', () => {
     test('skips values that are boxed String instances', () => {
       const result = generate({
         color: {
-          values: [
-            'red',
-            new String('dynamic') as any,
-          ],
+          values: ['red', new String('dynamic') as any],
           resolve: (value: string) => ({
             color: value,
           }),

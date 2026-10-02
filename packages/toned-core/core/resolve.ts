@@ -1,4 +1,5 @@
 import {
+  type NormalizedMetadata,
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../stylesheet/rule-protocol.ts'
@@ -65,7 +66,7 @@ export function resolveTokenStyle(
   platform: 'web' | 'native',
 ) {
   const operations: readonly TokenOperation[] =
-    (style as any)[TOKEN_OPERATIONS] ??
+    (style as NormalizedMetadata)[TOKEN_OPERATIONS] ??
     Object.entries(style).map(([key, value]) => ({ key, value, layer: 0 }))
   const fields: Record<string, unknown> = {}
   let className: string | undefined
@@ -112,6 +113,7 @@ export function resolveConfiguredToken(
   config:
     | {
         resolve?: (
+          // oxlint-disable-next-line typescript/no-explicit-any -- accepts every token's resolver; the value is the token's own authored input
           value: any,
           tokens: Tokens,
           context: { platform: 'web' | 'native' },

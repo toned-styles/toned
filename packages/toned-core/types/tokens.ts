@@ -3,6 +3,10 @@
  *
  * @module types/tokens
  */
+import type { LayoutContext, LogicalLength } from '../core/values.ts'
+import type { TonedTypeRegistry } from '../registry.ts'
+import type { Platform } from './config.ts'
+import type { PlatformStyle } from './style.ts'
 
 /**
  * Token values object - maps token names to their resolved values.
@@ -20,20 +24,6 @@
 export type Tokens = Record<string, any>
 
 /**
- * Token configuration - defines possible values and how to resolve them to styles.
- *
- * @template Values - Tuple of allowed values (use `as const` for literal types)
- * @template Result - The CSS properties object returned by resolve
- *
- * @example
- * ```ts
- * const bgColor: TokenConfig<['primary', 'secondary'], { backgroundColor: string }> = {
- *   values: ['primary', 'secondary'],
- *   resolve: (value, tokens) => ({ backgroundColor: tokens.colors[value] })
- * }
- * ```
- */
-/**
  * Context passed to a token's `resolve` as its third argument, so a token can
  * resolve differently per platform where CSS and native genuinely diverge
  * (`elevation` → box-shadow on web, shadow* props on native; also gradients,
@@ -47,12 +37,26 @@ export type Tokens = Record<string, any>
  * baseline both the inline and the generated paths agree on.
  */
 export type ResolveContext = {
-  platform: import('./config.ts').Platform /** Internal descriptor lowering policy; legacy keeps authored shorthands. */
+  platform: Platform
+  /** Internal descriptor lowering policy; legacy keeps authored shorthands. */
   canonicalFields?: boolean
-} & import('../core/values.ts').LayoutContext
+} & LayoutContext
 
-// oxlint-disable-next-line typescript/no-explicit-any -- const generic requires any[] for tuple inference
-export type TokenConfig<Values extends readonly any[], Result> = {
+/**
+ * Token configuration - defines possible values and how to resolve them to styles.
+ *
+ * @template Values - Tuple of allowed values (use `as const` for literal types)
+ * @template Result - The CSS properties object returned by resolve
+ *
+ * @example
+ * ```ts
+ * const bgColor: TokenConfig<['primary', 'secondary'], { backgroundColor: string }> = {
+ *   values: ['primary', 'secondary'],
+ *   resolve: (value, tokens) => ({ backgroundColor: tokens.colors[value] })
+ * }
+ * ```
+ */
+export type TokenConfig<Values extends readonly unknown[], Result> = {
   /** Exact emitted field footprint when it is independent of the value. */
   properties?: readonly string[]
   /** Explicit dynamic input channel; boxed sentinel values remain legacy aliases. */
@@ -74,7 +78,7 @@ export type TokenConfig<Values extends readonly any[], Result> = {
   alphaSteps?: readonly number[]
   /** Element types this token applies to — see `TokenTypeConfig`. */
   $types?: readonly ElementType[]
-  /** Inheritable on a View — see `TokenInheritConfig`. */
+  /** Inheritable on a View — see `TokenTypeConfig.inherit`. */
   inherit?: boolean
   /**
    * PSEUDO-ELEMENT rules attached to a value's atomic class, emitted by
@@ -90,6 +94,14 @@ export type TokenConfig<Values extends readonly any[], Result> = {
   ) => Record<string, Record<string, string | number>> | undefined
 }
 
+/**
+ * A token config of any value set and result. `resolve` and `pseudoRules`
+ * take `Values[number]` in parameter position, so a concrete config only
+ * matches an `any` instantiation.
+ */
+// oxlint-disable-next-line typescript/no-explicit-any -- the only escape from TokenConfig's contravariance in Values
+export type AnyTokenConfig = TokenConfig<any, any>
+
 /** The extra shape `defineToken` preserves so `TokenStyle` can widen values. */
 export type TokenAlphaConfig = {
   alphaChannel?: readonly string[]
@@ -97,7 +109,7 @@ export type TokenAlphaConfig = {
 }
 
 /**
- * The element types a stylesheet element can declare via `$$type`. Each maps
+ * The element kinds a stylesheet part can declare via `$kind` (legacy `$$type`). Each maps
  * to a host primitive through the config's `resolveElement` (View/Text/Image/
  * Pressable in an RN-vocabulary host; div/span/img/button on the bare web).
  * For token typing, `pressable` is a view that presses: every view token is
@@ -106,12 +118,13 @@ export type TokenAlphaConfig = {
 export type ElementType = 'view' | 'text' | 'image' | 'pressable'
 
 /**
- * The extra shape `defineToken` preserves so element `$$type` declarations can
+ * The extra shape `defineToken` preserves so element `$kind` declarations can
  * constrain a token: a token declaring `$types: ['text']` is OFFERED (and
- * allowed) only on elements whose `$$type` is 'text' — which is how a
+ * allowed) only on elements whose `$kind` is 'text' — which is how a
  * stylesheet stays React-Native-compliant, where text styling exists only on
- * Text. A token without `$types` is allowed everywhere; an element without
- * `$$type` accepts everything (untyped elements opt out of enforcement).
+ * Text. A token without `$types` is allowed everywhere. Descriptor systems
+ * default an element's kind to `view`; in a legacy system an element without
+ * a kind accepts everything (untyped elements opt out of enforcement).
  */
 export type TokenTypeConfig = {
   $types?: readonly ElementType[]
@@ -153,13 +166,9 @@ export type Breakpoints<O extends Record<string, number | string>> = {
  */
 export type Containers = Record<
   string,
-  Record<string, number | string | import('../core/values.ts').LogicalLength>
+  Record<string, number | string | LogicalLength>
 >
 
-/**
- * Token style declaration - the complete system definition.
- * Maps token names to their configurations, with optional breakpoints.
- */
 /**
  * One animation's keyframes: step ('from' | 'to' | '50%') to raw CSS
  * properties. Raw on purpose — keyframes are enumerated, system-compiled
@@ -220,24 +229,28 @@ export const isAnimationDefinition = (
   typeof a.keyframes === 'object' &&
   !Array.isArray(a.keyframes)
 
+/**
+ * Token style declaration - the complete system definition.
+ * Maps token names to their configurations, with optional breakpoints.
+ */
 export type TokenStyleDeclaration = {
-  layoutContext?: import('../core/values.ts').LayoutContext
+  layoutContext?: LayoutContext
   externalCssVariables?: readonly string[]
-  // oxlint-disable-next-line typescript/no-explicit-any -- index signature must accept all TokenConfig variants
   [key: string]:
-    | TokenConfig<any, any>
+    | AnyTokenConfig
+    // oxlint-disable-next-line typescript/no-explicit-any -- matches `breakpoints` below, which keeps the key set open
     | Breakpoints<any>
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
-    | Record<string, number | import('../core/values.ts').LogicalLength>
+    | Record<string, number | LogicalLength>
     | Containers
     | readonly string[]
     | number
     | undefined
-  // oxlint-disable-next-line typescript/no-explicit-any -- breakpoints use generic parameter
+  // oxlint-disable-next-line typescript/no-explicit-any -- an open key set; a precise Record breaks breakpoint-key indexing on generic sheets (TS2536 under TS 6)
   breakpoints?: Breakpoints<any>
-  media?: Record<string, number | import('../core/values.ts').LogicalLength>
+  media?: Record<string, number | LogicalLength>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
   /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
@@ -287,10 +300,6 @@ export type TokenKeys<S> = Exclude<
   | 'externalCssVariables'
 >
 
-import type { TonedTypeRegistry } from '../registry.ts'
-import type { Platform } from './config.ts'
-import type { PlatformStyle } from './style.ts'
-
 /**
  * Inline style object — what the `style` escape hatch accepts. Tuned by the
  * host through the `TonedTypeRegistry` (see ../registry.ts): unaugmented it
@@ -301,21 +310,6 @@ export type InlineStyle = TonedTypeRegistry extends { inlineStyle: infer T }
   : // oxlint-disable-next-line typescript/no-explicit-any -- the unaugmented default is permissive
     any
 
-/**
- * Style object for a token system - maps token names to their allowed values.
- *
- * @template S - The token style declaration
- *
- * @example
- * ```ts
- * // For a system with bgColor and padding tokens:
- * const style: TokenStyle<typeof system> = {
- *   bgColor: 'primary',
- *   padding: 2,
- *   style: { opacity: 0.5 } // inline styles
- * }
- * ```
- */
 /**
  * Does a token apply to an element of type ET? Untyped elements (ET =
  * undefined) accept everything; tokens without `$types` apply everywhere.
@@ -352,6 +346,21 @@ type TokenInheritAllows<C, ET extends ElementType> = C extends { inherit: true }
     : false
   : false
 
+/**
+ * Style object for a token system - maps token names to their allowed values.
+ *
+ * @template S - The token style declaration
+ *
+ * @example
+ * ```ts
+ * // For a system with bgColor and padding tokens:
+ * const style: TokenStyle<typeof system.system> = {
+ *   bgColor: 'primary',
+ *   padding: 2,
+ *   $style: { opacity: 0.5 }, // low-level raw style
+ * }
+ * ```
+ */
 export type TokenStyle<
   S extends TokenStyleDeclaration,
   ET extends ElementType | undefined = undefined,
@@ -380,20 +389,16 @@ type TokenStyleAllowed<
   // `Partial<{ [x: string]: never }>` — every style object becomes a type error,
   // and TokenSystem<Concrete> stops being assignable to TokenSystem<open>.
   // Extracting the TokenConfig member keeps the open system permissive while
-  // leaving concrete systems exactly as strict as before.
+  // leaving concrete systems strict.
   //
   // The `as` clause drops tokens whose `$types` excludes this element's
-  // declared `$$type` — they are not offered, and using one is an error.
+  // declared `$kind` — they are not offered, and using one is an error.
   [
     key in TokenKeys<S> as TokenAllowedOn<S[key], ET> extends true ? key : never
-  ]: Extract<
-    S[key],
-    // oxlint-disable-next-line typescript/no-explicit-any -- matching all TokenConfig variants
-    TokenConfig<any, unknown>
-  > extends TokenConfig<infer V, unknown>
+  ]: Extract<S[key], AnyTokenConfig> extends TokenConfig<infer V, unknown>
     ? // A token that declared an alphaChannel also accepts `'value/alpha'`.
       // The presence test is on a REQUIRED alphaChannel, so the open system
-      // (where the field is merely optional) stays exactly as strict as before.
+      // (where the field is merely optional) does not accept alpha values.
       Extract<S[key], { alphaChannel: readonly string[] }> extends never
       ? V[number] | DynamicTokenValue<S[key]>
       :
@@ -404,7 +409,7 @@ type TokenStyleAllowed<
 }>
 
 /**
- * Tokens whose `$types` exclude this element's `$$type`, mapped to
+ * Tokens whose `$types` exclude this element's `$kind`, mapped to
  * never-valued optionals rather than merely dropped: a dropped key would pass
  * generic-constraint validation (which checks assignability without
  * excess-property freshness), while `paddingX?: never` rejects any value with

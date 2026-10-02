@@ -196,7 +196,7 @@ export function attachMotion(
       }
     } else {
       // Install the committed target through the ownership writer before reading
-      // computed CSS. The old visual value is restored in this same commit turn.
+      // computed CSS. The previous visual value is restored in this same commit turn.
       write(next)
       const element = host as HTMLElement
       const view = element.ownerDocument?.defaultView

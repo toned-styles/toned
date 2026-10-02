@@ -32,7 +32,7 @@ export function inject<
   const S extends
     | TokenStyleDeclaration
     | {
-        // oxlint-disable-next-line typescript/no-explicit-any -- breakpoint config uses generic parameter
+        // oxlint-disable-next-line typescript/no-explicit-any -- accepts any system's breakpoint key set
         breakpoints?: Breakpoints<any>
       },
 >(system: S) {

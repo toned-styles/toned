@@ -16,7 +16,7 @@ import { APPLY_OVERRIDE } from './rule-protocol.ts'
 import type { VariantSelector } from './variantSelector.ts'
 
 /** Null removes an inherited leaf at this exact declaration path. */
-export type NullableOverride<T> = T extends (...args: any[]) => unknown
+export type NullableOverride<T> = T extends (...args: never) => unknown
   ? T
   : T extends readonly unknown[]
     ? T | null
@@ -28,7 +28,7 @@ type OverrideDeclaration<
   T,
   Parts extends string,
   Local extends boolean = false,
-> = T extends (...args: any[]) => unknown
+> = T extends (...args: never) => unknown
   ? T
   : T extends readonly unknown[]
     ? T | null

@@ -12,7 +12,7 @@ import type { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
  * stylesheet. A sheet's type has symbol-keyed members, and tsc will only name
  * those symbols in a `.d.ts` if the emitting file has them in scope, resolved
  * against the module the type is declared in — this one. Without this the
- * export fails with TS4023 and the only escape was annotating the sheet
+ * export fails with TS4023 and the only escape is annotating the sheet
  * `OverridableStylesheet`, which erases the element, system and variant
  * typing that every override then loses.
  */
@@ -108,13 +108,11 @@ export type ModType = Record<string, string | boolean | number>
 
 /** Supported pseudo-class selectors */
 /*
- * Derived from the runtime lists rather than restated, because restating it
- * drifted: the tracked set was spelled here by hand and the five CSS-ONLY
- * states (`:focus-visible`, `:focus-within`, and the cross-element channels)
- * were never added, so a stylesheet writing `':focus-visible'` was accepted
- * only because StylesheetInput is used as a CONSTRAINT, which does no excess
- * property checking. `overrideStyles`, which checks its rules for real, then
- * rejected the very thing every button sheet writes.
+ * Derived from the runtime lists rather than restated, so the CSS-only states
+ * (`:focus-visible`, `:focus-within`, and the cross-element channels) cannot
+ * drift out of the type. StylesheetInput is used as a CONSTRAINT, which does
+ * no excess property checking, so a missing state would go unnoticed there and
+ * surface only in `overrideStyles`, which checks its rules exactly.
  */
 export type Pseudo = PseudoState | CssOnlyPseudoState
 
@@ -135,8 +133,7 @@ type Override<L, R> = Omit<L, keyof R> & R
  * `t({ bgColor: 'a' }, { bgColor: 'b' })` to `never`. An argument that may be
  * falsy only may apply, so it widens the result instead of replacing it.
  */
-// oxlint-disable-next-line typescript/no-explicit-any -- tuple manipulation requires any[]
-type Merge<D extends any[], Acc = object> = D extends [
+type Merge<D extends unknown[], Acc = object> = D extends [
   infer First,
   ...infer Rest,
 ]
@@ -164,7 +161,7 @@ type Merge<D extends any[], Acc = object> = D extends [
  * const style: TokenStyleWithSelectors<System> = {
  *   bgColor: 'primary',
  *   ':hover': { bgColor: 'secondary' },
- *   '@sm': { padding: 4, style: { gridTemplateColumns: '1fr 1fr' } }
+ *   '@sm': { padding: 4, $style: { opacity: 0.5 } },
  * }
  * ```
  */
@@ -183,7 +180,7 @@ export type TokenStyleWithSelectors<
  *
  * @example
  * ```ts
- * const { t } = defineSystem({ bgColor, padding })
+ * const { t } = defineSystem({ id: 'app', tokens: { bgColor, padding } })
  * const style = t({ bgColor: 'primary', padding: 2 })
  * ```
  */
@@ -198,6 +195,7 @@ export interface ResolvedTokenStyle<S extends TokenStyleDeclaration> {
   /** @internal */
   [SYMBOL_REF]: TokenSystem<S>
   /** Resolved inline styles */
+  // oxlint-disable-next-line typescript/no-explicit-any -- spread into either platform's host style prop
   readonly style: Record<string, any>
   /** Generated class name string */
   readonly className: string | undefined
@@ -302,11 +300,11 @@ export type ElementStyleNew<
    * schema unions explode.
    *
    * The keys are NOT enumerated here. `[K in `${Parts}${AvailablePseudo}`]`
-   * gave every part one optional member per sibling part per pseudo, at every
-   * nesting level — a sheet cost parts² × pseudos (160 parts: 4.95s of check
-   * time against 0.64s without it). The target a cross-part key is checked
-   * against rides this one type-only member instead, and ValidateDeclaration
-   * checks the keys actually WRITTEN against it.
+   * would give every part one optional member per sibling part per pseudo, at
+   * every nesting level — a sheet would cost parts² × pseudos (160 parts:
+   * 4.95s of check time against 0.64s without it). The target a cross-part
+   * key is checked against rides this one type-only member instead, and
+   * ValidateDeclaration checks the keys actually WRITTEN against it.
    */
   [CROSS_PART]?: ElementStyleNew<
     S,
@@ -329,7 +327,7 @@ type InferContainerAliases<S> = S extends {
     }[keyof C & string]
   : never
 
-/** The `$$type` an element declared in the input, if any. */
+/** The `$kind` (or legacy `$$type`) an element declared in the input, if any. */
 export type InferElementType<
   T,
   K,
@@ -371,8 +369,8 @@ export type ElementMap<
     E extends keyof Kinds ? Kinds[E] : undefined,
     undefined,
     // Never the part names: the shape does not use them (cross-part keys are
-    // checked by ValidateDeclaration), and passing them made each sheet's
-    // element shape a distinct type whose keys were resolved again per sheet.
+    // checked by ValidateDeclaration), and passing them would make each
+    // sheet's element shape a distinct type whose keys resolve again per sheet.
     never,
     false
   >
@@ -412,7 +410,7 @@ type CrossSuffix<S extends TokenStyleDeclaration> =
 /**
  * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
  * `${Elements}${CrossSuffix}` union is never built. Enumerating it as mapped
- * keys (root, variant conditions, and each part) made a sheet cost
+ * keys (root, variant conditions, and each part) would make a sheet cost
  * parts x suffixes, instantiated again for every sheet.
  */
 type IsCrossElementKey<
@@ -435,13 +433,13 @@ type IsCrossElementKey<
  * The single source for "what may be written about an element": the authoring
  * surface below and `overrideStyles`' rules type both use THIS, so the two
  * cannot drift. Re-deriving the pseudo and breakpoint arguments at a second
- * site is what let overrides reject `:focus-visible` and `@field-group/md`
- * while the stylesheet accepted them.
+ * site would let overrides reject `:focus-visible` and `@field-group/md`
+ * while the stylesheet accepts them.
  */
 export type AuthoredElementStyle<
   S extends TokenStyleDeclaration,
   ET extends ElementType | undefined = undefined,
-  // Kept for callers; the shape no longer depends on it. Cross-part keys are
+  // Kept for compatibility; the shape does not depend on it. Cross-part keys are
   // checked by ValidateDeclaration, which receives the parts itself, so the
   // element shape is instantiated ONCE per system and element kind and shared
   // by every sheet, instead of once per sheet's part-name union.
@@ -487,7 +485,7 @@ export type ValidateDeclaration<
    * `true` only for a stylesheet's own parts, where the authored shape is
    * intersected alongside and already checks every plain leaf. There a plain
    * leaf answers `unknown` instead of being validated a second time — that
-   * re-check was ~75% of a part's type cost. Special subtrees (computed query
+   * re-check would be ~75% of a part's type cost. Special subtrees (computed query
    * keys, compound pseudos, cross-part and cross-element keys) switch it back
    * off: their leaves are the only contextual type those keys get (see ValidLeaf).
    */
@@ -507,7 +505,7 @@ export type ValidateDeclaration<
         ? // A `$` member is a VALUE (`$webRules: webRules(…)`, a `$grid`
           // definition, `$compose`), never nested rules — only `$style` (and
           // a variant's named fragments, which are rules) are walked.
-          // Descending into a constructed value re-walked its whole type
+          // Descending into a constructed value would re-walk its whole type
           // (csstype's ~800 properties for every `$webRules`) per sheet.
           Light extends true
           ? unknown
@@ -585,7 +583,7 @@ type ValidateSpecial<
         Local
       >
     : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
-      // per written key made each sheet cost parts × pseudos again.
+      // per written key would make each sheet cost parts × pseudos again.
       K extends `${infer _Part extends Parts}:${infer Rest}`
       ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
         ? K extends ShapeKeys<Shape>
@@ -629,23 +627,23 @@ type ValidateSpecial<
  * contextually typed, against.
  *
  * A single written value (the normal case: one literal) gets the whole allowed
- * type, exactly as before. That is load-bearing twice over: it is what the
+ * type. That is load-bearing twice over: it is what the
  * error names, and this object is also a CONTEXTUAL type whose concrete keys
  * (a computed `q.all(…)` key, say) hide the index signatures the authored shape
  * matches the same key with — so this leaf is the only thing offering
  * `$compose` completions or keeping a nested `'sticky'` from widening to
- * `string` (`toned-editor` fixture, `query-keys.test-d.ts`).
+ * `string` (see `query-keys.test-d.ts`).
  *
- * A `never` or UNION value that fits gets `unknown` instead, and that is the
- * fix for TS2590. Every caller intersects its input with this validation
+ * A `never` or UNION value that fits gets `unknown` instead, which avoids
+ * TS2590. Every caller intersects its input with this validation
  * (`Rules & ValidateDeclaration<Rules, …>`). A generic call written INSIDE the
  * rules (a `web({ … })` helper) is contextually typed before `Rules` is
  * inferred, so the leaves it sees are not what was written but `never` or the
  * rules constraint's own value union — and returning the allowed union there
- * made each leaf `Values & (Values | null)`: two union objects, which the
+ * would make each leaf `Values & (Values | null)`: two union objects, which the
  * checker crosses member by member before reducing, with
  * `` `a/${number}` & `b/${number}` `` never reducing. A colour token with
- * `alphaChannel` has 2N members, so a leaf cost (2N)² and crossed the
+ * `alphaChannel` has 2N members, so a leaf would cost (2N)² and cross the
  * 100,000-member limit at ~160 colours. `unknown` drops out of the
  * intersection: the cost is linear in the palette
  * (`toned-react/override-scale.test-d.ts` pins 1,000 colours), and a union
@@ -764,7 +762,7 @@ export type StylesheetInput<
  * `StylesheetInput` and applied to the argument instead
  * (`style: T & StylesheetValidation<S, T>`).
  *
- * Inside the constraint, every part's type was `authored shape & validation`:
+ * Inside the constraint, every part's type would be `authored shape & validation`:
  * a fresh intersection per part, which the checker reduces by materializing
  * all ~300 merged properties of the element shape — for every part of every
  * sheet (~1.5ms of check time for a two-part sheet). On the argument, a part
@@ -815,9 +813,9 @@ export type StylesheetValidation<
  * cross-element keys (`'Root:hover'`, `'Root~:open'`). The constraint only
  * relates their values, and a relation does not reject unknown keys, so a
  * typo'd token inside `'@md': { Root: { … } }` and a cross key naming a part
- * the sheet does not have were both silently accepted. A cross key that is
+ * the sheet does not have would both be silently accepted. A cross key that is
  * not `<part><state>` is rejected outright; a condition block's parts are
- * walked like the parts themselves (Light: the constraint still checks the
+ * walked like the parts themselves (the constraint still checks the
  * values). A `'@…'` key the root shape does not declare stays open (see
  * type-constraints.test-d.ts); query keys have their own member in
  * StylesheetInput.
@@ -945,7 +943,7 @@ export type VariantsInput<
 }
 
 // =============================================================================
-// New Callback-based Variants API
+// Callback-based Variants API
 // =============================================================================
 
 /**
@@ -955,7 +953,7 @@ export type VariantElementStyle<
   S extends TokenStyleDeclaration,
   Elements extends string,
   Kind extends ElementType | undefined = undefined,
-  // Kept for callers; the shape no longer depends on it (see
+  // Kept for compatibility; the shape does not depend on it (see
   // AuthoredElementStyle), so every sheet shares one part shape per kind.
   _AllParts extends string = Elements,
   Host extends Platform | undefined = undefined,
@@ -1055,7 +1053,7 @@ type VariantEditorShape<T> = T extends readonly unknown[]
       ? T
       : // A leaf's VALUE vocabulary comes from the validation intersected
         // alongside (ValidLeaf); offering the token union here as well
-        // crossed the two unions member by member in every contextual leaf
+        // would cross the two unions member by member in every contextual leaf
         // type. (`undefined` stays: an optional nested block is `X |
         // undefined`, and `unknown` there would swallow `X` itself.)
         unknown
@@ -1067,7 +1065,7 @@ type VariantEditorShape<T> = T extends readonly unknown[]
  *
  * Built from the system, the part's kind and the host ONLY, so it is
  * instantiated once per system and shared by every sheet. Mapping the sheet's
- * own `VariantStyleDef` instead re-resolved every token of every part for
+ * own `VariantStyleDef` instead would re-resolve every token of every part for
  * each `.variants()` call (~130k instantiations for a five-part sheet).
  */
 type VariantEditorElement<
@@ -1170,9 +1168,7 @@ export type CheckedVariantRules<
         : never)
 }
 
-/**
- * Callback function type for the new variants API
- */
+/** Callback form of `.variants()`: receives the variant selector and query builder. */
 export type VariantsCallback<
   S extends TokenStyleDeclaration,
   Elements extends string,
@@ -1199,8 +1195,8 @@ export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
   /** The axes declared so far. Carried so `extend` can hand them back rather
-   * than collapsing to `never`, which is what stopped an override from
-   * selecting on the axes its target sheet already had. */
+   * than collapsing to `never`, which would stop an override from
+   * selecting on the axes its target sheet already has. */
   Mods extends ModType = never,
   Kinds extends Record<Elements, ElementType | undefined> = Record<
     Elements,
@@ -1359,7 +1355,7 @@ export interface StylesheetMetadata<
    * Returns the live `Base` instance, not a bare record: the element accessors
    * are defined on its prototype, and callers (useStyles, the benches) also
    * reach for matchStyles / applyState / getCurrentStyle on it. Typing this as
-   * only the element map hid that.
+   * only the element map would hide that.
    */
   [SYMBOL_INIT]: (
     config: Config,
@@ -1426,9 +1422,9 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
    * from each element: that the name exists, and which `$$type` constrains
    * its tokens. It reconstructs `AuthoredElementStyle` from those on demand,
    * so the two surfaces cannot drift while the brand stays small — recording
-   * the full authored type per element instead pushed the biggest sheets past
-   * what tsc will serialize (TS7056), which is what forced them to be
-   * exported with their typing erased.
+   * the full authored type per element instead would push the biggest sheets
+   * past what tsc will serialize (TS7056), forcing them to be exported with
+   * their typing erased.
    */
   {
     [K in PickString<ExtractElements<T>>]: InferElementType<

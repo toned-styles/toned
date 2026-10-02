@@ -10,6 +10,7 @@ import { evaluatePredicate, FALSE } from '../../core/predicates.ts'
 import { resolveAlphaChannels } from '../../core/resolve.ts'
 import { namespaceOutput } from '../../system/namespace.ts'
 import type { TokenSystem, Tokens } from '../../types/index.ts'
+import type { AnyDeclaration } from '../../types/system.ts'
 import {
   alphaVarName,
   alphaWrappable,
@@ -63,7 +64,7 @@ const unconditional = (predicate: Predicate) =>
   predicate.op === 'all' && predicate.operands.length === 0
 
 /** Compatibility is an adapter policy, not a second declaration compiler. The
- * old root source grammar retains its nearest-source CSS channel. Explicit
+ * legacy root source grammar retains its nearest-source CSS channel. Explicit
  * relation queries continue to use host topology facts on every backend. */
 function browserPredicate(operation: DeclarationOperation): Predicate {
   const channel = operation.origin.legacyChannel
@@ -172,13 +173,13 @@ function atoms(
     : (children.flat() as Extract<Predicate, { op: 'atom' }>['fact'][])
 }
 
-/** The unnamespaced checkpoint deliberately retains its fixed media/state
+/** Unnamespaced (legacy) systems deliberately retain a fixed media/state
  * ladder inside each layer. New descriptors use source order on every backend.
- * Base raw styles outrank token classes, as they did as inline declarations.
+ * Base raw styles outrank token classes, matching inline-declaration precedence.
  * Compound query boundaries always retain occurrence order, including legacy. */
 function legacyOrder(
   operations: readonly ResolvedOperation[],
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   rawStyleLast = false,
 ): ResolvedOperation[] {
   const config = system.system
@@ -296,7 +297,7 @@ function pruneParameters(
  * bounded custom-property chains. Token resolvers are never invoked by lowering. */
 function lowerCssOperations(
   input: readonly ResolvedOperation[],
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   part: string,
   useClassName = true,
   namespace = true,
@@ -461,7 +462,7 @@ function lowerCssOperations(
  * evaluation is the same plan pipeline used by native and Tailwind adapters. */
 export function resolveCssPlan(
   plan: CompiledPlan,
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   tokens: Tokens,
   facts: Facts = {},
   options: {

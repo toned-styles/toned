@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
 import type { Config, TokenSystem } from '../types/index.ts'
+import type { Variants } from '../types/stylesheet.ts'
 import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
 import { overrideSheet } from './overrideSheet.ts'
@@ -133,11 +134,9 @@ describe('createStylesheet', () => {
       const stylesheet = createStylesheet(mockTokenSystem, {
         container: { bgColor: 'blue', paddingX: 2 },
         label: {},
-      }).variants(
-        ($: import('../types/stylesheet.ts').Variants<{ size: 'sm' }>) => ({
-          [$.size('sm')]: { label: { $compose: 'container', paddingX: 4 } },
-        }),
-      )
+      }).variants(($: Variants<{ size: 'sm' }>) => ({
+        [$.size('sm')]: { label: { $compose: 'container', paddingX: 4 } },
+      }))
       const controller = stylesheet[SYMBOL_INIT](mockConfig, { size: 'sm' })
       expect((controller as unknown as Base).rules['[size=sm]'].label).toEqual({
         bgColor: 'blue',
@@ -150,15 +149,13 @@ describe('createStylesheet', () => {
       const sheet = createStylesheet(mockTokenSystem, {
         source: { bgColor: 'blue', paddingX: 2, borderRadius: 'medium' },
         target: {},
-      }).variants(($: import('../types/stylesheet.ts').Variants<Mods>) => ({
+      }).variants(($: Variants<Mods>) => ({
         [$.size('sm')]: { target: {} },
       }))
       const first = overrideSheet(sheet, {
         source: { bgColor: 'red', paddingX: null },
       })
-      const composed = (
-        $: import('../types/stylesheet.ts').Variants<Mods>,
-      ) => ({
+      const composed = ($: Variants<Mods>) => ({
         [$.size('sm')]: { target: { $compose: 'source' as const } },
       })
       const withoutRadius = overrideSheet(first, {
@@ -429,9 +426,9 @@ describe('Base class', () => {
   })
 })
 
-describe('integration: new API with StyleMatcher', () => {
+describe('integration: stylesheet rules with StyleMatcher', () => {
   test('inline pseudo class affects only self element', () => {
-    // New API: inline pseudo only affects the element it's defined in
+    // An inline pseudo only affects the element it's defined in
     const transformedRules = {
       container: {
         bgColor: 'blue',
@@ -935,7 +932,7 @@ describe('contextless updates do not leak interaction across instances', () => {
   // box reacts to BOTH an interaction pseudo (:hover) and a non-interaction mod
   // (a `size` variant). The variant lets a *contextless* applyState genuinely
   // change box (so isEqual doesn't short-circuit the paint), exercising the
-  // path that previously fell back to the shared global style.
+  // path that must not fall back to the shared global style.
   const rules = {
     box: {
       bgColor: 'base',
@@ -1070,8 +1067,8 @@ describe('cross-element interaction isolation (multi-instance)', () => {
     expect(c1.recorded).toEqual({ bgColor: 'hover' })
     expect(c2.recorded).toEqual({ bgColor: 'base' })
 
-    // Regression guard: before the fix both labels were painted with the
-    // cross-element hover ('hovered'). They must now both render resting.
+    // Neither label may be painted with the cross-element hover ('hovered'):
+    // both render resting.
     expect(l1.recorded).toEqual({ textColor: 'base' })
     expect(l2.recorded).toEqual({ textColor: 'base' })
 

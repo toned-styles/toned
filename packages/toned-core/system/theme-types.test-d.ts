@@ -1,4 +1,5 @@
 import { defineSystem, defineTokenFor } from '../index.ts'
+import { createNativeRenderer } from '../server/index.ts'
 
 type Theme = { colors: { primary: string }; space: number }
 const token = defineTokenFor<Theme>()
@@ -59,8 +60,6 @@ const bad = defineSystem({ id: 'typed-value', tokens: { color } }).stylesheet({
   Root: { color: 'missing' },
 })
 void bad
-
-import { createNativeRenderer } from '../server/index.ts'
 
 const rendererSystem = defineSystem({
   id: 'renderer-theme-schema',

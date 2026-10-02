@@ -169,10 +169,9 @@ describe('defineAnimations', async () => {
   })
 
   test('a stylesheet references an animation by name', () => {
-    const out = animSystem.exec(
-      { tokens: {}, useClassName: true },
-      { animation: 'fade-in' } as any,
-    )
+    const out = animSystem.exec({ tokens: {}, useClassName: true }, {
+      animation: 'fade-in',
+    } as any)
     expect(out.className).toContain('animation_fade-in')
   })
 })

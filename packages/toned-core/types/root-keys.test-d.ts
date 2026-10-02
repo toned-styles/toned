@@ -3,7 +3,7 @@
  * blocks and cross-element keys. Their values are related to the root shape,
  * and a relation does not reject unknown keys, so a typo inside
  * `'@md': { Root: { … } }` and a cross key naming a part the sheet does not
- * have used to be accepted silently. `tsc` is the test: every
+ * have would otherwise be accepted silently. `tsc` is the test: every
  * `@ts-expect-error` fails the build if its error disappears.
  */
 import { defineSystem, defineToken } from '../system/index.ts'

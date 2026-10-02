@@ -47,8 +47,8 @@ export interface Palette {
 
 /**
  * Declare a themeable palette. Validates at import (a constructor, not an
- * annotation — see the CLAUDE.md doctrine): exactly one default theme, and every
- * per-theme key names a declared theme.
+ * annotation): exactly one default theme, and every per-theme key names a
+ * declared theme.
  *
  * @param tokens token name → value (bare string = invariant, or a per-theme map)
  * @param config the themes this palette spans

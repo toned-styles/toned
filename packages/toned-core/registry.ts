@@ -16,10 +16,9 @@
  *   import type {} from '@toned/react/style-types.web'        // CSSProperties
  *   import type {} from '@toned/react/style-types.universal'  // web ∩ native
  *
- * Unaugmented, the `style` escape hatch stays `any` — exactly as before.
+ * Unaugmented, the `style` escape hatch stays `any`.
  *
  * @module registry
  */
 
-// oxlint-disable-next-line typescript/no-empty-object-type -- filled by host declaration merging
 export interface TonedTypeRegistry {}

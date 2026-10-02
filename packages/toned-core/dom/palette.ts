@@ -20,7 +20,7 @@ export interface GeneratePaletteOptions {
   /**
    * Emit `@media (prefers-color-scheme)` blocks for automatic (OS-preference)
    * switching. Off by default: the manual scopes alone reproduce a `.dark`-class
-   * setup byte-for-byte; turning it on is the deliberate behaviour change.
+   * setup byte-for-byte; turning it on opts into following the OS preference.
    */
   media?: boolean
 }

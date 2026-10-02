@@ -31,41 +31,41 @@ base.variants(($: Variants<Mods>, q) => ({
   '@platform.web': { Root: { $style: { opacity: 1 } } },
 }))
 // @ts-expect-error unknown literal axis
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '[missing=x]': { Root: { padding: 2 } },
 }))
 // @ts-expect-error unknown literal key
-base.variants(($: Variants<Mods>) => ({ wat: { Root: { padding: 2 } } }))
+base.variants((_$: Variants<Mods>) => ({ wat: { Root: { padding: 2 } } }))
 // @ts-expect-error invalid value on a known axis
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '[size=wrong]': { Root: { padding: 2 } },
 }))
 // @ts-expect-error bare attributes mean true and require an axis allowing true
-base.variants(($: Variants<Mods>) => ({ '[size]': { Root: { padding: 2 } } }))
+base.variants((_$: Variants<Mods>) => ({ '[size]': { Root: { padding: 2 } } }))
 // @ts-expect-error numeric values remain finite
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '[count=1]': { Root: { padding: 2 } },
 }))
 // @ts-expect-error a valid prefix cannot hide trailing syntax
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '[size=s]junk': { Root: { padding: 2 } },
 }))
 // @ts-expect-error malformed attribute
-base.variants(($: Variants<Mods>) => ({ '[size=s': { Root: { padding: 2 } } }))
+base.variants((_$: Variants<Mods>) => ({ '[size=s': { Root: { padding: 2 } } }))
 // @ts-expect-error a computed valid selector does not hide an explicit invalid key
 base.variants(($: Variants<Mods>) => ({
   [$.size('s')]: { Root: { padding: 2 } },
   wat: { Root: { padding: 2 } },
 }))
 // @ts-expect-error encoded attributes still check the declared value
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '[a%5Db=wrong]': { Root: { padding: 2 } },
 }))
 // @ts-expect-error condition aliases must use declared names
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '@media typo': { Root: { padding: 2 } },
 }))
 
-base.variants(($: Variants<Mods>) => ({
+base.variants((_$: Variants<Mods>) => ({
   '@platform.web': { Root: { $style: { cursor: 'pointer' } } },
 }))

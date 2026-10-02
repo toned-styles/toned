@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { defineSystem, defineTokenFor } from '../index.ts'
+import { defineSystem, defineTokenFor, type WebInlineStyle } from '../index.ts'
 import { assertBuildArtifact, buildStyles, generateThemes } from './index.ts'
 
 type Theme = { surface: string; ink: string; unit: number }
@@ -26,7 +26,7 @@ test('a declared theme is built: classes read variables the build defines', () =
   const { css } = buildStyles(ui, { sheets: [sheet] })
   // What a class reads…
   expect(css).toContain('var(--demo-surface)')
-  // …the build now supplies: the first theme by default, every theme by name.
+  // …the build supplies: the first theme by default, every theme by name.
   expect(css).toContain(
     ':root { --demo-surface: #fff; --demo-ink: #111; --demo-unit: 4; }',
   )
@@ -97,7 +97,7 @@ test('only values CSS variables can carry are emitted; unsafe ones are refused',
 
 test('a theme value used for a four-sided property must be a single value', () => {
   type Edges = { rule: string; pad: string }
-  const edge = defineTokenFor<Edges, import('../index.ts').WebInlineStyle>()
+  const edge = defineTokenFor<Edges, WebInlineStyle>()
   const tokens = {
     edge: edge({
       values: ['rule'],

@@ -75,9 +75,13 @@ export interface AdaptiveLayout<
   ): Readonly<Record<`[${Axis}=${Name}]`, AdaptiveRule<Root, Area>>>
 }
 export type AdaptiveLayoutName<T> =
-  T extends AdaptiveLayout<any, infer Name, any, any> ? Name : never
+  T extends AdaptiveLayout<infer _Axis, infer Name, infer _Root, infer _Area>
+    ? Name
+    : never
 export type AdaptiveLayoutAreas<T> =
-  T extends AdaptiveLayout<any, any, any, infer Area> ? Area : never
+  T extends AdaptiveLayout<infer _Axis, infer _Name, infer _Root, infer Area>
+    ? Area
+    : never
 type CheckedCandidates<Layouts, Area extends string> = {
   [Name in keyof Layouts]: Record<
     Exclude<keyof Layouts[Name], keyof AdaptiveCandidate>,
@@ -535,7 +539,7 @@ export interface AdaptiveStore<
   Name extends string = string,
   Area extends string = string,
 > {
-  readonly layout: AdaptiveLayout<Axis, Name, any, Area>
+  readonly layout: AdaptiveLayout<Axis, Name, string, Area>
   /** Partial transaction. content/safeArea objects replace their complete field. */
   update(measurements: Partial<AdaptiveMeasurements<Area>>): void
   getMeasurements(): AdaptiveMeasurements<Area>
@@ -570,7 +574,8 @@ export function createAdaptiveStore<
       if (name === selected) return
       selected = name
       current = layout.variants(name)
-      for (const listener of [...listeners]) listener()
+      // Snapshot: a listener subscribed during notification waits for the next change.
+      for (const listener of Array.from(listeners)) listener()
     },
     getMeasurements: () => measurements,
     getSnapshot: () => current,

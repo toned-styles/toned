@@ -1,14 +1,12 @@
-import type { OutputBackend } from '../backends/index.ts'
 /**
  * Configuration type definitions.
  *
  * @module types/config
  */
+import type { OutputBackend } from '../backends/index.ts'
+import type { NativeHostAdapter } from '../stylesheet/native-host.ts'
 import type { ElementType, Tokens } from './tokens.ts'
 
-/**
- * Runtime configuration for the styling system.
- */
 /**
  * The platforms a stylesheet can address with `'@platform.<name>'` keys.
  * A key matching the running config's `platform` merges into its parent;
@@ -23,9 +21,10 @@ export interface HostConditions {
   subscribe(listener: () => void): () => void
 }
 
+/** Runtime configuration for the styling system. */
 export type Config = Readonly<{
   /** Native host writes require an explicitly integrated renderer adapter. */
-  nativeHost?: import('../stylesheet/native-host.ts').NativeHostAdapter
+  nativeHost?: NativeHostAdapter
 
   /** Explicit output adapter; host platform must agree. */
   backend?: OutputBackend
@@ -75,17 +74,16 @@ export type Config = Readonly<{
   debug: boolean
 
   /** Get props for an element - returns style/className based on config */
-  // oxlint-disable-next-line typescript/no-explicit-any -- context type varies by usage
   getProps(
-    this: any,
+    this: unknown,
     elementKey: string,
     conditions?: HostConditions,
   ): Record<string, unknown>
 
   /**
-   * Maps an element's `$$type` to the host element a binding should render for
+   * Maps an element's `$kind` to the host element a binding should render for
    * it — a React intrinsic tag on web (`view`→`'div'`), a component for native
-   * or a host override (e.g. haelo-primitives `View`/`Text`/`Image`).
+   * or a host override (e.g. a design-system package's `View`/`Text`/`Image`).
    *
    * Only bindings (useBind/bind) read this; `getProps`-based useStyles ignores
    * it. Optional and absent on the bare default config, so useBind throws a
@@ -105,7 +103,7 @@ export type Config = Readonly<{
 
   /**
    * Whether a scoped entry applies at the ambient scope. The default
-   * (overrides.tsx) treats both as '/'-delimited paths and matches when the
+   * (in @toned/react) treats both as '/'-delimited paths and matches when the
    * entry's scope appears in the ambient path as a contiguous run of whole
    * segments — 'checkout/summary' applies under '__root__/checkout/summary/x'.
    */

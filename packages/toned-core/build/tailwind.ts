@@ -11,6 +11,7 @@ import {
 } from '../core/plan.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { TokenSystem, Tokens } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { assertConditionSlugs } from '../utils/conditions.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import {
@@ -39,7 +40,7 @@ export type TailwindManifest = BuildManifest &
  * The returned backend is bound to this inventory and rejects missing sheets.
  * The compiler is the application's actual configured Tailwind build. */
 export async function buildTailwind(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   profile: TailwindBackend,
   options: (
     | { operations: readonly ResolvedOperation[] }

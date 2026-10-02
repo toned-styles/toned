@@ -2,6 +2,7 @@ import { compileRules, foldOperations, resolvePlan } from '../../core/plan.ts'
 import {
   CONDITIONAL_RULES,
   type ConditionalRule,
+  type NormalizedMetadata,
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../../stylesheet/rule-protocol.ts'
@@ -37,7 +38,7 @@ function expand(key: string, value: unknown): Record<string, unknown> {
 function declaration(input: Record<string, unknown>): Record<string, unknown> {
   const normalized = normalizeDeclarations(input)
   const source: readonly TokenOperation[] =
-    (normalized as any)[TOKEN_OPERATIONS] ??
+    (normalized as NormalizedMetadata)[TOKEN_OPERATIONS] ??
     Object.entries(normalized).map(([key, value]) => ({ key, value, layer: 0 }))
   const operations: TokenOperation[] = source.flatMap((operation) => {
     if (operation.conditional)
@@ -54,9 +55,9 @@ function declaration(input: Record<string, unknown>): Record<string, unknown> {
       ([key, value]) => ({ ...operation, key, value }),
     )
   })
-  if (!(normalized as any)[TOKEN_OPERATIONS]) {
+  if (!(normalized as NormalizedMetadata)[TOKEN_OPERATIONS]) {
     const conditional: readonly ConditionalRule[] =
-      (normalized as any)[CONDITIONAL_RULES] ?? []
+      (normalized as NormalizedMetadata)[CONDITIONAL_RULES] ?? []
     for (const rule of conditional)
       operations.push({
         key: '',

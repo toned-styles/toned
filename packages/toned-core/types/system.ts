@@ -1,11 +1,11 @@
-import type { SystemOptions } from '../system/definition.ts'
-import type { QueryBuilder } from '../system/queries.ts'
 /**
  * Token system type definitions.
  *
  * @module types/system
  */
-import type { Config } from './config.ts'
+import type { SystemOptions } from '../system/definition.ts'
+import type { QueryBuilder } from '../system/queries.ts'
+import type { Config, Platform } from './config.ts'
 import type {
   AuthoredElementStyle,
   StylesheetType,
@@ -13,7 +13,7 @@ import type {
   ValidateDeclaration,
 } from './stylesheet.ts'
 import type {
-  TokenConfig,
+  AnyTokenConfig,
   TokenStyle,
   TokenStyleDeclaration,
   Tokens,
@@ -29,8 +29,11 @@ import type {
  * @example
  * ```ts
  * const { t, stylesheet } = defineSystem({
- *   bgColor: defineToken({ ... }),
- *   padding: defineToken({ ... }),
+ *   id: 'app',
+ *   tokens: {
+ *     bgColor: defineToken({ ... }),
+ *     padding: defineToken({ ... }),
+ *   },
  * })
  * ```
  */
@@ -43,7 +46,7 @@ export type TokenSystem<
     Pick<
       S,
       {
-        [K in keyof S]: S[K] extends TokenConfig<any, any> ? K : never
+        [K in keyof S]: S[K] extends AnyTokenConfig ? K : never
       }[keyof S]
     >
   >
@@ -81,8 +84,8 @@ export type TokenSystem<
    *
    * Accepts the CHAIN key forms as well as plain token names: `exec` is the
    * low-level resolver, and it reads `':<pseudo>_<token>'` and
-   * `'@<breakpoint>_<token>'` (definers.ts, the `k[0] === ':'` and
-   * `k[0] === '@'` branches). Those are admitted here rather than on
+   * `'@<breakpoint>_<token>'` (see `expand` in backends/css/execute.ts).
+   * Those are admitted here rather than on
    * `TokenStyle` itself, which is instantiated per element of every
    * stylesheet: enumerating ~190 tokens against ~50 pseudo prefixes would be
    * 9,500 keys on the hottest type in the system.
@@ -95,9 +98,20 @@ export type TokenSystem<
   ) => { style: object; className?: string }
 }
 
+/**
+ * Declaration argument for system-agnostic engine code (plan compilation,
+ * backends, hosts): `TokenSystem<AnyDeclaration>`. `TokenSystem<S>` is
+ * invariant in `S` — its stylesheet, `style` and `t` take `S` in parameter
+ * position — so a concrete system is not assignable to
+ * `TokenSystem<TokenStyleDeclaration>`. It must stay a type argument (not a
+ * `TokenSystem<any>` alias) so the checker keeps comparing by variance.
+ */
+// oxlint-disable-next-line typescript/no-explicit-any -- the only escape from TokenSystem's invariance in S
+export type AnyDeclaration = any
+
 export type ExecConfig = {
   /** Token values for style resolution */
-  platform?: import('./config.ts').Platform
+  platform?: Platform
   tokens: Tokens
 
   /** Whether to emit class names for static token values */

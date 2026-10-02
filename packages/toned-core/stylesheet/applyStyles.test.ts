@@ -52,8 +52,8 @@ describe('setStyles (web) baseline restore', () => {
     setStyles(el, { style: { cursor: 'var(--toned_hover__cursor, pointer)' } })
     expect(cssValue(el, 'cursor')).toBe('var(--toned_hover__cursor, pointer)')
 
-    // A variant change drops `cursor`. The old code `continue`d on any
-    // var(--toned_ value and left the chain behind; it must now be cleared.
+    // A variant change drops `cursor`: its var(--toned_ chain must be cleared,
+    // not left behind.
     setStyles(el, { style: { color: 'red' } })
 
     expect(cssValue(el, 'cursor')).toBe('')

@@ -12,6 +12,11 @@ export interface TokenOperation {
   readonly layer: number
   readonly conditional?: ConditionalRule
 }
+/** Metadata a normalized declaration carries beside its authored fields. */
+export interface NormalizedMetadata {
+  readonly [TOKEN_OPERATIONS]?: readonly TokenOperation[]
+  readonly [CONDITIONAL_RULES]?: readonly ConditionalRule[]
+}
 export interface ConditionalRule {
   readonly predicate: QueryPredicate
   readonly style: RuleObject

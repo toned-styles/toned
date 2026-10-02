@@ -24,7 +24,7 @@ export type ComposableParts<
  * The sources a target of kind `TargetKind` may compose. Keyed on the KIND, not
  * the target: every target of one kind shares one instantiation, so a sheet
  * costs parts x kinds here rather than parts x parts (mapping all sources once
- * per target was quadratic in the sheet's part count).
+ * per target would be quadratic in the sheet's part count).
  */
 type ComposableForKind<Kinds, TargetKind> = {
   [Source in keyof Kinds]: undefined extends Kinds[Source]

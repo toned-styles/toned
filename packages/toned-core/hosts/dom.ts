@@ -3,6 +3,7 @@ import type { GridArea, GridDefinition } from '../grid/index.ts'
 import { initMedia } from '../stylesheet/media.ts'
 import { subscribeWebRelations } from '../stylesheet/relations-web.ts'
 import type { TokenSystem } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { fixedQueryWidth, parseConditionKey } from '../utils/conditions.ts'
 import type { HostIntegration } from './types.ts'
 
@@ -11,7 +12,7 @@ import type { HostIntegration } from './types.ts'
 const media = new WeakMap<object, Map<string, ReturnType<typeof initMedia>>>()
 
 export function createDomIntegration(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
 ): HostIntegration {
   const stateAttributes = Object.values(system.system.states ?? {}).flatMap(
     (selector) =>

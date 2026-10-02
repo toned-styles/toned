@@ -1,9 +1,9 @@
-import { createCssExecutor } from '../backends/css/execute.ts'
 /**
  * System definition functions.
  *
  * @module system/definers
  */
+import { createCssExecutor } from '../backends/css/execute.ts'
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import type { DefaultSystemKind } from '../types/stylesheet.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
@@ -27,6 +27,8 @@ import type {
   TokenTypeConfig,
 } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
+import type { AnyTokenConfig } from '../types/tokens.ts'
 import { getConfig, resolveModes } from './config.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
@@ -64,8 +66,7 @@ export function defineToken<
   } & Extra,
 ): TokenConfig<Values, Result> & Extra & { dynamic: Dynamic }
 export function defineToken<
-  // oxlint-disable-next-line typescript/no-explicit-any -- Values must accept any const array for token definitions
-  const Values extends readonly any[],
+  const Values extends readonly unknown[],
   // Result type is intentionally loose - could be CSSProperties but allows custom token styles
   Result extends {},
   // Preserved so TokenStyle can see whether the token declared an alphaChannel
@@ -74,7 +75,7 @@ export function defineToken<
 >(
   config: TokenConfig<Values, Result> & Extra,
 ): TokenConfig<Values, Result> & Extra
-export function defineToken(config: any): any {
+export function defineToken(config: AnyTokenConfig): AnyTokenConfig {
   if (!config.properties) return config
   const fields = new Set<string>(config.properties)
   const resolve = config.resolve
@@ -108,10 +109,11 @@ export function defineToken(config: any): any {
  * const motion = defineAnimations({
  *   'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
  * })
- * const system = defineSystem(
- *   { ...tokens, animation: motion.animation },
- *   { breakpoints, animations: motion.animations },
- * )
+ * const system = defineSystem({
+ *   id: 'app',
+ *   tokens: { ...tokens, animation: motion.animation },
+ *   conditions: { animations: motion.animations },
+ * })
  * ```
  */
 export function defineAnimations<
@@ -175,33 +177,35 @@ export function defineUnit<T>(
  * Define a complete token system with all tokens and optional configuration.
  *
  * Returns an object with:
- * - `system` - The token definitions
- * - `t` - Function for inline token styles
+ * - `tokens` - The token definitions
+ * - `q` - The typed query builder for the system's conditions
  * - `stylesheet` - Function to create stylesheets with variants support
- * - `exec` - Function to resolve tokens to CSS styles
+ * - `style` - Pure declaration helper for a single part
+ * - `t` - Function for inline token styles
+ * - `exec` - Low-level resolver from token styles to output props
+ *
+ * The descriptor form (`id`, `tokens`, `conditions`) is canonical; the
+ * `defineSystem(tokens, config)` overload remains for compatibility.
  *
  * @example
  * ```ts
  * const { stylesheet, t } = defineSystem({
- *   bgColor,
- *   textColor,
- *   padding,
- * }, {
- *   breakpoints: { __breakpoints: { sm: 640, md: 768, lg: 1024 } }
+ *   id: 'app',
+ *   tokens: { bgColor, textColor, padding },
+ *   conditions: { media: { sm: 640, md: 768, lg: 1024 } },
  * })
  * ```
  */
-
 export function defineSystem<
-  const S extends Record<string, TokenConfig<any, any>>,
+  const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
 >(definition: SystemDefinition<S, C>): TokenSystem<S & C & DefaultSystemKind, C>
 export function defineSystem<
-  const S extends Record<string, TokenConfig<any, any>>,
+  const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
 >(system: S, config?: C): TokenSystem<S & C, C>
 export function defineSystem<
-  const S extends Record<string, TokenConfig<any, any>>,
+  const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
 >(input: S | SystemDefinition<S, C>, legacyConfig?: C): TokenSystem<S & C, C> {
   const descriptor =
@@ -274,12 +278,11 @@ export function defineSystem<
     stylesheet: (<T extends StylesheetInput<S & C, T>>(
       rules: T | ((q: TokenSystem<S & C, C>['q']) => T),
     ) => {
-      // oxlint-disable-next-line typescript/no-explicit-any -- complex type intersection requires cast
       const declaration = normalizeDeclarations(
         typeof rules === 'function' ? rules(ref.q) : rules,
       )
       if (id) validateDeclarations(declaration, config ?? {})
-      return createStylesheet(ref as any, declaration)
+      return createStylesheet(ref as TokenSystem<AnyDeclaration>, declaration)
     }) as StylesheetType<S & C>,
     exec: createCssExecutor(system, config, id),
   }

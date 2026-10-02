@@ -1,4 +1,5 @@
 import type { Config, TokenSystem } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { createDomIntegration } from './dom.ts'
 import { createNativeIntegration } from './native.ts'
 import type { HostIntegration } from './types.ts'
@@ -15,7 +16,7 @@ const nativeWithoutAdapter = new WeakMap<object, HostIntegration>()
 /** Platform selection belongs at the integration boundary, not in the controller. */
 export function createHostIntegration(
   config: Config,
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
 ): HostIntegration {
   if (config.platform !== 'native') {
     let integration = dom.get(system)

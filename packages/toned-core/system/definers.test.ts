@@ -255,8 +255,7 @@ describe('defineSystem', () => {
   })
 
   describe('exec() nested pseudo blocks and $ keys', () => {
-    // Nested pseudo blocks used to be silently ignored here (the stylesheet
-    // path pre-flattens them, so only t() ever hit this) — now exec flattens
+    // The stylesheet path pre-flattens nested pseudo blocks; exec flattens
     // them itself, so t() carries pseudo and breakpoint blocks too.
     test('a nested : block builds the pseudo chain', () => {
       const { exec } = defineSystem({ bgColor })

@@ -12,7 +12,7 @@ export type SystemOptions = {
   layoutContext?: LayoutContext
   /** Canonical named viewport thresholds in fixed logical pixels. */
   media?: Record<string, number | (LogicalLength & { unit: 'dp' })>
-  // oxlint-disable-next-line typescript/no-explicit-any -- breakpoints config uses generic parameter
+  // oxlint-disable-next-line typescript/no-explicit-any -- matches TokenStyleDeclaration.breakpoints, which keeps the key set open
   breakpoints?: Breakpoints<any>
   animations?: Record<string, AnimationInput>
   bridges?: Record<string, BridgeConfig>

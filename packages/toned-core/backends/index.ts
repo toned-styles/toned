@@ -1,6 +1,7 @@
 import type { BuildManifest } from '../build/manifest.ts'
 import type { CompiledPlan, ResolvedOperation } from '../core/plan.ts'
 import type { TokenSystem } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 
 /** Output adapters consume resolved fields, never selector strings or host refs. */
 export type StyleFields = Readonly<Record<string, unknown>>
@@ -25,7 +26,7 @@ export type OutputBackend = Readonly<{
   validatePlan?(plan: CompiledPlan): void
   resolvePlan?(
     operations: readonly ResolvedOperation[],
-    context: { system: TokenSystem<any>; part: string },
+    context: { system: TokenSystem<AnyDeclaration>; part: string },
   ): ResolvedProps
   resolve(input: ResolvedProps): ResolvedProps
 }>

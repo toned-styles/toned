@@ -1,10 +1,11 @@
 import { connectNativeMedia } from '../stylesheet/media.native.ts'
 import type { NativeHostAdapter } from '../stylesheet/native-host.ts'
 import type { TokenSystem } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { eventState, type HostIntegration } from './types.ts'
 
 export function createNativeIntegration(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   adapter?: NativeHostAdapter,
 ): HostIntegration {
   // Ordinary and relational facts may share a behavior/topology source. Keep

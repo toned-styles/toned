@@ -1,5 +1,3 @@
-import type { QueryPredicate } from '../system/queries.ts'
-import { isQueryKey, queryExpression } from '../system/query-key.ts'
 /**
  * The condition model behind every `'@…'` stylesheet key.
  *
@@ -31,6 +29,8 @@ import { isQueryKey, queryExpression } from '../system/query-key.ts'
  *
  * @module utils/conditions
  */
+import type { QueryPredicate } from '../system/queries.ts'
+import { isQueryKey, queryExpression } from '../system/query-key.ts'
 import { camelToKebab } from './css.ts'
 
 export type ConditionAtom = {
@@ -102,7 +102,7 @@ export function parseConditionKey(key: string): ConditionExpr | null {
   return clauses
 }
 
-/** One clause, one positive atom — the shape the pre-algebra keys had. */
+/** One clause, one positive atom — a simple, non-algebraic key. */
 export function isSimpleExpr(expr: ConditionExpr): boolean {
   return expr.length === 1 && expr[0]!.length === 1 && !expr[0]![0]!.negated
 }
@@ -127,7 +127,7 @@ function lengthSlug(value: number | string): string {
 }
 
 /**
- * The atom's toggle slug — WITHOUT polarity, matching the pre-algebra names:
+ * The atom's toggle slug — WITHOUT polarity, the same name a simple key uses:
  * `media-md`, `cq-field-group-md`, `cq-card-gte400`.
  */
 export function atomSlug(atom: ConditionAtom): string {

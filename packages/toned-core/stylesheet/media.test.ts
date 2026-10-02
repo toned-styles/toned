@@ -395,8 +395,8 @@ describe('query construction per breakpoint value shape', () => {
           },
         },
       } as unknown as TokenSystem<TokenStyleDeclaration>)
-      // Appending px to a string produced '(min-width: 30rempx)' — every rem
-      // breakpoint was silently dead in runtime mode.
+      // Appending px to a string would produce '(min-width: 30rempx)', which
+      // silently never matches.
       expect(queries).toEqual([
         '(min-width: 480px)',
         '(min-width: 30rem)',

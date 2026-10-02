@@ -164,12 +164,7 @@ describe('style matcher with pseudo', () => {
       },
     },
 
-    label: {
-      // style: {
-      // 	pointerEvents: 'none',
-      // 	userSelect: 'none',
-      // },
-    },
+    label: {},
 
     '[variant=accent]': {
       $container: {
@@ -269,12 +264,7 @@ describe('style matcher with media', () => {
       },
     },
 
-    label: {
-      // style: {
-      // 	pointerEvents: 'none',
-      // 	userSelect: 'none',
-      // },
-    },
+    label: {},
 
     '[variant=accent]': {
       $container: {
@@ -368,7 +358,7 @@ describe('style deep-merge across rules', () => {
 })
 
 // =============================================================================
-// NEW API TESTS
+// VARIANTS CHAIN AND RULE TRANSFORMATION
 // =============================================================================
 
 import { createStylesheet } from './StyleSheet.ts'
@@ -430,7 +420,7 @@ const mockTokenSystem = {
   }),
 } as unknown as TokenSystem<typeof testTokens>
 
-describe('new API: stylesheet with variants chain', () => {
+describe('stylesheet with variants chain', () => {
   test('creates stylesheet with variants method', () => {
     const rules = {
       container: {
@@ -467,7 +457,7 @@ describe('new API: stylesheet with variants chain', () => {
   })
 })
 
-describe('new API: transformRulesToInternal', () => {
+describe('transformRulesToInternal', () => {
   test('transforms inline pseudo classes for self', () => {
     // When a pseudo class is defined inline in an element, it should only affect that element
     const rules = {

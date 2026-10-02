@@ -1,6 +1,7 @@
 import { systemDefinition } from '../build/manifest.ts'
 import type { TailwindManifest } from '../build/tailwind.ts'
 import type { TokenSystem } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { compileTailwindPlan } from './tailwind-plan.ts'
 import type { TailwindBackend } from './tailwind.ts'
@@ -23,7 +24,7 @@ export function tailwindProfileDefinition(profile: TailwindBackend): string {
 /** Runtime entry: reconstruct a build-bound backend from a published JSON
  * manifest. No Tailwind import, CSS generation, DOM access or stylesheet writes. */
 export function createTailwindRuntime(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   profile: TailwindBackend,
   input: TailwindManifest,
 ) {

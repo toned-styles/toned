@@ -113,7 +113,7 @@ base.variants(
   { defaults: { size: undefined } },
 )
 // @ts-expect-error empty schemas still receive exact declaration checks
-base.variants(($: Variants<{}>) => ({
+base.variants((_$: Variants<{}>) => ({
   named: { Root: { padding: 2, typo: 1 } },
 }))
 // @ts-expect-error open schemas cannot fall through to an unchecked overload

@@ -24,6 +24,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { collectAdHocConditions } from '../utils/conditions.ts'
 import { immutableSnapshot, isImmutableSnapshot } from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -392,15 +393,10 @@ export function createStylesheet<
 }
 
 /*
- * `Base` is the untyped runtime engine — it walks rules dynamically and already
- * treats its ref as AnyValue internally. It must therefore accept a system of
- * ANY shape: TokenSystem<S> is invariant in S (StylesheetType<S> takes S in
- * parameter position), so TokenSystem<Concrete> is not assignable to
- * TokenSystem<TokenStyleDeclaration> and pinning it to the open declaration
- * rejects every real system.
+ * `Base` is the untyped runtime engine — it walks rules dynamically, so it
+ * accepts a system of any declaration (see `AnyDeclaration`).
  */
-// oxlint-disable-next-line typescript/no-explicit-any -- the runtime engine is system-agnostic
-type BaseRef = TokenSystem<any>
+type BaseRef = TokenSystem<AnyDeclaration>
 type BaseRules = AnyValue
 
 export class Base {
@@ -1027,13 +1023,16 @@ export class Base {
     return this.applyTokens(this.matcher.match(facts)[key], key, facts)
   }
 
-  // oxlint-disable-next-line typescript/no-explicit-any -- return type is dynamic based on token system
   private tokenOutputs?: Map<
     string | undefined,
     WeakMap<object, { tokens: Tokens; output: AnyValue }>
   >
 
-  applyTokens(value: ElementStyle, part?: string, facts = this.modsState): any {
+  applyTokens(
+    value: ElementStyle,
+    part?: string,
+    facts = this.modsState,
+  ): AnyValue {
     const declaration = value ?? EMPTY_DECLARATION
     // Public imperative callers may ask for arbitrary names. Keep the strong
     // part index bounded to this plan; declaration keys below remain weak.
@@ -1059,23 +1058,16 @@ export class Base {
     value: ElementStyle,
     part?: string,
     facts = this.modsState,
-  ): any {
+  ): AnyValue {
     const backend = this.config.backend
     if (backend?.resolvePlan && part) {
-      const plan = compileRules(
-        this.ref as TokenSystem<any>,
-        this.rules,
-        backend.platform,
-      )
-      const selected = resolvePlan(
-        plan,
-        this.ref as TokenSystem<any>,
-        this.tokens,
-        facts,
-        { preserveConditions: backend.browserConditions, part },
-      )
+      const plan = compileRules(this.ref, this.rules, backend.platform)
+      const selected = resolvePlan(plan, this.ref, this.tokens, facts, {
+        preserveConditions: backend.browserConditions,
+        part,
+      })
       return backend.resolvePlan(selected[part] ?? [], {
-        system: this.ref as TokenSystem<any>,
+        system: this.ref,
         part,
       })
     }
@@ -1107,7 +1099,7 @@ export class Base {
           )[part] ?? { style: {} })
       : portable
         ? resolveTokenStyle(
-            this.ref as TokenSystem<any>,
+            this.ref,
             value ?? {},
             this.tokens,
             this.config.platform ?? 'web',
@@ -1431,7 +1423,7 @@ export class Base {
           }
         }
       } else if (ref) {
-        // Single ref (native) — unchanged.
+        // A single ref (native): apply its current style directly.
         setStyles(
           ref,
           this.getCurrentStyle(elementKey),

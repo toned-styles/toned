@@ -2,6 +2,7 @@ import { validateGridDeclarations } from '../grid/validation.ts'
 import { sharedRuntimeNormalization } from '../stylesheet/matcher/sharedNormalization.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import {
+  type RuleObject,
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../stylesheet/rule-protocol.ts'
@@ -10,6 +11,7 @@ import type {
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import {
@@ -123,7 +125,7 @@ function operationsByPart(plan: CompiledPlan) {
 const cache = new WeakMap<object, WeakMap<object, Map<string, CompiledPlan>>>()
 
 export function compilePlan(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   sheet: object,
   platform: 'web' | 'native',
 ): CompiledPlan {
@@ -136,7 +138,7 @@ export function compilePlan(
 /** Shared declaration compiler. Its result contains only immutable declaration
  * data and semantic facts; CSS selectors/classes and host state are adapters. */
 export function compileRules(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   rules: Readonly<Record<string, unknown>>,
   platform: 'web' | 'native',
 ): CompiledPlan {
@@ -156,7 +158,7 @@ export function compileRules(
   const kinds: Record<string, string> = {}
   const requiredExtensions = new Set<string>()
   const append = (
-    rule: Record<string, any>,
+    rule: RuleObject,
     predicate: Predicate,
     path: readonly string[],
     query = false,
@@ -331,7 +333,7 @@ function implies(earlier: readonly Fact[], later: Fact): boolean {
 }
 
 function footprint(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   operation: DeclarationOperation,
   platform: 'web' | 'native',
 ): readonly string[] {
@@ -356,7 +358,7 @@ function footprint(
 }
 
 function shadowDiagnostics(
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   operations: readonly DeclarationOperation[],
   platform: 'web' | 'native',
 ): ShadowDiagnostic[] {
@@ -410,7 +412,7 @@ function shadowDiagnostics(
 
 export function resolvePlan(
   plan: CompiledPlan,
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   tokens: Tokens,
   facts: Facts = {},
   options: {
@@ -495,7 +497,7 @@ export function foldOperations(operations: readonly ResolvedOperation[]) {
 /** Inspect winners and every competing write without retaining host objects. */
 export function explain(
   plan: CompiledPlan,
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   tokens: Tokens,
   facts: Facts = {},
 ) {

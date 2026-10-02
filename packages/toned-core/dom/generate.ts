@@ -1,12 +1,12 @@
-import {
-  resolveAlphaChannels,
-  resolveConfiguredToken,
-} from '../core/resolve.ts'
 /**
  * CSS generation utilities.
  *
  * @module dom/generate
  */
+import {
+  resolveAlphaChannels,
+  resolveConfiguredToken,
+} from '../core/resolve.ts'
 import { namespaceCss } from '../system/namespace.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
@@ -40,7 +40,7 @@ const tokens = new Proxy(Object.create(null), {
 /**
  * Generate CSS from a token style declaration.
  *
- * `scope` (an ancestor selector, e.g. `.haelo-ds`) namespaces the emitted
+ * `scope` (an ancestor selector, e.g. `.my-design-system`) namespaces the emitted
  * rules so two systems can share one page without their identically-named
  * atomic classes fighting: a scoped system's classes, alpha steps, state and
  * pseudo toggles apply only under the scope element, while the `html {}`
@@ -111,7 +111,7 @@ export function generate<const S extends TokenStyleDeclaration>(
 
         // SIBLING source channel: the same state on a `_s` source toggles
         // `--toned_sib-<alias>` on its FOLLOWING SIBLINGS (the `~` combinator
-        // the sidebar's peer-recolor css used), self-scoped: a sibling's own
+        // of peer-recolor css), self-scoped: a sibling's own
         // subtree resets, so only the sibling element itself answers.
         const sibName = `--toned_sib-${alias}`
         stateToggles += `html {${sibName}: initial;}`
@@ -128,13 +128,13 @@ export function generate<const S extends TokenStyleDeclaration>(
   //
   // The unset fallback must preserve the property's pre-bridge behavior:
   // INHERITED properties fall back to `inherit` (an icon with no iconColor
-  // keeps inheriting its parent's colour — `initial` painted them black),
+  // keeps inheriting its parent's colour — `initial` would paint it black),
   // everything else to `initial`.
   // A var-name → (bridge, cssProp, selector) index for the token loop below:
   // DESCENDANT bridges compile class-scoped (the setter class carries the
   // descendant rule directly), because an always-on `._ <sel>` rule
   // cascade-WINS over component css even when its parameter is unset — an
-  // unset var's fallback still participates in the cascade, which blew every
+  // unset var's fallback still participates in the cascade, which would blow every
   // un-tokened icon up to its intrinsic size. Their token values are closed
   // sets, so the class path is total. Pseudo-element bridges keep the
   // parameter mechanism (they attach to the element itself, tie with
@@ -218,7 +218,8 @@ export function generate<const S extends TokenStyleDeclaration>(
     PSEUDO_STATES.forEach((pseudo) => {
       const name = `--toned_${pseudo}`
       rootRule += `${name}: initial;`
-      // make it work as expected with nested elements
+      // Reset under a pseudo-active element so its nested elements do not
+      // inherit the toggle; a nested element in the same pseudo re-enables it.
       const toggles = `${scope}._:${pseudo} {${name}: ;} ${scope}._:${pseudo} ._ {${name}: initial;} ${scope}._:${pseudo} ._:${pseudo} {${name}: ;}`
       // Hover only exists where the primary input can hover — the same gate
       // every hover utility framework applies. Without it, a touch tap leaves
@@ -237,7 +238,7 @@ export function generate<const S extends TokenStyleDeclaration>(
       `${scope}._s:hover ._s:hover {--toned_src-hover: ;}}`
 
     // Its focus-within twin (a container's focus revealing a descendant —
-    // sidebar's row actions): pure css, no JS event, never hover-gated.
+    // e.g. a list row's actions): pure css, no JS event, never hover-gated.
     rootRule += '--toned_src-focus-within: initial;'
     rules +=
       `${scope}._s:focus-within {--toned_src-focus-within: ;} ` +

@@ -22,7 +22,7 @@ customGlobal[SYMBOL_CONFIG] ??= {
   pseudoMode: 'runtime',
   debug: false,
 
-  // Default getProps returns empty object - overridden by toned-react with actual style/className props
+  // Default getProps returns empty object - overridden by @toned/react with actual style/className props
   getProps() {
     warnOnce(
       'no-platform-config',

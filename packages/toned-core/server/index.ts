@@ -1,5 +1,5 @@
-import { resolveCssPlan } from '../backends/css/plan.ts'
 /** Pure resolution: no React imports, global config installation or host writes. */
+import { resolveCssPlan } from '../backends/css/plan.ts'
 import type { OutputBackend, ResolvedProps } from '../backends/index.ts'
 import {
   cssVariablesBackend,

@@ -1,9 +1,9 @@
-import { unitlessNumbers } from './unitlessNumbers.ts'
 /**
  * CSS utility functions.
  *
  * @module utils/css
  */
+import { unitlessNumbers } from './unitlessNumbers.ts'
 
 const camelToKebabRe = /([a-z0-9]|(?=[A-Z]))([A-Z])/g
 

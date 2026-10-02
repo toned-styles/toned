@@ -2,9 +2,8 @@
  * Nested selector-block flattening for inline token styles.
  *
  * `stylesheet()` accepts nested `'@bp'` and `':pseudo'` blocks and flattens them
- * in {@link StyleMatcher} before they reach `exec`. `t()` had no equivalent step,
- * so nested blocks passed to it were silently discarded. This module is that
- * missing step.
+ * in {@link StyleMatcher} before they reach `exec`. This module is the
+ * equivalent step for `t()`, so nested blocks passed to it are not discarded.
  *
  * @module utils/selectorBlocks
  */

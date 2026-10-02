@@ -1,10 +1,11 @@
 import { fingerprint, systemDefinition } from '../build/manifest.ts'
 import type { Predicate, ResolvedOperation } from '../core/plan.ts'
 import type { TokenSystem } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
 import type { ResolvedProps } from './index.ts'
 import { serializeTailwindParameter, type TailwindBackend } from './tailwind.ts'
 
-type Context = { system: TokenSystem<any>; part: string }
+type Context = { system: TokenSystem<AnyDeclaration>; part: string }
 const identity = (value: unknown) => JSON.stringify(value)
 const key = (value: unknown) => fingerprint(identity(value))
 
@@ -13,7 +14,7 @@ const key = (value: unknown) => fingerprint(identity(value))
  * Boolean algebra stays linear in predicate size and never expands to DNF. */
 export function compileTailwindPlan(
   profile: TailwindBackend,
-  system: TokenSystem<any>,
+  system: TokenSystem<AnyDeclaration>,
   operations: readonly ResolvedOperation[],
   emitCss = true,
 ) {

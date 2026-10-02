@@ -1,11 +1,15 @@
-import { serializeCssValue } from '../utils/css-value.ts'
 /** Differential host patches with per-controller requests and committed declarations. */
+import { serializeCssValue } from '../utils/css-value.ts'
 import { camelToKebab } from '../utils/css.ts'
 import { immutableSnapshot, isImmutableSnapshot } from '../utils/immutable.ts'
 import { nativeHostAdapter } from './native-host.ts'
 
+// oxlint-disable-next-line typescript/no-explicit-any -- a DOM element or a native view handle; writes are duck-typed per platform
 type Host = any
-type Style = Record<string, any>
+/** Host props and nested style objects, written field by field. */
+// oxlint-disable-next-line typescript/no-explicit-any -- nested style/prop bags of either platform; values are spread, compared and serialized untyped
+export type HostOutput = Record<string, any>
+type Style = HostOutput
 type Ownership = {
   previous: Style
   desired: Style
@@ -19,7 +23,6 @@ type OwnerRequest = {
   declarative: Style
   aggregate?: { output: Style; caller: Style; value: Style }
 }
-export type HostOutput = Record<string, any>
 export type HostOutputDriver = {
   update(output: HostOutput): void
   cancel(): void

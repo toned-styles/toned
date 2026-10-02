@@ -6,7 +6,7 @@
  *
  * - Every alpha-capable colour rule routes through relative colour syntax:
  *   `background-color: rgb(from var(--primary) r g b / var(--toned-alpha-background-color, 1))`.
- *   One rule per token value, exactly as before — no token × alpha explosion.
+ *   One rule per token value — no token × alpha explosion.
  * - The parameter is registered `@property { inherits: false; initial-value: 1 }`:
  *   non-inheritance is load-bearing, or a parent's wash would cascade onto
  *   every descendant's colour.
@@ -77,8 +77,8 @@ export const alphaWrappable = (value: unknown): value is string =>
  *
  * `calc(alpha * …)` — MULTIPLYING the source's own alpha channel — is
  * load-bearing: a bare `/ expr` REPLACES it, which silently turns a
- * translucent token opaque (measured: every `--border: rgb(20 20 28 / 0.08)`
- * hairline rendered solid, 39 of 109 showcase slugs shifted). Multiplication
+ * translucent token opaque (a `--border: rgb(20 20 28 / 0.08)` hairline
+ * would render solid). Multiplication
  * also matches color-mix-with-transparent semantics, which compose alphas.
  */
 export const withAlphaExpr = (colorValue: string, alphaExpr: string): string =>

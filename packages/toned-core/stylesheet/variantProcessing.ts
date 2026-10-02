@@ -234,8 +234,8 @@ export function processVariantRules(
 }
 
 /**
- * Merge base rules with variant rules for StyleMatcher
- * StyleMatcher now handles both the new API format and internal format directly
+ * Merge base rules with variant rules for StyleMatcher, which reads both the
+ * authored and the internal rule format directly.
  */
 export function mergeRules(
   baseRules: AnyValue,

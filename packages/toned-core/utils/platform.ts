@@ -1,5 +1,6 @@
 /**
- * `'@platform.<name>'` stylesheet keys — platform-conditional styling.
+ * `'@platform.<name>'` stylesheet keys — platform-conditional styling. The
+ * authored `'@platform <name>'` spelling is normalized to this form first.
  *
  * Unlike breakpoints (which vary at runtime and resolve through CSS variable
  * toggles or listeners), the platform is static for the life of a process, so
@@ -9,10 +10,10 @@
  * dropped. The matcher then compiles ordinary rules — no runtime machinery,
  * no CSS emitted for foreign platforms.
  *
- *   root: {
+ *   Root: {
  *     paddingX: 4,
- *     '@platform.web': { style: { whiteSpace: 'nowrap' } },
- *     '@platform.native': { style: { includeFontPadding: false } },
+ *     '@platform web': { $style: { whiteSpace: 'nowrap' } },
+ *     '@platform native': { $style: { includeFontPadding: false } },
  *   }
  *
  * @module utils/platform

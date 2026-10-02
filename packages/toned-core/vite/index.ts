@@ -28,7 +28,7 @@ export interface TonedPluginOptions<
    * sit at a chosen point in the cascade — e.g. `layer: 'components'` under
    * Tailwind's `theme, base, components, utilities` order lets a caller's
    * utility className still override a component's toned styling, exactly as
-   * it could override the component's own classes before toned. Unlayered
+   * it would override the component's own classes. Unlayered
    * (the default), the generated rules beat every layered rule on the page.
    */
   layer?: string
