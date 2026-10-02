@@ -51,6 +51,15 @@
       "rules": {
         "import/default": "off"
       }
+    },
+    {
+      "files": ["examples/fabric-acceptance/**"],
+      "rules": {
+        "react/refs": "off",
+        "react/static-components": "off",
+        "react/immutability": "off",
+        "react/exhaustive-deps": "off"
+      }
     }
   ]
 }
