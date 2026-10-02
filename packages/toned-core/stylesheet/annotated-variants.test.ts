@@ -41,7 +41,8 @@ test('annotated callbacks preserve defaults and resolution across renderers', ()
     )
   }
   expect(native.resolve(base).Root.style).toEqual({ opacity: 0 })
+  // An extension is written after the sheet's variants, so it wins over them.
   expect(
     native.resolve(sheet.extend({ Root: { opacity: 0.5 } })).Root.style,
-  ).toEqual({ opacity: 1 })
+  ).toEqual({ opacity: 0.5 })
 })

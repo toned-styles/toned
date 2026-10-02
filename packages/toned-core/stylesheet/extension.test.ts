@@ -4,7 +4,7 @@ import { buildStyles } from '../build/index.ts'
 import { createNativeRenderer, createWebRenderer } from '../server/index.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import type { Variants } from '../types/index.ts'
-import { overrideSheet } from './overrideSheet.ts'
+import { derivationSteps } from './derivations.ts'
 import * as variantProcessing from './variantProcessing.ts'
 
 const ui = defineSystem({
@@ -28,7 +28,7 @@ const sheet = ui.stylesheet({ Root: { opacity: 0, width: 4 } }).variants(
 )
 
 test('pure override sheets add authoritative layers for native and CSS rendering', () => {
-  const overridden = overrideSheet(sheet, { Root: { opacity: 1, width: null } })
+  const overridden = sheet.extend({ Root: { opacity: 1, width: null } })
   const native = createNativeRenderer(ui, { tokens: {} })
   expect(native.resolve(overridden).Root.style).toEqual({ opacity: 1 })
   expect(native.resolve(sheet).Root.style).toEqual({ opacity: 0.5, width: 4 })
@@ -45,7 +45,7 @@ test('pure override sheets add authoritative layers for native and CSS rendering
 })
 
 test('pure override factories select existing variants and retain defaults', () => {
-  const overridden = overrideSheet(sheet, {}, ($) => ({
+  const overridden = sheet.extend({}, ($) => ({
     [$.active(true)]: { Root: { opacity: 1 } },
   }))
   const native = createNativeRenderer(ui, { tokens: {} })
@@ -68,8 +68,7 @@ test('override query factories retain nullable leaves, named composition and par
     .variants(($: Variants<{ active: boolean }>) => ({
       [$.active(true)]: { Root: { opacity: 0.5 } },
     }))
-  const derived = overrideSheet(
-    base,
+  const derived = base.extend(
     (q) => ({
       Root: { width: null },
       [q.all(q.media('wide'), q.part('Root').state('hover'))]: {
@@ -107,7 +106,7 @@ test('override query factories retain nullable leaves, named composition and par
 test('untyped override queries reject implicit local states at sheet level', () => {
   const q = ui.q
   expect(() =>
-    overrideSheet(sheet, {
+    sheet.extend({
       [q.all(q.state('hover'))]: { Root: { opacity: 0 } },
     } as never),
   ).toThrow('sheet-level')
@@ -118,18 +117,17 @@ test.each(['$kind', '$$type'])(
   (key) => {
     for (const value of [null, undefined, 'view', 'text']) {
       expect(() =>
-        overrideSheet(sheet, { Root: { [key]: value } } as never),
+        sheet.extend({ Root: { [key]: value } } as never),
       ).toThrow('static part kind')
       for (const condition of ['Root:hover', 'Root~:hover']) {
         expect(() =>
-          overrideSheet(sheet, {
+          sheet.extend({
             Root: { [condition]: { [key]: value } },
           } as never),
         ).toThrow('static part kind')
       }
       expect(() =>
-        overrideSheet(
-          sheet,
+        sheet.extend(
           {},
           ($) =>
             ({
@@ -142,11 +140,11 @@ test.each(['$kind', '$$type'])(
 )
 
 test('plain override variants do not merge composition source defaults', () => {
-  const prior = overrideSheet(sheet, { Root: { width: null } })
+  const prior = sheet.extend({ Root: { width: null } })
   const merge = vi.spyOn(variantProcessing, 'deepMerge')
   let derived: typeof sheet
   try {
-    derived = overrideSheet(prior, { Root: { opacity: 0 } }, ($) => ({
+    derived = prior.extend({ Root: { opacity: 0 } }, ($) => ({
       [$.active(true)]: { Root: { opacity: 1 } },
     }))
     expect(merge).not.toHaveBeenCalled()
@@ -156,4 +154,40 @@ test('plain override variants do not merge composition source defaults', () => {
   expect(
     createNativeRenderer(ui, { tokens: {} }).resolve(derived!).Root.style,
   ).toEqual({ opacity: 1 })
+})
+
+test('an extension wins over the sheet\'s variants; its own variant rules win over both', () => {
+  const native = createNativeRenderer(ui, { tokens: {} })
+  const resolve = (target: typeof sheet, active: boolean) =>
+    native.resolve(target, { variants: { active } }).Root.style
+  // The sheet: opacity 0, and 0.5 when active.
+  expect(resolve(sheet, true)).toMatchObject({ opacity: 0.5 })
+  const flat = sheet.extend({ Root: { opacity: 1 } })
+  expect(resolve(flat, false)).toMatchObject({ opacity: 1 })
+  expect(resolve(flat, true)).toMatchObject({ opacity: 1 })
+  const restated = sheet.extend({ Root: { opacity: 1 } }, ($) => ({
+    [$.active(true)]: { Root: { opacity: 0 } },
+  }))
+  expect(resolve(restated, false)).toMatchObject({ opacity: 1 })
+  expect(resolve(restated, true)).toMatchObject({ opacity: 0 })
+  // The sheet it was derived from is untouched.
+  expect(resolve(sheet, true)).toMatchObject({ opacity: 0.5 })
+})
+
+test('an extension restyles existing parts only', () => {
+  expect(() => sheet.extend({ Rot: { opacity: 1 } } as never)).toThrow(
+    /"Rot" is not one of them \(Root\)/,
+  )
+})
+
+test('derivation steps lead from an ancestor to the derived sheet', () => {
+  const first = sheet.extend({ Root: { opacity: 1 } })
+  const second = first.extend({ Root: { width: 8 } })
+  expect(derivationSteps(sheet, sheet)).toEqual([])
+  expect(derivationSteps(second, sheet)?.map((step) => step.rules)).toEqual([
+    { Root: { opacity: 1 } },
+    { Root: { width: 8 } },
+  ])
+  expect(derivationSteps(second, first)).toHaveLength(1)
+  expect(derivationSteps(sheet, second)).toBeUndefined()
 })

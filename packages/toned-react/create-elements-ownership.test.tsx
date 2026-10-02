@@ -11,7 +11,6 @@ import { afterEach, expect, test, vi } from 'vitest'
 import {
   ConfigProvider,
   createElements,
-  overrideStyles,
   StyleOverrides,
 } from './index.ts'
 import web from './react-web.ts'
@@ -455,7 +454,7 @@ test('an internal custom host ref move validates retained grid areas without rer
 
 test('a live subtree override can introduce a standalone scope requirement', () => {
   const Independent = createElements(base)
-  const added = overrideStyles(base, {
+  const added = base.extend({
     'Root:hover': { Label: { $style: { opacity: 0.5 } } },
   })
   const wrap = (enabled: boolean) => (
@@ -480,7 +479,7 @@ test('removing a cross-part rule through subtree overrides permits a standalone 
     'Root:hover': { Label: { $style: { opacity: 0.5 } } },
   })
   const Standalone = createElements(sheet)
-  const removed = overrideStyles(sheet, {
+  const removed = sheet.extend({
     'Root:hover': { Label: { $style: { opacity: null } } },
   })
   const wrap = (enabled: boolean) => (

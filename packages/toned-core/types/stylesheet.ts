@@ -1185,12 +1185,6 @@ export type VariantsCallback<
 /**
  * Stylesheet with variants() method for adding conditional styles.
  */
-type ExtendKinds<Existing, Extension> = {
-  [
-    E in (keyof Existing | PickString<ExtractElements<Extension>>) & string
-  ]: E extends keyof Existing ? Existing[E] : InferElementType<Extension, E>
-}
-
 export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
@@ -1265,9 +1259,14 @@ export interface StylesheetWithVariants<
   ): Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
 
   /**
-   * Compose a new stylesheet by deep-merging additional rules into this one.
-   * The result is itself composable, so `.extend()` and `.variants()` chain in
-   * any order.
+   * Derive a new stylesheet whose rules sit above this one's, variants
+   * included: what the extension says wins. It restyles the parts the sheet
+   * has; a part it does not have is an error, so a typo cannot pass. A value
+   * of `null` removes an inherited one. The rules may be a callback over the
+   * sheet's query builder, and the optional second argument adds variant
+   * rules over the axes the sheet already has.
+   *
+   * The same derived sheet restyles a subtree when given to `StyleOverrides`.
    *
    * @example
    * ```ts
@@ -1275,43 +1274,14 @@ export interface StylesheetWithVariants<
    * ```
    */
   extend<
-    const Extension extends StylesheetInput<
-      S,
-      Extension,
-      Elements | PickString<ExtractElements<Extension>>,
-      Kinds
-    >,
+    This extends object,
+    const Rules extends Record<string, unknown>,
+    const Variants extends Record<string, unknown> = {},
   >(
-    rules: Extension &
-      NoInfer<
-        StylesheetValidation<
-          S,
-          Extension,
-          Elements | PickString<ExtractElements<Extension>>,
-          Kinds
-        >
-      >,
-    /**
-     * Variant rules to merge into the sheet's own table, over the SHEET's
-     * axes. A matcher the sheet declared is replaced; one it did not is
-     * added. Resolved against the sheet's own key order, so
-     * `$.size('sm').variant('ghost')` names the same matcher here as it does
-     * there regardless of the order it is written in.
-     */
-    variants?: VariantsCallback<
-      S,
-      Elements | PickString<ExtractElements<Extension>>,
-      Mods,
-      ExtendKinds<Kinds, Extension>
-    >,
-  ): Stylesheet<S, ExtendKinds<Kinds, Extension>, Mods, Defaults> &
-    StylesheetWithVariants<
-      S,
-      Elements | PickString<ExtractElements<Extension>>,
-      Mods,
-      ExtendKinds<Kinds, Extension>,
-      Defaults
-    >
+    this: This,
+    rules: ExtensionRules<This, Rules>,
+    variants?: ExtensionVariants<This, Variants>,
+  ): This
 }
 
 /**
@@ -1437,4 +1407,8 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
 >
 
 // Forward reference for TokenSystem (defined in system.ts)
+import type {
+  ExtensionRules,
+  ExtensionVariants,
+} from '../stylesheet/extension.ts'
 import type { TokenSystem } from './system.ts'

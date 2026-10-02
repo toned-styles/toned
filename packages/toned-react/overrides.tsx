@@ -1,5 +1,10 @@
-import { type Config, overrideSheet } from '@toned/core'
-import { immutableSnapshot } from '@toned/core/utils'
+import {
+  type Config,
+  type DerivationStep,
+  derivationOf,
+  derivationSteps,
+} from '@toned/core'
+import { SYMBOL_INIT } from '@toned/core/utils'
 import {
   createContext,
   createElement,
@@ -11,80 +16,60 @@ import {
 import { useRuntimeConfig } from './runtime-config.ts'
 
 /**
- * Stylesheet overrides — the styling analogue of a slot/implementation
- * override: an ANCESTOR decides that a stylesheet resolves differently for the
- * subtree under it, and every `useStyles`/`useBind` of that sheet below picks
- * the decision up without the component threading anything.
+ * Stylesheet overrides: an ANCESTOR decides that a stylesheet resolves
+ * differently for the subtree under it, and every `useStyles`/`useBind` of
+ * that sheet below picks the decision up without the component threading
+ * anything.
  *
- * The mechanism is identity-keyed and deliberately knows nothing about paths,
- * zones or names: an entry pairs the SHEET OBJECT with a partial rules object,
- * and a sheet matches an entry by `===`. Which entries are provided WHERE is
- * the integration's job — a host that addresses parts of the tree (a zone, a
- * router, a theme scope) renders `<StyleOverrides value={…}>` with
- * whatever it decided applies at that point. Core stays a context and a merge.
+ * An override is an ordinary derived sheet, `sheet.extend(rules)`. The
+ * provider is given the derived sheet; a component that asks for the sheet it
+ * derives from resolves the derived one instead. Matching is by identity along
+ * the derivation chain, and deliberately knows nothing about paths, zones or
+ * names. Which overrides are provided WHERE is the integration's job.
  *
- * Resolution: entries accumulate outer→inner (nesting concatenates), and a
- * sheet's matching entries become complete ordered override layers. The
- * selected scoped/provider policy chooses their order; later layers win
- * overlapping output fields, including variant and condition output.
+ * Resolution: entries accumulate outer→inner (nesting concatenates). When
+ * several match one sheet, each one's extension steps are replayed over the
+ * result of the one before, so later layers win overlapping output fields,
+ * including variant and condition output.
  *
  * Scope: render-time only. Module-level `bind()` cannot read context and is
  * never overridden.
  */
 
-// oxlint-disable-next-line typescript/no-explicit-any -- the runtime is stylesheet-agnostic; index.ts provides the typed surface.
-type AnyRules = Record<string, any>
+/** A derived sheet, or one that applies only where the ambient scope matches. */
+export type StyleOverride =
+  | object
+  | {
+      /** The derived sheet, from `sheet.extend(…)`. */
+      readonly sheet: object
+      /**
+       * When set, the override applies only where the config's ambient scope
+       * matches (config.useStyleOverrideScope + matchStyleOverrideScope — the
+       * host integration's channel; a host can feed it a zone or route path).
+       */
+      readonly scope?: string
+    }
 
-export interface StyleOverrideEntry {
+/** An entry in its provider, normalised once per provider value. */
+interface OverrideEntry {
   readonly sheet: object
-  readonly rules: Readonly<AnyRules>
-  /**
-   * Variant rules for the target sheet's OWN axes, resolved when the derived
-   * sheet is built so they can use the sheet's key order (see
-   * `mergeOverrideVariants` in core). Set by the entry's `.variants()`, which
-   * is non-enumerable so an entry still compares and spreads as plain data.
-   */
-  // oxlint-disable-next-line typescript/no-explicit-any -- the selector is the sheet's, typed at the index.ts surface
-  readonly variantRules?: ($: any) => AnyRules
-  /**
-   * When set, the entry applies only where the config's ambient scope matches
-   * (config.useStyleOverrideScope + matchStyleOverrideScope — the host
-   * integration's channel; a host can feed it a zone or route path, for example).
-   */
-  readonly scope?: string
+  readonly scope: string | undefined
 }
 
-/**
- * Pair a stylesheet with partial rules. Typed via the index.ts re-export.
- *
- * The returned entry carries `.variants()`, spelled like the stylesheet's own
- * so an override says what a declaration says: `overrideStyles(sheet, {…})
- * .variants($ => ({ [$.size('sm')]: {…} }))`. It returns a NEW entry, so an
- * entry stays a plain value that can be shared and compared by identity.
- */
-export function overrideStyles(
-  sheet: object,
-  rules: AnyRules,
-  opts?: { scope?: string },
-): StyleOverrideEntry {
-  rules = immutableSnapshot(rules)
-  const base: StyleOverrideEntry =
-    opts?.scope !== undefined
-      ? { sheet, rules, scope: opts.scope }
-      : { sheet, rules }
-  return withVariants(base)
-}
+const isScoped = (
+  entry: StyleOverride,
+): entry is { readonly sheet: object; readonly scope?: string } =>
+  !(SYMBOL_INIT in entry) && 'sheet' in entry
 
-/** Attach the chained `.variants()` without making it an enumerable field. */
-function withVariants(entry: StyleOverrideEntry): StyleOverrideEntry {
-  Object.defineProperty(entry, 'variants', {
-    // oxlint-disable-next-line typescript/no-explicit-any -- the selector is the sheet's own; index.ts types it
-    value: (fn: ($: any) => AnyRules) =>
-      withVariants({ ...entry, variantRules: fn }),
-    enumerable: false,
+const normalise = (value: readonly StyleOverride[]): OverrideEntry[] =>
+  value.map((entry) => {
+    const sheet = isScoped(entry) ? entry.sheet : entry
+    if (!derivationOf(sheet))
+      throw new Error(
+        '[toned] StyleOverrides takes derived stylesheets. Pass `sheet.extend(rules)`, not the sheet itself or a plain rules object.',
+      )
+    return { sheet, scope: isScoped(entry) ? entry.scope : undefined }
   })
-  return Object.freeze(entry)
-}
 
 /** Default scope match: the entry's scope appears in the ambient path as a
  * contiguous run of whole segments. */
@@ -105,17 +90,20 @@ export function matchesScopeDefault(
   return false
 }
 
-const StyleOverridesContext = createContext<readonly StyleOverrideEntry[]>([])
+const StyleOverridesContext = createContext<readonly OverrideEntry[]>([])
 
 export function StyleOverrides({
   value,
   children,
 }: {
-  value: readonly StyleOverrideEntry[]
+  value: readonly StyleOverride[]
   children?: ReactNode
 }) {
   const outer = useContext(StyleOverridesContext)
-  const merged = useMemo(() => [...outer, ...value], [outer, value])
+  const merged = useMemo(
+    () => [...outer, ...normalise(value)],
+    [outer, value],
+  )
   return createElement(
     StyleOverridesContext.Provider,
     { value: merged },
@@ -123,14 +111,22 @@ export function StyleOverrides({
   )
 }
 
+type DerivationReplay = (
+  rules: unknown,
+  variants?: unknown,
+  defaults?: Readonly<Record<string, unknown>>,
+) => object
+/** The core's derivation entry point; `sheet.extend` is the public spelling. */
+const APPLY_DERIVATION = Symbol.for('@toned/override')
+
 interface DerivedCache {
   config: Config
   /** The full context array the derivation was computed against. */
-  context: readonly StyleOverrideEntry[]
+  context: readonly OverrideEntry[]
   /** The ambient scope at derivation time — scoped matching depends on it. */
   ambient: string | null | undefined
   /** The matched entries (identities, in order) — revalidation short-circuit. */
-  matched: readonly StyleOverrideEntry[]
+  matched: readonly OverrideEntry[]
   derived: object
 }
 
@@ -154,11 +150,12 @@ function remember(sheet: object, value: DerivedCache) {
 }
 
 function sameEntries(
-  a: readonly StyleOverrideEntry[],
-  b: readonly StyleOverrideEntry[],
+  a: readonly OverrideEntry[],
+  b: readonly OverrideEntry[],
 ): boolean {
   if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  for (let i = 0; i < a.length; i++)
+    if (a[i]?.sheet !== b[i]?.sheet || a[i]?.scope !== b[i]?.scope) return false
   return true
 }
 
@@ -197,11 +194,16 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
   }
 
   const matchScope = config.matchStyleOverrideScope ?? matchesScopeDefault
-  const applicable = entries.filter(
-    (e) =>
-      e.sheet === sheet &&
-      (e.scope === undefined || matchScope(e.scope, ambient)),
-  )
+  const steps = new Map<OverrideEntry, readonly DerivationStep[]>()
+  const applicable = entries.filter((entry) => {
+    if (entry.scope !== undefined && !matchScope(entry.scope, ambient))
+      return false
+    // The entry applies to the sheet it derives from, however many steps back.
+    const chain = derivationSteps(entry.sheet, sheet)
+    if (!chain?.length) return false
+    steps.set(entry, chain)
+    return true
+  })
   // Scoped entries apply after unscoped, most specific (deepest scope) last —
   // so specificity wins over provider order among scoped entries, matching the
   // zone-override intuition; ties keep provider order (stable sort).
@@ -235,16 +237,18 @@ export function useOverriddenSheet<T extends object>(sheet: T): T {
     return equivalent.derived as T
   }
 
-  let derived: object = sheet
-  for (const entry of matched) {
-    derived = (
-      overrideSheet as (
-        sheet: object,
-        rules: unknown,
-        variants?: unknown,
-      ) => object
-    )(derived, entry.rules, entry.variantRules)
-  }
+  // One match is the common case, and its sheet is already this sheet with
+  // the extension applied. Further matches replay their steps on top.
+  const [first, ...rest] = matched
+  let derived: object = first?.sheet ?? sheet
+  for (const entry of rest)
+    for (const step of steps.get(entry) ?? []) {
+      const replay = (derived as Record<symbol, DerivationReplay | undefined>)[
+        APPLY_DERIVATION
+      ]
+      if (!replay) throw new Error('[toned] expected a Toned stylesheet')
+      derived = replay.call(derived, step.rules, step.variants, step.defaults)
+    }
   remember(sheet, {
     config,
     context: entries,
