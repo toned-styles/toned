@@ -497,3 +497,25 @@ process-global defaults. The native host supplies event/measurement adapters;
 applications must additionally provide their actual native renderer adapter and
 primitive resolver. The historical `react-web` and `react-native` entry points
 compose these same hosts with legacy configuration for existing applications.
+
+## Server Components
+
+`useStyles` and `createElements` also work in React Server Components. Under
+the `react-server` export condition the package resolves them without hooks or
+context, so the component is written the same way and needs no `'use client'`.
+
+Register the renderer once, where it is created, so the server build can find
+it:
+
+```ts
+import { createWebRenderer } from '@toned/core/server'
+import { registerRenderer } from '@toned/react'
+
+export const renderer = registerRenderer(createWebRenderer(ui, { manifest }))
+```
+
+Limits on the server: nothing is interactive (states declared in the
+stylesheet still apply through CSS); a `createElements` family passes its
+variants to the parts written inside its own JSX, and a part rendered by
+another component throws; `TonedProvider` and `StyleOverrides` need context
+and belong in a `'use client'` file.

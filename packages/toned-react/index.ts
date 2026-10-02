@@ -1,6 +1,5 @@
 'use client'
 
-
 export {
   ConfigProvider,
   type ReactHost,
@@ -332,6 +331,7 @@ export const bind = _bind as <T extends StylesheetLike>(
 ) => BoundElementsOf<T>
 
 export { ContainerSizesContext } from './containers.tsx'
+export { registerRenderer, type ServerRenderer } from './server-registry.ts'
 export type { StyleOverride } from './overrides.tsx'
 export { StyleOverrides } from './overrides.tsx'
 
