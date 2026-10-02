@@ -4,10 +4,32 @@
  * @module stylesheet
  */
 
-export { unitlessNumbers } from '../utils/unitlessNumbers.ts'
+export type { Variants } from '../types/stylesheet.ts'
+
 export { initMedia } from './media.ts'
+export {
+  defineReactNativeHost,
+  type NativeHostAdapter,
+  type NativePatch,
+  nativeHostAdapter,
+  registerNativeHost,
+} from './native-host.ts'
+export {
+  type NullableOverride,
+  type OverrideRulesContext,
+  type OverrideSheetRules,
+  type OverrideSheetVariantRules,
+  type OverrideVariantContext,
+  overrideSheet,
+} from './overrideSheet.ts'
+export {
+  getStylesheetPlan,
+  stylesheetParts,
+  stylesheetVariantAxes,
+} from './plans.ts'
 export { StyleMatcher } from './StyleMatcher.ts'
 export { Base, createStylesheet } from './StyleSheet.ts'
+export { unitlessNumbers } from './unitlessNumbers.ts'
 export {
   createVariantSelector,
   type ExtractNamedStyles,

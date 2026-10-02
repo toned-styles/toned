@@ -1,74 +1,53 @@
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from '@/components/ui/button.tsx'
 
-const inputGroupStyles = stylesheet({
+/*
+ * A block addon turns the group into a column. That depends on the group's
+ * children (`:has`), so it is a structural rule in styles.css.
+ */
+export const inputGroupStyles = stylesheet({
   root: {
-    borderColor: 'default',
-    borderWidth: 'thin',
-    borderRadius: 'medium',
-    shadow: 'small',
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     position: 'relative',
     width: '100%',
     minWidth: 0,
-    style: {
-      height: '2.25rem',
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
+    minHeight: '2.25rem',
+    bgColor: 'default',
+    textColor: 'default',
+    borderColor: 'input',
+    borderWidth: 'thin',
+    borderRadius: 'medium',
+    shadow: 'small',
+    // No token: the transition list is specific to this control.
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
     },
+    ':focus-within': { borderColor: 'action', shadow: 'focus' },
+  },
+  // The control has no border of its own: the group draws it.
+  control: {
+    flexGrow: '1',
+    flexBasis: 0,
+    minWidth: 0,
+    paddingX: 3,
+    paddingY: 1.5,
+    typo: 'body_small',
   },
   addon: {
     textColor: 'muted',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 2,
-    typo: 'body_small',
-    fontWeight: 500,
+    typo: 'label_small',
     cursor: 'text',
-    paddingTop: 1.5,
-    paddingBottom: 1.5,
-    height: 'auto',
-    style: {
-      userSelect: 'none',
-    },
-  },
-  addonInlineStart: {
-    paddingX: 3,
-    style: {
-      order: -1,
-    },
-  },
-  addonInlineEnd: {
-    paddingX: 3,
-    style: {
-      order: 999,
-    },
-  },
-  addonBlockStart: {
-    paddingX: 3,
-    paddingTop: 3,
-    style: {
-      order: -1,
-      width: '100%',
-      justifyContent: 'flex-start',
-    },
-  },
-  addonBlockEnd: {
-    paddingX: 3,
-    paddingBottom: 3,
-    style: {
-      order: 999,
-      width: '100%',
-      justifyContent: 'flex-start',
-    },
+    // No token: addon text is not selectable.
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   text: {
     textColor: 'muted',
@@ -77,9 +56,50 @@ const inputGroupStyles = stylesheet({
     gap: 2,
     typo: 'body_small',
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      align: 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
+      multiline: boolean
+    }>,
+  ) => ({
+    // No token for flex order: an addon sits before or after the control
+    // whatever its position in the markup.
+    [$.align('inline-start')]: {
+      addon: { paddingLeft: 3, '@platform web': { $style: { order: -1 } } },
+    },
+    [$.align('inline-end')]: {
+      addon: { paddingRight: 2, '@platform web': { $style: { order: 1 } } },
+    },
+    [$.align('block-start')]: {
+      addon: {
+        width: '100%',
+        paddingX: 3,
+        paddingTop: 2.5,
+        '@platform web': { $style: { order: -1 } },
+      },
+    },
+    [$.align('block-end')]: {
+      addon: {
+        width: '100%',
+        paddingX: 2,
+        paddingBottom: 2,
+        '@platform web': { $style: { order: 1 } },
+      },
+    },
+    [$.multiline(true)]: {
+      control: {
+        minHeight: '4rem',
+        paddingY: 2.5,
+        // No tokens: the field grows with its content and is not resized by hand.
+        '@platform web': { $style: { fieldSizing: 'content', resize: 'none' } },
+      },
+    },
+  }),
+  { defaults: { align: 'inline-start', multiline: false } },
+)
 
-function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
+function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(inputGroupStyles)
 
   return (
@@ -94,61 +114,50 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 
 function InputGroupAddon({
   className,
-  align = "inline-start",
+  align = 'inline-start',
   ...props
-}: React.ComponentProps<"div"> & {
-  align?: "inline-start" | "inline-end" | "block-start" | "block-end"
+}: React.ComponentProps<'div'> & {
+  align?: 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
 }) {
-  const s = useStyles(inputGroupStyles)
-
-  const alignStyles = align === 'inline-end' ? s.addonInlineEnd
-    : align === 'block-start' ? s.addonBlockStart
-    : align === 'block-end' ? s.addonBlockEnd
-    : s.addonInlineStart
+  const s = useStyles(inputGroupStyles, { align })
 
   return (
     <div
       role="group"
       data-slot="input-group-addon"
       data-align={align}
-      className={cn(s.addon.className, alignStyles.className, className)}
-      style={{ ...s.addon.style, ...alignStyles.style }}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button")) {
-          return
-        }
-        e.currentTarget.parentElement?.querySelector("input")?.focus()
-      }}
+      {...s.addon.with({
+        className,
+        onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
+          // This enlarges the pointer focus target. Keyboard users tab directly
+          // to the control; the decorative group is not an additional control.
+          if ((event.target as HTMLElement).closest('button')) return
+          event.preventDefault()
+          event.currentTarget.parentElement
+            ?.querySelector<HTMLElement>('[data-slot="input-group-control"]')
+            ?.focus()
+        },
+      })}
       {...props}
     />
   )
 }
 
 function InputGroupButton({
-  className,
-  type = "button",
-  variant = "ghost",
-  size = "xs",
+  type = 'button',
+  variant = 'ghost',
+  size = 'xs',
   ...props
 }: React.ComponentProps<typeof Button>) {
-  return (
-    <Button
-      type={type}
-      data-size={size}
-      variant={variant}
-      size={size}
-      className={cn(className)}
-      style={{ boxShadow: 'none' }}
-      {...props}
-    />
-  )
+  return <Button type={type} variant={variant} size={size} {...props} />
 }
 
-function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
+function InputGroupText({ className, ...props }: React.ComponentProps<'span'>) {
   const s = useStyles(inputGroupStyles)
 
   return (
     <span
+      data-slot="input-group-text"
       {...s.text.with({ className })}
       {...props}
     />
@@ -158,12 +167,13 @@ function InputGroupText({ className, ...props }: React.ComponentProps<"span">) {
 function InputGroupInput({
   className,
   ...props
-}: React.ComponentProps<"input">) {
+}: React.ComponentProps<'input'>) {
+  const s = useStyles(inputGroupStyles)
+
   return (
-    <Input
+    <input
       data-slot="input-group-control"
-      className={cn(className)}
-      style={{ flex: 1, borderRadius: 0, border: 0, background: 'transparent', boxShadow: 'none' }}
+      {...s.control.with({ className })}
       {...props}
     />
   )
@@ -172,12 +182,13 @@ function InputGroupInput({
 function InputGroupTextarea({
   className,
   ...props
-}: React.ComponentProps<"textarea">) {
+}: React.ComponentProps<'textarea'>) {
+  const s = useStyles(inputGroupStyles, { multiline: true })
+
   return (
-    <Textarea
+    <textarea
       data-slot="input-group-control"
-      className={cn(className)}
-      style={{ flex: 1, resize: 'none', borderRadius: 0, border: 0, background: 'transparent', padding: '0.75rem', boxShadow: 'none' }}
+      {...s.control.with({ className })}
       {...props}
     />
   )

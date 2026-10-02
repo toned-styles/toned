@@ -1,281 +1,659 @@
 # @toned/core
 
-Minimal core utilities for defining token systems, building stylesheets and runtime style matching rules.
+Toned declares a typed design vocabulary, named parts, variants and conditions.
+The matcher compiles declarations once; output backends resolve them; mounted
+hosts own direct updates. React is a separate integration.
 
-## Quick start
-
-1. Define tokens and units
-
-```ts
-import { defineToken, defineUnit, defineSystem } from '@toned/core'
-```
-
-2. Create a system
+## Declare a system
 
 ```ts
-const color = defineToken({
-  values: ['red','blue'] as const,
-  resolve: (v) => ({ color: v }),
-})
+import { defineSystem, defineToken, type Variants } from '@toned/core'
 
-const system = defineSystem({ color })
-```
-
-3. Optional - inject generated CSS to DOM (browser)
-
-```ts
-import { generate, inject } from '@toned/core/dom'
-
-const css = generate(system) // returns CSS string
-inject(system) // injects into <style id="toned/main">
-```
-
-## Stylesheet API
-
-### Basic Usage
-
-Create stylesheets with element definitions:
-
-```ts
-import { stylesheet } from '@toned/systems/base'
-
-export const styles = stylesheet({
-  container: {
-    textColor: 'on_action',
-    bgColor: 'default',
-    alignItems: 'flex-start',
-    flexLayout: 'column',
+export const ui = defineSystem({
+  id: 'example',
+  tokens: {
+    bgColor: defineToken({
+      values: ['primary', 'primary-hover'],
+      resolve: (value) => ({
+        backgroundColor: value === 'primary' ? '#2563eb' : '#1d4ed8',
+      }),
+    }),
+    opacity: defineToken({
+      values: [0, 0.5, 1],
+      resolve: (value) => ({ opacity: value }),
+    }),
   },
-  label: { textColor: 'destructive' },
+  conditions: {
+    media: { md: 768 },
+    containers: { field: { wide: 448 } },
+  },
 })
-```
 
-### Pseudo Classes (Self-Styling)
+type ButtonVariants = { size: 's' | 'm'; variant: 'accent' | 'quiet' }
 
-Add pseudo classes that only affect the element they're defined in:
-
-```ts
-const styles = stylesheet({
-  button: {
-    bgColor: 'primary',
-    // Pseudo class only affects button itself
-    ':hover': {
-      bgColor: 'primary_hover',
+export const button = ui
+  .stylesheet((q) => ({
+    Root: {
+      $kind: 'pressable',
+      bgColor: 'primary',
+      [q.state('hover')]: { bgColor: 'primary-hover' },
+      '@platform web': { $style: { cursor: 'pointer' } },
     },
-    ':active': {
-      bgColor: 'primary_active',
+  }))
+  .variants(($: Variants<ButtonVariants>, q) => ({
+    [$.size('s').variant('quiet')]: {
+      Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
     },
-  },
-  label: {
-    textColor: 'white',
-  },
-})
+  }))
 ```
 
-### Cross-Element Pseudo Classes
+Keep token properties camelCase and named values kebab-case. A semantic
+`typography: 'body-small'` token can resolve several fields; the core does not
+force a CSS vocabulary. `$kind` is static metadata (`view` by default), `$style`
+is low-level styling, `@` introduces a query, and `:` introduces a state.
+Conditional rules inherit the part kind and cannot change it.
 
-Use flat selectors to affect multiple elements when an element's pseudo state changes:
+`$style` is a portable property/value intersection. Inside `@platform web` it
+accepts web CSS types; inside `@platform native` it accepts the declared native
+style subset for that part kind. Foreign platform blocks are filtered before
+capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
+shorthand because their web/native meanings differ; use semantic typography or
+explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
+in its platform block. Legacy `$$type`, `style`, `@md`, `@field/wide`, and
+`@platform.web` remain compatibility spellings. New code should use canonical
+metadata and explicit platform scopes for platform-specific styles.
 
-```ts
-const styles = stylesheet({
-  button: { bgColor: 'primary' },
-  icon: { color: 'white' },
-  label: { textColor: 'white' },
+New descriptor systems use fixed logical pixels for both viewport and container
+thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
+negative and nonfinite thresholds are rejected. Legacy `defineSystem(tokens,
+config)` retains its spacing-scale container behavior for migration.
 
-  // When button is hovered, both button and label change
-  'button:hover': {
-    button: { bgColor: 'primary_hover' },
-    label: { textColor: 'primary_text' },
-  },
+Logical fields map through an explicit, immutable `layout` context that defaults
+to horizontal LTR. CSS output supports the declared direction and writing modes;
+native output rejects vertical writing modes because the native host contract has
+no vertical text layout. See [portable values and logical layout](core/README.md#portable-values-and-logical-layout).
 
-  // Multiple pseudo classes (must be in alphabetical order)
-  'button:active:hover': {
-    icon: { color: 'accent' },
-  },
-})
-```
+## Conditions and precedence
 
-### Breakpoints
+The finite builders `q.state`, `q.media`, `q.container(name, step)`,
+`q.part(name).state`, and `q.platform` return literal keys. Human aliases include
+`:hover`, `@media md`, `@container field wide`, and `@platform web`.
+Query builders are bound to their system: use the callback's `q` (which also
+knows declared part names) or that system's `ui.q`. Compound platform predicates
+filter execution but keep `$style` portable. Nest an explicit
+`[q.platform('web')]` or `[q.platform('native')]` block to widen its style types.
 
-Add responsive styles using breakpoint selectors:
-
-```ts
-const styles = stylesheet({
-  container: {
-    paddingX: 2,
-    // Breakpoint for small screens
-    '@sm': {
-      paddingX: 4,
-    },
-    '@md': {
-      paddingX: 6,
-    },
-  },
-})
-```
-
-### Variants
-
-Use the `.variants()` chain with a callback for type-safe variant definitions:
+Use the same computed-key form for compound queries, including inside a part:
 
 ```ts
-const styles = stylesheet({
-  container: {
-    bgColor: 'default',
-    borderRadius: 'medium',
-  },
-  label: {
-    textColor: 'primary',
-  },
-}).variants<{
-  size: 'sm' | 'md' | 'lg'
-  variant: 'primary' | 'secondary' | 'danger'
-}>(($) => ({
-  // Single variant
-  [$.size('sm')]: {
-    container: { paddingX: 2, paddingY: 1 },
-    label: { fontSize: 'small' },
-  },
-
-  [$.size('md')]: {
-    container: { paddingX: 4, paddingY: 2 },
-    label: { fontSize: 'medium' },
-  },
-
-  [$.variant('primary')]: {
-    container: { bgColor: 'action' },
-    label: { textColor: 'on_action' },
-  },
-
-  [$.variant('danger')]: {
-    container: { bgColor: 'destructive' },
-    label: { textColor: 'on_destructive' },
-  },
-
-  // Combined variants (order doesn't matter - keys are stable)
-  [$.size('sm').variant('primary')]: {
-    container: { borderColor: 'primary_border' },
+const emphasis = ui.stylesheet((q) => ({
+  Root: {
+    opacity: 1,
+    [q.not(q.any(q.media('md'), q.state('hover')))]: { opacity: 0 },
   },
 }))
 ```
 
-### Named Styles and Composition
+The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
+compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
+methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
+`q.container(name, dp(number))`, supply the resolved logical width: 100 legacy
+units at the default 4px base become `dp(400)`. Named steps retain the owning
+system's declared threshold through `q.container(name, 'wide')`.
 
-Use `$("name")` to define reusable named styles, and `$compose` to compose them:
+Compound builders produce self-contained deterministic keys; they do not allocate
+registry IDs or normalize Boolean expressions into an exponentially growing DNF.
+Pass operands inline or as a readonly tuple so TypeScript retains the expression
+and can validate every referenced part. Arbitrary runtime arrays lose that exact
+key information and are not accepted by checked declarations. Each expression is
+bounded to 512 nodes and 64 KiB and fails explicitly if it exceeds either limit.
+A bare `q.state(...)` binds to its enclosing part; sheet-level groups use
+`q.part('Root').state(...)`. The direct cross-part shorthand selects one source;
+use `q.all` or `q.any` for compound cross-part conditions.
+An axis builder can be reused as a direct variant key and as an operand in
+`q.all`, `q.any` and `q.not`; reading an operand does not declare another rule.
+Compound query keys are primitive strings. Repeating the same complete key in
+one object follows JavaScript's last-key-wins behavior, including in variants and
+overrides; merge its body instead. TypeScript rejects duplicates when their keys
+are statically known, but cannot catch every dynamically computed key. The direct
+axis-builder duplicate guard cannot detect this after object construction.
+Counting query construction would also
+reject valid reuse of one condition in separate parts or larger expressions.
+
+Annotate the single `.variants` callback and put compound conditions directly in
+its returned objects. Query builders return typed `QueryKey` strings; use those
+keys in declarations rather than assembling predicate objects. Explicit-generic
+callback and object variant declarations remain compatible.
+
+In descriptor systems, later matching declarations within a precedence layer win
+each resolved field. Legacy systems retain their historical pseudo/breakpoint
+order within a layer; a higher override layer still wins over the whole lower layer.
+A compound variant has no implicit specificity bonus. Use `.variants(($: Variants<Mods>, q) => ({ … }))` to infer the schema and
+check the complete returned declaration, including excess keys in nested rules.
+The callback offers part, token, variant-value and system-query completions.
+Re-export the type from your design-system module to write `ui.Variants<Mods>`
+with a namespace import (`import * as ui from "./ui"`). Reusable type aliases and interfaces both work, including optional axes.
+The annotation has no runtime cost. Literal rule keys are checked against declared
+axes and values, including combined attributes, named fragments and condition
+aliases. A misspelled literal remains an error beside a computed selector.
+TypeScript can widen arbitrary dynamically computed keys to a string index; their
+spelling cannot then be proved. Use `$.axis(value)` and the query builders for
+computed keys so arguments are checked before that widening occurs. Place
+platform-specific styles inside the variant's part or condition group: mixing a
+separate top-level platform rule with widened computed variant keys loses the
+key-to-host association needed to validate its raw styles.
+The explicit-generic direct callback and object signatures remain compatible;
+the explicit-generic direct callback cannot catch every excess property.
+Callbacks without explicit method type arguments use the checked overload,
+including callbacks annotated with `VariantSelector`, so excess keys are
+rejected. Keep an extracted factory's result literal (for example
+`return { ... } as const`) so finite token values do not widen to `number` or
+`string`; inline callbacks receive that context automatically. Overload errors
+can mention `VariantsInput`, the final compatibility signature; check the
+callback's declarations and literal values first.
+Variant keys are canonical
+literal strings at runtime and in TypeScript, including multi-value selections.
+The matcher keeps a fast unsigned single-word path and uses multiple words beyond
+32 allocated values. Equality uses exact rule membership and output operations,
+not a lossy XOR hash. Caches are bounded and compiled plans are shared.
+
+## Reuse named fragments and part declarations
+
+Declare a named fragment with `[$('interactive')]` inside the same variant
+callback and apply it with `$compose: 'interactive'` at rule level. The annotated
+callback infers the exact names for completion and rejects unknown names, including
+references inside other named fragments. Arrays compose from left to right; the
+rule's own declarations apply last. Named fragments do not create variant matches.
+
+Inside a part declaration, `$compose: 'Label'` instead refers to a declared part.
+The source comes from the same rule when present, otherwise from the sheet's base
+part declarations. Derived sheets use their effective declared defaults, including
+prior overrides and null removals, when copying base parts. Explicitly typed parts can compose only from the same kind,
+so composition cannot move text-only styles or kind-restricted tokens into views.
+Legacy unspecified kinds retain their previous permissive behavior. Composition
+copies styles, not the source part's `$kind`.
+
+Declared part names (and their `$Part` aliases) are also reserved as nested target
+keys by the legacy declaration grammar. A token cannot share one of those names
+at that position; its object payload would be interpreted as a target declaration.
+
+Part and named-fragment references resolve transitively. Unknown references and
+cycles throw during stylesheet construction, including in unused named fragments;
+untyped callers cannot silently lose styles. A composed source remains an ordinary
+part that can be rendered independently. The same composition rules apply inside
+media, container, cross-part, compound-query and platform groups. Put the condition
+around a part map when composing under that condition; `$compose` nested inside an
+individual part's condition block is rejected. Root query groups must name their
+source part (`q.part('Root').state('hover')`); local `q.state('hover')` belongs inside
+that part's declarations.
+
+## Build CSS before rendering
 
 ```ts
-const styles = stylesheet({
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  container: {
-    borderRadius: 'medium',
-  },
-  label: {
-    textColor: 'primary',
-  },
-}).variants<{
-  size: 'm' | 's'
-  variant: 'accent' | 'danger'
-}>(($) => ({
-  // Named style definition
-  [$('base_button')]: {
-    container: { borderWidth: 'thin' },
-    label: { fontWeight: 'bold' },
-  },
+// Build script; include lazy stylesheet declarations explicitly.
+import { buildStyles } from '@toned/core/build'
+const { css, manifest } = buildStyles(ui, {
+  sheets: [button, emphasis],
+  layer: 'components',
+})
+// Write css to an application asset and manifest to a generated module.
+```
 
-  [$.variant('accent')]: {
-    // Compose named style at variant level
-    $compose: 'base_button',
-    container: {
-      bgColor: 'action',
-      // Compose elements at element level
-      $compose: ['centered'],
-    },
-    label: {
-      textColor: 'on_action',
+Deliver the asset before first paint. Namespaced systems prefix generated classes,
+condition variables and keyframes with their ID. Theme variables consumed by such
+a system must use the same namespace. Declared `themes` are namespaced by the
+build; for a separately generated palette, `namespaceCss` from
+`@toned/core/system` applies the same prefix. A system consuming an existing application palette can
+declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
+`tokens`. These exact custom-property names remain unchanged in generated CSS and
+runtime output; classes, condition toggles and undeclared variables remain isolated.
+The immutable, validated list is part of the manifest contract. External variables
+must be supplied by the application; Toned does not discover or emit their values.
+Resolver implementation
+changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
+The build manifest records ad-hoc conditions and the exact static system schema,
+including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema
+or an undeclared condition with a regeneration instruction; it never injects a rule.
+Token names are canonicalized in that schema, so a bundler changing module-export
+enumeration order does not invalidate an otherwise identical system. This does
+not reorder emitted CSS or weaken its byte-level artifact fingerprint.
+
+`@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
+explicit optional development tool. The `@toned/core/dom` entry remains for compatibility.
+The Vite plugin serves `virtual:toned.css`; import it explicitly, supply watched
+`inputs`, and pass the complete system ref with a `sheets` collector, e.g.
+`toned({ system: ui, sheets: () => [button], inputs: ['./button.ts'] })`.
+It delegates to the same build path and exposes the paired manifest through
+`virtual:toned.manifest` (a default export). Both modules share one collection per
+build or watched invalidation. Passing a raw `system.system` token dictionary
+remains compatible, but requires an explicit namespace `id` and condition
+collector; it cannot collect sheets or check their runtime namespace.
+The plugin does not insert a style node into HTML; the application imports the
+CSS module.
+
+Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
+checks the original generated asset's fingerprint before publication; after
+minification, hash the final delivery bytes in the application's asset pipeline.
+The pure renderer does not fetch or inspect served stylesheets, and a manifest
+alone cannot prove which asset a browser loaded. The fingerprint is a content
+identifier for accidental drift, not a security digest. Changes inside `resolve`
+or `pseudoRules` functions require rebuilding assets; schema checks track function
+presence, not function source or captured values.
+
+## Pure server and alternative output
+
+```ts
+import { createWebRenderer } from '@toned/core/server'
+const web = createWebRenderer(ui, { manifest })
+const props = web.resolve(button, {
+  variants: { size: 's', variant: 'accent' },
+})
+// <button {...props.Root} /> works in an RSC/server entry: no hooks or refs.
+```
+
+Web renderers default to CSS custom-property references (`var(--name)`). Explicit
+`tokens` override those defaults. Each renderer exposes `t` for lightweight token
+composition using that renderer's backend and immutable tokens:
+
+```ts
+const props = web.t({ padding: 2 }, { $style: { opacity: 0.8 } })
+```
+
+When a token helper must exist before CSS generation (for example in a declaration
+module imported by the CSS inventory), use the standalone explicit constructor:
+
+```ts
+import { createTokenStyles, cssVariableTokens } from '@toned/core/server'
+export const t = createTokenStyles(ui, {
+  tokens: cssVariableTokens(),
+  platform: 'web',
+  useClassName: true,
+})
+```
+
+It requires no manifest and reads no installed global config. It does not generate
+or deliver CSS; the application's build still owns the classes it requests.
+`cssVariableTokens()` returns a frozen null-prototype token proxy preserved through
+immutable snapshots. Use concrete token values for native output. `renderer.t` is
+an ergonomic shortcut using the renderer's selected backend; it validates required
+build conditions. Both helpers retain the same typed composition and symbol protocol
+as legacy `system.t`, which remains available for consumers using installed config.
+Helpers are explicit snapshots and do not subscribe to provider theme changes.
+For recursively immutable declaration/token data, `style` and `className` share
+one lazy resolved output, including when spread into props. Opaque class instances
+and function values retain their identity and disable this caching, so valid
+mutable payloads remain observable. Legacy `system.t` continues reading its live
+installed context on each getter access.
+
+`createInlineRenderer(ui, { tokens })` produces concrete web style props for email
+and static HTML without a manifest, global configuration, hooks, or CSS assets.
+Spread the complete result of `renderer.resolve(sheet).Part` into the email
+component. Explicit variants and platform branches work; media, state, container,
+relation conditions and CSS extensions are rejected before branch selection.
+CSS variables, class names, non-finite numbers and structured CSS values are also
+rejected. Email-client property support remains the template author's responsibility;
+this backend does not add Outlook fallbacks or rewrite unsupported CSS.
+All pure renderer constructors return the exported `PureRenderer<S>` contract,
+so applications can export renderer instances from declaration-emitting packages.
+
+`createPdfRenderer(ui, { tokens })` resolves static report styles in a finite
+profile shared by React PDF and Forme. Numeric measurements are points. It keeps
+percentage dimensions and PDF `textDecoration`, and rejects browser conditions,
+CSS variables, web units, native-only fields, transforms and grid. The profile
+uses native platform branches but has its own field/value validation; it does not
+pretend that React Native and PDF hosts have identical style contracts. See the
+email and PDF examples for full-props spreading into their host components.
+
+`createNativeRenderer` evaluates the same declarations with explicit host facts
+and rejects fields outside its documented finite native profile. Unsupported CSS
+properties and values fail visibly instead of reaching a native host silently.
+`createRenderer` accepts an output backend. Define exact field/value mappings and
+fixed parameter utilities with `createTailwindBackend` from `@toned/core/backends`.
+Then call `buildTailwind(ui, profile, { sheets, tokens, source, compile })` from
+`@toned/core/build`, passing the application's actual Tailwind `compile` function
+and configured CSS source. Deliver its CSS and JSON manifest together. Runtime
+code uses `createTailwindRuntime(ui, profile, manifest)` to restore the backend
+without importing Tailwind or generating CSS. The build validates every collected declaration
+and declared theme, compiles complete candidates (including lazy sheets), and checks
+that each utility writes exactly its promised property and value.
+
+The built adapter preserves local states, media/container queries and boolean
+conditions using precompiled helper gates and fixed utility parameters. It consumes
+the shared ordered field plan, so class-attribute order cannot change a winner.
+Cross-part facts use the mounted host registry. Runtime token/theme values use
+explicit parameter serializers; rendering never compiles or injects CSS. A finite
+class list cannot in general represent arbitrary dynamic values or overlapping
+browser predicates with Toned's ordering; fixed, precompiled parameter utilities
+cover those cases. A strict `classesOnly: true` profile accepts finite runtime
+choices and rejects parameter channels and browser-conditional fields that need
+one. Unprovable CSS expression equivalence is rejected rather than inferred from
+utility names: `gap-3` on a rem scale is not established to mean twelve pixels.
+See [the backend contract](backends/README.md) for capabilities and validation.
+An unbuilt profile is a low-level mapping/formatting helper. Pure renderers and
+mounted hosts reject it until `buildTailwind`/`createTailwindRuntime` binds its
+validated asset; supplying an unrelated CSS manifest cannot bypass this gate.
+
+`ui.style(declaration)` is a pure immutable declaration helper. `ui.t(...)` is the
+supported shorthand for lightweight token-to-style resolution and composition:
+
+```ts
+const base = ui.t({ padding: 's', $style: { opacity: 0.8 } })
+const compact = ui.t(base, { $style: { minHeight: 24 } })
+// compact.style and compact.className resolve when read.
+```
+
+Later arguments override earlier token values; raw `$style` fields merge across
+arguments. The legacy `style` spelling and composed `t` results remain
+accepted. `t()` normalizes its inputs immediately and snapshots raw style fields;
+mutating a caller style object later does not change a retained result. Invalid
+metadata (such as a conditional `$kind` or conflicting kind aliases) throws
+when `t()` is called, including during module initialization. Direct `exec` still
+observes its input values on each call. Getters read the installed configuration's current tokens, platform and
+class mode. They call no hooks, create no subscriptions and do not read a React
+provider: merely retaining a bag does not update a mounted host when tokens change.
+Web CSS-variable values can follow CSS theme changes; native literal values must
+be resolved again and applied when the theme changes. Use `useStyles` or
+`createElements` for mounted lifecycle ownership, states and related parts.
+
+No global installation is needed for explicit resolution. The existing
+`ui.exec({ tokens, platform: 'native', useClassName: false }, declaration)` accepts
+per-call tokens for a single declaration. For sheet defaults, variants, host facts,
+manifest validation and alternative backends, use the pure renderer above with
+`ui.stylesheet({ Root: declaration })`. These paths do not consult the installed
+configuration; avoid changing global configuration for each server request.
+
+## Typed web grid
+
+```ts
+import { defineGrid, dp, fr } from '@toned/core'
+const message = defineGrid('message', {
+  columns: [dp(48), fr(1)],
+  areas: [
+    ['avatar', 'title'],
+    ['.', 'body'],
+  ],
+})
+const sheet = ui.stylesheet({
+  Root: { '@platform web': { $grid: message } },
+  Avatar: { '@platform web': { $area: message.area('avatar') } },
+  Title: { '@platform web': { $area: message.area('title') } },
+  Body: { '@platform web': { $area: message.area('body') } },
+})
+```
+
+Areas infer their names, exclude `.`, retain definition identity, and compile to
+local CSS area names. Numeric placements remain available as area metadata. Construction checks rectangular regions, track counts,
+and finite lengths. Hosts validate direct layout parentage and isolate repeated
+grid instances. Multiple occupants intentionally overlap in source order. Grid
+is enabled on web; native use throws a capability error. A web-scoped grid can
+have an ordinary shared/native fallback. Native grid is unavailable: a host can
+assign named areas, but not grid's intrinsic track sizing, span resolution,
+baseline alignment and layout integration. No measured JavaScript grid solver is
+installed; native grid requires a real integrated layout engine that passes host
+conformance.
+
+Create complete responsive plans with `message.variant(...)`:
+
+```ts
+const compact = message.variant({
+  columns: [fr(1)],
+  areas: [['avatar'], ['title'], ['body']],
+})
+const responsive = ui.stylesheet({
+  Root: {
+    '@platform web': {
+      $grid: compact,
+      [ui.q.media(dp(600))]: { $grid: message },
     },
   },
+  Avatar: { '@platform web': { $area: message.area('avatar') } },
+  Title: { '@platform web': { $area: message.area('title') } },
+  Body: { '@platform web': { $area: message.area('body') } },
+})
+```
 
-  // Multi-value selectors (OR semantics)
-  [$.size('m').variant('accent', 'danger')]: {
-    container: { paddingX: 4 },
+The alternative matrix must contain exactly the original named areas; missing
+or invented names fail both typing and runtime validation. Tracks and area
+positions may change, including through container queries or component variants.
+Area references from either plan work throughout the same family. Generated CSS
+moves the existing children before hydration, so resize needs no JavaScript
+measurement, host write, React render, or reparenting. Repeated grids independently
+follow their own container. Every plan emits its complete geometry: omitted rows
+use `auto`, and an omitted gap resets to `0`. A spacing token declared after
+`$grid` can override that plan's gap through ordinary declaration order.
+
+Each part needs an unconditional `$grid`/`$area` registration. Conditional geometry
+must belong to that same family: a query cannot introduce a different ownership
+boundary. Declare one base plan and vary it with `.variant(...)`; for visibility,
+keep its areas and apply conditional `display`. This keeps ownership validation
+stable even when the browser alone evaluates a condition. It deliberately rejects
+a condition-only grid registration instead of silently skipping host checks.
+
+## Source map
+
+- `system/`: definitions, normalization, predicate lowering, namespaces.
+- `stylesheet/matcher/`: bitsets, ordered rules, selector and predicate compilation.
+- `stylesheet/StyleSheet.ts`: immutable plan construction and mounted controllers.
+- `stylesheet/applyStyles.ts`: ownership-aware host patching and stale-field reset.
+- `backends/`, `server/`, `build/`: output, pure resolution and build delivery.
+- `grid/`: geometry compilation and host identity checks.
+
+Tests cover bit boundaries, reference evaluation, zero/conditional properties,
+selector types, suspended React work, ref cleanup, theme updates and owned native
+patches. A fixture is not certification of a React Native/Fabric device integration.
+
+## Variant defaults and alpha
+
+The fully checked factory takes defaults without widening axis values:
+`.variants(($: Variants<Mods>) => ({ … }), { defaults: { size: 'm' } })`. Defaulted axes are
+optional at consumption; explicit `undefined` selects the default. Other axes
+stay required. Defaults survive derived sheets and override layers and resolve
+identically through the pure renderer and mounted hooks.
+
+Use `alpha('primary', 0.2)` for a token declaring `alphaChannel`. It retains the
+base name in its type, validates a finite fraction in the inclusive `[0, 1]`
+range, and lowers to the existing slash representation. The `'primary/20'`
+spelling remains compatible. Zero multiplies the source alpha by zero; one
+preserves it, including already translucent literals. Named values on tokens
+without an alpha channel do not accept the helper's result.
+
+`definePalette` requires complete per-theme maps or an explicit `fallbackTheme`.
+The fallback must name a declared theme and supply every otherwise missing value.
+The default theme selects the initial CSS scope; it is not an implicit fallback.
+Invalid coverage fails at declaration, and palette snapshots are immutable.
+
+### Logical relationships and web selectors
+
+`q.part('Root').has('Item', 'checked', { scope: 'descendant' })` is a semantic
+condition key accepted directly in declaration objects and boolean query composition. The default scope
+is `descendant`; `child` means the immediate **registered part** parent, not every
+intermediate host wrapper. Each mounted controller family owns its part graph.
+Targets in another stylesheet instance never contribute facts. Web ancestry uses
+registered DOM ancestry; portals without an ancestor in that graph do not match.
+Native integrations explicitly supply topology and semantic state capabilities.
+
+Mounts, unmounts, moves and state transitions update the graph and matching facts
+without a styling render. Web observers are shared per document and released when
+the final subscriber leaves. Native relations require `parentOf` and
+`subscribeTopology`; semantic states beyond hover, active and focus additionally
+require `readState`. Unsupported host capabilities throw named errors.
+
+Use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
+`'@platform web'` block for CSS selectors or pseudo-elements. Styles use checked
+CSS property types. Each entry has one `&`-anchored selector; comma lists and
+at-rules are rejected as selector keys. Exact DOM child syntax such as
+`& > input:checked` and arbitrary `:has()` expressions belong here, distinct from
+the portable registered-part relationship. The generated CSS belongs to the
+normal build artifact, and native resolution never interprets it as native style.
+
+`webRules` is a CSS extension, not portable condition algebra. Put state and
+descendant selectors inside its `&`-anchored rules: a portable condition around
+a `$webRules` block is diagnosed. Use registered-part relations for semantics that
+must hold on every platform. Native, inline, PDF and Tailwind profiles reject
+CSS extensions.
+
+For browser-only media semantics, including rem breakpoints and reduced-motion
+preferences, pass explicit media groups. These do not change the fixed-pixel
+contract of portable conditions:
+
+```ts
+webRules(
+  {},
+  {
+    media: {
+      '(min-width: 64rem)': webRules({ '&': { display: 'flex' } }),
+      '(prefers-reduced-motion: reduce)': webRules({
+        '&': { animation: 'none' },
+      }),
+    },
+  },
+)
+```
+
+Groups retain declaration order and the owning selector/scope. They are immutable,
+participate in the extension's content identity, and must be inventoried before
+rendering. Selector-only extension identities remain unchanged. Media query
+support belongs to the browser; the builder rejects empty queries, block delimiters
+and comments. This is a CSS-only extension, unavailable to document/native backends.
+For exported inferred sheets, `import type { WEB_RULES } from '@toned/core'`
+lets TypeScript name the opaque brand during declaration emit.
+
+## Pure authoritative overrides
+
+`overrideSheet(sheet, rules, variants?)` creates an immutable higher-priority
+layer without React, provider context or token reads. It preserves the sheet's
+part kinds, axes and defaults, and accepts the same typed query builders.
+
+```ts
+const compact = overrideSheet(button, { Root: { padding: null } }, ($) => ({
+  [$.size('s')]: { Root: { padding: 4 } },
+}))
+const artifact = buildStyles(ui, { sheets: [button, compact] })
+const web = createWebRenderer(ui, { manifest: artifact.manifest })
+const props = web.resolve(compact, { variants: { size: 's' } })
+```
+
+Collect derived sheets before building when they introduce conditions or other
+CSS structure. Pure/native renderers resolve these layers directly; React hooks
+and element families consume the derived sheet, while ambient React scopes use
+the same composition operation. `null` removes an
+inherited leaf at that exact path before matching; it does not erase a separate
+variant declaration. `extend` remains ordinary derivation instead of an
+authoritative override layer.
+
+### Theme schemas in token authoring
+
+Bind a theme schema once with `defineTokenFor<Theme>()`; finite values and dynamic
+channels retain their ordinary inference. Resolver callbacks can only read fields
+in that schema. A descriptor system checks every declared theme against the
+combined requirements of its typed tokens, including tokens from several libraries.
+
+```ts
+type Theme = { colors: { primary: string }; spacing: number }
+const token = defineTokenFor<Theme>()
+const gap = token({
+  values: [0, 1, 2],
+  dynamic: 'number',
+  resolve: (value, theme) => ({ gap: value * theme.spacing }),
+})
+const ui = defineSystem({
+  id: 'typed-theme',
+  tokens: { gap },
+  themes: { daylight: { colors: { primary: '#246' }, spacing: 4 } },
+})
+```
+
+On the web the build delivers declared themes. A resolver's `theme.field` becomes
+`var(--<system id>-field)` in the generated class, and `buildStyles` (and the Vite
+plugin) writes the values: the first declared theme on `:root`, and every theme
+under `[data-theme='<name>']`, so a subtree can select any theme by attribute.
+Switching is CSS only: changing the attribute rerenders nothing, and classes and
+inline styles stay as they were.
+
+```ts
+const artifact = buildStyles(ui, { sheets }) // themes included
+buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
+buildStyles(ui, { sheets, themes: false }) // deliver them yourself
+```
+
+A class sets each side of a box separately, so a field read by a four-sided
+property (`borderWidth`, `padding`, `margin`, `inset`) must hold a single value;
+the build refuses a value such as `3px 0 0 0` there. Use one field per side.
+
+Only top-level string and number fields are written. A nested group, such as
+`colors` above, cannot be read through one CSS variable; give those values to a
+renderer as explicit `tokens`. `generateThemes(system, options)` from
+`@toned/core/build` returns the same CSS on its own.
+
+This is static schema checking, not validation of untrusted JSON. Applications
+validate external theme data before passing it to a renderer. Existing untyped
+`defineToken` remains compatible; adopting the typed factory is incremental.
+
+Fixed query thresholds can also be colocated at the use site:
+
+```ts
+import { defineSystem, defineToken, dp } from '@toned/core'
+
+const layout = defineSystem({
+  id: 'local-queries',
+  tokens: {
+    opacity: defineToken({
+      values: [0.8, 1],
+      resolve: (value) => ({ opacity: value }),
+    }),
+  },
+  conditions: { containers: { card: {} } },
+})
+layout.stylesheet((q) => ({
+  Root: {
+    [q.media(dp(600))]: { opacity: 0.8 },
+    [q.container('card', dp(300))]: { opacity: 1 },
   },
 }))
 ```
 
-### Using Styles in React
+The container name must be declared in the system; its threshold may be local.
+These keys retain exact literal types (`@>=600px`, `@card/>=300px`) and compose
+with `q.all`, `q.any`, and `q.not`. Mix variants into these expressions through
+checked selectors such as `$.size('s')`; unchecked raw `'[size=s]'` operands are
+rejected by the query helper types. Both host evaluators and generated query
+preludes use the same fixed pixel number. Percentage, font-relative, and
+custom-property thresholds are rejected. Include sheets containing these
+queries in the normal build inventory, including lazy or overridden sheets.
+Typed-theme systems also check renderer construction and per-resolution
+`tokens` against their declared schema.
 
-```tsx
-import { useStyles } from '@toned/react'
-import { styles } from './styles'
+Build validation rejects named conditions that collide with another condition's
+generated toggle identity, including a named container step such as `gte300px`
+beside a local `dp(300)` query. Rename that step instead of publishing ambiguous
+CSS. Fixed viewport toggles use a separate namespace from named breakpoints.
 
-function Button({ size = 'md', variant = 'primary' }) {
-  const s = useStyles(styles, { size, variant })
+`defineTokenFor` defaults to `PortableTokenStyle` for resolver output. Both field
+names and values are checked, including extra keys beside valid fields. Structured
+lengths belong to dimensional fields, structured colors to color fields, and
+`themeRef<Theme>()` retains the referenced value type. An opacity cannot receive
+`dp(1)` or a reference to a string-valued theme entry.
 
-  return (
-    <button {...s.container}>
-      <span {...s.label}>Click me</span>
-    </button>
-  )
-}
+Platform-specific resolvers state their output contract explicitly:
+
+```ts
+const webToken = defineTokenFor<Theme, WebInlineStyle>()
+const sticky = webToken({
+  values: ['top'],
+  resolve: () => ({ position: 'sticky', top: 0 }),
+})
 ```
 
-## Type Safety
+`NativeInlineStyle<'view'>` is another valid explicit contract and retains kind
+restrictions. An explicit output type describes the selected host vocabulary;
+backend capability validation still applies. Legacy `defineToken` retains its
+broad output contract for incremental migration.
 
-The API provides full type inference for:
+### Portable motion
 
-- Token properties (autocomplete for valid token values)
-- Element names (autocomplete when referencing elements)
-- Pseudo classes (`:hover`, `:active`, `:focus`)
-- Breakpoints (from system configuration)
-- Variant selectors (from `.variants<T>()` type parameter)
-
-## API Reference
-
-### `stylesheet(rules)`
-
-Creates a stylesheet with element definitions.
-
-**Parameters:**
-- `rules` - Object with element keys and their token styles
-
-**Returns:** Pre-variants stylesheet with `.variants()` method
-
-### `.variants<Mods>(callback)`
-
-Adds variant-based styles to a stylesheet using a type-safe callback.
-
-**Type Parameter:**
-- `Mods` - Object type defining variant names and their possible values
-
-**Parameters:**
-- `callback` - Function receiving `$` selector proxy, returning variant rules
-
-**Returns:** Final stylesheet ready for use with `useStyles`
-
-### Variant Selector (`$`) API
-
-| Selector | Description | Example |
-|----------|-------------|---------|
-| `$("name")` | Named style definition | `[$("base")]: { ... }` |
-| `$.key("value")` | Single variant | `[$.size("sm")]: { ... }` |
-| `$.key("v1", "v2")` | Multi-value (OR) | `[$.size("sm", "md")]: { ... }` |
-| `$.k1("v1").k2("v2")` | Combined variants | `[$.size("sm").variant("primary")]: { ... }` |
-
-### Composition (`$compose`)
-
-| Level | Composes | Example |
-|-------|----------|---------|
-| Variant level | Named styles | `$compose: "base_button"` |
-| Element level | Other elements | `$compose: ["centered", "flex"]` |
-
-### Base Selector Syntax
-
-| Selector | Description | Example |
-|----------|-------------|---------|
-| `element` | Element definition | `container: { ... }` |
-| `:pseudo` | Pseudo class (self only) | `':hover': { ... }` |
-| `@breakpoint` | Breakpoint (self only) | `'@sm': { ... }` |
-| `element:pseudo` | Cross-element pseudo | `'container:hover': { ... }` |
+`@toned/core/motion` adds timing and spring transitions to committed Toned host
+outputs, sharing the existing differential writer and ownership rules. It supports
+numeric native targets, computed pixel/numeric web targets, interruption, reduced
+motion, entry and retained-host exit. See the [motion contract](motion/README.md)
+for the finite property vocabulary, lifecycle rules and native JS-thread boundary.
+React's committed ref adapter is `useMotion` from `@toned/react/motion`.

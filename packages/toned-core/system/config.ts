@@ -5,6 +5,7 @@
  */
 
 import type { Config, Tokens } from '../types/index.ts'
+import { warnOnce } from '../utils/warn.ts'
 
 const SYMBOL_CONFIG = Symbol.for('@toned/core/CONFIG')
 
@@ -21,8 +22,14 @@ customGlobal[SYMBOL_CONFIG] ??= {
   pseudoMode: 'runtime',
   debug: false,
 
-  // Default getProps returns empty object - overridden by toned-react with actual style/className props
+  // Default getProps returns empty object - overridden by @toned/react with actual style/className props
   getProps() {
+    warnOnce(
+      'no-platform-config',
+      'a stylesheet resolved before any platform config was installed — its elements carry ' +
+        "no style and no className. Import '@toned/react/react-web' (or react-native) and pass it " +
+        'to setConfig once, before the first render.',
+    )
     return {}
   },
 

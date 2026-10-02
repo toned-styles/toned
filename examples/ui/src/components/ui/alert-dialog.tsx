@@ -1,78 +1,53 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from '@/components/ui/button.tsx'
 
-const alertDialogStyles = stylesheet({
+export const alertDialogStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',
     zIndex: 50,
-    style: { inset: 0 },
+    // No token for the inset shorthand.
+    '@platform web': { $style: { inset: 0 } },
   },
   content: {
-    bgColor: 'default',
+    bgColor: 'elevated',
+    textColor: 'default',
     position: 'fixed',
     zIndex: 50,
     display: 'grid',
-    width: '100%',
     gap: 4,
-    borderRadius: 'large',
+    width: '100%',
+    maxWidth: 'calc(100% - 2rem)',
+    padding: 6,
+    borderRadius: 'xlarge',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 6,
-    shadow: 'large',
+    shadow: 'xlarge',
     top: '50%',
     left: '50%',
-    style: {
-      transform: 'translate(-50%, -50%)',
-      maxWidth: 'calc(100% - 2rem)',
-      outline: 'none',
-      animation: 'zoom-in 0.2s ease',
-    },
-    '@sm': {
-      maxWidth: '32rem',
-    },
-  },
-  contentSm: {
-    maxWidth: '20rem',
+    // No token for transforms: centres the panel on its top-left anchor.
+    '@platform web': { $style: { transform: 'translate(-50%, -50%)' } },
+    '@media sm': { maxWidth: '28rem' },
   },
   header: {
-    display: 'grid',
-    gap: 1.5,
-    style: {
-      placeItems: 'center',
-      textAlign: 'center',
-      gridTemplateRows: 'auto 1fr',
-    },
+    flexLayout: 'column',
+    gap: 2,
   },
   footer: {
-    display: 'flex',
+    flexLayout: 'column-reverse',
     gap: 2,
-    style: {
-      flexDirection: 'column-reverse',
-    },
-    '@sm': {
-      justifyContent: 'flex-end',
-      style: {
-        flexDirection: 'row',
-      },
-    },
-  },
-  footerSm: {
-    display: 'grid',
-    style: {
-      gridTemplateColumns: 'repeat(2, 1fr)',
-    },
+    '@media sm': { flexLayout: 'row', justifyContent: 'flex-end' },
   },
   title: {
+    typo: 'heading_4',
     fontSize: '1.125rem',
-    fontWeight: 600,
   },
   description: {
     textColor: 'muted',
@@ -80,15 +55,24 @@ const alertDialogStyles = stylesheet({
   },
   media: {
     bgColor: 'action_secondary',
+    textColor: 'on_action_secondary',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 'medium',
-    width: '4rem',
-    height: '4rem',
-    marginBottom: 2,
+    borderRadius: 'large',
+    width: '2.5rem',
+    height: '2.5rem',
+    marginBottom: 1,
   },
-})
+}).variants(
+  ($: Variants<{ size: 'default' | 'sm' }>) => ({
+    [$.size('sm')]: {
+      content: { '@media sm': { maxWidth: '20rem' } },
+      footer: { '@media sm': { justifyContent: 'stretch' } },
+    },
+  }),
+  { defaults: { size: 'default' } },
+)
 
 function AlertDialog({
   ...props
@@ -129,13 +113,12 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
-  size = "default",
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
-  size?: "default" | "sm"
+  size?: 'default' | 'sm'
 }) {
-  const s = useStyles(alertDialogStyles)
-  const sizeStyle = size === "sm" ? s.contentSm.style : undefined
+  const s = useStyles(alertDialogStyles, { size })
 
   return (
     <AlertDialogPortal>
@@ -143,13 +126,7 @@ function AlertDialogContent({
       <AlertDialogPrimitive.Content
         data-slot="alert-dialog-content"
         data-size={size}
-        {...s.content.with({
-          className: cn(
-            size === "sm" && s.contentSm.className,
-            className
-          ),
-          style: sizeStyle,
-        })}
+        {...s.content.with({ className })}
         {...props}
       />
     </AlertDialogPortal>
@@ -159,7 +136,7 @@ function AlertDialogContent({
 function AlertDialogHeader({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertDialogStyles)
 
   return (
@@ -174,7 +151,7 @@ function AlertDialogHeader({
 function AlertDialogFooter({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertDialogStyles)
 
   return (
@@ -219,7 +196,7 @@ function AlertDialogDescription({
 function AlertDialogMedia({
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<'div'>) {
   const s = useStyles(alertDialogStyles)
 
   return (
@@ -233,16 +210,16 @@ function AlertDialogMedia({
 
 function AlertDialogAction({
   className,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  Pick<React.ComponentProps<typeof Button>, 'variant' | 'size'>) {
   return (
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Action
         data-slot="alert-dialog-action"
-        className={cn(className)}
+        className={className}
         {...props}
       />
     </Button>
@@ -251,16 +228,16 @@ function AlertDialogAction({
 
 function AlertDialogCancel({
   className,
-  variant = "outline",
-  size = "default",
+  variant = 'outline',
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Cancel> &
-  Pick<React.ComponentProps<typeof Button>, "variant" | "size">) {
+  Pick<React.ComponentProps<typeof Button>, 'variant' | 'size'>) {
   return (
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Cancel
         data-slot="alert-dialog-cancel"
-        className={cn(className)}
+        className={className}
         {...props}
       />
     </Button>

@@ -1,21 +1,18 @@
-import { styles } from '@examples/shared/card'
+import { cardStyles } from '@examples/shared'
 import { useStyles } from '@toned/react'
-import { t } from '@toned/systems/base'
 
 import { Button } from './Button.tsx'
 
-function Card() {
-  const s = useStyles(styles)
+export default function Card() {
+  const s = useStyles(cardStyles)
 
   return (
-    <div {...s.container}>
-      <Button label={String(Math.random())} />
+    <div {...s.Root}>
+      <Button label="Hover me" />
 
-      <span {...t({ textColor: 'status_info' })}>
-        Edit <code {...s.code}>src/App.tsx</code> and save to test HMR
+      <span {...s.Hint}>
+        Edit <code {...s.Code}>src/App.tsx</code> and save to test HMR
       </span>
     </div>
   )
 }
-
-export default Card

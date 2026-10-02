@@ -1,102 +1,103 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
 
-const tableStyles = stylesheet({
+export const tableStyles = stylesheet({
   container: {
     position: 'relative',
     width: '100%',
-    overflow: 'auto',
+    overflowX: 'auto',
   },
   table: {
     width: '100%',
     typo: 'body_small',
-    style: { captionSide: 'bottom' },
+    textColor: 'default',
+    // No tokens for table layout.
+    '@platform web': {
+      $style: { borderCollapse: 'collapse', captionSide: 'bottom' },
+    },
+  },
+  header: {
+    borderColor: 'default',
+    // No token sets a single edge.
+    $style: { borderBottomWidth: 1 },
   },
   footer: {
+    bgColor: 'muted',
     borderColor: 'default',
-    borderWidth: 'thin',
     fontWeight: 500,
-    style: {
-      backgroundColor: 'color-mix(in srgb, var(--muted) 50%, transparent)',
-      borderTop: '1px solid var(--border)',
-    },
+    // No token sets a single edge.
+    $style: { borderTopWidth: 1 },
   },
+  // The line between rows and the selected state are rules in styles.css.
   row: {
     borderColor: 'default',
-    style: {
-      borderBottom: '1px solid var(--border)',
-      transition: 'background-color 0.15s',
-    },
-    ':hover': {
-      bgColor: 'subtle',
-    },
+    // No token: the transition list is specific to this part.
+    '@platform web': { $style: { transition: 'background-color 0.15s' } },
+    ':hover': { bgColor: 'muted' },
   },
   head: {
-    textColor: 'default',
     height: '2.5rem',
-    paddingX: 2,
+    paddingX: 3,
+    textColor: 'muted',
+    typo: 'caption',
     fontWeight: 500,
-    style: {
-      textAlign: 'left',
-      verticalAlign: 'middle',
-      whiteSpace: 'nowrap' as const,
+    // No tokens for cell alignment or text wrapping.
+    '@platform web': {
+      $style: {
+        textAlign: 'left',
+        verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
+      },
     },
   },
   cell: {
-    padding: 2,
-    style: {
-      verticalAlign: 'middle',
-      whiteSpace: 'nowrap' as const,
+    paddingX: 3,
+    paddingY: 2.5,
+    // No tokens for cell alignment or text wrapping.
+    '@platform web': {
+      $style: {
+        verticalAlign: 'middle',
+        whiteSpace: 'nowrap',
+      },
     },
   },
   caption: {
+    paddingTop: 3,
     textColor: 'muted',
-    marginTop: 4,
-    typo: 'body_small',
+    typo: 'caption',
   },
 })
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({ className, ...props }: React.ComponentProps<'table'>) {
   const s = useStyles(tableStyles)
 
   return (
-    <div
-      data-slot="table-container"
-      {...s.container}
-    >
-      <table
-        data-slot="table"
-        {...s.table.with({ className })}
-        {...props}
-      />
+    <div data-slot="table-container" {...s.container}>
+      <table data-slot="table" {...s.table.with({ className })} {...props} />
     </div>
   )
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
+function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
+  const s = useStyles(tableStyles)
+
   return (
     <thead
       data-slot="table-header"
-      className={className}
+      {...s.header.with({ className })}
       {...props}
     />
   )
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return (
-    <tbody
-      data-slot="table-body"
-      className={className}
-      {...props}
-    />
-  )
+function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
+  return <tbody data-slot="table-body" className={className} {...props} />
 }
 
-function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
+function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   const s = useStyles(tableStyles)
 
   return (
@@ -108,46 +109,32 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
   )
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
+function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+  const s = useStyles(tableStyles)
+
+  return <tr data-slot="table-row" {...s.row.with({ className })} {...props} />
+}
+
+function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   const s = useStyles(tableStyles)
 
   return (
-    <tr
-      data-slot="table-row"
-      {...s.row.with({ className })}
-      {...props}
-    />
+    <th data-slot="table-head" {...s.head.with({ className })} {...props} />
   )
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   const s = useStyles(tableStyles)
 
   return (
-    <th
-      data-slot="table-head"
-      {...s.head.with({ className })}
-      {...props}
-    />
-  )
-}
-
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
-  const s = useStyles(tableStyles)
-
-  return (
-    <td
-      data-slot="table-cell"
-      {...s.cell.with({ className })}
-      {...props}
-    />
+    <td data-slot="table-cell" {...s.cell.with({ className })} {...props} />
   )
 }
 
 function TableCaption({
   className,
   ...props
-}: React.ComponentProps<"caption">) {
+}: React.ComponentProps<'caption'>) {
   const s = useStyles(tableStyles)
 
   return (

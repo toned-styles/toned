@@ -12,25 +12,51 @@
  */
 export const PSEUDO_STATES = [':hover', ':active', ':focus'] as const
 
+/**
+ * States that resolve through the CSS variable chains but have NO runtime
+ * event pairing. The browser decides `:focus-visible`; native integrations
+ * supply it through their explicit semantic-state capability with an input
+ * modality contract. Native declarations fail visibly without that capability.
+ * CSS mode handles these in the same way as the event-tracked set.
+ */
+export const CSS_ONLY_PSEUDO_STATES = [
+  ':src-hover',
+  ':src-focus-within',
+  ':sib-hover',
+  ':focus-within',
+  ':focus-visible',
+] as const
+
 export type PseudoState = (typeof PSEUDO_STATES)[number]
 
 // Cascade precedence for CSS variable fallback chains: a higher number sits
 // further out, so it wins. `:active` overrides `:focus` overrides `:hover`.
 // Typed against PSEUDO_STATES so adding a pseudo without a priority is a
 // compile error — keeping the two lists from drifting apart.
-const PSEUDO_PRIORITY: Record<PseudoState, number> = {
+const PSEUDO_PRIORITY: Record<PseudoState | CssOnlyPseudoState, number> = {
+  // Cross-element channels sit below the element's own states: a target that
+  // also styles its own :hover keeps the more specific answer. Siblings below
+  // ancestors (an ancestor channel is the tighter relationship).
+  ':sib-hover': -3,
+  ':src-focus-within': -2,
+  ':src-hover': -1,
   ':hover': 0,
   ':focus': 1,
-  ':active': 2,
+  ':focus-within': 1.5,
+  ':focus-visible': 2,
+  ':active': 3,
 }
+
+export type CssOnlyPseudoState = (typeof CSS_ONLY_PSEUDO_STATES)[number]
 
 /**
  * The pseudo-states in cascade order (outermost/highest priority last). Derived
  * from {@link PSEUDO_STATES}, so it is always a permutation of the tracked set.
  */
-export const PSEUDO_CASCADE_ORDER: PseudoState[] = [...PSEUDO_STATES].sort(
-  (a, b) => PSEUDO_PRIORITY[a] - PSEUDO_PRIORITY[b],
-)
+export const PSEUDO_CASCADE_ORDER: (PseudoState | CssOnlyPseudoState)[] = [
+  ...PSEUDO_STATES,
+  ...CSS_ONLY_PSEUDO_STATES,
+].sort((a, b) => PSEUDO_PRIORITY[a] - PSEUDO_PRIORITY[b])
 
 /**
  * Separator used to join an element's active pseudos into a signature string.

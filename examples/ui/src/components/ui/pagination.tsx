@@ -1,62 +1,77 @@
-import * as React from "react"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MoreHorizontalIcon,
-} from "lucide-react"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+} from 'lucide-react'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
-import { buttonStyles, type Button } from "@/components/ui/button"
-
-const paginationStyles = stylesheet({
+export const paginationStyles = stylesheet({
   root: {
     display: 'flex',
     justifyContent: 'center',
-    style: {
-      margin: '0 auto',
-      width: '100%',
-    },
+    width: '100%',
   },
   content: {
     display: 'flex',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 1,
-    style: {
-      flexDirection: 'row',
-    },
   },
   link: {
-    ':hover': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+    minWidth: '2.25rem',
+    height: '2.25rem',
+    paddingX: 2.5,
+    borderRadius: 'medium',
+    typo: 'label_small',
+    textColor: 'default',
+    cursor: 'pointer',
+    // No token: the transition list is specific to this part.
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
     },
+    ':hover': { bgColor: 'subtle' },
+    ':focus-visible': { shadow: 'focus' },
   },
   ellipsis: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    style: {
-      width: '2.25rem',
-      height: '2.25rem',
-    },
+    width: '2.25rem',
+    height: '2.25rem',
+    textColor: 'muted',
   },
+  // On narrow screens the previous and next links show their icon only.
   prevNextText: {
     display: 'none',
-    '@sm': {
-      display: 'block',
-    },
+    '@media sm': { display: 'block' },
   },
-})
+}).variants(
+  ($: Variants<{ active: boolean }>) => ({
+    [$.active(true)]: {
+      link: {
+        bgColor: 'default',
+        borderColor: 'input',
+        borderWidth: 'thin',
+        shadow: 'small',
+      },
+    },
+  }),
+  { defaults: { active: false } },
+)
 
-function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
   const s = useStyles(paginationStyles)
 
   return (
     <nav
-      role="navigation"
-      aria-label="pagination"
+      aria-label="Pagination"
       data-slot="pagination"
       {...s.root.with({ className })}
       {...props}
@@ -67,7 +82,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
 function PaginationContent({
   className,
   ...props
-}: React.ComponentProps<"ul">) {
+}: React.ComponentProps<'ul'>) {
   const s = useStyles(paginationStyles)
 
   return (
@@ -79,73 +94,52 @@ function PaginationContent({
   )
 }
 
-function PaginationItem({ ...props }: React.ComponentProps<"li">) {
+function PaginationItem({ ...props }: React.ComponentProps<'li'>) {
   return <li data-slot="pagination-item" {...props} />
 }
 
 type PaginationLinkProps = {
   isActive?: boolean
-} & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">
+} & React.ComponentProps<'a'>
 
 function PaginationLink({
   className,
-  isActive,
-  size = "icon",
+  isActive = false,
+  children,
   ...props
 }: PaginationLinkProps) {
-  const s = useStyles(buttonStyles, {
-    variant: isActive ? "outline" : "ghost",
-    size,
-  })
-  const ps = useStyles(paginationStyles)
+  const s = useStyles(paginationStyles, { active: isActive })
 
   return (
     <a
-      aria-current={isActive ? "page" : undefined}
+      aria-current={isActive ? 'page' : undefined}
       data-slot="pagination-link"
       data-active={isActive}
-      {...s.root.with(ps.link).with({ className })}
+      {...s.link.with({ className })}
       {...props}
-    />
+    >
+      {children}
+    </a>
   )
 }
 
-function PaginationPrevious({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) {
-  const ps = useStyles(paginationStyles)
+function PaginationPrevious(props: PaginationLinkProps) {
+  const s = useStyles(paginationStyles)
 
   return (
-    <PaginationLink
-      aria-label="Go to previous page"
-      size="default"
-      className={cn(className)}
-      style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
-      {...props}
-    >
+    <PaginationLink aria-label="Go to previous page" {...props}>
       <ChevronLeftIcon />
-      <span {...ps.prevNextText}>Previous</span>
+      <span {...s.prevNextText}>Previous</span>
     </PaginationLink>
   )
 }
 
-function PaginationNext({
-  className,
-  ...props
-}: React.ComponentProps<typeof PaginationLink>) {
-  const ps = useStyles(paginationStyles)
+function PaginationNext(props: PaginationLinkProps) {
+  const s = useStyles(paginationStyles)
 
   return (
-    <PaginationLink
-      aria-label="Go to next page"
-      size="default"
-      className={cn(className)}
-      style={{ gap: '0.25rem', paddingLeft: '0.625rem', paddingRight: '0.625rem' }}
-      {...props}
-    >
-      <span {...ps.prevNextText}>Next</span>
+    <PaginationLink aria-label="Go to next page" {...props}>
+      <span {...s.prevNextText}>Next</span>
       <ChevronRightIcon />
     </PaginationLink>
   )
@@ -154,18 +148,18 @@ function PaginationNext({
 function PaginationEllipsis({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(paginationStyles)
 
   return (
     <span
-      aria-hidden
+      role="img"
+      aria-label="More pages"
       data-slot="pagination-ellipsis"
       {...s.ellipsis.with({ className })}
       {...props}
     >
-      <MoreHorizontalIcon style={{ width: '1rem', height: '1rem' }} />
-      <span className="sr-only">More pages</span>
+      <MoreHorizontalIcon />
     </span>
   )
 }

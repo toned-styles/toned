@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import type { Config } from '../types/index.ts'
 import { resolveModes } from './config.ts'
 

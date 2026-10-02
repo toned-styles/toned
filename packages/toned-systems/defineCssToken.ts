@@ -3,14 +3,14 @@ import { defineToken as defineTokenCore } from '@toned/core'
 import type { CSSProperties } from 'react'
 
 export const defineToken = defineTokenCore as <
-  // biome-ignore lint/suspicious/noExplicitAny: ignore
+  // oxlint-disable-next-line typescript/no-explicit-any -- ignore
   const Values extends readonly any[],
 >(
   config: TokenConfig<Values, CSSProperties>,
 ) => typeof config
 
 // TODO: consider moving to the core
-// biome-ignore lint/suspicious/noExplicitAny: generic token values
+// oxlint-disable-next-line typescript/no-explicit-any -- generic token values
 export const defineCssToken = <const Values extends Readonly<any[]>>(
   propName: keyof CSSProperties | Array<keyof CSSProperties>,
   values: Values,
@@ -21,6 +21,9 @@ export const defineCssToken = <const Values extends Readonly<any[]>>(
 ) => {
   return defineTokenCore({
     values,
+    properties: Object.freeze(
+      Array.isArray(propName) ? [...propName] : [propName],
+    ),
     resolve: (value, tokens) => {
       const v = getValue ? getValue(value, tokens) : value
 

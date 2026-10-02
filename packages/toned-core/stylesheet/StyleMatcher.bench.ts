@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { test } from 'vitest'
+
 import { StyleMatcher } from './StyleMatcher.ts'
 
 // Complex rules similar to real-world usage
@@ -94,55 +95,50 @@ const complexRules = {
 
 const matcher = new StyleMatcher(complexRules)
 
-describe('StyleMatcher Performance', () => {
-  bench('construction', () => {
-    new StyleMatcher(complexRules)
-  })
-
-  bench('match() - simple props', () => {
-    matcher.match({ size: 'sm', variant: 'primary' })
-  })
-
-  bench('match() - with disabled', () => {
-    matcher.match({ size: 'md', variant: 'secondary', disabled: 'true' })
-  })
-
-  bench('match() - with pseudo state', () => {
-    matcher.match({
-      size: 'lg',
-      variant: 'accent',
-      'container:hover': true,
-    })
-  })
-
-  bench('match() - with media query', () => {
-    matcher.match({
-      size: 'sm',
-      variant: 'primary',
-      '@media.desktop': true,
-    })
-  })
-
-  bench('match() - full props', () => {
-    matcher.match({
-      size: 'lg',
-      variant: 'accent',
-      disabled: 'true',
-      'container:hover': true,
-      '@media.desktop': true,
-      '@media.tablet': false,
-    })
-  })
-
-  bench('getPropsBits()', () => {
-    matcher.getPropsBits({ size: 'sm', variant: 'primary' })
-  })
-
-  bench('getPropsBits() - complex', () => {
-    matcher.getPropsBits({
-      size: 'lg',
-      variant: 'accent',
-      disabled: 'true',
-    })
-  })
+test('StyleMatcher Performance', async ({ bench }) => {
+  await bench.compare(
+    bench('construction', () => {
+      new StyleMatcher(complexRules)
+    }),
+    bench('match() - simple props', () => {
+      matcher.match({ size: 'sm', variant: 'primary' })
+    }),
+    bench('match() - with disabled', () => {
+      matcher.match({ size: 'md', variant: 'secondary', disabled: 'true' })
+    }),
+    bench('match() - with pseudo state', () => {
+      matcher.match({
+        size: 'lg',
+        variant: 'accent',
+        'container:hover': true,
+      })
+    }),
+    bench('match() - with media query', () => {
+      matcher.match({
+        size: 'sm',
+        variant: 'primary',
+        '@media.desktop': true,
+      })
+    }),
+    bench('match() - full props', () => {
+      matcher.match({
+        size: 'lg',
+        variant: 'accent',
+        disabled: 'true',
+        'container:hover': true,
+        '@media.desktop': true,
+        '@media.tablet': false,
+      })
+    }),
+    bench('getPropsBits()', () => {
+      matcher.getPropsBits({ size: 'sm', variant: 'primary' })
+    }),
+    bench('getPropsBits() - complex', () => {
+      matcher.getPropsBits({
+        size: 'lg',
+        variant: 'accent',
+        disabled: 'true',
+      })
+    }),
+  )
 })

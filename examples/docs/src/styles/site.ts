@@ -1,0 +1,611 @@
+import type { Variants } from '@toned/core'
+
+import { stylesheet } from './system.ts'
+
+/** The header every page shares. */
+export const headerStyles = stylesheet({
+  Bar: {
+    pin: 'top',
+    zIndex: 50,
+    fill: 'page-glass',
+    border: 'bottom',
+    borderTone: 'subtle',
+    // No token: the blur behind the translucent bar exists only on the web.
+    '@platform web': { $style: { backdropFilter: 'saturate(1.4) blur(12px)' } },
+  },
+  Inner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    bar: 'header',
+    measure: 'site',
+    marginX: 'auto',
+    paddingX: 4,
+    '@media md': { paddingX: 8, gap: 8 },
+  },
+  Logo: { display: 'flex', alignItems: 'center', flexShrink: '0' },
+  Nav: {
+    display: 'none',
+    alignItems: 'center',
+    gap: 1,
+    flexGrow: '1',
+    '@media md': { display: 'flex' },
+  },
+  Spacer: { flexGrow: '1', '@media md': { display: 'none' } },
+  Link: {
+    paddingX: 3,
+    paddingY: 1.5,
+    radius: 'md',
+    textStyle: 'ui',
+    weight: 'medium',
+    text: 'muted',
+    motion: 'colors',
+    ':hover': { text: 'default', fill: 'tint' },
+  },
+  Actions: { display: 'flex', alignItems: 'center', gap: 2 },
+  IconLink: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 9,
+    height: 9,
+    radius: 'md',
+    text: 'muted',
+    ':hover': { text: 'default', fill: 'tint' },
+  },
+  MenuButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 9,
+    height: 9,
+    radius: 'md',
+    cursor: 'pointer',
+    text: 'default',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    '@media md': { display: 'none' },
+  },
+  MobileNav: {
+    flexLayout: 'column',
+    gap: 1,
+    paddingX: 4,
+    paddingBottom: 4,
+    border: 'top',
+    borderTone: 'subtle',
+  },
+  MobileLink: {
+    paddingY: 2.5,
+    textStyle: 'body',
+    weight: 'medium',
+    text: 'default',
+  },
+}).variants(($: Variants<{ active?: boolean }>) => ({
+  [$.active(true)]: {
+    Link: { text: 'accent', fill: 'accent-soft' },
+    MobileLink: { text: 'accent' },
+  },
+}))
+
+/** Documentation shell: sidebar, article column and on-this-page rail. */
+export const docsStyles = stylesheet({
+  Page: {
+    minHeight: '100vh',
+    font: 'sans',
+    textStyle: 'body',
+    text: 'default',
+    fill: 'page',
+  },
+  Shell: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    measure: 'site',
+    marginX: 'auto',
+    '@media md': { paddingX: 4 },
+  },
+  Sidebar: {
+    display: 'none',
+    flexShrink: '0',
+    width: '264px',
+    pin: 'below-header',
+    fit: 'below-header',
+    overflowY: 'auto',
+    paddingY: 8,
+    paddingX: 4,
+    // No token: keeps a finished sidebar scroll from moving the page.
+    '@platform web': { $style: { overscrollBehavior: 'contain' } },
+    '@media md': { display: 'block' },
+  },
+  Main: {
+    flexGrow: '1',
+    minWidth: 0,
+    paddingX: 5,
+    paddingTop: 8,
+    paddingBottom: 16,
+    // No token: the region takes focus after a navigation and from the skip
+    // link, as a place to continue from, not as a control to mark with a ring.
+    '@platform web': { $style: { outline: 'none' } },
+    '@media md': { paddingX: 10, paddingTop: 12 },
+  },
+  Article: { measure: 'article', marginX: 'auto', minWidth: 0 },
+  Wide: { measure: 'wide', marginX: 'auto', minWidth: 0 },
+  Gallery: { measure: 'gallery', marginX: 'auto', minWidth: 0 },
+  Rail: {
+    display: 'none',
+    flexShrink: '0',
+    width: '220px',
+    pin: 'below-header',
+    fit: 'below-header-max',
+    overflowY: 'auto',
+    paddingY: 12,
+    paddingRight: 4,
+    '@media xl': { display: 'block' },
+  },
+  Breadcrumb: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 2,
+    marginBottom: 3,
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'accent',
+  },
+  Title: {
+    textStyle: 'title',
+    weight: 'bold',
+    text: 'default',
+    wrap: 'balance',
+  },
+  Lead: {
+    marginTop: 4,
+    textStyle: 'lead',
+    text: 'muted',
+    wrap: 'pretty',
+  },
+  Meta: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 5,
+    textStyle: 'caption',
+    text: 'faint',
+  },
+  MetaLink: {
+    weight: 'semibold',
+    text: 'accent',
+    ':hover': { textDecoration: 'underline' },
+  },
+  HeaderRule: {
+    marginTop: 8,
+    marginBottom: 2,
+    border: 'bottom',
+    borderTone: 'subtle',
+  },
+  // Mobile drawer for the sidebar; it opens directly under the header.
+  Drawer: {
+    display: 'none',
+    pin: 'drawer',
+    zIndex: 45,
+    overflowY: 'auto',
+    paddingX: 5,
+    paddingY: 6,
+    fill: 'page',
+  },
+}).variants(($: Variants<{ drawer?: 'open' }>) => ({
+  [$.drawer('open')]: {
+    Drawer: { display: 'block', '@media md': { display: 'none' } },
+  },
+}))
+
+export const sidebarStyles = stylesheet({
+  Group: { flexLayout: 'column', gap: 0.5, marginBottom: 6 },
+  Heading: {
+    paddingX: 3,
+    paddingBottom: 1.5,
+    textStyle: 'label',
+    weight: 'heavy',
+    letterSpacing: '0.02em',
+    text: 'default',
+  },
+  Link: {
+    display: 'block',
+    paddingX: 3,
+    paddingY: 1.25,
+    textStyle: 'ui',
+    lineHeight: 1.45,
+    text: 'muted',
+    border: 'marker-left',
+    borderTone: 'none',
+    motion: 'colors',
+    // One-off shape: square against the marker, rounded on the far side.
+    '@platform web': { $style: { borderRadius: '0 8px 8px 0' } },
+    ':hover': { text: 'default', fill: 'tint' },
+  },
+}).variants(($: Variants<{ active?: boolean }>) => ({
+  [$.active(true)]: {
+    Link: {
+      weight: 'semibold',
+      text: 'accent',
+      fill: 'accent-soft',
+      borderTone: 'accent',
+    },
+  },
+}))
+
+export const tocStyles = stylesheet({
+  Root: { flexLayout: 'column', gap: 1 },
+  Heading: {
+    marginBottom: 2,
+    textStyle: 'label',
+    weight: 'heavy',
+    text: 'default',
+  },
+  Link: {
+    display: 'block',
+    paddingY: 1,
+    paddingLeft: 3,
+    textStyle: 'caption',
+    lineHeight: 1.45,
+    text: 'muted',
+    border: 'marker-left',
+    borderTone: 'subtle',
+    motion: 'colors',
+    ':hover': { text: 'default' },
+  },
+}).variants(($: Variants<{ active?: boolean; depth?: 3 }>) => ({
+  [$.depth(3)]: { Link: { paddingLeft: 6 } },
+  [$.active(true)]: { Link: { text: 'accent', borderTone: 'accent' } },
+}))
+
+export const pagerStyles = stylesheet({
+  Root: {
+    columns: 'halves',
+    gap: 4,
+    marginTop: 16,
+    paddingTop: 8,
+    border: 'top',
+    borderTone: 'subtle',
+  },
+  Card: {
+    flexLayout: 'column',
+    gap: 1,
+    padding: 4,
+    radius: 'lg',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    motion: 'lift',
+    ':hover': { borderTone: 'accent', elevation: 'hover' },
+  },
+  Label: { textStyle: 'label', text: 'faint' },
+  Title: { textStyle: 'body-small', weight: 'semibold', text: 'default' },
+}).variants(($: Variants<{ align?: 'end' }>) => ({
+  [$.align('end')]: {
+    Card: {
+      textAlign: 'right',
+      // One-off placement: a lone "next" card keeps the second column.
+      '@platform web': { $style: { gridColumn: '2' } },
+    },
+  },
+}))
+
+/** Framed code: a header with the language and a copy button above the code. */
+export const codeStyles = stylesheet({
+  Frame: {
+    marginY: 5,
+    minWidth: 0,
+    overflow: 'hidden',
+    radius: 'lg',
+    fill: 'code',
+    border: 'all',
+    borderTone: 'default',
+  },
+  Header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 3,
+    bar: 'code',
+    paddingLeft: 4,
+    paddingRight: 1.5,
+    textStyle: 'label',
+    weight: 'semibold',
+    text: 'faint',
+    fill: 'code-chrome',
+    border: 'bottom',
+    borderTone: 'subtle',
+  },
+  Copy: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1.5,
+    paddingX: 2.5,
+    paddingY: 1,
+    radius: 'md',
+    cursor: 'pointer',
+    textStyle: 'label',
+    weight: 'semibold',
+    text: 'muted',
+    ':hover': { text: 'default', fill: 'surface' },
+  },
+  Pre: {
+    overflowX: 'auto',
+    paddingX: 4,
+    paddingY: 3.5,
+    textStyle: 'code',
+    text: 'code',
+    // No token: tab width matters only where source is printed.
+    '@platform web': { $style: { tabSize: 2 } },
+  },
+}).variants(($: Variants<{ bare?: boolean }>) => ({
+  [$.bare(true)]: {
+    Frame: { marginY: 0, border: 'none', radius: 'none' },
+  },
+}))
+
+/** Index pages: search field, grouped card grids and quick links. */
+export const indexStyles = stylesheet({
+  Actions: { display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 6 },
+  Primary: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 2,
+    paddingX: 4,
+    paddingY: 2.5,
+    radius: 'md',
+    textStyle: 'ui',
+    weight: 'semibold',
+    text: 'on-accent',
+    fill: 'accent',
+    ':hover': { fill: 'accent-strong' },
+  },
+  Secondary: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 2,
+    paddingX: 4,
+    paddingY: 2.5,
+    radius: 'md',
+    textStyle: 'ui',
+    weight: 'semibold',
+    text: 'default',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    ':hover': { borderTone: 'accent' },
+  },
+  Search: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  SearchIcon: {
+    position: 'absolute',
+    left: 4,
+    text: 'faint',
+    pointerEvents: 'none',
+  },
+  Input: {
+    width: '100%',
+    height: 12,
+    paddingLeft: 12,
+    paddingRight: 4,
+    radius: 'lg',
+    textStyle: 'body-small',
+    text: 'default',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    elevation: 'resting',
+    // The focus ring below replaces the browser outline.
+    '@platform web': { $style: { outline: 'none' } },
+    ':focus-visible': { borderTone: 'accent', elevation: 'focus-ring' },
+  },
+  Count: { marginTop: 3, textStyle: 'caption', text: 'faint' },
+  Group: { flexLayout: 'column', gap: 4, marginTop: 10 },
+  GroupTitle: { textStyle: 'eyebrow', weight: 'heavy', text: 'muted' },
+  Grid: { columns: 'cards', gap: 4 },
+  Card: {
+    flexLayout: 'column',
+    gap: 2,
+    padding: 5,
+    radius: 'lg',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    motion: 'lift',
+    ':hover': {
+      borderTone: 'accent',
+      elevation: 'hover',
+      // One-off: the card rises a pixel to meet its shadow.
+      '@platform web': { $style: { transform: 'translateY(-1px)' } },
+    },
+  },
+  CardTitle: {
+    textStyle: 'body',
+    lineHeight: 1.35,
+    weight: 'bold',
+    text: 'default',
+  },
+  CardBody: { textStyle: 'ui', lineHeight: 1.6, text: 'muted' },
+  CardMore: {
+    marginTop: 'auto',
+    paddingTop: 2,
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'accent',
+  },
+  Empty: {
+    marginTop: 8,
+    padding: 8,
+    radius: 'lg',
+    textAlign: 'center',
+    text: 'muted',
+    border: 'dashed',
+    borderTone: 'default',
+  },
+  Note: {
+    marginTop: 6,
+    paddingX: 4,
+    paddingY: 3,
+    radius: 'lg',
+    textStyle: 'ui',
+    lineHeight: 1.6,
+    text: 'body',
+    fill: 'tint',
+    border: 'all',
+    borderTone: 'default',
+  },
+}).variants(($: Variants<{ density?: 'compact' }>) => ({
+  // The component sidebar's filter: the same field, sized for a rail.
+  [$.density('compact')]: {
+    Input: { height: 9.5, paddingLeft: 3, marginBottom: 2, textStyle: 'ui' },
+  },
+}))
+
+/** Interactive examples: each one is a titled stage with its source, by layer, below. */
+export const experimentStyles = stylesheet({
+  Jump: { display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 6 },
+  Chip: {
+    paddingX: 3,
+    paddingY: 1.25,
+    radius: 'full',
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'body',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    ':hover': { text: 'accent', borderTone: 'accent' },
+  },
+  Section: {
+    flexLayout: 'column',
+    gap: 5,
+    marginTop: 14,
+    anchor: 'below-header',
+  },
+  Head: { display: 'flex', gap: 4, alignItems: 'flex-start' },
+  Number: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: '0',
+    width: 9,
+    height: 9,
+    radius: 'md',
+    textStyle: 'caption',
+    weight: 'heavy',
+    text: 'accent',
+    fill: 'accent-soft',
+  },
+  Title: {
+    textStyle: 'heading',
+    lineHeight: 1.25,
+    weight: 'bold',
+    text: 'default',
+  },
+  Summary: { marginTop: 1, textStyle: 'body', text: 'muted' },
+  Stage: {
+    padding: 6,
+    minWidth: 0,
+    radius: '2xl',
+    fill: 'surface',
+    border: 'all',
+    borderTone: 'default',
+    elevation: 'raised',
+  },
+  Footer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 3,
+    textStyle: 'ui',
+  },
+  Link: {
+    weight: 'semibold',
+    text: 'accent',
+    ':hover': { textDecoration: 'underline' },
+  },
+  // A caption above one layer of an example: styles, output, configuration.
+  Layer: {
+    textStyle: 'overline',
+    weight: 'semibold',
+    text: 'faint',
+  },
+  Block: { flexLayout: 'column', gap: 2, minWidth: 0 },
+  // A source frame set in running text takes the margins of a code block.
+  Inline: { marginY: 5, minWidth: 0 },
+  // One frame holding the layer tabs and the selected file.
+  Source: {
+    minWidth: 0,
+    overflow: 'hidden',
+    radius: 'lg',
+    fill: 'code',
+    border: 'all',
+    borderTone: 'default',
+  },
+  Tabs: {
+    display: 'flex',
+    overflowX: 'auto',
+    paddingX: 2,
+    fill: 'code-chrome',
+    border: 'bottom',
+    borderTone: 'subtle',
+  },
+  Tab: {
+    flexShrink: '0',
+    paddingX: 3,
+    paddingY: 2.5,
+    cursor: 'pointer',
+    textStyle: 'caption',
+    weight: 'semibold',
+    text: 'muted',
+    wrap: 'nowrap',
+    border: 'marker-bottom',
+    borderTone: 'none',
+    ':hover': { text: 'default' },
+  },
+  // Demo chrome inside a stage.
+  Output: { flexLayout: 'column', gap: 5, minWidth: 0 },
+  Pair: {
+    columns: 'single',
+    gap: 5,
+    minWidth: 0,
+    '@media md': { columns: 'even-halves' },
+  },
+  Cell: { flexLayout: 'column', gap: 2, minWidth: 0 },
+  Note: { textStyle: 'caption', lineHeight: 1.6, text: 'muted' },
+}).variants(($: Variants<{ selected?: boolean; quiet?: boolean }>) => ({
+  [$.selected(true)]: { Tab: { text: 'accent', borderTone: 'accent' } },
+  // Configuration reads as a footnote to the styles and their output.
+  [$.quiet(true)]: { Source: { fill: 'none', borderTone: 'subtle' } },
+}))
+
+export const footerStyles = stylesheet({
+  Root: { marginTop: 16, border: 'top', borderTone: 'subtle' },
+  Inner: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    measure: 'site',
+    marginX: 'auto',
+    paddingX: 5,
+    paddingY: 10,
+    textStyle: 'ui',
+    text: 'muted',
+    '@media md': { paddingX: 8 },
+  },
+  Brand: { flexLayout: 'column', gap: 2 },
+  Links: { display: 'flex', flexWrap: 'wrap', gap: 6 },
+  Link: {
+    weight: 'medium',
+    text: 'muted',
+    ':hover': { text: 'default' },
+  },
+})

@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { CodeBlock } from '../components/CodeBlock.tsx'
 import { proseStyles } from '../styles/prose.ts'
 
@@ -13,12 +14,14 @@ function Concepts() {
     <article {...s.container}>
       <h1 {...s.h1}>Core Concepts</h1>
       <p>
-        toned-styles is built around four core ideas: design tokens, systems,
+        Toned is built around four core ideas: design tokens, systems,
         stylesheets, and variants. Together they give you type-safe,
         cross-platform styling with a single authoring model.
       </p>
 
-      <h2 {...s.h2}>Design Tokens</h2>
+      <h2 {...s.h2} id="design-tokens">
+        Design Tokens
+      </h2>
       <p>
         Tokens are the atomic building blocks of your design system. Each token
         maps a semantic name to one or more platform-specific values. For
@@ -29,7 +32,7 @@ function Concepts() {
         directly.
       </p>
       <CodeBlock>{`// Tokens are used directly inside stylesheet definitions:
-container: {
+Root: {
   bgColor: 'action',       // semantic background colour
   borderRadius: 'medium',  // semantic border radius
   paddingX: 3,             // spacing scale value
@@ -40,39 +43,49 @@ container: {
         <code {...s.code}>borderColor</code>), borders (
         <code {...s.code}>borderRadius</code>,{' '}
         <code {...s.code}>borderWidth</code>), typography (
-        <code {...s.code}>typo</code>), shadows (<code {...s.code}>shadow</code>
+        <code {...s.code}>typography</code>), shadows (
+        <code {...s.code}>shadow</code>
         ), layout (<code {...s.code}>paddingX</code>,{' '}
         <code {...s.code}>paddingY</code>, <code {...s.code}>gap</code>,{' '}
         <code {...s.code}>flexLayout</code>), and sizing (
         <code {...s.code}>width</code>, <code {...s.code}>height</code>).
       </p>
 
-      <h2 {...s.h2}>Systems</h2>
+      <h2 {...s.h2} id="systems">
+        Systems
+      </h2>
       <p>
         A system is a collection of tokens plus configuration (breakpoints,
         selectors, rules). You create one with{' '}
         <code {...s.code}>defineSystem</code>:
       </p>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
+      <CodeBlock>{`import { defineSystem, defineToken } from '@toned/core'
 
-export const { system, stylesheet, t } = defineSystem(
-  { ...typo, ...colour, ...border, ...layout, ...shadow, ...sizes },
-  config,
-)`}</CodeBlock>
+export const ui = defineSystem({
+  id: 'example',
+  tokens: {
+    padding: defineToken({
+      values: [0, 1, 2, 3] as const,
+      resolve: value => ({ padding: value * 4 }),
+    }),
+  },
+})`}</CodeBlock>
       <p>
-        The returned <code {...s.code}>stylesheet</code> function is bound to
+        The system's <code {...s.code}>ui.stylesheet</code> function is bound to
         that system's token set, giving you full autocompletion and type
         checking for every token property.
       </p>
 
-      <h2 {...s.h2}>Stylesheets</h2>
+      <h2 {...s.h2} id="stylesheets">
+        Stylesheets
+      </h2>
       <p>
         A stylesheet defines one or more named elements, each with a set of
-        token values and an optional <code {...s.code}>style</code> escape hatch
-        for raw CSS properties:
+        token values and an optional <code {...s.code}>$style</code> escape
+        hatch for raw CSS properties:
       </p>
       <CodeBlock>{`const cardStyles = stylesheet({
-  card: {
+  Root: {
     bgColor: 'elevated',
     borderRadius: 'large',
     borderColor: 'subtle',
@@ -87,52 +100,58 @@ export const { system, stylesheet, t } = defineSystem(
         your style definitions platform-agnostic.
       </p>
 
-      <h2 {...s.h2}>Variants</h2>
+      <h2 {...s.h2} id="variants">
+        Variants
+      </h2>
       <p>
         Variants let you conditionally apply different token values based on
         component state. Chain <code {...s.code}>.variants()</code> onto a
         stylesheet and use the dollar-sign builder to declare variant
         conditions:
       </p>
-      <CodeBlock>{`const buttonStyles = stylesheet({
-  container: { bgColor: 'action', borderRadius: 'medium' },
-  label: { textColor: 'on_action' },
-}).variants<{
+      <CodeBlock>{`import type { Variants } from '@toned/core'
+
+const buttonStyles = stylesheet({
+  Root: { $kind: 'pressable', bgColor: 'action', borderRadius: 'medium' },
+  Label: { $kind: 'text', textColor: 'on_action' },
+}).variants(($: Variants<{
   size: 'm' | 's'
   variant: 'accent' | 'danger'
-}>(($) => ({
-  [$.variant('accent')]: {
-    container: { bgColor: 'action' },
-    label: { textColor: 'on_action' },
+}>) => ({
+  [$.variant('danger')]: {
+    Root: { bgColor: 'destructive' },
+    Label: { textColor: 'on_destructive' },
   },
   [$.size('m')]: {
-    container: { paddingX: 3 },
+    Root: { paddingX: 3 },
   },
   [$.size('s')]: {
-    container: { paddingX: 2, paddingY: 1 },
+    Root: { paddingX: 2, paddingY: 1 },
   },
 }))`}</CodeBlock>
       <p>
         Variant keys are fully typed: your component will get compile-time
-        errors if it passes invalid variant values to{' '}
+        errors if it passes invalid variant values to the element family or to{' '}
         <code {...s.code}>useStyles</code>.
       </p>
 
-      <h2 {...s.h2}>Media Queries / Breakpoints</h2>
+      <h2 {...s.h2} id="media-queries-breakpoints">
+        Media Queries / Breakpoints
+      </h2>
       <p>
         The base system defines breakpoints (<code {...s.code}>xs</code>,{' '}
         <code {...s.code}>sm</code>, <code {...s.code}>md</code>,{' '}
         <code {...s.code}>lg</code>, <code {...s.code}>xl</code>). You can apply
-        responsive token values by prefixing a breakpoint name with{' '}
-        <code {...s.code}>@</code>:
+        responsive token values under an <code {...s.code}>@media</code> key
+        that names the breakpoint:
       </p>
       <CodeBlock>{`const responsiveCard = stylesheet({
-  card: {
+  Root: {
     paddingX: 2,
-    '@md': {
+    '@media md': {
       paddingX: 4,
     },
-    '@lg': {
+    '@media lg': {
       paddingX: 6,
     },
   },
@@ -143,13 +162,26 @@ export const { system, stylesheet, t } = defineSystem(
         and friends.
       </p>
       <p>
-        When <code {...s.code}>mediaMode</code> is set to{' '}
-        <code {...s.code}>'css'</code> in your config, these generate real CSS{' '}
-        <code {...s.code}>@media</code> rules. In JavaScript mode a stylesheet
-        evaluates them at runtime, while inline <code {...s.code}>t</code>{' '}
-        blocks -- which compile to CSS custom properties and have no runtime
-        equivalent -- are dropped with a development-only warning. See{' '}
-        <a href="/api/media-queries">Media Queries</a>.
+        With a web renderer these are real CSS <code {...s.code}>@media</code>{' '}
+        rules, generated at build time. A native renderer evaluates a
+        stylesheet&apos;s breakpoints against the host&apos;s viewport. Inline{' '}
+        <code {...s.code}>t</code> blocks compile to CSS custom properties and
+        apply to web output only. See{' '}
+        <Link to="/api/media-queries">Media Queries</Link>.
+      </p>
+
+      <h2 {...s.h2} id="states-and-conditions">
+        States and Conditions
+      </h2>
+      <p>
+        Breakpoints are one kind of condition. A part can also change in a state
+        (<code {...s.code}>':hover'</code>,{' '}
+        <code {...s.code}>':focus-visible'</code>), inside a container of a
+        given width (<code {...s.code}>'@container card wide'</code>), on one
+        platform (<code {...s.code}>'@platform web'</code>), or when another
+        part is in a state (<code {...s.code}>'Root:hover'</code>). Every key
+        and its forms are listed in{' '}
+        <Link to="/api/conditions">Conditions and selectors</Link>.
       </p>
     </article>
   )

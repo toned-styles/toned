@@ -1,12 +1,23 @@
-import { doc, c } from '@/lib/doc'
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis } from './pagination'
+import { c, doc } from '@/lib/doc.tsx'
+
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './pagination.tsx'
 
 export default doc({
+  description:
+    'Links between the pages of a long list, with the current page marked.',
   components: [
     c({ Pagination }, {}),
     c({ PaginationContent }, {}),
     c({ PaginationItem }, {}),
-    c({ PaginationLink }, { href: '#', children: '1' }),
+    c({ PaginationLink }, { href: '#' }),
     c({ PaginationPrevious }, { href: '#' }),
     c({ PaginationNext }, { href: '#' }),
     c({ PaginationEllipsis }, {}),
@@ -18,10 +29,12 @@ export default doc({
           <C.PaginationPrevious />
         </C.PaginationItem>
         <C.PaginationItem>
-          <C.PaginationLink href="#" isActive>1</C.PaginationLink>
+          <C.PaginationLink href="#">1</C.PaginationLink>
         </C.PaginationItem>
         <C.PaginationItem>
-          <C.PaginationLink href="#">2</C.PaginationLink>
+          <C.PaginationLink href="#" isActive>
+            2
+          </C.PaginationLink>
         </C.PaginationItem>
         <C.PaginationItem>
           <C.PaginationLink href="#">3</C.PaginationLink>

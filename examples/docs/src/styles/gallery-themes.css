@@ -1,0 +1,1125 @@
+/*
+ * Themes for the component gallery.
+ *
+ * The collection's stylesheets name tokens of the base system, and each token
+ * reads a CSS variable. A theme here is one set of values for those
+ * variables. No component and no stylesheet changes between themes.
+ *
+ * The switcher sets two attributes on <html>:
+ *   data-gallery-theme-scope   the gallery is mounted
+ *   data-theme="<id>"          the selected theme
+ *
+ * The values are declared on the themed regions only, so the site's own
+ * header, sidebar and panels keep the site's look:
+ *   [data-gallery-themed]        a preview stage
+ *   body > :not([id="root"])     a portalled overlay (dialog, menu, tooltip)
+ *
+ * "Modern" is the collection's own look (ui/src/styles.css with
+ * docs-theme.css) and needs no block.
+ *
+ * Variables named --g-* are not part of the base system. They carry what its
+ * tokens cannot express (border style, text case, backdrop blur, press
+ * movement, motion timing) and are applied by the rules in section 3.
+ */
+
+/* ================================================================
+   1. Shared: where a theme lands, and the variables derived from it
+   ================================================================ */
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-gallery-themed], body > :not([id="root"])) {
+  color: var(--foreground);
+  font-family: var(--typo_font_sans);
+  -webkit-font-smoothing: var(--g-smoothing);
+
+  /* Neutral values for the extension variables; a theme overrides its own. */
+  --g-smoothing: antialiased;
+  --g-font-heading: var(--typo_font_sans);
+  --g-font-label: var(--typo_font_sans);
+  --g-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --g-weight-body: 400;
+  --g-weight-label: 500;
+  --g-weight-heading: 600;
+  --g-tracking-label: 0;
+  --g-tracking-heading: -0.01em;
+  --g-label-case: none;
+  --g-title-case: none;
+  --g-title-style: normal;
+  --g-title-color: inherit;
+  --g-border-style: solid;
+  --g-panel-border-style: solid;
+  --g-panel-border-width: var(--border_width_thin);
+  --g-panel-backdrop: none;
+  --g-overlay-bg: var(--popover);
+  --g-overlay-backdrop: none;
+  --g-scrim-backdrop: none;
+  --g-stage-radius: 14px;
+  --g-panel-image: none;
+  --g-border-action: var(--ring);
+  --g-control-border-width: 0px;
+  --g-control-border-color: transparent;
+  --g-outline-border-width: var(--border_width_thin);
+  --g-outline-border-color: var(--input);
+  --g-control-shadow: var(--shadow_small);
+  --g-control-image: none;
+  --g-press: none;
+  --g-press-shadow: var(--g-control-shadow);
+  --g-field-bg: var(--background);
+  --g-field-border-width: var(--border_width_thin);
+  --g-thumb: var(--background);
+  --g-radio-radius: 9999px;
+  --g-radio-rotate: 0deg;
+  --g-track-image: none;
+  --g-meter-image: none;
+  --g-button-open: none;
+  --g-button-close: none;
+  --g-easing: ease;
+  --g-spin-easing: linear;
+  /* --destructive is the text colour; a filled surface may need a deeper one. */
+  --g-destructive-bg: var(--destructive);
+  --g-on-destructive: #ffffff;
+  --g-success: #1d7a4c;
+  --g-on-success: #ffffff;
+  --g-warning: #a04a12;
+  --g-on-warning: #ffffff;
+  --g-info: var(--primary);
+  --g-on-info: var(--primary-foreground);
+  --g-text-destructive: var(--destructive);
+  --g-text-success: var(--g-success);
+  --g-text-warning: var(--g-warning);
+  --g-track: var(--input);
+  --g-tint: color-mix(in srgb, var(--primary) 16%, var(--background));
+
+  /* The base system's colour roles, from the theme's palette. */
+  --colors_bg_default: var(--background);
+  --colors_bg_subtle: var(--accent);
+  --colors_bg_muted: var(--muted);
+  --colors_bg_emphasized: var(--foreground);
+  --colors_bg_elevated: var(--card);
+  --colors_bg_interactive: var(--accent);
+  --colors_bg_interactive_subtle: var(--background);
+  --colors_bg_interactive_muted: var(--g-track);
+  --colors_bg_action: var(--primary);
+  --colors_bg_action_secondary: var(--secondary);
+  --colors_bg_action_subtle: var(--g-tint);
+  --colors_bg_destructive: var(--g-destructive-bg);
+  --colors_bg_important: var(--primary);
+  --colors_bg_status_error: var(--g-destructive-bg);
+  --colors_bg_status_warning: var(--g-warning);
+  --colors_bg_status_success: var(--g-success);
+  --colors_bg_status_info: var(--g-info);
+  --colors_bg_skeleton: var(--muted);
+
+  --colors_text_default: var(--foreground);
+  --colors_text_subtle: var(--accent-foreground);
+  --colors_text_muted: var(--muted-foreground);
+  --colors_text_emphasized: var(--foreground);
+  --colors_text_interactive: var(--accent-foreground);
+  --colors_text_interactive_subtle: var(--muted-foreground);
+  --colors_text_action: var(--g-text-action, var(--primary));
+  --colors_text_action_secondary: var(--secondary-foreground);
+  --colors_text_destructive: var(--g-text-destructive);
+  --colors_text_important: var(--g-text-action, var(--primary));
+  --colors_text_on_action: var(--primary-foreground);
+  --colors_text_on_action_secondary: var(--secondary-foreground);
+  --colors_text_on_destructive: var(--g-on-destructive);
+  --colors_text_on_important: var(--primary-foreground);
+  --colors_text_on_status_error: var(--g-on-destructive);
+  --colors_text_on_status_warning: var(--g-on-warning);
+  --colors_text_on_status_success: var(--g-on-success);
+  --colors_text_on_status_info: var(--g-on-info);
+  --colors_text_status_error: var(--g-text-destructive);
+  --colors_text_status_warning: var(--g-text-warning);
+  --colors_text_status_success: var(--g-text-success);
+  --colors_text_status_info: var(--g-text-action, var(--primary));
+
+  --colors_border_default: var(--border);
+  --colors_border_subtle: var(--border);
+  --colors_border_muted: var(--border);
+  --colors_border_interactive: var(--ring);
+  --colors_border_input: var(--input);
+  --colors_border_action: var(--g-border-action);
+  --colors_border_destructive: var(--g-text-destructive);
+  --colors_border_status_error: var(--g-text-destructive);
+  --colors_border_status_warning: var(--g-text-warning);
+  --colors_border_status_success: var(--g-text-success);
+
+  --colors_fill_default: var(--foreground);
+  --colors_fill_subtle: var(--muted-foreground);
+  --colors_fill_muted: var(--muted-foreground);
+  --colors_fill_emphasized: var(--foreground);
+  --colors_fill_interactive: var(--foreground);
+  --colors_fill_interactive_subtle: var(--muted-foreground);
+  --colors_fill_action: var(--primary);
+  --colors_fill_action_secondary: var(--secondary-foreground);
+  --colors_fill_destructive: var(--g-text-destructive);
+  --colors_fill_important: var(--primary);
+  --colors_fill_status_error: var(--g-text-destructive);
+  --colors_fill_status_warning: var(--g-text-warning);
+  --colors_fill_status_success: var(--g-text-success);
+  --colors_fill_status_info: var(--primary);
+
+  --colors_outline_focus_center: var(--ring);
+  --colors_outline_focus_edge: color-mix(in srgb, var(--ring) 50%, transparent);
+
+  /* The typography roles, from the theme's families, weights and tracking. */
+  --typo_display_large_family: var(--g-font-heading);
+  --typo_display_medium_family: var(--g-font-heading);
+  --typo_display_small_family: var(--g-font-heading);
+  --typo_heading_1_family: var(--g-font-heading);
+  --typo_heading_2_family: var(--g-font-heading);
+  --typo_heading_3_family: var(--g-font-heading);
+  --typo_heading_4_family: var(--g-font-heading);
+  --typo_display_large_weight: var(--g-weight-heading);
+  --typo_display_medium_weight: var(--g-weight-heading);
+  --typo_display_small_weight: var(--g-weight-heading);
+  --typo_heading_1_weight: var(--g-weight-heading);
+  --typo_heading_2_weight: var(--g-weight-heading);
+  --typo_heading_3_weight: var(--g-weight-heading);
+  --typo_heading_4_weight: var(--g-weight-heading);
+  --typo_heading_1_spacing: var(--g-tracking-heading);
+  --typo_heading_2_spacing: var(--g-tracking-heading);
+  --typo_heading_3_spacing: var(--g-tracking-heading);
+  --typo_heading_4_spacing: var(--g-tracking-heading);
+  --typo_body_large_family: var(--typo_font_sans);
+  --typo_body_medium_family: var(--typo_font_sans);
+  --typo_body_small_family: var(--typo_font_sans);
+  --typo_caption_family: var(--typo_font_sans);
+  --typo_quote_family: var(--g-font-heading);
+  --typo_body_large_weight: var(--g-weight-body);
+  --typo_body_medium_weight: var(--g-weight-body);
+  --typo_body_small_weight: var(--g-weight-body);
+  --typo_caption_weight: var(--g-weight-body);
+  --typo_label_large_family: var(--g-font-label);
+  --typo_label_medium_family: var(--g-font-label);
+  --typo_label_small_family: var(--g-font-label);
+  --typo_label_large_weight: var(--g-weight-label);
+  --typo_label_medium_weight: var(--g-weight-label);
+  --typo_label_small_weight: var(--g-weight-label);
+  --typo_label_large_spacing: var(--g-tracking-label);
+  --typo_label_medium_spacing: var(--g-tracking-label);
+  --typo_label_small_spacing: var(--g-tracking-label);
+  --typo_code_family: var(--g-font-mono);
+}
+
+/* ================================================================
+   2. The themes: values only
+   ================================================================ */
+
+/* ---------------- 8-bit ----------------
+   A sixteen-colour console palette, square corners, stepped outlines drawn
+   with offset shadows, a bold monospace face and two-step motion. */
+html[data-gallery-theme-scope][data-theme="pixel"]
+  :is([data-gallery-themed], body > :not([id="root"])) {
+  --g-stage:
+    conic-gradient(#232a4d 25%, transparent 0) 0 0 / 16px 16px, #1a1c2c;
+  --g-stage-line: #f4f4f4;
+
+  --base: 4px;
+  --radius: 0px;
+  --background: #1a1c2c;
+  --foreground: #f4f4f4;
+  --card: #333c57;
+  --card-foreground: #f4f4f4;
+  --popover: #29366f;
+  --popover-foreground: #f4f4f4;
+  --primary: #ffcd75;
+  --primary-foreground: #1a1c2c;
+  --secondary: #94b0c2;
+  --secondary-foreground: #1a1c2c;
+  --muted: #29366f;
+  --muted-foreground: #c0d2de;
+  --accent: #3b5dc9;
+  --accent-foreground: #ffffff;
+  --destructive: #ff8fa3;
+  --g-destructive-bg: #b13e53;
+  --border: #94b0c2;
+  --input: #f4f4f4;
+  --ring: #73eff7;
+  --sidebar: #29366f;
+  --sidebar-foreground: #f4f4f4;
+  --sidebar-primary: #ffcd75;
+  --sidebar-primary-foreground: #1a1c2c;
+  --sidebar-accent: #3b5dc9;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #94b0c2;
+  --sidebar-ring: #73eff7;
+  --chart-1: #ffcd75;
+  --chart-2: #a7f070;
+  --chart-3: #73eff7;
+  --chart-4: #ef7d57;
+  --chart-5: #94b0c2;
+
+  --colors_bg_overlay: rgb(13 14 23 / 0.82);
+  --g-track: #566c86;
+  --g-tint: #1a1c2c;
+  --g-text-action: #ffcd75;
+  --g-on-destructive: #ffffff;
+  --g-success: #38b764;
+  --g-on-success: #10121c;
+  --g-text-success: #a7f070;
+  --g-warning: #ffcd75;
+  --g-on-warning: #1a1c2c;
+  --g-text-warning: #ffcd75;
+  --g-info: #41a6f6;
+  --g-on-info: #10121c;
+
+  --radius_none: 0px;
+  --radius_small: 0px;
+  --radius_medium: 0px;
+  --radius_large: 0px;
+  --radius_xlarge: 0px;
+  --radius_full: 0px;
+  --border_width_none: 0px;
+  --border_width_thin: 2px;
+  --border_width_medium: 4px;
+  --border_width_thick: 4px;
+  --border_width_heavy: 6px;
+
+  --shadow_none: none;
+  --shadow_small: 4px 4px 0 0 #0d0e17;
+  --shadow_medium: 4px 4px 0 0 #0d0e17;
+  --shadow_large: 8px 8px 0 0 #0d0e17;
+  --shadow_xlarge: 8px 8px 0 0 #0d0e17;
+  --shadow_focus: 0 0 0 4px #1a1c2c, 0 0 0 8px #73eff7;
+
+  --typo_font_sans:
+    Monaco, "Lucida Console", ui-monospace, "SF Mono", Menlo, Consolas,
+    "Courier New", monospace;
+  --g-font-mono: var(--typo_font_sans);
+  --g-smoothing: none;
+  --g-weight-body: 400;
+  --g-weight-label: 700;
+  --g-weight-heading: 700;
+  --g-tracking-label: 0.04em;
+  --g-tracking-heading: 0.02em;
+  --g-label-case: uppercase;
+  --g-title-case: uppercase;
+  --g-title-color: #ffcd75;
+  --typo_body_medium_size: 0.875rem;
+  --typo_body_small_size: 0.8125rem;
+  --typo_label_small_size: 0.75rem;
+  --typo_caption_size: 0.6875rem;
+  --typo_heading_4_size: 0.9375rem;
+  --typo_heading_3_size: 1.0625rem;
+
+  --g-stage-radius: 0px;
+  --g-border-style: solid;
+  --g-panel-border-width: 4px;
+  --g-outline-border-width: 2px;
+  --g-overlay-bg: #29366f;
+  /* A stepped outline with a bevel: light on the top left, dark below. */
+  --g-control-shadow:
+    0 -4px 0 0 #0d0e17, 0 4px 0 0 #0d0e17, -4px 0 0 0 #0d0e17,
+    4px 0 0 0 #0d0e17, inset -4px -4px 0 0 rgb(0 0 0 / 0.28),
+    inset 4px 4px 0 0 rgb(255 255 255 / 0.4);
+  --g-press: translateY(2px);
+  --g-press-shadow:
+    0 -4px 0 0 #0d0e17, 0 4px 0 0 #0d0e17, -4px 0 0 0 #0d0e17,
+    4px 0 0 0 #0d0e17, inset 4px 4px 0 0 rgb(0 0 0 / 0.28);
+  --g-field-bg: #10121c;
+  --g-thumb: #f4f4f4;
+  --g-radio-radius: 0px;
+  --g-radio-rotate: 45deg;
+  --g-meter-image: repeating-linear-gradient(
+    90deg,
+    transparent 0 12px,
+    #1a1c2c 12px 16px
+  );
+  --g-easing: steps(2, end);
+  --g-spin-easing: steps(8, end);
+}
+
+/* ---------------- Liquid glass ----------------
+   Translucent panes over a soft backdrop. Depth comes from a blur of what is
+   behind each pane, a bright hairline where its top edge catches the light,
+   and wide soft shadows. Text stays dark and solid. */
+html[data-gallery-theme-scope][data-theme="glass"]
+  :is([data-gallery-themed], body > :not([id="root"])) {
+  /* One blue hue with a single warm glow, as in the theme showcase: enough for
+     the glass to refract without turning into a rainbow. Kept light so dark
+     text on the translucent panes stays well above its contrast floor. */
+  --g-stage:
+    radial-gradient(42% 46% at 14% 20%, #e6f1ff 0, transparent 70%),
+    radial-gradient(40% 52% at 86% 16%, #9fb9f6 0, transparent 72%),
+    radial-gradient(48% 54% at 74% 96%, #ffdcc6 0, transparent 70%),
+    linear-gradient(160deg, #c6d9f9 0%, #abc2f2 55%, #bfc5f4 100%);
+  --g-stage-line: rgb(255 255 255 / 0.8);
+
+  --base: 4px;
+  --radius: 16px;
+  --background: rgb(255 255 255 / 0.62);
+  --foreground: #10162b;
+  --card: rgb(255 255 255 / 0.46);
+  --card-foreground: #10162b;
+  --popover: rgb(250 251 255 / 0.78);
+  --popover-foreground: #10162b;
+  --primary: #0b5bd3;
+  --primary-foreground: #ffffff;
+  --secondary: rgb(255 255 255 / 0.66);
+  --secondary-foreground: #10162b;
+  --muted: rgb(16 22 43 / 0.06);
+  --muted-foreground: #3a4158;
+  --accent: rgb(16 22 43 / 0.07);
+  --accent-foreground: #10162b;
+  --destructive: #9f1029;
+  --border: rgb(16 22 43 / 0.11);
+  --input: rgb(16 22 43 / 0.2);
+  --ring: #0b5bd3;
+  --sidebar: rgb(255 255 255 / 0.4);
+  --sidebar-foreground: #10162b;
+  --sidebar-primary: #0b5bd3;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(16 22 43 / 0.07);
+  --sidebar-accent-foreground: #10162b;
+  --sidebar-border: rgb(16 22 43 / 0.11);
+  --sidebar-ring: #0b5bd3;
+  --chart-1: #0b5bd3;
+  --chart-2: #7a5cff;
+  --chart-3: #12805c;
+  --chart-4: #b3541e;
+  --chart-5: #6b7390;
+
+  --colors_bg_overlay: rgb(24 30 66 / 0.22);
+  --g-track: rgb(16 22 43 / 0.16);
+  --g-tint: rgb(16 22 43 / 0.1);
+  --g-on-destructive: #ffffff;
+  --g-success: #12805c;
+  --g-on-success: #ffffff;
+  --g-warning: #a4520e;
+  --g-on-warning: #ffffff;
+
+  --radius_none: 0px;
+  --radius_small: 7px;
+  --radius_medium: 11px;
+  --radius_large: 16px;
+  --radius_xlarge: 22px;
+  --radius_full: 9999px;
+  --border_width_none: 0px;
+  --border_width_thin: 1px;
+  --border_width_medium: 2px;
+  --border_width_thick: 3px;
+  --border_width_heavy: 4px;
+
+  /* Each level: a bright top edge, a faint inner rim, then the cast shadow. */
+  --shadow_none: none;
+  --shadow_small:
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 0 0 1px rgb(255 255 255 / 0.28), 0 1px 2px rgb(24 30 66 / 0.06),
+    0 6px 18px rgb(24 30 66 / 0.07);
+  --shadow_medium:
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    inset 0 0 0 1px rgb(255 255 255 / 0.28), 0 2px 4px rgb(24 30 66 / 0.06),
+    0 12px 28px rgb(24 30 66 / 0.1);
+  --shadow_large:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.3), 0 2px 6px rgb(24 30 66 / 0.08),
+    0 18px 44px rgb(24 30 66 / 0.16);
+  --shadow_xlarge:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 1px rgb(255 255 255 / 0.3), 0 4px 10px rgb(24 30 66 / 0.08),
+    0 32px 72px rgb(24 30 66 / 0.22);
+  --shadow_focus: 0 0 0 2px rgb(255 255 255 / 0.95), 0 0 0 4.5px #0b5bd3;
+
+  --typo_font_sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+    system-ui, sans-serif;
+  --g-font-heading:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+    system-ui, sans-serif;
+  --g-weight-label: 500;
+  --g-weight-heading: 600;
+  --g-tracking-heading: -0.015em;
+
+  /* Brighter where the light enters at the top left, clearer below. */
+  --g-panel-image: linear-gradient(
+    145deg,
+    rgb(255 255 255 / 0.42),
+    rgb(255 255 255 / 0.06) 55%,
+    rgb(255 255 255 / 0.14)
+  );
+  --g-outline-border-color: rgb(255 255 255 / 0.7);
+  --g-panel-backdrop: blur(22px) saturate(170%);
+  --g-overlay-bg: rgb(250 251 255 / 0.78);
+  --g-overlay-backdrop: blur(30px) saturate(180%);
+  --g-scrim-backdrop: blur(5px);
+  /* A soft sheen across the upper half of a filled control. */
+  --g-control-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.2),
+    rgb(255 255 255 / 0) 58%
+  );
+  --g-control-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45), 0 1px 2px rgb(24 30 66 / 0.14),
+    0 4px 12px rgb(24 30 66 / 0.1);
+  --g-press: scale(0.97);
+  --g-field-bg: rgb(255 255 255 / 0.58);
+  --g-thumb: #ffffff;
+  --g-meter-image: linear-gradient(90deg, #0b5bd3, #6a5cf0);
+  --g-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------------- DOS ----------------
+   Text mode: the sixteen CGA colours, one monospace size, double-line panel
+   borders, bracketed buttons, block shadows and no motion. */
+html[data-gallery-theme-scope][data-theme="dos"]
+  :is([data-gallery-themed], body > :not([id="root"])) {
+  --g-stage: #0000aa;
+  --g-stage-line: #aaaaaa;
+
+  --base: 4px;
+  --radius: 0px;
+  --background: #0000aa;
+  --foreground: #c8c8c8;
+  --card: #0000aa;
+  --card-foreground: #c8c8c8;
+  --popover: #0000aa;
+  --popover-foreground: #c8c8c8;
+  --primary: #ffff55;
+  --primary-foreground: #000000;
+  --secondary: #aaaaaa;
+  --secondary-foreground: #000000;
+  --muted: #000080;
+  --muted-foreground: #55ffff;
+  --accent: #00aaaa;
+  --accent-foreground: #000000;
+  --destructive: #ff8080;
+  --g-destructive-bg: #aa0000;
+  --border: #aaaaaa;
+  --input: #aaaaaa;
+  --ring: #ffff55;
+  --sidebar: #0000aa;
+  --sidebar-foreground: #c8c8c8;
+  --sidebar-primary: #ffff55;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #00aaaa;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #aaaaaa;
+  --sidebar-ring: #ffff55;
+  --chart-1: #ffff55;
+  --chart-2: #55ffff;
+  --chart-3: #55ff55;
+  --chart-4: #ff55ff;
+  --chart-5: #aaaaaa;
+
+  --colors_bg_overlay: rgb(0 0 0 / 0.6);
+  --colors_bg_emphasized: #aaaaaa;
+  --colors_text_emphasized: #ffffff;
+  --g-track: #000000;
+  --g-tint: #000000;
+  --g-on-destructive: #ffffff;
+  --g-success: #00aa00;
+  --g-on-success: #000000;
+  --g-text-success: #55ff55;
+  --g-warning: #aa5500;
+  --g-on-warning: #ffffff;
+  --g-text-warning: #ffff55;
+  --g-info: #00aaaa;
+  --g-on-info: #000000;
+
+  --radius_none: 0px;
+  --radius_small: 0px;
+  --radius_medium: 0px;
+  --radius_large: 0px;
+  --radius_xlarge: 0px;
+  --radius_full: 0px;
+  --border_width_none: 0px;
+  --border_width_thin: 1px;
+  --border_width_medium: 2px;
+  --border_width_thick: 3px;
+  --border_width_heavy: 4px;
+
+  --shadow_none: none;
+  --shadow_small: none;
+  --shadow_medium: 8px 8px 0 0 #000000;
+  --shadow_large: 12px 12px 0 0 #000000;
+  --shadow_xlarge: 16px 16px 0 0 #000000;
+  --shadow_focus: 0 0 0 2px #000000, 0 0 0 4px #ffff55;
+
+  --typo_font_sans:
+    ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+  --g-font-mono: var(--typo_font_sans);
+  --g-smoothing: none;
+  --g-weight-body: 400;
+  --g-weight-label: 400;
+  --g-weight-heading: 400;
+  --g-tracking-heading: 0;
+  --g-title-color: #ffffff;
+  --g-title-case: uppercase;
+  /* Text mode has one size; emphasis comes from colour. */
+  --typo_heading_1_size: 0.9375rem;
+  --typo_heading_2_size: 0.9375rem;
+  --typo_heading_3_size: 0.9375rem;
+  --typo_heading_4_size: 0.9375rem;
+  --typo_body_large_size: 0.9375rem;
+  --typo_body_medium_size: 0.9375rem;
+  --typo_body_small_size: 0.9375rem;
+  --typo_label_large_size: 0.9375rem;
+  --typo_label_medium_size: 0.9375rem;
+  --typo_label_small_size: 0.9375rem;
+  --typo_caption_size: 0.9375rem;
+  --typo_code_size: 0.9375rem;
+
+  --g-stage-radius: 0px;
+  --g-panel-border-style: double;
+  --g-panel-border-width: 3px;
+  --g-outline-border-width: 0px;
+  --g-overlay-bg: #0000aa;
+  --g-control-shadow: 6px 6px 0 0 #000000;
+  --g-press: translate(2px, 2px);
+  --g-press-shadow: 2px 2px 0 0 #000000;
+  --g-field-bg: #000000;
+  --g-field-border-width: 0px;
+  --g-thumb: #ffffff;
+  /* A two-pixel dither: the shaded block of a text-mode gauge. */
+  --g-track-image: repeating-conic-gradient(#555555 0 25%, #000000 0 50%);
+  /* The empty alternative text keeps the brackets out of accessible names. */
+  --g-button-open: "[" / "";
+  --g-button-close: "]" / "";
+  --g-easing: linear;
+}
+
+/* ---------------- Paper ----------------
+   A printed form: warm paper, ink rules, a book serif with italic titles and
+   letterspaced small labels. Fields are ruled on one edge only. */
+html[data-gallery-theme-scope][data-theme="paper"]
+  :is([data-gallery-themed], body > :not([id="root"])) {
+  --g-stage:
+    repeating-linear-gradient(
+      transparent 0 31px,
+      rgb(31 27 22 / 0.06) 31px 32px
+    ),
+    #ece3cd;
+  --g-stage-line: #1f1b16;
+
+  --base: 4.5px;
+  --radius: 2px;
+  --background: #fbf7ec;
+  --foreground: #1f1b16;
+  --card: #fbf7ec;
+  --card-foreground: #1f1b16;
+  --popover: #fffdf6;
+  --popover-foreground: #1f1b16;
+  --primary: #1f1b16;
+  --primary-foreground: #fbf7ec;
+  --secondary: #ebe1c6;
+  --secondary-foreground: #1f1b16;
+  --muted: #f1e9d5;
+  --muted-foreground: #5a5245;
+  --accent: #ebe1c6;
+  --accent-foreground: #1f1b16;
+  --destructive: #8f2a1d;
+  --border: #1f1b16;
+  --input: #1f1b16;
+  --ring: #8f2a1d;
+  --sidebar: #f5efdf;
+  --sidebar-foreground: #1f1b16;
+  --sidebar-primary: #1f1b16;
+  --sidebar-primary-foreground: #fbf7ec;
+  --sidebar-accent: #ebe1c6;
+  --sidebar-accent-foreground: #1f1b16;
+  --sidebar-border: #1f1b16;
+  --sidebar-ring: #8f2a1d;
+  --chart-1: #1f1b16;
+  --chart-2: #8f2a1d;
+  --chart-3: #2a5a2d;
+  --chart-4: #6b4a00;
+  --chart-5: #8a8170;
+
+  --colors_bg_overlay: rgb(31 27 22 / 0.42);
+  --g-track: #cfc5a9;
+  --g-tint: #e0d6ba;
+  --g-on-destructive: #fbf7ec;
+  --g-success: #2a5a2d;
+  --g-on-success: #fbf7ec;
+  --g-warning: #6b4a00;
+  --g-on-warning: #fbf7ec;
+
+  --radius_none: 0px;
+  --radius_small: 1px;
+  --radius_medium: 2px;
+  --radius_large: 2px;
+  --radius_xlarge: 2px;
+  --radius_full: 9999px;
+  --border_width_none: 0px;
+  --border_width_thin: 1px;
+  --border_width_medium: 2px;
+  --border_width_thick: 3px;
+  --border_width_heavy: 4px;
+
+  --shadow_none: none;
+  --shadow_small: none;
+  --shadow_medium:
+    0 1px 2px rgb(60 40 10 / 0.18), 0 6px 16px rgb(60 40 10 / 0.12);
+  --shadow_large:
+    0 1px 2px rgb(60 40 10 / 0.22), 0 12px 30px rgb(60 40 10 / 0.18);
+  --shadow_xlarge:
+    0 2px 4px rgb(60 40 10 / 0.22), 0 22px 56px rgb(60 40 10 / 0.28);
+  --shadow_focus: 0 0 0 2px #fbf7ec, 0 0 0 4px #8f2a1d;
+
+  --typo_font_sans:
+    "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
+    serif;
+  --g-font-heading:
+    Didot, "Bodoni 72", "Bodoni MT", "Iowan Old Style", Georgia, serif;
+  --g-font-mono: "Courier New", Courier, monospace;
+  --g-weight-label: 600;
+  --g-weight-heading: 400;
+  --g-tracking-label: 0.09em;
+  --g-tracking-heading: 0;
+  --g-label-case: uppercase;
+  --g-title-style: italic;
+  --typo_label_small_size: 0.75rem;
+  --typo_heading_4_size: 1.25rem;
+  --typo_heading_3_size: 1.5rem;
+  --typo_body_small_size: 0.9375rem;
+
+  --g-stage-radius: 2px;
+  --g-border-action: #1f1b16;
+  --g-panel-border-style: double solid solid;
+  --g-panel-border-width: 3px 1px 1px;
+  --g-overlay-bg: #fffdf6;
+  --g-control-shadow: none;
+  --g-field-bg: transparent;
+  --g-field-border-width: 0 0 1px;
+  --g-thumb: #fbf7ec;
+  --g-easing: ease;
+}
+
+/* ---------------- Brutalist ----------------
+   Black rules, hard offset shadows, square corners, primary colours and heavy
+   uppercase grotesque. Nothing eases: states change at once. */
+html[data-gallery-theme-scope][data-theme="brutalist"]
+  :is([data-gallery-themed], body > :not([id="root"])) {
+  --g-stage: #ffe600;
+  --g-stage-line: #000000;
+
+  --base: 4.5px;
+  --radius: 0px;
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #0038ff;
+  --primary-foreground: #ffffff;
+  --secondary: #ffe600;
+  --secondary-foreground: #000000;
+  --muted: #ededed;
+  --muted-foreground: #3a3a3a;
+  --accent: #ffe600;
+  --accent-foreground: #000000;
+  --destructive: #c4160c;
+  --g-destructive-bg: #ff3b30;
+  --border: #000000;
+  --input: #000000;
+  --ring: #ff3b30;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #0038ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ffe600;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #000000;
+  --sidebar-ring: #ff3b30;
+  --chart-1: #0038ff;
+  --chart-2: #ff3b30;
+  --chart-3: #00a651;
+  --chart-4: #000000;
+  --chart-5: #8a8a8a;
+
+  --colors_bg_overlay: rgb(255 230 0 / 0.78);
+  --g-track: #c9c9c9;
+  --g-tint: #d9d9d9;
+  --g-on-destructive: #000000;
+  --g-success: #00d26a;
+  --g-on-success: #000000;
+  --g-text-success: #00703a;
+  --g-warning: #ffe600;
+  --g-on-warning: #000000;
+  --g-text-warning: #6e5a00;
+
+  --radius_none: 0px;
+  --radius_small: 0px;
+  --radius_medium: 0px;
+  --radius_large: 0px;
+  --radius_xlarge: 0px;
+  --radius_full: 0px;
+  --border_width_none: 0px;
+  --border_width_thin: 2px;
+  --border_width_medium: 3px;
+  --border_width_thick: 4px;
+  --border_width_heavy: 6px;
+
+  --shadow_none: none;
+  --shadow_small: 3px 3px 0 0 #000000;
+  --shadow_medium: 5px 5px 0 0 #000000;
+  --shadow_large: 8px 8px 0 0 #000000;
+  --shadow_xlarge: 12px 12px 0 0 #000000;
+  --shadow_focus: 0 0 0 3px #ffffff, 0 0 0 6px #ff3b30;
+
+  --typo_font_sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --g-font-heading:
+    "Arial Black", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --g-font-mono: "Courier New", Courier, monospace;
+  --g-weight-body: 500;
+  --g-weight-label: 800;
+  --g-weight-heading: 900;
+  --g-tracking-label: 0.04em;
+  --g-tracking-heading: -0.01em;
+  --g-label-case: uppercase;
+  --g-title-case: uppercase;
+
+  --g-stage-radius: 0px;
+  --g-border-action: #000000;
+  --g-panel-border-width: 3px;
+  --g-outline-border-color: #000000;
+  --g-overlay-bg: #ffffff;
+  --g-control-border-width: 2px;
+  --g-control-border-color: #000000;
+  --g-control-shadow: 3px 3px 0 0 #000000;
+  --g-press: translate(3px, 3px);
+  --g-press-shadow: 0 0 0 0 #000000;
+  --g-field-bg: #ffffff;
+  --g-thumb: #ffffff;
+  --g-radio-radius: 9999px;
+  --g-easing: linear;
+}
+
+/* ================================================================
+   3. What the base system's variables cannot express
+
+   Each rule reads a --g-* variable, so it holds no theme's values. Parts
+   inside [data-gallery-chrome] are the site's own controls and are skipped.
+   ================================================================ */
+
+/* The stage behind a preview. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-preview-stage], [data-gallery-stage]) {
+  background: var(--g-stage);
+  border-color: var(--g-stage-line);
+  border-radius: var(--g-stage-radius);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"]) [data-gallery-stage] {
+  padding: 16px;
+  border: 1px solid var(--g-stage-line);
+}
+
+@media (min-width: 48rem) {
+  html[data-gallery-theme-scope]:not([data-theme="modern"])
+    [data-gallery-stage] {
+    padding: 28px;
+  }
+}
+
+/* Border style: tokens set a border's width and colour only. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  [data-slot]:where(:not([data-gallery-chrome] *)) {
+  border-style: var(--g-border-style);
+}
+
+/* Panels: surfaces that frame content. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="card"],
+    [data-slot="alert"],
+    [data-slot="command"],
+    [data-slot="item"][data-variant="outline"],
+    [data-gallery-panel]
+  ):not([data-gallery-chrome] *) {
+  border-style: var(--g-panel-border-style);
+  border-width: var(--g-panel-border-width);
+  background-image: var(--g-panel-image);
+  -webkit-backdrop-filter: var(--g-panel-backdrop);
+  backdrop-filter: var(--g-panel-backdrop);
+}
+
+/* Overlays: surfaces that float above the page. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="select-content"],
+    [data-slot="combobox-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"],
+    [data-slot="menubar-content"],
+    [data-slot="menubar-sub-content"],
+    [data-slot="navigation-menu-viewport"],
+    [data-slot="sheet-content"],
+    [data-slot="drawer-content"]
+  ) {
+  background-color: var(--g-overlay-bg);
+  border-style: var(--g-panel-border-style);
+  -webkit-backdrop-filter: var(--g-overlay-backdrop);
+  backdrop-filter: var(--g-overlay-backdrop);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="popover-content"],
+    [data-slot="hover-card-content"],
+    [data-slot="select-content"],
+    [data-slot="combobox-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="context-menu-content"],
+    [data-slot="context-menu-sub-content"],
+    [data-slot="menubar-content"],
+    [data-slot="menubar-sub-content"],
+    [data-slot="navigation-menu-viewport"]
+  ) {
+  border-width: var(--g-panel-border-width);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="dialog-overlay"],
+    [data-slot="alert-dialog-overlay"],
+    [data-slot="sheet-overlay"],
+    [data-slot="drawer-overlay"]
+  ) {
+  -webkit-backdrop-filter: var(--g-scrim-backdrop);
+  backdrop-filter: var(--g-scrim-backdrop);
+}
+
+/* Toasts are drawn by their library, which reads variables of its own. */
+html[data-gallery-theme-scope]:not([data-theme="modern"]) [data-sonner-toast] {
+  font-family: var(--typo_font_sans);
+  background-color: var(--g-overlay-bg);
+  border-color: var(--border);
+  border-style: var(--g-panel-border-style);
+  border-width: var(--g-panel-border-width);
+  border-radius: var(--radius_large);
+  box-shadow: var(--shadow_large);
+  -webkit-backdrop-filter: var(--g-overlay-backdrop);
+  backdrop-filter: var(--g-overlay-backdrop);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  [data-sonner-toast]
+  [data-description] {
+  color: var(--muted-foreground);
+}
+
+/* Filled controls: an edge, a sheen, a shadow and a press movement. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-size]
+  )[data-variant]:is(
+    [data-variant="default"],
+    [data-variant="destructive"],
+    [data-variant="secondary"]
+  ):not([data-gallery-chrome] *) {
+  border: var(--g-control-border-width) solid var(--g-control-border-color);
+  background-image: var(--g-control-image);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-size]
+  )[data-variant="outline"]:not([data-gallery-chrome] *) {
+  border-width: var(--g-outline-border-width);
+  border-color: var(--g-outline-border-color);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-size]
+  )[data-variant]:is(
+    [data-variant="default"],
+    [data-variant="destructive"],
+    [data-variant="secondary"],
+    [data-variant="outline"]
+  ):not(:focus-visible):not([data-gallery-chrome] *) {
+  box-shadow: var(--g-control-shadow);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-size]
+  )[data-variant]:is(
+    [data-variant="default"],
+    [data-variant="destructive"],
+    [data-variant="secondary"],
+    [data-variant="outline"]
+  ):active:not(:disabled):not([data-gallery-chrome] *) {
+  transform: var(--g-press);
+  box-shadow: var(--g-press-shadow);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  [data-slot="badge"]:not([data-variant="outline"]):not(
+    [data-gallery-chrome] *
+  ) {
+  border: var(--g-control-border-width) solid var(--g-control-border-color);
+}
+
+/* Bracketed labels, for a theme that draws its buttons in text. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-variant]
+  )[data-size]:not([data-size^="icon"]):not([data-variant="link"]):not(
+    [data-gallery-chrome] *
+  )::before {
+  content: var(--g-button-open);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-variant]
+  )[data-size]:not([data-size^="icon"]):not([data-variant="link"]):not(
+    [data-gallery-chrome] *
+  )::after {
+  content: var(--g-button-close);
+}
+
+/* Fields: their own surface, and which edges are ruled. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="native-select"],
+    [data-slot="input-group"],
+    [data-slot="input-otp-slot"],
+    [data-slot="combobox-chips"]
+  ):not([data-gallery-chrome] *) {
+  background-color: var(--g-field-bg);
+  border-width: var(--g-field-border-width);
+}
+
+/* Knobs stay opaque when the surface colour is translucent. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-slot="switch-thumb"], [data-slot="slider-thumb"]):not(
+    [data-gallery-chrome] *
+  ) {
+  background-color: var(--g-thumb);
+}
+
+/* A radio keeps a shape of its own when every radius is square. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-slot="radio-group-item"], [data-slot="radio-group-indicator"]):not(
+    [data-gallery-chrome] *
+  ) {
+  border-radius: var(--g-radio-radius);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  [data-slot="radio-group-item"]:not([data-gallery-chrome] *) {
+  rotate: var(--g-radio-rotate);
+}
+
+/* Gauges: a patterned track or fill. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-slot="progress"], [data-slot="slider-track"]):not(
+    [data-gallery-chrome] *
+  ) {
+  background-image: var(--g-track-image);
+  background-size: 4px 4px;
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-slot="progress-indicator"], [data-slot="slider-range"]):not(
+    [data-gallery-chrome] *
+  ) {
+  background-image: var(--g-meter-image);
+}
+
+/* Text case and title style: no variable carries them. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is(
+    [data-slot="button"],
+    [data-slot$="-trigger"][data-variant][data-size],
+    [data-slot="badge"],
+    [data-slot="tabs-trigger"],
+    [data-slot="table-head"],
+    [data-slot="toggle"],
+    [data-slot="toggle-group-item"],
+    [data-slot="dropdown-menu-label"],
+    [data-slot="context-menu-label"],
+    [data-slot="menubar-label"],
+    [data-slot="select-label"],
+    [data-slot="sidebar-group-label"],
+    [data-slot="command-group"] [cmdk-group-heading]
+  ):not([data-gallery-chrome] *) {
+  text-transform: var(--g-label-case);
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  :is([data-slot$="-title"], [data-gallery-title]):not(
+    [data-gallery-chrome] *
+  ) {
+  color: var(--g-title-color);
+  font-style: var(--g-title-style);
+  text-transform: var(--g-title-case);
+}
+
+/* Motion: each theme's easing replaces the components' own. */
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *) {
+  transition-timing-function: var(--g-easing) !important;
+  animation-timing-function: var(--g-easing) !important;
+}
+
+html[data-gallery-theme-scope]:not([data-theme="modern"])
+  [data-slot="spinner"]:not([data-gallery-chrome] *) {
+  animation-timing-function: var(--g-spin-easing) !important;
+}
+
+/* Text mode and brutalism have no transitions: a state changes at once. */
+html[data-gallery-theme-scope]:is([data-theme="dos"], [data-theme="brutalist"])
+  [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *),
+html[data-gallery-theme-scope]:is([data-theme="dos"], [data-theme="brutalist"])
+  [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *)::before,
+html[data-gallery-theme-scope]:is([data-theme="dos"], [data-theme="brutalist"])
+  [data-slot]:not([data-slot="spinner"]):not([data-gallery-chrome] *)::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+}
+
+/* ================================================================
+   4. The switcher's swatches: each option previews its own theme
+   ================================================================ */
+
+[data-gallery-theme="modern"] [data-gallery-swatch] {
+  background: linear-gradient(135deg, #ffffff 50%, #284bdd 50%);
+}
+
+[data-gallery-theme="pixel"] [data-gallery-swatch] {
+  border-radius: 0;
+  background: linear-gradient(135deg, #1a1c2c 50%, #ffcd75 50%);
+}
+
+[data-gallery-theme="glass"] [data-gallery-swatch] {
+  background: linear-gradient(135deg, #dbe6ff 0%, #ffe0ea 55%, #0b5bd3 56%);
+}
+
+[data-gallery-theme="dos"] [data-gallery-swatch] {
+  border-radius: 0;
+  background: linear-gradient(135deg, #0000aa 50%, #ffff55 50%);
+}
+
+[data-gallery-theme="paper"] [data-gallery-swatch] {
+  background: linear-gradient(135deg, #fbf7ec 50%, #1f1b16 50%);
+}
+
+[data-gallery-theme="brutalist"] [data-gallery-swatch] {
+  border-radius: 0;
+  border-color: #000000;
+  background: linear-gradient(135deg, #ffe600 50%, #0038ff 50%);
+}

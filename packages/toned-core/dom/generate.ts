@@ -3,62 +3,397 @@
  *
  * @module dom/generate
  */
-
+import {
+  resolveAlphaChannels,
+  resolveConfiguredToken,
+} from '../core/resolve.ts'
+import { namespaceCss } from '../system/namespace.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { camelToKebab, withCssUnit } from '../utils/css.ts'
-import { PSEUDO_STATES } from '../utils/pseudo.ts'
+import { isAnimationDefinition } from '../types/index.ts'
+import {
+  alphaVarName,
+  alphaWrappable,
+  DEFAULT_ALPHA_STEPS,
+  withAlphaExpr,
+} from '../utils/alpha.ts'
+import {
+  assertConditionSlugs,
+  atomSlug,
+  parseConditionKey,
+} from '../utils/conditions.ts'
+import { serializeCssValue } from '../utils/css-value.ts'
+import { bridgeVarName, camelToKebab } from '../utils/css.ts'
 
-const tokens = new Proxy(
-  {},
-  {
-    get(_target, prop: string) {
-      return `var(--${prop})`
-    },
+const tokens = new Proxy(Object.create(null), {
+  get(_target, prop: string) {
+    return `var(--${prop})`
   },
-)
+  // Build symbols deliberately represent every theme key; runtime themes
+  // still require a real own property before a themeRef can resolve.
+  getOwnPropertyDescriptor(_target, prop) {
+    return typeof prop === 'string'
+      ? { configurable: true, enumerable: true, value: `var(--${prop})` }
+      : undefined
+  },
+})
 
 /**
  * Generate CSS from a token style declaration.
+ *
+ * `scope` (an ancestor selector, e.g. `.my-design-system`) namespaces the emitted
+ * rules so two systems can share one page without their identically-named
+ * atomic classes fighting: a scoped system's classes, alpha steps, state and
+ * pseudo toggles apply only under the scope element, while the `html {}`
+ * custom-property inits, `@property` registrations and `@keyframes` stay
+ * global — they are idempotent inits, not values, and duplicating them is
+ * harmless. An unscoped system is the page's default and wins everywhere
+ * outside the scope; inside it, the scoped rules out-specify it.
  */
-export function generate<const S extends TokenStyleDeclaration>({
-  breakpoints,
-  ...system
-}: S) {
+export function generate<const S extends TokenStyleDeclaration>(
+  {
+    breakpoints,
+    animations,
+    bridges,
+    states,
+    responsiveTokens,
+    containers,
+    base,
+    layoutContext: layout,
+    externalCssVariables,
+    ...system
+  }: S,
+  opts?: {
+    scope?: string
+    /** Stable system identity; namespaces classes, parameters and animations. */
+    id?: string
+    /**
+     * Ad-hoc condition ATOMS to emit toggles for (canonical `name/>=len`
+     * spellings) — the union a generator script collects from the system
+     * ref's `usedConditions` after importing every stylesheet module.
+     */
+    conditions?: readonly string[]
+  },
+) {
+  assertConditionSlugs({ breakpoints, containers }, opts?.conditions)
+  const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
 
-  let rootRule = ''
-  let rules = ''
+  // Declared state toggles — the attribute analogue of the pseudo toggles
+  // below. Each state's selector, applied to the element (`._<selector>`),
+  // empties `--toned_<alias>`; the nested reset keeps it self-scoped (a state
+  // on an ancestor does not leak onto descendants' chains). Not hover-gated —
+  // these are data-states, always live.
+  if (states) {
+    let stateToggles = ''
+    for (const [alias, selector] of Object.entries(
+      states as Record<string, string>,
+    )) {
+      const name = `--toned_${alias}`
+      stateToggles += `html {${name}: initial;}`
+      const sel =
+        selector.startsWith(':') || selector.startsWith('[')
+          ? `._${selector}`
+          : `._ ${selector}`
+      stateToggles += `${scope}${sel} {${name}: ;} ${scope}${sel} ._ {${name}: initial;} ${scope}${sel} ${sel} {${name}: ;}`
 
-  // Pseudo-state toggles first, and unconditionally: `pseudoMode: 'css'` reads
-  // them whether or not the system declares any breakpoints.
-  for (const pseudo of PSEUDO_STATES) {
-    const name = `--toned_${pseudo.slice(1)}`
-    rootRule += `${name}: initial;`
-    // make it work as expected with nested elements
-    rules += `._${pseudo} {${name}: ;} ._${pseudo} ._ {${name}: initial;} ._${pseudo} ._${pseudo} {${name}: ;}`
+      // Cross-element source channel: a `_s` source IN this state sets
+      // `--toned_src-<alias>` for its DOM descendants, so a target styled via a
+      // base-level `'source:<alias>'` key answers its NEAREST such source (a
+      // nested `_s` resets it). The state analogue of the `._s:hover` channel
+      // emitted in the breakpoints block — not gated, data-states are always
+      // live. Attribute/pseudo selectors attach to `._s` directly; a descendant
+      // form (`._ sel`) has no single source element to mark, so it is skipped.
+      if (selector.startsWith(':') || selector.startsWith('[')) {
+        const srcName = `--toned_src-${alias}`
+        const ssel = `._s${selector}`
+        stateToggles += `html {${srcName}: initial;}`
+        stateToggles += `${scope}${ssel} {${srcName}: ;} ${scope}${ssel} ._s {${srcName}: initial;} ${scope}${ssel} ${ssel} {${srcName}: ;}`
+
+        // SIBLING source channel: the same state on a `_s` source toggles
+        // `--toned_sib-<alias>` on its FOLLOWING SIBLINGS (the `~` combinator
+        // of peer-recolor css), self-scoped: a sibling's own
+        // subtree resets, so only the sibling element itself answers.
+        const sibName = `--toned_sib-${alias}`
+        stateToggles += `html {${sibName}: initial;}`
+        stateToggles += `${scope}${ssel} ~ ._ {${sibName}: ;} ${scope}${ssel} ~ ._ ._ {${sibName}: initial;}`
+      }
+    }
+    styles += stateToggles
   }
 
-  if (breakpoints) {
-    for (const [key, value] of Object.entries(breakpoints.__breakpoints)) {
-      const varName = `--media-${camelToKebab(key).replace('@', '')}`
+  // Bridges: one static parameter-reading rule per target, plus the `._`
+  // boundary reset so a parameter never inherits across component boundaries.
+  // The reset precedes every token class (emitted below), so a setter class
+  // beats it on order at equal specificity; an inline parameter wins outright.
+  //
+  // The unset fallback must preserve the property's pre-bridge behavior:
+  // INHERITED properties fall back to `inherit` (an icon with no iconColor
+  // keeps inheriting its parent's colour — `initial` would paint it black),
+  // everything else to `initial`.
+  // A var-name → (bridge, cssProp, selector) index for the token loop below:
+  // DESCENDANT bridges compile class-scoped (the setter class carries the
+  // descendant rule directly), because an always-on `._ <sel>` rule
+  // cascade-WINS over component css even when its parameter is unset — an
+  // unset var's fallback still participates in the cascade, which would blow every
+  // un-tokened icon up to its intrinsic size. Their token values are closed
+  // sets, so the class path is total. Pseudo-element bridges keep the
+  // parameter mechanism (they attach to the element itself, tie with
+  // component css at equal specificity, and lose to it on import order).
+  const descendantBridgeVars = new Map<
+    string,
+    { selector: string; cssProp: string }
+  >()
+  if (bridges) {
+    const INHERITED = new Set([
+      'color',
+      'fontFamily',
+      'fontSize',
+      'fontStyle',
+      'fontWeight',
+      'letterSpacing',
+      'lineHeight',
+      'textAlign',
+      'textTransform',
+      'visibility',
+      'cursor',
+    ])
+    let resets = ''
+    for (const [name, bridge] of Object.entries(bridges)) {
+      if (!bridge.selector.startsWith(':')) {
+        for (const prop of bridge.properties) {
+          descendantBridgeVars.set(bridgeVarName(name, prop), {
+            selector: bridge.selector,
+            cssProp: camelToKebab(prop),
+          })
+        }
+        continue
+      }
+      let rule = ''
+      for (const prop of bridge.properties) {
+        const varName = bridgeVarName(name, prop)
+        resets += `${varName}: initial;`
+        const fallback = INHERITED.has(prop) ? 'inherit' : 'initial'
+        rule += `${camelToKebab(prop)}: var(${varName}, ${fallback});`
+      }
+      styles += `${scope}._${bridge.selector} {${rule}}`
+    }
+    if (resets) styles += `${scope}._ {${resets}}`
+  }
 
-      rootRule += `${varName}: initial;`
-      rules += `@media (min-width: ${value}px) { html { ${varName}: ; } }`
+  // Named animations: enumerated and system-compiled, like the tokens. The
+  // matching `.animation_<name>` classes come from the `animation` token
+  // `defineAnimations` returns, through the ordinary token loop below.
+  if (animations) {
+    for (const [name, entry] of Object.entries(animations)) {
+      const frames = isAnimationDefinition(entry) ? entry.keyframes : entry
+      let body = ''
+      for (const [step, decl] of Object.entries(frames)) {
+        let rule = ''
+        for (const prop in decl) {
+          rule += `${camelToKebab(prop)}:${serializeCssValue(prop, decl[prop])};`
+        }
+        body += `${step} {${rule}}`
+      }
+      styles += `@keyframes toned_${name} {${body}}`
     }
   }
 
-  styles += `html {${rootRule}}`
-  styles += rules
+  {
+    // Interaction state toggles exist independently of viewport breakpoints.
+    const bpValues = breakpoints?.__breakpoints ?? {}
+
+    // The runtime-tracked states plus the css-only enhancements (:focus-visible
+    // has no JS event and no native analogue — the browser decides it).
+    const PSEUDO_STATES = [
+      'hover',
+      'focus',
+      'focus-visible',
+      'focus-within',
+      'active',
+    ]
+
+    let rootRule = ''
+    let rules = ''
+
+    PSEUDO_STATES.forEach((pseudo) => {
+      const name = `--toned_${pseudo}`
+      rootRule += `${name}: initial;`
+      // Reset under a pseudo-active element so its nested elements do not
+      // inherit the toggle; a nested element in the same pseudo re-enables it.
+      const toggles = `${scope}._:${pseudo} {${name}: ;} ${scope}._:${pseudo} ._ {${name}: initial;} ${scope}._:${pseudo} ._:${pseudo} {${name}: ;}`
+      // Hover only exists where the primary input can hover — the same gate
+      // every hover utility framework applies. Without it, a touch tap leaves
+      // an element stuck in its hover style until the next tap elsewhere.
+      rules +=
+        pseudo === 'hover' ? `@media (hover: hover) {${toggles}}` : toggles
+    })
+
+    // The cross-element hover channel: a source element (marker class `_s`)
+    // toggles `--toned_src-hover` for its DOM descendants; a nested source
+    // resets it, so a target answers its NEAREST cross-element source.
+    rootRule += '--toned_src-hover: initial;'
+    rules +=
+      `@media (hover: hover) {${scope}._s:hover {--toned_src-hover: ;} ` +
+      `${scope}._s:hover ._s {--toned_src-hover: initial;} ` +
+      `${scope}._s:hover ._s:hover {--toned_src-hover: ;}}`
+
+    // Its focus-within twin (a container's focus revealing a descendant —
+    // e.g. a list row's actions): pure css, no JS event, never hover-gated.
+    rootRule += '--toned_src-focus-within: initial;'
+    rules +=
+      `${scope}._s:focus-within {--toned_src-focus-within: ;} ` +
+      `${scope}._s:focus-within ._s {--toned_src-focus-within: initial;} ` +
+      `${scope}._s:focus-within ._s:focus-within {--toned_src-focus-within: ;}`
+
+    // The SIBLING hover channel: a hovered source toggles
+    // `--toned_sib-hover` on its FOLLOWING SIBLINGS (`~`), self-scoped to the
+    // sibling element itself — the peer-recolor shape (`.button:hover ~
+    // .action`) the descendant channel cannot say.
+    rootRule += '--toned_sib-hover: initial;'
+    rules +=
+      `@media (hover: hover) {${scope}._s:hover ~ ._ {--toned_sib-hover: ;} ` +
+      `${scope}._s:hover ~ ._ ._ {--toned_sib-hover: initial;}}`
+
+    for (const [key, value] of Object.entries(bpValues)) {
+      const varName = `--media-${camelToKebab(key).replace('@', '')}`
+
+      // Each condition carries a COMPLEMENT toggle beside the positive one:
+      // `-not` is valid-empty exactly when the positive is invalid, which is
+      // what lets a chain guard on `not(condition)` (see utils/conditions.ts).
+      rootRule += `${varName}: initial;${varName}-not: ;`
+      // A number is pixels; a string ('40rem') passes through, so a system can
+      // declare a rem-based scale that tracks the user's root font size. A
+      // parenthesised string is a raw media CONDITION ('(pointer: coarse)') —
+      // the same toggle machinery, gated on the condition instead of a width.
+      const condition =
+        typeof value === 'string' && value.startsWith('(')
+          ? value
+          : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
+      rules += `@media ${condition} { html { ${varName}: ; ${varName}-not: initial; } }`
+    }
+
+    for (const atomKey of [...(opts?.conditions ?? [])].sort()) {
+      const atom = parseConditionKey(atomKey)?.[0]?.[0]
+      if (!atom || atom.container !== null || atom.step !== null) continue
+      const variable = `--${atomSlug(atom)}`
+      rootRule += `${variable}: initial;${variable}-not: ;`
+      rules += `@media (min-width: ${atom.min}) { html { ${variable}: ; ${variable}-not: initial; } }`
+    }
+    styles += `html {${rootRule}}`
+    styles += rules
+  }
+
+  // Complement channels make q.not(state) equivalent on CSS and native.
+  // Reset at every bound element so a parent's state never answers for a child.
+  const complementStates: Record<string, string> = {
+    hover: ':hover',
+    focus: ':focus',
+    'focus-visible': ':focus-visible',
+    'focus-within': ':focus-within',
+    active: ':active',
+    ...states,
+  }
+  for (const [name, selector] of Object.entries(complementStates)) {
+    const variable = `--toned_${name}-not`
+    styles += `${scope}._ {${variable}: ;}`
+    const rule = `${scope}._${selector} {${variable}: initial;}`
+    styles += name === 'hover' ? `@media (hover: hover) {${rule}}` : rule
+  }
+
+  // Container-condition toggles — the `@container` analogue of the media
+  // toggles above, with one difference: the OFF init sits on `._` ITSELF, not
+  // on html. The on-value is valid-empty and custom properties inherit, so an
+  // html-level init would let an outer element's ON leak into a descendant
+  // whose own nearest same-name container does not match; a per-element init
+  // makes every `._` carry its own answer. The `@container <name>` on-rule
+  // (same specificity, later in source) flips it exactly where css evaluates
+  // the element's NEAREST ancestor container of that name as matching — the
+  // runtime binding mirrors that lookup on native. Chains guard on
+  // `var(--cq-<name>-<step>)`.
+  if (containers || opts?.conditions?.length) {
+    let cqResets = ''
+    let cqRules = ''
+    // Container NUMBERS ride the universal spacing scale (× base, default
+    // 4px) — the same numeric language as every other token, and the reason
+    // rem never needs to appear: native has no rem, px is the shared floor.
+    const unitPx = (base as number | undefined) ?? 4
+    const emitContainerToggle = (
+      name: string,
+      slug: string,
+      value: number | string,
+    ) => {
+      const varName = `--cq-${camelToKebab(name)}-${slug}`
+      cqResets += `${varName}: initial;${varName}-not: ;`
+      // A string length passes through (web-only escape); a parenthesised
+      // string is a raw container CONDITION, same as the media scale.
+      const condition =
+        typeof value === 'string' && value.startsWith('(')
+          ? value
+          : `(min-width: ${typeof value === 'number' ? `${value * unitPx}px` : value})`
+      cqRules += `@container ${name} ${condition} { ${scope}._ { ${varName}: ; ${varName}-not: initial; } }`
+    }
+    for (const [name, steps] of Object.entries(
+      (containers ?? {}) as Record<string, Record<string, number | string>>,
+    )) {
+      for (const [step, value] of Object.entries(steps)) {
+        emitContainerToggle(name, camelToKebab(step), value)
+      }
+    }
+    // AD-HOC condition atoms — min-widths used at stylesheet call sites on
+    // declared container names, registered by createStylesheet on the system
+    // ref and passed here by the generator script (which must import the
+    // stylesheet modules first). Sorted for deterministic output.
+    for (const atomKey of [...(opts?.conditions ?? [])].sort()) {
+      const expr = parseConditionKey(atomKey)
+      const atom = expr?.[0]?.[0]
+      if (!atom || atom.container === null || atom.step !== null) continue
+      emitContainerToggle(
+        atom.container,
+        atomSlug(atom).slice(`cq-${camelToKebab(atom.container)}-`.length),
+        atom.min!,
+      )
+    }
+    styles += `${scope}._ {${cqResets}}`
+    styles += cqRules
+  }
 
   // handle custom tokens
 
+  // Alpha machinery (see utils/alpha.ts): which CSS properties need their
+  // @property parameter registered, and the per-token step classes.
+  const alphaProps = new Set<string>()
+  let alphaClasses = ''
+
   for (const key in system) {
-    const token = system[key]
+    // oxlint-disable-next-line typescript/no-explicit-any -- the index union narrows structurally, not by type
+    const token = system[key] as any
 
     // Skip non-token entries (like breakpoints)
     if (!token || !('values' in token) || !('resolve' in token)) continue
 
-    // biome-ignore lint/suspicious/noExplicitAny: token values are dynamically typed
+    const authoredAlphaChannel = (token as { alphaChannel?: readonly string[] })
+      .alphaChannel
+    const alphaChannel =
+      authoredAlphaChannel &&
+      resolveAlphaChannels(authoredAlphaChannel, {
+        ...layout,
+        canonicalFields: !!opts?.id,
+      })
+    if (alphaChannel) {
+      const steps =
+        (token as { alphaSteps?: readonly number[] }).alphaSteps ??
+        DEFAULT_ALPHA_STEPS
+      for (const step of steps) {
+        const decl = alphaChannel
+          .map((prop) => `${alphaVarName(prop)}:${step / 100}`)
+          .join(';')
+        const stepKey = `${key}$${step}`
+        const stepSelector = stepKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
+        alphaClasses += `${scope}.${stepSelector}{${decl}}`
+      }
+    }
+
+    // oxlint-disable-next-line typescript/no-explicit-any -- token values are dynamically typed
     token.values.forEach((value: any) => {
       if (value instanceof Number || value instanceof String) {
         // Skip boxed primitives - these represent dynamic/runtime values
@@ -66,25 +401,150 @@ export function generate<const S extends TokenStyleDeclaration>({
         return
       }
 
-      const result = token.resolve(value, tokens)
+      // Static CSS generation is the web target, so a per-platform token
+      // resolves its web branch here (its native branch resolves inline under
+      // the RN binding, which does not use generated CSS).
+      const result = resolveConfiguredToken(token, value, tokens, {
+        ...layout,
+        platform: 'web',
+        canonicalFields: !!opts?.id,
+      })
 
       if (!result) return
 
       let cssRule = ''
+      const descendantRules = new Map<string, string>()
 
       for (const cssProp in result) {
-        // Same unit rule as the runtime path: a resolver may return a bare
-        // number, and a static rule has no later step that would suffix it.
-        cssRule += `${camelToKebab(cssProp)}:${withCssUnit(cssProp, result[cssProp])};`
+        let cssValue = result[cssProp]
+        // Descendant-bridge parameters compile into a class-scoped descendant
+        // rule with the value inlined — see the bridge block above.
+        const descendant = descendantBridgeVars.get(cssProp)
+        if (descendant) {
+          descendantRules.set(
+            descendant.selector,
+            `${descendantRules.get(descendant.selector) ?? ''}${descendant.cssProp}:${serializeCssValue(descendant.cssProp, cssValue)};`,
+          )
+          continue
+        }
+        // An alpha-capable colour routes through relative colour syntax with
+        // its non-inheriting parameter, so `.bgColor$50` (or an inline
+        // parameter) can wash it without a token x alpha rule explosion.
+        if (alphaChannel?.includes(cssProp) && alphaWrappable(cssValue)) {
+          alphaProps.add(cssProp)
+          // Keep an ordinary color when the browser cannot parse relative
+          // colors. color-mix preserves source alpha and the modifier on
+          // browsers that support it; RCS remains the final modern value.
+          const property = camelToKebab(cssProp)
+          const plain = serializeCssValue(cssProp, cssValue)
+          cssRule += `${property}:${plain};`
+          cssRule += `${property}:color-mix(in oklab, ${plain} calc(var(${alphaVarName(cssProp)}, 1) * 100%), transparent);`
+          cssValue = withAlphaExpr(cssValue, `var(${alphaVarName(cssProp)}, 1)`)
+        }
+        cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, cssValue)};`
       }
 
       const ruleKey = `${key}_${value}`
 
-      cssRule = `.${ruleKey}{${cssRule}}`
+      // The class NAME may contain characters that are valid in a class
+      // attribute but meta-characters in a selector — `paddingX_0.5` needs to
+      // be matched as `.paddingX_0\.5`. Escape the selector, not the name: the
+      // runtime emits the unescaped form into className.
+      const selector = ruleKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
 
-      styles += cssRule
+      if (cssRule) styles += `${scope}.${selector}{${cssRule}}`
+      for (const [descSelector, body] of descendantRules) {
+        styles += `${scope}.${selector} ${descSelector} {${body}}`
+      }
+
+      // PSEUDO-ELEMENT rules attached to this value's atomic class — the one
+      // sanctioned pseudo-element channel (scrollbars, ::file-selector-button:
+      // vendor surfaces that cannot be real elements). Web-only by nature:
+      // they exist ONLY in this generated css, so a native binding sees the
+      // class name and nothing else. Everything else stays real elements.
+      const pseudoRules = (
+        token as {
+          pseudoRules?: (
+            v: unknown,
+            tokens: unknown,
+          ) => Record<string, Record<string, unknown>> | undefined
+        }
+      ).pseudoRules
+      if (pseudoRules) {
+        const perPseudo = pseudoRules(value, tokens)
+        if (perPseudo) {
+          for (const pseudoSel in perPseudo) {
+            let body = ''
+            const props = perPseudo[pseudoSel]!
+            for (const cssProp in props) {
+              body += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, props[cssProp])};`
+            }
+            if (body) styles += `${scope}.${selector}${pseudoSel}{${body}}`
+          }
+        }
+      }
     })
   }
 
-  return styles
+  // Responsive atomic classes for the opted tokens (see `responsiveTokens` on
+  // the declaration type): every enumerated value again, under each width
+  // breakpoint's media condition. Emitted AFTER the resting atomics so an
+  // active breakpoint class beats the resting value by order at equal
+  // specificity — and, unlike a chain, still loses to a caller's utilities.
+  // Ascending width order so a larger breakpoint's block wins the same way;
+  // raw media CONDITIONS ('(pointer: coarse)') sort last, as in the chains.
+  if (responsiveTokens && breakpoints) {
+    const px = (v: number | string): number =>
+      typeof v === 'number'
+        ? v
+        : v.startsWith('(')
+          ? Number.POSITIVE_INFINITY
+          : Number.parseFloat(v) *
+            (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
+    const sorted = Object.entries(
+      breakpoints.__breakpoints as Record<string, number | string>,
+    ).sort(([, a], [, b]) => px(a) - px(b))
+    for (const [bpKey, bpValue] of sorted) {
+      const condition =
+        typeof bpValue === 'string' && bpValue.startsWith('(')
+          ? bpValue
+          : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
+      let block = ''
+      for (const key of responsiveTokens) {
+        // oxlint-disable-next-line typescript/no-explicit-any -- same structural narrowing as the token loop
+        const token = system[key] as any
+        if (!token || !('values' in token) || !('resolve' in token)) continue
+        // oxlint-disable-next-line typescript/no-explicit-any -- token values are dynamically typed
+        token.values.forEach((value: any) => {
+          if (value instanceof Number || value instanceof String) return
+          const result = resolveConfiguredToken(token, value, tokens, {
+            ...layout,
+            platform: 'web',
+            canonicalFields: !!opts?.id,
+          })
+          if (!result) return
+          let cssRule = ''
+          for (const cssProp in result) {
+            cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, result[cssProp])};`
+          }
+          if (!cssRule) return
+          const ruleKey = `@${bpKey}:${key}_${value}`
+          const selector = ruleKey.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
+          block += `${scope}.${selector}{${cssRule}}`
+        })
+      }
+      if (block) styles += `@media ${condition} {${block}}`
+    }
+  }
+
+  // `inherits: false` is load-bearing: an unregistered custom property
+  // inherits, and a parent's wash would cascade onto every descendant's colour.
+  for (const prop of alphaProps) {
+    styles += `@property ${alphaVarName(prop)} {syntax:'<number>';inherits:false;initial-value:1;}`
+  }
+  styles += alphaClasses
+
+  return opts?.id
+    ? namespaceCss(styles, opts.id, { scope: opts.scope, externalCssVariables })
+    : styles
 }

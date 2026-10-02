@@ -1,15 +1,12 @@
-import { styles } from '@examples/shared/button'
-import { useStyles } from '@toned/react/index'
+import { buttonStyles } from '@examples/shared'
+import { useStyles } from '@toned/react'
 
 export function Button({ label }: { label: string }) {
-  const s = useStyles(styles, {
-    size: 'm',
-    variant: 'accent',
-  })
+  const s = useStyles(buttonStyles, { size: 'm', variant: 'accent' })
 
   return (
-    <button type="button" {...s.container}>
-      <span {...s.label}>{label}</span>
+    <button type="button" {...s.Root}>
+      <span {...s.Label}>{label}</span>
     </button>
   )
 }

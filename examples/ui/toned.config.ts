@@ -1,9 +1,8 @@
-import { system } from '@toned/systems/base'
-import { inject } from '@toned/core/dom'
 import { defineConfig, setConfig } from '@toned/core'
 import reactConfig from '@toned/react/react-web'
 
-inject(system)
+// The consuming application imports generated CSS (the docs app uses Vite's
+// virtual:toned.css). This shared component package never injects CSS at runtime.
 
 export default setConfig(
   defineConfig({

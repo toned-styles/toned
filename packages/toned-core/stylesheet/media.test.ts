@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from 'vitest'
+
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { initMedia } from './media.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: test helper for globalThis access
 const g = globalThis as any
 
 const createMockSystem = (breakpoints?: Record<string, number>) =>
@@ -47,7 +47,6 @@ describe('initMedia', () => {
   describe('SSR safety', () => {
     test('does not crash when window is undefined', () => {
       const originalWindow = g.window
-      // biome-ignore lint/performance/noDelete: need to simulate SSR where window is truly absent
       delete g.window
 
       try {
@@ -64,7 +63,6 @@ describe('initMedia', () => {
 
     test('returns emitter with empty data when no breakpoints configured', () => {
       const originalWindow = g.window
-      // biome-ignore lint/performance/noDelete: need to simulate SSR where window is truly absent
       delete g.window
 
       try {
@@ -86,7 +84,6 @@ describe('initMedia', () => {
       } as unknown as TokenSystem<TokenStyleDeclaration>
 
       const originalWindow = g.window
-      // biome-ignore lint/performance/noDelete: need to simulate SSR where window is truly absent
       delete g.window
 
       try {
@@ -295,7 +292,9 @@ describe('initMedia', () => {
       stubWindowWithMatchMedia(mockMatchMedia)
 
       try {
-        initMedia(createMockSystem({ sm: 640, md: 768 }))
+        const emitter = initMedia(createMockSystem({ sm: 640, md: 768 }))
+        for (const mock of addListenerMocks) expect(mock).not.toHaveBeenCalled()
+        emitter.sub(() => {})
 
         expect(addListenerMocks).toHaveLength(2)
         for (const mock of addListenerMocks) {
@@ -371,4 +370,62 @@ describe('initMedia', () => {
       }
     })
   })
+})
+
+describe('query construction per breakpoint value shape', () => {
+  test('numbers get px; string lengths pass VERBATIM; parenthesised strings ARE the query', () => {
+    const queries: string[] = []
+    const originalWindow = g.window
+    g.window = {
+      matchMedia: (q: string) => {
+        queries.push(q)
+        return createMockMediaQueryList(q, false)
+      },
+    }
+    try {
+      initMedia({
+        system: {},
+        config: {
+          breakpoints: {
+            __breakpoints: {
+              sm: 480,
+              md: '30rem',
+              coarse: '(pointer: coarse)',
+            },
+          },
+        },
+      } as unknown as TokenSystem<TokenStyleDeclaration>)
+      // Appending px to a string would produce '(min-width: 30rempx)', which
+      // silently never matches.
+      expect(queries).toEqual([
+        '(min-width: 480px)',
+        '(min-width: 30rem)',
+        '(pointer: coarse)',
+      ])
+    } finally {
+      g.window = originalWindow
+    }
+  })
+})
+
+test('media listeners attach only for subscribers and detach with the last one', () => {
+  const mql = createMockMediaQueryList('(min-width: 640px)', false)
+  stubWindowWithMatchMedia(() => mql)
+  try {
+    const emitter = initMedia(createMockSystem({ sm: 640 }))
+    expect(mql.addListener).not.toHaveBeenCalled()
+    const first = emitter.sub(() => {})
+    const second = emitter.sub(() => {})
+    expect(mql.addListener).toHaveBeenCalledTimes(1)
+    first()
+    expect(mql.removeListener).not.toHaveBeenCalled()
+    second()
+    expect(mql.removeListener).toHaveBeenCalledTimes(1)
+    const replay = emitter.sub(() => {})
+    expect(mql.addListener).toHaveBeenCalledTimes(2)
+    replay()
+    expect(mql.removeListener).toHaveBeenCalledTimes(2)
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

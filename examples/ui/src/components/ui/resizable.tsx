@@ -1,40 +1,51 @@
-"use client"
+'use client'
 
-import { GripVerticalIcon } from "lucide-react"
-import * as ResizablePrimitive from "react-resizable-panels"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { GripVerticalIcon } from 'lucide-react'
+import * as ResizablePrimitive from 'react-resizable-panels'
 
-
-const resizableStyles = stylesheet({
+/*
+ * The handle is a one-pixel line. A vertical group turns it on its side:
+ * that depends on the group's direction attribute, so it is in styles.css.
+ */
+export const resizableStyles = stylesheet({
   group: {
     display: 'flex',
     height: '100%',
     width: '100%',
   },
   handle: {
-    bgColor: 'subtle',
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-    style: {
-      width: '1px',
+    flexShrink: '0',
+    width: '1px',
+    bgColor: 'interactive_muted',
+    // No token: the transition list is specific to this part.
+    '@platform web': {
+      $style: { transition: 'background-color 0.15s, box-shadow 0.15s' },
     },
+    ':hover': { bgColor: 'action' },
+    ':focus-visible': { bgColor: 'action', shadow: 'focus' },
   },
   handleGrip: {
-    bgColor: 'subtle',
-    borderColor: 'default',
-    borderWidth: 'thin',
-    borderRadius: 'small',
-    zIndex: 10,
+    zIndex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    style: {
-      height: '1rem',
-      width: '0.75rem',
-    },
+    width: '0.75rem',
+    height: '1.25rem',
+    bgColor: 'elevated',
+    textColor: 'muted',
+    borderColor: 'input',
+    borderWidth: 'thin',
+    borderRadius: 'small',
+  },
+  gripIcon: {
+    width: '0.625rem',
+    height: '0.625rem',
   },
 })
 
@@ -73,8 +84,8 @@ function ResizableHandle({
       {...props}
     >
       {withHandle && (
-        <div {...s.handleGrip}>
-          <GripVerticalIcon style={{ width: '0.625rem', height: '0.625rem' }} />
+        <div data-slot="resizable-handle-grip" {...s.handleGrip}>
+          <GripVerticalIcon {...s.gripIcon} />
         </div>
       )}
     </ResizablePrimitive.Separator>

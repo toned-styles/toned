@@ -1,0 +1,5 @@
+{
+  "toned.include": ["src"],
+  "toned.modules": {},
+  "extensions.ignoreRecommendations": true
+}

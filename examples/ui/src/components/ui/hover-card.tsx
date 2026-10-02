@@ -1,24 +1,21 @@
-import * as React from "react"
-import { HoverCard as HoverCardPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { HoverCard as HoverCardPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-const hoverCardStyles = stylesheet({
+// The open and close animations are keyed on `data-state` in styles.css.
+export const hoverCardStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     zIndex: 50,
-    borderRadius: 'medium',
+    width: '18rem',
+    padding: 4,
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 4,
-    shadow: 'medium',
-    width: '16rem',
-    style: {
-      outline: 'none',
-      transformOrigin: 'var(--radix-hover-card-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    shadow: 'large',
+    typo: 'body_small',
   },
 })
 
@@ -38,7 +35,7 @@ function HoverCardTrigger({
 
 function HoverCardContent({
   className,
-  align = "center",
+  align = 'center',
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof HoverCardPrimitive.Content>) {

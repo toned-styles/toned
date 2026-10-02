@@ -1,5 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { CodeBlock } from '../../components/CodeBlock.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
@@ -13,130 +14,89 @@ function ApiDefineSystem() {
     <article {...s.container}>
       <h1 {...s.h1}>defineSystem</h1>
       <p>
-        <code {...s.code}>defineSystem</code> creates a styling system from a
-        set of token definitions and configuration. It is the foundation of
-        every toned-styles project.
+        A system owns the typed token vocabulary, conditions and namespace used
+        by its sheets. Keep the complete returned object for renderers and
+        builds.
       </p>
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
 
-      <h2 {...s.h2}>Signature</h2>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
-
-const { system, stylesheet, t } = defineSystem(tokens, config)`}</CodeBlock>
-
-      <h3 {...s.h3}>Parameters</h3>
-      <p>
-        <strong>tokens</strong> -- An object whose values are token definitions
-        created with <code {...s.code}>defineToken</code> or{' '}
-        <code {...s.code}>defineCssToken</code>. Each token describes a semantic
-        property (e.g. <code {...s.code}>bgColor</code>,{' '}
-        <code {...s.code}>paddingX</code>) and its allowed values.
-      </p>
-      <p>
-        <strong>config</strong> -- System configuration including breakpoints.
-        The base system ships with <code {...s.code}>xs</code> (0),{' '}
-        <code {...s.code}>sm</code> (480), <code {...s.code}>md</code> (768),{' '}
-        <code {...s.code}>lg</code> (992), and <code {...s.code}>xl</code>{' '}
-        (1200).
-      </p>
-
-      <h3 {...s.h3}>Return Value</h3>
-      <p>An object with three properties:</p>
-      <p>
-        <strong>system</strong> -- The compiled system object. Pass this to
-        the Vite plugin (<code {...s.code}>toned({'{ system }'})</code>) or to{' '}
-        <code {...s.code}>inject(system)</code> for runtime CSS generation.
-      </p>
-      <p>
-        <strong>stylesheet</strong> -- A factory function for creating type-safe
-        stylesheets bound to this system's tokens. Every token property gets
-        full autocompletion.
-      </p>
-      <p>
-        <strong>t</strong> -- A utility for creating inline token styles. Useful
-        for one-off styling without defining a full stylesheet. It accepts the
-        same responsive and interactive blocks a stylesheet element does.
-      </p>
-
-      <h2 {...s.h2}>Example</h2>
-      <CodeBlock>{`import { defineSystem } from '@toned/core'
-import * as colour from './colour.ts'
-import * as border from './border.ts'
-import * as layout from './layout.ts'
-import * as config from './config.ts'
-
-export const { system, stylesheet, t } = defineSystem(
-  {
-    ...colour,
-    ...border,
-    ...layout,
+export const ui = defineSystem({
+  id: 'controls',
+  tokens: {
+    opacity: defineToken({
+      values: [0, 0.5, 1] as const,
+      resolve: opacity => ({ opacity }),
+    }),
+    padding: defineToken({
+      values: [2, 4] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
   },
-  config,
-)`}</CodeBlock>
+  conditions: {
+    media: { compact: 640, wide: 1024 },
+    containers: { field: { wide: 448 } },
+  },
+})
 
-      <h2 {...s.h2}>Using the t Utility</h2>
+export const { stylesheet } = ui`}</CodeBlock>
       <p>
-        The <code {...s.code}>t</code> function lets you apply tokens inline
-        without defining a stylesheet. This is handy for one-off styles:
+        Sheets import <code {...s.code}>stylesheet</code> from this module. It
+        is bound to the system, so token values and the conditions declared
+        above are checked where they are used:
       </p>
-      <CodeBlock>{`import { t } from '@toned/systems/base'
+      <CodeBlock title="styles.ts">{`import { stylesheet } from './system.ts'
 
-function Heading() {
-  return <h1 {...t({ typo: 'heading_1' })}>Hello</h1>
-}`}</CodeBlock>
+export const styles = stylesheet(q => ({
+  Root: {
+    opacity: 0.5,
+    padding: 2,
+    [q.media('wide')]: { opacity: 1 },
+    [q.container('field', 'wide')]: { padding: 4 },
+  },
+}))`}</CodeBlock>
+      <h2 {...s.h2} id="token-and-condition-contracts">
+        Token and condition contracts
+      </h2>
       <p>
-        Multiple arguments merge left to right, so a later one overrides an
-        earlier one. This is the usual way to layer a conditional style over a
-        base:
+        Token properties use camelCase; named values use kebab-case. Resolvers
+        translate semantic values into output fields and may read the current
+        token snapshot. Declarations and compiled matching plans are immutable.
       </p>
-      <CodeBlock>{`import { t } from '@toned/systems/base'
-
-function Row({ selected }) {
-  return <div {...t({ bgColor: 'surface' }, selected && { bgColor: 'action' })} />
-}`}</CodeBlock>
-
-      <h3 {...s.h3}>Breakpoint and Pseudo-State Blocks</h3>
       <p>
-        <code {...s.code}>t</code> accepts the same nested{' '}
-        <code {...s.code}>'@breakpoint'</code> and{' '}
-        <code {...s.code}>':pseudo'</code> blocks as an element definition in a{' '}
-        <a href="/api/stylesheet">stylesheet</a>, so an inline style can be
-        responsive or interactive without reaching for one:
+        Descriptor-system media and container thresholds are fixed logical
+        pixels. Query preludes cannot read CSS custom properties. Colocated
+        conditions use the same typed builder in base and variant declarations.
       </p>
-      <CodeBlock>{`import { t } from '@toned/systems/base'
+      <h2 {...s.h2} id="use-the-complete-system">
+        Use the complete system
+      </h2>
+      <CodeBlock title="build.ts">{`import { buildStyles } from '@toned/core/build'
+import { createWebRenderer } from '@toned/core/server'
+import { styles } from './styles.ts'
+import { ui } from './system.ts'
 
-function Card() {
-  return (
-    <div
-      {...t({
-        paddingX: 2,
-        bgColor: 'surface',
-        '@md': { paddingX: 4 },
-        ':hover': { bgColor: 'action' },
-      })}
-    />
-  )
-}`}</CodeBlock>
+const artifact = buildStyles(ui, { sheets: [styles] })
+const renderer = createWebRenderer(ui, { manifest: artifact.manifest })
+const props = renderer.resolve(styles)`}</CodeBlock>
       <p>
-        Blocks are one level deep: a breakpoint block cannot contain another
-        breakpoint, and neither can contain the cross-element{' '}
-        <code {...s.code}>$element</code> references a stylesheet supports. Both
-        kinds accept the <code {...s.code}>style</code> escape hatch, and when
-        two arguments target the same block their properties merge rather than
-        replace:
+        The <code {...s.code}>system</code> property is the raw token
+        dictionary. Retaining only that property loses the system's
+        configuration and identity; pass <code {...s.code}>ui</code> to new
+        build/render integrations.
       </p>
-      <CodeBlock>{`import { t } from '@toned/systems/base'
-
-// Both survive: { '@md': { paddingX: 4, gap: 1 } }
-t({ '@md': { paddingX: 4 } }, { '@md': { gap: 1 } })`}</CodeBlock>
+      <h2 {...s.h2} id="compatibility">
+        Compatibility
+      </h2>
       <p>
-        These blocks compile to CSS custom-property fallback chains, so they
-        require <code {...s.code}>mediaMode: 'css'</code> and{' '}
-        <code {...s.code}>pseudoMode: 'css'</code> respectively. Under any other
-        mode -- including React Native -- the block is dropped, the base token
-        value still applies, and a development-only warning names the config
-        option that would enable it. See{' '}
-        <a href="/api/media-queries">Media Queries</a> and{' '}
-        <a href="/guides/interactive">Interactive Styles</a>.
+        The two-argument <code {...s.code}>defineSystem(tokens, config)</code>{' '}
+        form creates a system without a namespace. It composes vocabularies that
+        read unprefixed custom properties, such as{' '}
+        <code {...s.code}>@toned/systems/base</code> (see the{' '}
+        <Link to="/guides/react-web">React web guide</Link>), and keeps its
+        spacing-scale container steps for existing consumers. The{' '}
+        <code {...s.code}>t</code> utility remains available too. New components
+        should use named sheets and explicit bindings rather than introduce new
+        ambient inline-token calls.
       </p>
     </article>
   )

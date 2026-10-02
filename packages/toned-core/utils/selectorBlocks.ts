@@ -2,16 +2,15 @@
  * Nested selector-block flattening for inline token styles.
  *
  * `stylesheet()` accepts nested `'@bp'` and `':pseudo'` blocks and flattens them
- * in {@link StyleMatcher} before they reach `exec`. `t()` had no equivalent step,
- * so nested blocks passed to it were silently discarded. This module is that
- * missing step.
+ * in {@link StyleMatcher} before they reach `exec`. This module is the
+ * equivalent step for `t()`, so nested blocks passed to it are not discarded.
  *
  * @module utils/selectorBlocks
  */
 
 import { SYMBOL_STYLE } from './symbols.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: token style values are dynamic
+// oxlint-disable-next-line typescript/no-explicit-any -- token style values are dynamic
 type AnyValue = any
 
 function isBlock(value: unknown): value is Record<string, AnyValue> {

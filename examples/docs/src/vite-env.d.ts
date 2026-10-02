@@ -1,11 +1,5 @@
 /// <reference types="vite/client" />
 
-declare module '*.mdx' {
-  import type { ComponentType } from 'react'
-  const component: ComponentType
-  export default component
-}
-
 declare module 'virtual:component-docs/*' {
   export interface PropDoc {
     name: string
@@ -23,16 +17,34 @@ declare module 'virtual:component-docs/*' {
     props: Record<string, PropDoc>
   }
 
+  export interface SheetSource {
+    name: string
+    source: string
+    parts: string[]
+  }
+  export const source: string
+  export const sheets: SheetSource[]
   const docs: ComponentDoc[]
   export default docs
 }
 
 declare module 'virtual:component-docs/index' {
-  import type { ComponentDoc } from 'virtual:component-docs/*'
+  import type { ComponentDoc, SheetSource } from 'virtual:component-docs/*'
 
   export const names: string[]
   export const loaders: Record<
     string,
-    () => Promise<{ default: ComponentDoc[] }>
+    () => Promise<{
+      default: ComponentDoc[]
+      source: string
+      sheets: SheetSource[]
+    }>
   >
+}
+
+declare module 'virtual:toned.manifest' {
+  import type { BuildManifest } from '@toned/core/build'
+
+  const manifest: BuildManifest
+  export default manifest
 }

@@ -1,6 +1,8 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
+
 import { CodeBlock } from '../../components/CodeBlock.tsx'
+import { InstallCommand } from '../../components/site/InstallCommand.tsx'
 import { proseStyles } from '../../styles/prose.ts'
 
 export const Route = createFileRoute('/guides/react-native')({
@@ -11,118 +13,162 @@ function GuideReactNative() {
   const s = useStyles(proseStyles)
   return (
     <article {...s.container}>
-      <h1 {...s.h1}>React Native Guide</h1>
+      <h1 {...s.h1}>React Native integration</h1>
       <p>
-        toned-styles works with React Native, allowing you to share style
-        definitions across web and native platforms. The core authoring model is
-        identical; only the config and runtime differ.
+        Toned shares portable declarations and resolves native style fields.
+        Your application supplies its renderer, concrete primitives and an
+        explicit host adapter. The native host module alone does not establish a
+        working or certified React Native integration.
       </p>
 
-      <h2 {...s.h2}>1. Install Dependencies</h2>
-      <CodeBlock>
-        {'npm install @toned/core @toned/react @toned/systems'}
-      </CodeBlock>
-      <p>
-        Note: you do not need <code {...s.code}>@toned/themes</code> for React
-        Native since themes are handled differently on native platforms.
-      </p>
-
-      <h2 {...s.h2}>2. Create the Config File</h2>
-      <p>
-        The React Native config omits DOM-specific features like CSS class names
-        and CSS media queries:
-      </p>
-      <CodeBlock>{`// toned.config.ts
-import { defineConfig, setConfig } from '@toned/core'
-import reactNativeConfig from '@toned/react/react-native'
-import { system } from '@toned/systems/base'
-
-export default setConfig(
-  defineConfig({
-    ...reactNativeConfig,
-    useMedia: true,
-  }),
-)`}</CodeBlock>
-
-      <h2 {...s.h2}>3. Import Config Early</h2>
-      <p>
-        Import the config at the top of your app entry point, before any
-        component imports:
-      </p>
-      <CodeBlock>{`// App.tsx
-import './toned.config.ts'
-
-import { View, Text } from 'react-native'
-import { useStyles } from '@toned/react'
-import { appStyles } from './styles.ts'
-
-export default function App() {
-  const s = useStyles(appStyles)
-  return (
-    <View {...s.container}>
-      <Text {...s.title}>Hello from toned-styles</Text>
-    </View>
-  )
-}`}</CodeBlock>
-
-      <h2 {...s.h2}>4. Shared Style Definitions</h2>
-      <p>
-        The key benefit of toned-styles is that your stylesheet definitions are
-        platform-agnostic. The same stylesheet file works on both web and
-        native:
-      </p>
-      <CodeBlock>{`// styles/card.ts - works on both web and native
-import { stylesheet } from '@toned/systems/base'
+      <h2 {...s.h2} id="1-define-portable-parts">
+        1. Define portable parts
+      </h2>
+      <InstallCommand packages="@toned/core @toned/react" />
+      <CodeBlock title="styles.ts">{`import { stylesheet } from './system'
 
 export const cardStyles = stylesheet({
-  card: {
-    bgColor: 'elevated',
-    borderRadius: 'large',
-    borderColor: 'subtle',
-    borderWidth: 'thin',
-    shadow: 'small',
-    padding: 3,
-  },
-  title: {
-    textColor: 'primary',
-    typo: 'heading_3',
-  },
+  Root: { surface: 'card', padding: 4 },
+  Title: { $kind: 'text', text: 'title' },
 })`}</CodeBlock>
+      <p>The sheet takes its tokens from the application's system:</p>
+      <CodeBlock title="system.ts">{`import { defineSystem, defineToken } from '@toned/core'
+
+export const ui = defineSystem({
+  id: 'native-example',
+  tokens: {
+    surface: defineToken({
+      values: ['card'] as const,
+      resolve: () => ({ backgroundColor: '#fff' }),
+    }),
+    padding: defineToken({
+      values: [2, 4] as const,
+      resolve: step => ({ padding: step * 4 }),
+    }),
+    text: defineToken({
+      values: ['title'] as const,
+      resolve: () => ({ color: '#172033', fontSize: 20 }),
+    }),
+  },
+})
+
+export const { stylesheet } = ui`}</CodeBlock>
       <p>
-        On the web, tokens like <code {...s.code}>bgColor</code> resolve to CSS
-        custom properties. On React Native, they resolve to concrete colour
-        values from your theme.
+        The token resolvers return concrete values that both platforms accept.
+        If you reach for the <code {...s.code}>$style</code> escape hatch,
+        shared declarations use the portable property intersection. Explicit
+        platform blocks can widen styles for that platform. Native rejects
+        unsupported CSS fields and values; a web-only cursor or CSS variable is
+        not automatically translated into a native equivalent. Theme resolvers
+        must supply concrete native values.
       </p>
 
-      <h2 {...s.h2}>5. Platform Differences</h2>
+      <h2 {...s.h2} id="2-declare-the-application-host">
+        2. Declare the application host
+      </h2>
+      <CodeBlock title="host.ts">{`// Integration-owned adapter.
+import { Dimensions, Image, Pressable, Text, View } from 'react-native'
+import { defineReactNativeHost } from '@toned/core/stylesheet'
+import type { ReactHost } from '@toned/react'
+import { nativeHost as native } from '@toned/react/hosts/native'
+import { isApplicationFabricHost, appReactNativeVersion } from './host-identity'
+
+const adapter = defineReactNativeHost({
+  renderer: 'fabric',
+  version: appReactNativeVersion,
+  isHost: isApplicationFabricHost,
+})
+
+const primitives = { view: View, text: Text, image: Image, pressable: Pressable }
+export const host: ReactHost = {
+  ...native,
+  nativeHost: {
+    ...adapter,
+    getViewportWidth: () => Dimensions.get('window').width,
+    subscribeViewport: notify => {
+      const subscription = Dimensions.addEventListener('change', () => notify())
+      return () => subscription.remove()
+    },
+  },
+  resolveElement: kind => primitives[kind ?? 'view'],
+}`}</CodeBlock>
       <p>
-        <strong>No className</strong> -- React Native does not support CSS
-        classes. The config adapter ensures that{' '}
-        <code {...s.code}>useStyles</code> returns only{' '}
-        <code {...s.code}>style</code> props.
+        The host identity module in this example belongs to your integration:
+        verify actual forwarded hosts from the selected renderer, not merely the
+        presence of <code {...s.code}>setNativeProps</code>. The helper declares
+        merge patches and null resets; a version string does not prove that the
+        renderer implements them correctly. Validate View, Text and input
+        targets, style removal, caller baselines, ref replacement and
+        interrupted renders in a real native application.
+      </p>
+
+      <h2 {...s.h2} id="3-install-a-renderer-and-render-the-parts">
+        3. Install a renderer and render the parts
+      </h2>
+      <CodeBlock title="App.tsx">{`import { createNativeRenderer } from '@toned/core/server'
+import { createElements, TonedProvider } from '@toned/react'
+import { host } from './host'
+import { cardStyles } from './styles'
+import { ui } from './system'
+
+const renderer = createNativeRenderer(ui, { tokens: {} })
+const Card = createElements(cardStyles)
+
+export default function App() {
+  return (
+    <TonedProvider renderer={renderer} host={host}>
+      <Card>
+        <Card.Root>
+          <Card.Title>Hello from Toned</Card.Title>
+        </Card.Root>
+      </Card>
+    </TonedProvider>
+  )
+}`}</CodeBlock>
+      <p>
+        The provider scopes renderer inputs to this tree. The element family
+        keeps component identities stable; its provider shares variant inputs
+        and cross-part ownership without adding a native layout wrapper.
+        Independent parts can also render standalone with their base/default
+        declarations. Bound refs must reach the real native hosts.
+      </p>
+
+      <h2 {...s.h2} id="4-measurements-states-and-capability-limits">
+        4. Measurements, states and capability limits
+      </h2>
+      <p>
+        Viewport queries require the adapter&apos;s{' '}
+        <code {...s.code}>getViewportWidth</code> and{' '}
+        <code {...s.code}>subscribeViewport</code> capabilities. The example
+        supplies them using Dimensions; Toned does not install a Dimensions
+        subscription or browser matchMedia fallback automatically. Runtime
+        container queries use the native binding&apos;s onLayout measurement
+        props, including host-local measurements within one family.
       </p>
       <p>
-        <strong>Media queries</strong> -- In React Native, breakpoint evaluation
-        happens in JavaScript using <code {...s.code}>Dimensions</code> rather
-        than CSS <code {...s.code}>@media</code> rules.
+        Hover, active and focus facts come from primitive events. Additional
+        semantic states need declared readers and subscriptions. Cross-part
+        relationships also need committed parent topology; native parent
+        traversal is not assumed. Native props include refs, event handlers and
+        configured bridge props as well as style fields.
       </p>
       <p>
-        <strong>Inline selector blocks</strong> -- The{' '}
-        <code {...s.code}>'@breakpoint'</code> and{' '}
-        <code {...s.code}>':pseudo'</code> blocks that{' '}
-        <code {...s.code}>t</code> accepts compile to CSS custom properties, so
-        they do not apply on native. The block is dropped, the base token value
-        still applies, and a development-only warning explains why. Declare
-        responsive and interactive styles in a{' '}
-        <a href="/api/stylesheet">stylesheet</a> and read them with{' '}
-        <a href="/api/use-styles">useStyles</a>, which works on both platforms.
+        Grid remains a web capability. Named-area ownership alone cannot
+        implement intrinsic native track sizing or span placement. A native grid
+        needs an integrated layout engine and its own acceptance tests. The Expo
+        example is an integration sketch: it does not certify a concrete Fabric
+        renderer. The separate Fabric acceptance app verifies one pinned Android
+        profile; see the{' '}
+        <Link to="/learn/$topic" params={{ topic: 'native' }}>
+          native hosts reference
+        </Link>
+        .
       </p>
       <p>
-        <strong>style escape hatch</strong> -- When using the{' '}
-        <code {...s.code}>style</code> property, prefer numeric values for
-        dimensions (e.g. <code {...s.code}>padding: 24</code> instead of{' '}
-        <code {...s.code}>'24px'</code>) to ensure compatibility with React
-        Native's style system.
+        Opaque styles from other engines must use an explicit primitive adapter
+        and a separate prop rather than Toned&apos;s plain style merger. Ordered
+        style arrays do not coordinate two engines&apos; imperative writes to
+        the same field; overlapping ownership needs an integration-aware writer.
       </p>
     </article>
   )

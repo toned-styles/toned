@@ -1,40 +1,49 @@
-import * as React from "react"
-import { CircleIcon } from "lucide-react"
-import { RadioGroup as RadioGroupPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { RadioGroup as RadioGroupPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-const radioGroupStyles = stylesheet({
+export const radioGroupStyles = stylesheet({
   root: {
     display: 'grid',
     gap: 3,
   },
   item: {
-    borderColor: 'input',
-    borderWidth: 'thin',
-    textColor: 'action',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     width: '1rem',
     height: '1rem',
     flexShrink: '0',
+    bgColor: 'default',
+    borderColor: 'input',
+    borderWidth: 'thin',
     borderRadius: 'full',
     shadow: 'small',
-    style: {
-      aspectRatio: '1',
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
+    cursor: 'pointer',
+    // No token: the transition list is specific to this control.
+    '@platform web': {
+      $style: { transition: 'border-color 0.15s, box-shadow 0.15s' },
     },
-  },
-  disabled: {
-    cursor: 'not-allowed',
-    opacity: 0.5,
+    ':hover': { borderColor: 'action' },
+    ':focus-visible': { shadow: 'focus' },
   },
   indicator: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'block',
+    width: '0.5rem',
+    height: '0.5rem',
+    borderRadius: 'full',
+    bgColor: 'action',
   },
-})
+}).variants(
+  ($: Variants<{ disabled: boolean }>) => ({
+    [$.disabled(true)]: {
+      item: { cursor: 'not-allowed', opacity: 0.5 },
+    },
+  }),
+  { defaults: { disabled: false } },
+)
 
 function RadioGroup({
   className,
@@ -56,21 +65,19 @@ function RadioGroupItem({
   disabled,
   ...props
 }: React.ComponentProps<typeof RadioGroupPrimitive.Item>) {
-  const s = useStyles(radioGroupStyles)
+  const s = useStyles(radioGroupStyles, { disabled: !!disabled })
 
   return (
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
-      {...s.item.with(disabled && s.disabled).with({ className })}
+      {...s.item.with({ className })}
       disabled={disabled}
       {...props}
     >
       <RadioGroupPrimitive.Indicator
         data-slot="radio-group-indicator"
         {...s.indicator}
-      >
-        <CircleIcon className="fill-primary absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2" />
-      </RadioGroupPrimitive.Indicator>
+      />
     </RadioGroupPrimitive.Item>
   )
 }

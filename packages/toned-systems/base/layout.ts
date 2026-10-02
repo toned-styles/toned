@@ -1,20 +1,5 @@
-import { defineUnit } from '@toned/core'
 import { defineCssToken, defineToken } from '../defineCssToken.ts'
-
-// TODO: move to configuration level
-// biome-ignore lint/complexity/noBannedTypes: instance is expected
-const SpaceUnit = defineUnit<Number | String>((value, tokens) => {
-  // @ts-expect-error
-  const base = tokens.base
-
-  if (typeof value === 'string') {
-    return tokens[`space_${value}`]
-  }
-
-  return String(base).startsWith('var')
-    ? `calc(${base} * ${Number(value)})`
-    : Number(value) * Number.parseInt(String(base), 10)
-})
+import { isCssDimension, SpaceUnit } from './unit.ts'
 
 export const overflow = defineCssToken('overflow', [
   'hidden',
@@ -37,6 +22,33 @@ export const overflowY = defineCssToken('overflowY', [
 
 const paddingValues = [
   new Number(),
+  // The common steps of the 4px scale, enumerated as literals so static CSS
+  // generation (`@toned/core/dom`) can emit an atomic class for each and the
+  // runtime resolves them by className instead of an inline style. The boxed
+  // Number above still covers any other value dynamically — an off-scale
+  // number simply resolves inline.
+  0,
+  0.5,
+  1,
+  1.5,
+  2,
+  2.5,
+  3,
+  3.5,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  14,
+  16,
+  20,
+  24,
+  32,
   'xxsmal',
   'xsmall',
   'small',
@@ -79,6 +91,28 @@ export const paddingBottom = defineCssToken(
 )
 
 export const gap = defineCssToken('gap', paddingValues, SpaceUnit)
+
+/*
+ * Margins and insets share the padding scale plus its negative half and
+ * 'auto' — same relative-to-base semantics, enumerated for static generation
+ * exactly like the padding steps (an off-scale number still resolves inline).
+ */
+const marginValues = [
+  new Number(),
+  -0.5,
+  -1,
+  -1.5,
+  -2,
+  -2.5,
+  -3,
+  -3.5,
+  -4,
+  -5,
+  -6,
+  -8,
+  'auto',
+  ...paddingValues.filter((v): v is number => typeof v === 'number'),
+] as const
 export const rowGap = defineCssToken('rowGap', paddingValues, SpaceUnit)
 export const columnGap = defineCssToken('columnGap', paddingValues, SpaceUnit)
 
@@ -90,6 +124,7 @@ export const flexLayout = defineToken({
   }),
 })
 
+export const flexBasis = defineCssToken('flexBasis', paddingValues, SpaceUnit)
 export const flexGrow = defineCssToken('flexGrow', ['0', '1'])
 export const flexWrap = defineCssToken('flexWrap', [
   'wrap',
@@ -177,43 +212,59 @@ export const placeSelf = defineCssToken('placeSelf', [
   'stretch',
 ])
 
-// Margin tokens (same scale as padding)
+// Margin tokens (padding scale + negatives + auto)
+const MarginUnit = (
+  value: Parameters<typeof SpaceUnit>[0],
+  tokens: Parameters<typeof SpaceUnit>[1],
+) => (value === 'auto' ? 'auto' : SpaceUnit(value, tokens))
+
 export const margin = defineCssToken(
   ['marginLeft', 'marginTop', 'marginBottom', 'marginRight'],
-  paddingValues,
-  SpaceUnit,
+  marginValues,
+  MarginUnit,
 )
 export const marginX = defineCssToken(
   ['marginLeft', 'marginRight'],
-  paddingValues,
-  SpaceUnit,
+  marginValues,
+  MarginUnit,
 )
 export const marginY = defineCssToken(
   ['marginTop', 'marginBottom'],
-  paddingValues,
-  SpaceUnit,
+  marginValues,
+  MarginUnit,
 )
-export const marginTop = defineCssToken('marginTop', paddingValues, SpaceUnit)
+export const marginTop = defineCssToken('marginTop', marginValues, MarginUnit)
 export const marginBottom = defineCssToken(
   'marginBottom',
-  paddingValues,
-  SpaceUnit,
+  marginValues,
+  MarginUnit,
 )
-export const marginLeft = defineCssToken('marginLeft', paddingValues, SpaceUnit)
+export const marginLeft = defineCssToken('marginLeft', marginValues, MarginUnit)
 export const marginRight = defineCssToken(
   'marginRight',
-  paddingValues,
-  SpaceUnit,
+  marginValues,
+  MarginUnit,
 )
 
-// Sizing
-const sizeValues = [new String()] as const
-export const width = defineCssToken('width', sizeValues)
-export const height = defineCssToken('height', sizeValues)
-export const minWidth = defineCssToken('minWidth', sizeValues)
-export const minHeight = defineCssToken('minHeight', sizeValues)
-export const maxWidth = defineCssToken('maxWidth', sizeValues)
-export const maxHeight = defineCssToken('maxHeight', sizeValues)
+/*
+ * The LOGICAL inline margins, which flip with writing direction where the
+ * physical pair above does not. Same scale, same unit; an overlapped avatar
+ * stack, for example, pulls its children together on the inline axis without
+ * a raw-style escape that writes the base arithmetic out by hand.
+ */
+export const marginInlineStart = defineCssToken(
+  'marginInlineStart',
+  marginValues,
+  MarginUnit,
+)
+export const marginInlineEnd = defineCssToken(
+  'marginInlineEnd',
+  marginValues,
+  MarginUnit,
+)
+
+// Sizing lives in sizes.ts (base-relative, enumerated) — the spread order in
+// index.ts lets it own width/height and friends.
 
 // Display & positioning
 export const display = defineCssToken('display', [
@@ -233,12 +284,36 @@ export const position = defineCssToken('position', [
   'sticky',
 ])
 
-const offsetValues = [new Number(), new String()] as const
-export const top = defineCssToken('top', offsetValues)
-export const left = defineCssToken('left', offsetValues)
-export const right = defineCssToken('right', offsetValues)
-export const bottom = defineCssToken('bottom', offsetValues)
-export const zIndex = defineCssToken('zIndex', [new Number()] as const)
+// Insets ride the margin scale (base-relative, negatives, enumerated); a
+// boxed String keeps percentages and calc() available dynamically.
+const offsetValues = [new String(), 0, ...marginValues] as const
+// CSS lengths and expressions pass through, as they do for sizes; any other
+// string is a named spacing alias.
+const OffsetUnit = (
+  value: Parameters<typeof SpaceUnit>[0],
+  tokens: Parameters<typeof SpaceUnit>[1],
+) => (isCssDimension(value) ? value : MarginUnit(value, tokens))
+export const top = defineCssToken('top', offsetValues, OffsetUnit)
+export const left = defineCssToken('left', offsetValues, OffsetUnit)
+export const right = defineCssToken('right', offsetValues, OffsetUnit)
+export const bottom = defineCssToken('bottom', offsetValues, OffsetUnit)
+
+// Not base-relative — a stacking index, enumerated for static generation.
+export const zIndex = defineCssToken('zIndex', [
+  new Number(),
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  10,
+  20,
+  30,
+  40,
+  50,
+] as const)
 
 // Interaction
 export const cursor = defineCssToken('cursor', [
@@ -251,7 +326,4 @@ export const cursor = defineCssToken('cursor', [
   'grabbing',
 ])
 export const opacity = defineCssToken('opacity', [new Number()] as const)
-export const pointerEvents = defineCssToken('pointerEvents', [
-  'auto',
-  'none',
-])
+export const pointerEvents = defineCssToken('pointerEvents', ['auto', 'none'])

@@ -1,5 +1,5 @@
 {
-  "extends": ["@config/typescript/lib", "@config/typescript/react"],
+  "extends": ["@toned-config/typescript/lib", "@toned-config/typescript/react"],
   "references": [
     {
       "path": "../../config/build"
@@ -7,5 +7,9 @@
     {
       "path": "../toned-core"
     }
-  ]
+  ],
+  "exclude": ["style-types.web.ts", "style-types.universal.ts"],
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
 }

@@ -1,71 +1,85 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { Select as SelectPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react'
+import { Select as SelectPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-
-const selectStyles = stylesheet({
+/*
+ * Highlighted items, the open and close animations and the rotated chevron are
+ * keyed on Radix data attributes in styles.css.
+ */
+export const selectStyles = stylesheet({
   trigger: {
-    borderColor: 'input',
-    borderWidth: 'thin',
-    borderRadius: 'medium',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 2,
+    width: 'fit-content',
     paddingX: 3,
-    paddingY: 2,
+    bgColor: 'default',
+    textColor: 'default',
+    borderColor: 'input',
+    borderWidth: 'thin',
+    borderRadius: 'medium',
     typo: 'body_small',
     shadow: 'small',
-    width: 'fit-content',
-    style: {
-      backgroundColor: 'transparent',
-      whiteSpace: 'nowrap' as const,
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
+    cursor: 'pointer',
+    // No tokens for text wrapping or transitions.
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      },
     },
+    ':focus-visible': { borderColor: 'action', shadow: 'focus' },
   },
-  triggerDisabled: {
-    cursor: 'not-allowed',
-    opacity: 0.5,
+  icon: {
+    textColor: 'muted',
+    // The open state rotates the icon from styles.css.
+    '@platform web': { $style: { transition: 'transform 0.15s' } },
   },
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     position: 'relative',
     zIndex: 50,
-    borderRadius: 'medium',
+    minWidth: '8rem',
+    maxHeight: 'var(--radix-select-content-available-height)',
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    shadow: 'medium',
-    overflow: 'hidden',
-    minWidth: '8rem',
+    shadow: 'large',
     overflowX: 'hidden',
     overflowY: 'auto',
-    maxHeight: 'var(--radix-select-content-available-height)',
-    style: {
-      transformOrigin: 'var(--radix-select-content-transform-origin)',
-    },
+  },
+  viewport: {
+    padding: 1,
   },
   item: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
+    position: 'relative',
+    width: '100%',
     paddingY: 1.5,
     paddingLeft: 2,
     paddingRight: 8,
+    borderRadius: 'medium',
     typo: 'body_small',
-    position: 'relative',
-    width: '100%',
     cursor: 'default',
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
+    // No token: option text is not selectable.
+    '@platform web': { $style: { userSelect: 'none' } },
+  },
+  itemIndicator: {
+    position: 'absolute',
+    right: 2,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textColor: 'action',
   },
   label: {
     textColor: 'muted',
@@ -74,20 +88,39 @@ const selectStyles = stylesheet({
     typo: 'caption',
   },
   separator: {
-    bgColor: 'subtle',
-    height: '1px',
+    borderColor: 'default',
     marginY: 1,
     marginX: -1,
-    pointerEvents: 'none',
+    // No token sets a single edge.
+    $style: { borderTopWidth: 1 },
   },
   scrollButton: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     paddingY: 1,
+    textColor: 'muted',
     cursor: 'default',
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      size: 'sm' | 'default'
+      disabled: boolean
+      position: 'item-aligned' | 'popper'
+    }>,
+  ) => ({
+    [$.size('default')]: { trigger: { height: '2.25rem' } },
+    [$.size('sm')]: { trigger: { height: '2rem' } },
+    [$.disabled(true)]: {
+      trigger: { cursor: 'not-allowed', opacity: 0.5 },
+    },
+    [$.position('popper')]: {
+      viewport: { minWidth: 'var(--radix-select-trigger-width)' },
+    },
+  }),
+  { defaults: { size: 'default', disabled: false, position: 'popper' } },
+)
 
 function Select({
   ...props
@@ -109,26 +142,26 @@ function SelectValue({
 
 function SelectTrigger({
   className,
-  size = "default",
+  size = 'default',
   disabled,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
-  size?: "sm" | "default"
+  size?: 'sm' | 'default'
 }) {
-  const s = useStyles(selectStyles)
+  const s = useStyles(selectStyles, { size, disabled: !!disabled })
 
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
       disabled={disabled}
-      {...s.trigger.with(disabled && s.triggerDisabled).with({ className })}
+      {...s.trigger.with({ className })}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4 opacity-50" />
+        <ChevronDownIcon data-slot="select-icon" {...s.icon} />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
@@ -137,11 +170,11 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  position = 'popper',
+  sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
-  const s = useStyles(selectStyles)
+  const s = useStyles(selectStyles, { position })
 
   return (
     <SelectPrimitive.Portal>
@@ -149,21 +182,11 @@ function SelectContent({
         data-slot="select-content"
         {...s.content.with({ className })}
         position={position}
-        align={align}
+        sideOffset={sideOffset}
         {...props}
       >
         <SelectScrollUpButton />
-        <SelectPrimitive.Viewport
-          data-slot="select-viewport"
-          style={{
-            padding: '4px',
-            ...(position === "popper" ? {
-              height: 'var(--radix-select-trigger-height)',
-              width: '100%',
-              minWidth: 'var(--radix-select-trigger-width)',
-            } : {}),
-          }}
-        >
+        <SelectPrimitive.Viewport data-slot="select-viewport" {...s.viewport}>
           {children}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
@@ -200,20 +223,9 @@ function SelectItem({
       {...s.item.with({ className })}
       {...props}
     >
-      <span
-        data-slot="select-item-indicator"
-        style={{
-          position: 'absolute',
-          right: '8px',
-          display: 'flex',
-          width: '0.875rem',
-          height: '0.875rem',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <span data-slot="select-item-indicator" {...s.itemIndicator}>
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <CheckIcon />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -248,7 +260,7 @@ function SelectScrollUpButton({
       {...s.scrollButton.with({ className })}
       {...props}
     >
-      <ChevronUpIcon className="size-4" />
+      <ChevronUpIcon />
     </SelectPrimitive.ScrollUpButton>
   )
 }
@@ -265,7 +277,7 @@ function SelectScrollDownButton({
       {...s.scrollButton.with({ className })}
       {...props}
     >
-      <ChevronDownIcon className="size-4" />
+      <ChevronDownIcon />
     </SelectPrimitive.ScrollDownButton>
   )
 }

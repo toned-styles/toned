@@ -1,0 +1,30 @@
+import type { QueryPredicate } from '../system/queries.ts'
+
+/** Shared metadata carried from authoring through matching to output resolution.
+ * Keep these registry keys stable for declarations crossing package boundaries. */
+export const APPLY_OVERRIDE = Symbol.for('@toned/override')
+export const RULE_LAYERS = Symbol.for('@toned/layers')
+export const CONDITIONAL_RULES = Symbol.for('@toned/conditionalRules')
+export const TOKEN_OPERATIONS = Symbol.for('@toned/operations')
+export interface TokenOperation {
+  readonly key: string
+  readonly value: unknown
+  readonly layer: number
+  readonly conditional?: ConditionalRule
+}
+/** Metadata a normalized declaration carries beside its authored fields. */
+export interface NormalizedMetadata {
+  readonly [TOKEN_OPERATIONS]?: readonly TokenOperation[]
+  readonly [CONDITIONAL_RULES]?: readonly ConditionalRule[]
+}
+export interface ConditionalRule {
+  readonly predicate: QueryPredicate
+  readonly style: RuleObject
+  readonly part: string
+  readonly order: number
+}
+
+// The authoring grammar is dynamic at this boundary; the compiler consumes the
+// structured rule metadata and never reparses a selector during an update.
+// oxlint-disable-next-line typescript/no-explicit-any -- authoring syntax boundary
+export type RuleObject = Record<string, any>

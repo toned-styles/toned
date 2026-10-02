@@ -1,18 +1,16 @@
-import * as React from "react"
-import { Label as LabelPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Label as LabelPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-const labelStyles = stylesheet({
+export const labelStyles = stylesheet({
   root: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
     typo: 'label_small',
-    style: {
-      cursor: 'default',
-      userSelect: 'none',
-    },
+    // No token: double-clicking a label should not select its text.
+    '@platform web': { $style: { userSelect: 'none' } },
   },
 })
 

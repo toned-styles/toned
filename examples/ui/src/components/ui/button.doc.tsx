@@ -1,8 +1,14 @@
-import { doc, c } from '@/lib/doc'
-import { Button } from './button'
+import { c, doc } from '@/lib/doc.tsx'
+
+import { Button } from './button.tsx'
 
 export default doc({
+  description:
+    'Six appearances and eight sizes from one typed stylesheet. Change the props to see each variant.',
   components: [
-    c({ Button }, { children: 'Click me', variant: 'default', size: 'default' }),
+    c(
+      { Button },
+      { children: 'Ship your idea', variant: 'default', size: 'default' },
+    ),
   ],
 })

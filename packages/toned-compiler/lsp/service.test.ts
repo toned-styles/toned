@@ -1,0 +1,214 @@
+import { readFileSync } from 'node:fs'
+import { PassThrough } from 'node:stream'
+
+import { describe, expect, it } from 'vitest'
+import {
+  CompletionItemKind,
+  createConnection,
+  createProtocolConnection,
+  DiagnosticSeverity,
+  ProposedFeatures,
+  StreamMessageReader,
+  StreamMessageWriter,
+  SymbolKind,
+} from 'vscode-languageserver/node'
+
+import * as browserEntry from '../language-service.ts'
+import { registerLanguageServer } from './server.ts'
+import { DesignLanguageService } from './service.ts'
+
+const uri = 'file:///workspace/control.tsx'
+const source = `const ui=defineSystem({id:'ui',tokens:{gap:defineToken({values:[0,2,4],resolve:gap=>({gap})})}})
+export const styles=ui.stylesheet({Root:{gap:2}})`
+
+describe('design language service', () => {
+  it('provides token completion, source definition, hover and versioned edits from one cached index', () => {
+    const service = new DesignLanguageService()
+    service.project.update(uri, source, 1)
+    const document = service.document(uri)!,
+      offset = source.lastIndexOf('gap:2') + 4,
+      position = document.positionAt(offset)
+    expect(
+      service.completions(uri, position).items.map((item) => item.label),
+    ).toEqual(['0', '2', '4'])
+    expect(service.hover(uri, position)?.contents).toMatchObject({
+      value: expect.stringContaining('styles / Root / gap'),
+    })
+    expect(
+      service.definition(uri, document.positionAt(offset - 2)),
+    ).toHaveLength(1)
+    const node = service.project.at(uri, offset)!
+    const proposal = service.propose(
+      {
+        nodeId: node.id,
+        value: 4,
+        expectedVersion: 1,
+        scope: { uri, owner: 'styles' },
+      },
+      () => 1,
+    )
+    expect(proposal.workspaceEdit.documentChanges?.[0]).toMatchObject({
+      textDocument: { uri, version: 1 },
+      edits: [{ newText: '4' }],
+    })
+    for (let n = 0; n < 100; n++) service.completions(uri, position)
+    expect(service.project.statistics.parses).toBe(1)
+    service.dispose()
+  })
+  it('stays loadable in a browser: protocol constants without the Node transport', () => {
+    // The browser entry re-exports this module, so a runtime import of the
+    // protocol library (whose only entry here is Node's) would break bundles.
+    const runtimeImports = [
+      ...readFileSync(
+        new URL('./service.ts', import.meta.url),
+        'utf8',
+      ).matchAll(/^import (?!type\b)[^;]*?from '([^']+)'/gm),
+    ].map((match) => match[1])
+    expect(runtimeImports).not.toContain('vscode-languageserver/node')
+    expect(browserEntry.DesignLanguageService).toBe(DesignLanguageService)
+
+    const service = new browserEntry.DesignLanguageService(
+      new browserEntry.DesignProject({ maxFiles: 2 }),
+    )
+    const invalid = source.replace('gap:2', 'gap:3')
+    service.project.update(uri, invalid, 1)
+    const document = service.document(uri)!
+    const value = document.positionAt(invalid.lastIndexOf('gap:3') + 4)
+    const name = document.positionAt(invalid.lastIndexOf('gap:3') + 1)
+    expect(service.completions(uri, value).items[0]?.kind).toBe(
+      CompletionItemKind.EnumMember,
+    )
+    expect(service.completions(uri, name).items[0]?.kind).toBe(
+      CompletionItemKind.Property,
+    )
+    expect(service.diagnostics(uri)).toMatchObject([
+      { code: 'token-value', severity: DiagnosticSeverity.Warning },
+    ])
+    expect(service.symbols(uri).map((symbol) => symbol.kind)).toEqual(
+      expect.arrayContaining([SymbolKind.Namespace, SymbolKind.Property]),
+    )
+    service.dispose()
+  })
+  it('resolves references from an imported stylesheet use outside a declaration', () => {
+    const service = new DesignLanguageService()
+    service.project.update(uri, source, 1)
+    const consumerUri = 'file:///workspace/consumer.ts'
+    const consumer =
+      "import { styles as button } from './control'; export const reference = button"
+    service.project.update(consumerUri, consumer, 1)
+    const position = service
+      .document(consumerUri)!
+      .positionAt(consumer.lastIndexOf('button'))
+    expect(
+      service
+        .definition(consumerUri, position)
+        .some((target) => target.uri === uri),
+    ).toBe(true)
+    expect(
+      service
+        .references(consumerUri, position)
+        .some((target) => target.uri === consumerUri),
+    ).toBe(true)
+    service.dispose()
+  })
+  it('serves actual JSON-RPC lifecycle, snapshot edits and custom inspection requests', async () => {
+    const incoming = new PassThrough(),
+      outgoing = new PassThrough()
+    const server = createConnection(
+      ProposedFeatures.all,
+      new StreamMessageReader(incoming),
+      new StreamMessageWriter(outgoing),
+    )
+    const registration = registerLanguageServer(server)
+    const client = createProtocolConnection(
+      new StreamMessageReader(outgoing),
+      new StreamMessageWriter(incoming),
+    )
+    server.listen()
+    client.listen()
+    try {
+      const initialized = (await client.sendRequest('initialize', {
+        processId: null,
+        rootUri: null,
+        capabilities: {},
+      })) as { capabilities: { textDocumentSync: number } }
+      expect(initialized.capabilities.textDocumentSync).toBe(1)
+      await client.sendNotification('initialized', {})
+      await client.sendNotification('textDocument/didOpen', {
+        textDocument: {
+          uri,
+          languageId: 'typescriptreact',
+          version: 1,
+          text: source,
+        },
+      })
+      const position = {
+        line: 1,
+        character: source.split('\n')[1]!.indexOf('gap:2') + 4,
+      }
+      const completions = (await client.sendRequest('textDocument/completion', {
+        textDocument: { uri },
+        position,
+      })) as { items: { label: string }[] }
+      expect(completions.items.map((item) => item.label)).toEqual([
+        '0',
+        '2',
+        '4',
+      ])
+      await client.sendNotification('textDocument/didChange', {
+        textDocument: { uri, version: 2 },
+        contentChanges: [
+          {
+            text: source.replace('gap:2', 'gap:4'),
+          },
+        ],
+      })
+      const page = (await client.sendRequest('toned/inspect', {
+        uri,
+        owner: 'styles',
+      })) as { items: { value?: number }[] }
+      expect(page.items.some((item) => item.value === 4)).toBe(true)
+      const stats = (await client.sendRequest('toned/statistics')) as {
+        parses: number
+      }
+      expect(stats.parses).toBe(2)
+      await expect(
+        client.sendRequest('toned/inspect', { limit: 900 }),
+      ).rejects.toMatchObject({ code: -32602 })
+      await expect(
+        client.sendRequest('toned/proposeEdit', { value: 2 }),
+      ).rejects.toMatchObject({ code: -32602 })
+      await client.sendNotification('textDocument/didChange', {
+        textDocument: { uri, version: 3 },
+        contentChanges: [{ text: ' '.repeat(1_000_001) }],
+      })
+      const refused = (await client.sendRequest('toned/inspect', { uri })) as {
+        total: number
+      }
+      expect(refused.total).toBe(0)
+      expect(registration.documents.size).toBe(1)
+      await client.sendNotification('textDocument/didChange', {
+        textDocument: { uri, version: 4 },
+        contentChanges: [{ text: source }],
+      })
+      expect(await client.sendRequest('toned/inspect', { uri })).toMatchObject({
+        total: expect.any(Number),
+      })
+      expect(registration.service.project.get(uri)?.text).toBe(source)
+      await client.sendNotification('textDocument/didClose', {
+        textDocument: { uri },
+      })
+      expect(await client.sendRequest('toned/inspect', { uri })).toMatchObject({
+        total: 0,
+      })
+      await client.sendRequest('shutdown')
+      expect(registration.documents.size).toBe(0)
+    } finally {
+      registration.dispose()
+      client.dispose()
+      server.dispose()
+      incoming.destroy()
+      outgoing.destroy()
+    }
+  })
+})

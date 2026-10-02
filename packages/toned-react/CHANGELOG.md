@@ -3,6 +3,32 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# Next release
+
+### Added
+
+* **Element families.** `createElements(sheet)` returns stable part components and a provider for the sheet's variants, created once at module scope. ([useStyles and element families](https://toned.style/api/use-styles))
+* **`TonedProvider`.** Takes an explicit `renderer` and `host`; an array of renderers serves several systems in one tree. ([React reference](https://toned.style/learn/react))
+* **Hosts.** `@toned/react/hosts/web` and `@toned/react/hosts/native`. ([React Native hosts](https://toned.style/learn/native))
+* **Scoped overrides.** `StyleOverrides` with `overrideStyles(sheet, rules).variants(…)` customises a child's stylesheet from an ancestor. ([Extending and overriding](https://toned.style/guides/overrides))
+* **Typed `as`.** A part's `as` prop checks the chosen element's or component's props and ref.
+* **`withProps<Host>()`** merges props, styles, classes, handlers and refs into a part's prop bag.
+* **`useBind` and `bind`** return bound part components from a stylesheet.
+* **`useMotion`** in `@toned/react/motion` and adaptive layout bindings in `@toned/react/adaptive`.
+* Variant defaults declared on a sheet make the matching props optional.
+
+### Changed
+
+* The package emits JavaScript that Node can load directly.
+* `useStyles` commits its styles in a layout effect; a suspended render cannot publish variants, theme values or refs.
+* On the web, a theme is switched with the `data-theme` attribute. The provider's `theme` prop is for explicit token values, such as a native renderer's.
+
+### Fixed
+
+* Two parts of one family can share an element: `{...s.Root.with(disabled && s.Disabled)}`.
+* `as="div"` stays a literal type when `JSX.IntrinsicElements` has a pattern key.
+* A stable variants object no longer re-applies unchanged state.
+
 # [0.4.0](https://github.com/lttb/toned/compare/@toned/react@0.3.0...@toned/react@0.4.0) (2026-09-30)
 
 ### Features

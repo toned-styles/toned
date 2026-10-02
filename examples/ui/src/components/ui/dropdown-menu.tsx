@@ -1,128 +1,115 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react"
-import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react'
+import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-
-const menuStyles = stylesheet({
+/*
+ * The highlighted, disabled and open states come from Radix data attributes,
+ * and the open and close animations from `data-state`: both are structural
+ * rules in styles.css.
+ */
+export const menuStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     zIndex: 50,
-    borderRadius: 'medium',
+    minWidth: '11rem',
+    maxHeight: 'var(--radix-dropdown-menu-content-available-height)',
+    padding: 1,
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 1,
-    shadow: 'medium',
-    minWidth: '8rem',
-    overflow: 'hidden',
-    style: {
-      transformOrigin: 'var(--radix-dropdown-menu-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    shadow: 'large',
+    overflowX: 'hidden',
+    overflowY: 'auto',
   },
   item: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
+    position: 'relative',
     paddingX: 2,
     paddingY: 1.5,
+    borderRadius: 'medium',
     typo: 'body_small',
-    position: 'relative',
     cursor: 'default',
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
-    ':focus': {
-      bgColor: 'subtle',
-      textColor: 'subtle',
-      style: { outline: 'none' },
-    },
-  },
-  itemDisabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
-  },
-  itemInset: {
-    paddingLeft: 8,
-  },
-  itemDestructiveFocus: {
-    ':focus': {
-      bgColor: 'destructive',
-      style: { outline: 'none', color: 'oklch(0.985 0 0)' },
-    },
+    // No token: menu text is not selectable.
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   checkboxItem: {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderRadius: 'small',
-    paddingY: 1.5,
-    typo: 'body_small',
     position: 'relative',
-    cursor: 'default',
+    paddingY: 1.5,
     paddingRight: 2,
     paddingLeft: 8,
-    style: {
-      outline: 'none',
-      userSelect: 'none',
-    },
+    borderRadius: 'medium',
+    typo: 'body_small',
+    cursor: 'default',
+    // No token: menu text is not selectable.
+    '@platform web': { $style: { userSelect: 'none' } },
   },
   indicator: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
+    left: 2,
+    width: '1rem',
+    height: '1rem',
     pointerEvents: 'none',
-    left: '0.5rem',
-    width: '0.875rem',
-    height: '0.875rem',
+  },
+  radioIcon: {
+    width: '0.5rem',
+    height: '0.5rem',
+    svgFill: 'current',
   },
   label: {
     paddingX: 2,
     paddingY: 1.5,
-    typo: 'body_small',
+    typo: 'caption',
+    textColor: 'muted',
     fontWeight: 500,
   },
-  labelInset: {
-    paddingLeft: 8,
-  },
   separator: {
-    bgColor: 'subtle',
-    height: '1px',
+    borderColor: 'default',
     marginY: 1,
     marginX: -1,
+    // No token sets a single edge.
+    $style: { borderTopWidth: 1 },
   },
   shortcut: {
+    marginLeft: 'auto',
+    paddingLeft: 4,
     textColor: 'muted',
     typo: 'caption',
-    letterSpacing: '0.1em',
-    style: {
-      marginLeft: 'auto',
-    },
   },
-  subContent: {
-    bgColor: 'elevated',
-    textColor: 'default',
-    zIndex: 50,
-    borderRadius: 'medium',
-    borderColor: 'default',
-    borderWidth: 'thin',
-    padding: 1,
-    shadow: 'large',
-    minWidth: '8rem',
-    overflow: 'hidden',
-    style: {
-      transformOrigin: 'var(--radix-dropdown-menu-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+  subIcon: {
+    marginLeft: 'auto',
+    textColor: 'muted',
   },
-})
+}).variants(
+  (
+    $: Variants<{
+      inset: boolean
+      variant: 'default' | 'destructive'
+    }>,
+  ) => ({
+    [$.inset(true)]: {
+      item: { paddingLeft: 8 },
+      label: { paddingLeft: 8 },
+    },
+    [$.variant('destructive')]: {
+      item: { textColor: 'destructive' },
+    },
+  }),
+  { defaults: { inset: false, variant: 'default' } },
+)
 
 function DropdownMenu({
   ...props
@@ -179,14 +166,14 @@ function DropdownMenuGroup({
 function DropdownMenuItem({
   className,
   inset,
-  variant = "default",
+  variant = 'default',
   disabled,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   inset?: boolean
-  variant?: "default" | "destructive"
+  variant?: 'default' | 'destructive'
 }) {
-  const s = useStyles(menuStyles)
+  const s = useStyles(menuStyles, { inset: !!inset, variant })
 
   return (
     <DropdownMenuPrimitive.Item
@@ -194,11 +181,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       disabled={disabled}
-      {...s.item
-        .with(inset && s.itemInset)
-        .with(disabled && s.itemDisabled)
-        .with(variant === "destructive" && s.itemDestructiveFocus)
-        .with({ className })}
+      {...s.item.with({ className })}
       {...props}
     />
   )
@@ -221,7 +204,7 @@ function DropdownMenuCheckboxItem({
     >
       <span {...s.indicator}>
         <DropdownMenuPrimitive.ItemIndicator>
-          <CheckIcon className="size-4" />
+          <CheckIcon />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -255,7 +238,7 @@ function DropdownMenuRadioItem({
     >
       <span {...s.indicator}>
         <DropdownMenuPrimitive.ItemIndicator>
-          <CircleIcon className="size-2 fill-current" />
+          <CircleIcon {...s.radioIcon} />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -270,13 +253,13 @@ function DropdownMenuLabel({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Label> & {
   inset?: boolean
 }) {
-  const s = useStyles(menuStyles)
+  const s = useStyles(menuStyles, { inset: !!inset })
 
   return (
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"
       data-inset={inset}
-      {...s.label.with(inset && s.labelInset).with({ className })}
+      {...s.label.with({ className })}
       {...props}
     />
   )
@@ -300,7 +283,7 @@ function DropdownMenuSeparator({
 function DropdownMenuShortcut({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(menuStyles)
 
   return (
@@ -326,17 +309,17 @@ function DropdownMenuSubTrigger({
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
   inset?: boolean
 }) {
-  const s = useStyles(menuStyles)
+  const s = useStyles(menuStyles, { inset: !!inset })
 
   return (
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
-      {...s.item.with(inset && s.itemInset).with({ className })}
+      {...s.item.with({ className })}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto size-4" />
+      <ChevronRightIcon {...s.subIcon} />
     </DropdownMenuPrimitive.SubTrigger>
   )
 }
@@ -350,7 +333,7 @@ function DropdownMenuSubContent({
   return (
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
-      {...s.subContent.with({ className })}
+      {...s.content.with({ className })}
       {...props}
     />
   )

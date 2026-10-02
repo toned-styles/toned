@@ -1,17 +1,60 @@
-import { getConfig, resolveModes } from '../system/config.ts'
+import { resolveCssPlan } from '../backends/css/plan.ts'
+import { compileRules, foldOperations, resolvePlan } from '../core/plan.ts'
+import { resolveTokenStyle } from '../core/resolve.ts'
+import { gridRegistrations } from '../grid/validation.ts'
+import {
+  createHostIntegration,
+  eventState,
+  type HostIntegration,
+} from '../hosts/index.ts'
+import { getConfig } from '../system/config.ts'
+import {
+  normalizeDeclarations,
+  validateDeclarations,
+} from '../system/normalize.ts'
 import type {
   Config,
+  ElementType,
+  ExtractElements,
+  InferElementType,
   ModType,
+  PickString,
+  PreVariantsStylesheet,
   TokenStyleDeclaration,
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
-import { IS_PRODUCTION } from '../utils/env.ts'
+import type { AnyDeclaration } from '../types/system.ts'
+import { collectAdHocConditions } from '../utils/conditions.ts'
+import { immutableSnapshot, isImmutableSnapshot } from '../utils/immutable.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
 import { PSEUDO_SIGNATURE_SEPARATOR, PSEUDO_STATES } from '../utils/pseudo.ts'
-import { SYMBOL_INIT, SYMBOL_REF, SYMBOL_VARIANTS } from '../utils/symbols.ts'
-import { setStyles } from './applyStyles.ts'
-import { initMedia } from './media.ts'
-import { StyleMatcher } from './StyleMatcher.ts'
+import {
+  SYMBOL_DEFAULTS,
+  SYMBOL_INIT,
+  SYMBOL_REF,
+  SYMBOL_VARIANTS,
+} from '../utils/symbols.ts'
+import { warnOnce } from '../utils/warn.ts'
+import {
+  prepareHostRelease,
+  recordHostCommit,
+  releaseHost,
+  setStyles,
+} from './applyStyles.ts'
+import {
+  type ControllerPlan,
+  controllerPlan,
+  evaluateControllerConditions,
+} from './controller-plan.ts'
+import { sharedMatcher } from './matcher/sharedMatcher.ts'
+import { type ContainerSizes, MountedFamily } from './mounted-family.ts'
+import { assertOverrideMetadata } from './overrideValidation.ts'
+import { registerStylesheetPlan } from './plans.ts'
+import { type Relation, relationFactKey } from './relations.ts'
+import { declarationLayers } from './removals.ts'
+import { APPLY_OVERRIDE, RULE_LAYERS } from './rule-protocol.ts'
+import type { StyleMatcher } from './StyleMatcher.ts'
 import {
   deepMerge,
   extractOrderedKeys,
@@ -20,28 +63,183 @@ import {
 } from './variantProcessing.ts'
 import { createVariantSelector } from './variantSelector.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: internal type alias for dynamic stylesheet values
+// oxlint-disable-next-line typescript/no-explicit-any -- internal type alias for dynamic stylesheet values
 type AnyValue = any
+
+function sameBridgeProps(
+  first?: Record<string, string>,
+  second?: Record<string, string>,
+): boolean {
+  if (first === second) return true
+  if (!first || !second) return false
+  const keys = Object.keys(first)
+  return (
+    keys.length === Object.keys(second).length &&
+    keys.every((key) => first[key] === second[key])
+  )
+}
+
+const EMPTY_CONTAINER_NAMES: readonly string[] = Object.freeze([])
 
 type ElementKey = string
 
 type ApplyContext = { triggerKey?: string; pseudo?: string }
+const ATTACHMENTS = new WeakMap<
+  object,
+  WeakMap<object, { owner: Base; generation: object }>
+>()
+const HOST_CLEANUPS = new WeakMap<object, WeakMap<object, Set<() => void>>>()
+
+// Bundlers replace `process.env.NODE_ENV`; fall back to non-production when the
+// global is unavailable so dev-only warnings still surface in browser bundles.
+const IS_PRODUCTION =
+  (globalThis as AnyValue)?.process?.env?.NODE_ENV === 'production'
 
 type ElementStyle = AnyValue
 
 type StyleDecl = Record<ElementKey, ElementStyle>
+const EMPTY_DECLARATION = Object.freeze({})
 
 // ModState represents the current state of modifiers (variants, media queries, pseudo-states)
 // Kept as AnyValue because keys are dynamic: variant names, breakpoint keys, and element:pseudo combinations
 type ModState = AnyValue
 
+/** The element keys of a rules object — selectors, pseudo keys and the
+ * variants symbol are not elements. */
+function elementNamesOf(rules: AnyValue): Set<string> {
+  const variantSymbolStr = SYMBOL_VARIANTS.toString()
+  const names = new Set<string>()
+  for (const key in rules as object) {
+    if (
+      key[0] !== '[' &&
+      !key.includes(':') &&
+      key !== 'prototype' &&
+      key !== variantSymbolStr
+    ) {
+      names.add(key)
+    }
+  }
+  return names
+}
+
+/**
+ * Merge an override's variant rules into a sheet's own table.
+ *
+ * Selector keys sort their axes and values canonically. The sheet and an
+ * override therefore agree whether a caller writes $.size('sm').variant('ghost')
+ * or $.variant('ghost').size('sm'); no sheet-specific axis seeding is required.
+ *
+ * Where a matcher exists in both, the override's element rules merge onto the
+ * sheet's, property by property, so an override changes what it names and
+ * leaves the rest of that matcher standing. A matcher only the override has
+ * is appended.
+ */
+function mergeOverrideVariants(
+  sheetVariants: AnyValue,
+  variantsArg: ($: AnyValue, q?: AnyValue) => AnyValue,
+  baseRules: AnyValue,
+  q?: AnyValue,
+  defaultKind?: string,
+): AnyValue {
+  const existing = sheetVariants ?? {}
+  const incoming = processVariantRules(
+    variantsArg(createVariantSelector([], { rejectDuplicates: true }), q),
+    baseRules,
+    defaultKind,
+  )
+
+  const merged: AnyValue = { ...existing }
+  for (const key in incoming) {
+    const before = merged[key]
+    delete merged[key]
+    const after = incoming[key]
+    if (
+      !before ||
+      typeof before !== 'object' ||
+      !after ||
+      typeof after !== 'object'
+    ) {
+      merged[key] = after
+      continue
+    }
+    const entry: AnyValue = { ...before }
+    for (const el in after) {
+      const incomingEl = after[el]
+      const existingEl = entry[el]
+      entry[el] =
+        existingEl &&
+        typeof existingEl === 'object' &&
+        incomingEl &&
+        typeof incomingEl === 'object'
+          ? { ...existingEl, ...incomingEl }
+          : incomingEl
+    }
+    merged[key] = entry
+  }
+  return merged
+}
+
+/** Composition copies the sheet's current declared defaults. Prepare removals
+ * before merging authoritative layers so null cannot resurrect an older value. */
+function compositionDefaults(
+  rules: AnyValue,
+  layers: readonly AnyValue[],
+): AnyValue {
+  if (!layers.length) return rules
+  const source = { ...rules }
+  Object.defineProperty(source, RULE_LAYERS, { value: layers })
+  return declarationLayers(source).reduce(
+    (merged, layer) => deepMerge(merged, layer),
+    {},
+  )
+}
+
 export function createStylesheet<
   S extends TokenStyleDeclaration,
   _Mods extends ModType,
   T,
->(ref: TokenSystem<S>, rules: T, variantRules?: AnyValue) {
+>(
+  ref: TokenSystem<S>,
+  rules: T,
+  variantRules?: AnyValue,
+  overrideLayers: AnyValue[] = [],
+  defaults: Readonly<Record<string, unknown>> = {},
+): PreVariantsStylesheet<
+  S,
+  // Element name → its declared `$$type` — see the note on StylesheetType.
+  // `.variants()` routes back through here, so both entry points must record
+  // the same thing or an override's typing depends on whether the sheet
+  // declared variants.
+  { [K in PickString<ExtractElements<T>>]: InferElementType<T, K> },
+  PickString<ExtractElements<T>>
+> {
+  for (const [axis, value] of Object.entries(defaults)) {
+    if (
+      value === undefined ||
+      value === null ||
+      !['string', 'number', 'boolean'].includes(typeof value)
+    )
+      throw new Error(
+        `Toned: variant default ${axis} must be a defined scalar value`,
+      )
+  }
+  rules = normalizeDeclarations(rules)
+  variantRules = normalizeDeclarations(variantRules)
   // Merge base rules with variants - StyleMatcher handles the format directly
-  const mergedRules = mergeRules(rules, variantRules)
+  const mergedRules = { ...mergeRules(rules, variantRules) }
+  if (overrideLayers.length)
+    Object.defineProperty(mergedRules, RULE_LAYERS, {
+      value: overrideLayers,
+      enumerable: true,
+    })
+  if (ref.id) validateDeclarations(mergedRules, ref.config ?? {})
+
+  // Register the ad-hoc condition atoms this sheet uses on the system ref, so
+  // a css generator that imports the stylesheet modules can emit exactly the
+  // toggles in use (see utils/conditions.ts).
+  if (ref.usedConditions) {
+    collectAdHocConditions(mergedRules, ref.usedConditions)
+  }
 
   class LocalBase extends Base {}
 
@@ -56,6 +254,9 @@ export function createStylesheet<
       elementKey === variantSymbolStr
     )
       continue
+    // Compatibility accessors must not replace controller methods. Public
+    // React snapshots project every part independently of this namespace.
+    if (elementKey in Base.prototype) continue
     Object.defineProperty(LocalBase.prototype, elementKey, {
       get(this: LocalBase) {
         const result = this.config.getProps.call(this, elementKey)
@@ -64,81 +265,143 @@ export function createStylesheet<
     })
   }
 
+  const hasDefaults = Object.keys(defaults).length > 0
   const stylesheet = Object.assign({
     [SYMBOL_REF]: ref,
+    [SYMBOL_DEFAULTS]: Object.freeze({ ...defaults }),
     [SYMBOL_INIT]: (config: Config, modsState: ModState) => {
       return new LocalBase({
-        // Cast needed: TokenSystem generic S doesn't match BaseRef's TokenStyleDeclaration
+        // Base is system-agnostic at runtime; S is only meaningful to callers.
         ref: ref as AnyValue,
         rules: mergedRules,
         config,
-        modsState,
+        modsState: hasDefaults
+          ? {
+              ...defaults,
+              ...Object.fromEntries(
+                Object.entries(modsState ?? {}).filter(
+                  ([, value]) => value !== undefined,
+                ),
+              ),
+            }
+          : modsState,
       })
     },
     // Add variants method for chaining
     variants: <M extends ModType>(
-      variantsArg: AnyValue | (($: AnyValue) => AnyValue),
-    ) => {
-      let newVariantRules: AnyValue
-
-      if (typeof variantsArg === 'function') {
-        // Callback-based API
-        // First, we need to call the callback to get the rules
-        // We'll use a preliminary call to extract keys, then create the real selector
-        const preliminaryRules = variantsArg(
-          createVariantSelector<M>([] as (keyof M)[]),
-        )
-        const orderedKeys = extractOrderedKeys(preliminaryRules)
-
-        // Now create the real selector with ordered keys and call again
-        const $ = createVariantSelector<M>(orderedKeys as (keyof M)[])
-        const rawRules = variantsArg($)
-
-        // Collect base element names
-        const baseElements = new Set<string>()
-        for (const key in rules as object) {
-          if (
-            key[0] !== '[' &&
-            !key.includes(':') &&
-            key !== 'prototype' &&
-            key !== SYMBOL_VARIANTS.toString()
-          ) {
-            baseElements.add(key)
-          }
-        }
-
-        // Process $compose
-        newVariantRules = processVariantRules(rawRules, baseElements)
-      } else {
-        // Legacy object-based API
-        newVariantRules = variantsArg
-      }
-
-      return createStylesheet<S, M, T>(ref, rules, newVariantRules)
+      variantsArg: AnyValue,
+      variantOptions?: { defaults?: Record<string, unknown> },
+    ): AnyValue => {
+      const variants = mergeOverrideVariants(
+        variantRules,
+        typeof variantsArg === 'function' ? variantsArg : () => variantsArg,
+        () => compositionDefaults(rules, overrideLayers),
+        ref.q,
+        ref.id ? 'view' : undefined,
+      )
+      return createStylesheet<S, M, T>(ref, rules, variants, overrideLayers, {
+        ...defaults,
+        ...variantOptions?.defaults,
+      })
     },
-    // Add extend method for composition
-    extend: (extensionRules: AnyValue) => {
-      // Deep merge base rules with extension rules
-      const extendedRules = deepMerge(rules as AnyValue, extensionRules)
-      return createStylesheet<S, never, AnyValue>(
+    // Ordinary derivation changes defaults; existing matching variants retain
+    // their normal precedence over those defaults.
+    extend: (
+      extensionRules: AnyValue,
+      variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
+    ) => {
+      const extension = normalizeDeclarations(
+        typeof extensionRules === 'function'
+          ? extensionRules(ref.q)
+          : extensionRules,
+      )
+      const extendedRules = deepMerge(rules as AnyValue, extension)
+      const variants = variantsArg
+        ? mergeOverrideVariants(
+            variantRules,
+            variantsArg,
+            () => compositionDefaults(extendedRules, overrideLayers),
+            ref.q,
+            ref.id ? 'view' : undefined,
+          )
+        : variantRules
+      return createStylesheet<S, _Mods, AnyValue>(
         ref,
         extendedRules,
+        variants,
+        overrideLayers,
+        defaults,
+      )
+    },
+    // Subtree/instance override application is a separate, complete precedence
+    // layer. No resolver probes or ambient theme reads occur during authoring.
+    [APPLY_OVERRIDE]: (
+      extensionRules: AnyValue,
+      variantsArg?: ($: AnyValue, q?: AnyValue) => AnyValue,
+    ) => {
+      const extension = normalizeDeclarations(
+        typeof extensionRules === 'function'
+          ? extensionRules(ref.q)
+          : extensionRules,
+      )
+      const parts = elementNamesOf(rules)
+      assertOverrideMetadata(extension, parts)
+      const authoredVariants = variantsArg?.(
+        createVariantSelector([], { rejectDuplicates: true }),
+        ref.q,
+      )
+      assertOverrideMetadata(authoredVariants, parts)
+      const variants = authoredVariants
+        ? processVariantRules(
+            authoredVariants,
+            () => compositionDefaults(rules, [...overrideLayers, extension]),
+            ref.id ? 'view' : undefined,
+          )
+        : undefined
+      const layer = mergeRules(extension, normalizeDeclarations(variants))
+      return createStylesheet<S, _Mods, T>(
+        ref,
+        rules,
         variantRules,
+        [...overrideLayers, layer],
+        defaults,
       )
     },
   })
 
+  if (!IS_PRODUCTION && ref.id) {
+    for (const diagnostic of compileRules(ref, mergedRules, 'web')
+      .diagnostics) {
+      warnOnce(
+        `shadow:${diagnostic.earlier.id}:${diagnostic.later.id}:${diagnostic.field}`,
+        `${diagnostic.later.part}.${diagnostic.field}: later declaration ${diagnostic.later.path.join(' / ')} shadows the earlier compound ${diagnostic.earlier.path.join(' / ')}; source order wins. Use renderer.explain(sheet, inputs) to inspect all writes.`,
+      )
+    }
+  }
+  registerStylesheetPlan(stylesheet, {
+    ref: ref as AnyValue,
+    rules: mergedRules,
+    parts: Object.freeze([...elementNamesOf(rules)]),
+    variantAxes: Object.freeze([
+      ...new Set([
+        ...extractOrderedKeys(variantRules),
+        ...Object.keys(defaults),
+      ]),
+    ]),
+  })
   return stylesheet
 }
 
-type BaseRef = TokenSystem<TokenStyleDeclaration>
+/*
+ * `Base` is the untyped runtime engine — it walks rules dynamically, so it
+ * accepts a system of any declaration (see `AnyDeclaration`).
+ */
+type BaseRef = TokenSystem<AnyDeclaration>
 type BaseRules = AnyValue
 
 export class Base {
+  private readonly host: HostIntegration
   config: Config
-
-  /** Media/pseudo modes resolved once from `config`; see `resolveModes`. */
-  modes: Pick<Config, 'mediaMode' | 'pseudoMode'>
 
   ref: BaseRef
   rules: BaseRules
@@ -156,13 +419,9 @@ export class Base {
 
   // Element keys already warned about unisolated cross-element interaction in
   // multi-instance mode (dev-only; warn once per key).
-  private _warnedCrossElement = new Set<ElementKey>()
+  private _warnedCrossElement?: Set<ElementKey>
 
-  // The compiled rule last written to each mounted element, so applyElementStyles
-  // can skip rewriting inline styles on siblings whose resolved style is
-  // unchanged (StyleMatcher caches the rule, so reference identity is a valid,
-  // cheap signal).
-  private _lastAppliedRule = new WeakMap<AnyValue, AnyValue>()
+  private readonly controllerPlan: ControllerPlan
 
   constructor({
     ref,
@@ -175,44 +434,575 @@ export class Base {
     config?: Config
     modsState?: ModState
   }) {
-    this.config = config ?? getConfig()
+    const resolvedConfig = { ...(config ?? getConfig()) }
+    if (resolvedConfig.bridgeProps)
+      resolvedConfig.bridgeProps = immutableSnapshot(resolvedConfig.bridgeProps)
+    this.config = resolvedConfig
+    const backend = this.config.backend
+    if (backend) {
+      if (backend.requiresBuild && !backend.manifest)
+        throw new Error(
+          'Toned: backend requires a validated build artifact; use buildTailwind and createTailwindRuntime',
+        )
+      if (this.config.platform && this.config.platform !== backend.platform) {
+        throw new Error(
+          `[toned] Backend ${backend.id} targets ${backend.platform}, but the installed host targets ${this.config.platform}`,
+        )
+      }
+      resolvedConfig.platform = backend.platform
+      resolvedConfig.mediaMode =
+        !backend.browserConditions && this.config.mediaMode === 'css'
+          ? 'runtime'
+          : this.config.mediaMode
+      resolvedConfig.pseudoMode =
+        !backend.browserConditions && this.config.pseudoMode === 'css'
+          ? 'runtime'
+          : this.config.pseudoMode
+      resolvedConfig.useClassName =
+        backend.id === 'css-vars' && this.config.useClassName
+    }
 
     this.ref = ref
+    this.host = createHostIntegration(this.config, ref)
+    // '@platform.<name>' keys resolve statically before compilation — matching
+    // blocks merge in (and win over siblings), foreign platforms drop. Memoized
+    // and identity-preserving, so matcher sharing keys on the resolved tree.
+    rules = resolvePlatformKeys(rules, this.config.platform)
     this.rules = rules
 
     this.tokens = this.config.getTokens()
     this.refs = {}
 
-    // One reading of the modes for the whole instance: StyleMatcher decides
-    // whether to flatten selector blocks, and exec decides whether to emit the
-    // custom property chains those flattened keys turn into.
-    this.modes = resolveModes(this.config)
-    const { mediaMode, pseudoMode } = this.modes
-    this.matcher = new StyleMatcher(rules, {
-      cssMediaMode: mediaMode === 'css',
-      cssPseudoMode: pseudoMode === 'css',
-    })
+    const mediaMode =
+      this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    const pseudoMode = this.config.pseudoMode ?? 'runtime'
+    // Declared-state aliases live on the system ref (`defineSystem` spreads the
+    // config, incl. `states`, into `.system`). They drive the CSS src-state
+    // cross-element channel; absent, only `:hover` cross keys compile to CSS.
+    const stateAliases = (
+      this.ref as { system?: { states?: Record<string, string> } }
+    ).system?.states
+    this.matcher = sharedMatcher(
+      rules,
+      mediaMode === 'css',
+      pseudoMode === 'css',
+      stateAliases,
+      this.config.platform,
+      !!this.ref.id,
+    )
 
-    if (mediaMode === 'runtime') {
-      const mediaEmitter = initMedia(this.ref)
+    this.controllerPlan = controllerPlan(this.matcher)
 
-      // Merge initial mods state with current media query state
-      // Note: Object spread is O(n) but n is small (few variants + breakpoints)
-      this.modsState = {
-        ...modsState,
-        ...mediaEmitter.data,
+    if (mediaMode === false && this.matcher.hasMediaRules) {
+      warnOnce(
+        'media-disabled',
+        'this stylesheet declares @breakpoint styles, but media handling is off ' +
+          "(useMedia defaults to false) — they will be silently dropped. Set { useMedia: true, mediaMode: 'css' } " +
+          "(or mediaMode: 'runtime') in setConfig.",
+      )
+    }
+
+    // Construction is a pure render candidate. Browser listeners start only
+    // when a host commits/mounts this controller.
+    this.modsState = { ...modsState }
+    this.matchStyles()
+  }
+
+  private stopMedia?: () => void
+  private predecessor?: Base
+  private _family?: MountedFamily
+  private get family(): MountedFamily {
+    this._family ??= new MountedFamily(this)
+    return this._family
+  }
+
+  private trackedPseudos(part: string): readonly string[] {
+    return this.host.semanticStates
+      ? (this.controllerPlan.trackedPseudos[part] ?? PSEUDO_STATES)
+      : PSEUDO_STATES
+  }
+
+  private semanticStateNames(): readonly string[] {
+    return this.controllerPlan.semanticStates
+  }
+
+  private refreshHostStates(publish = false) {
+    const capability = this.host.semanticStates
+    if (!capability) return
+    const facts: Record<string, boolean> = {}
+    let changed = false
+    for (const part in this.matcher.interactions) {
+      const targets = this.refs[part]
+      for (const pseudo of this.trackedPseudos(part)) {
+        if (eventState(pseudo.slice(1))) continue
+        const key = this.stateKey(part, pseudo)
+        const active = new Set<object>()
+        if (targets instanceof Set)
+          for (const target of targets)
+            if (
+              this.host.connected(target) &&
+              capability.read(target, pseudo.slice(1))
+            )
+              active.add(target)
+        const previous = this._activeEls[key]
+        if (
+          active.size !== (previous?.size ?? 0) ||
+          [...active].some((target) => !previous?.has(target))
+        )
+          changed = true
+        this._activeEls[key] = active
+        facts[key] = active.size > 0
       }
-
+    }
+    if (publish && changed) {
+      // Two sibling hosts can exchange a state while the aggregate fact stays
+      // true. Their own signatures still changed and must reach the writer.
+      Object.assign(this.modsState, facts)
       this.matchStyles()
+      this.modsStylePrev = undefined as AnyValue
+      this.applyElementStyles()
+    } else Object.assign(this.modsState, facts)
+  }
 
-      mediaEmitter.sub(() => {
-        this.applyState(mediaEmitter.data || {})
+  private startHostStates() {
+    this.family.stopStates?.()
+    this.family.stopStates = undefined
+    if (!this.host.semanticStates) return
+    const states = this.semanticStateNames()
+    if (!states.length) return
+    this.host.semanticStates.validate(states)
+    this.refreshHostStates()
+    this.family.stopStates = this.host.semanticStates.subscribe(() =>
+      this.family.current.refreshHostStates(true),
+    )
+  }
+  private relationQueries(): readonly Relation[] {
+    return this.controllerPlan.relations
+  }
+
+  private refreshRelations() {
+    this.family.relations.batch(() => {
+      this.refreshRelationParents()
+      this.refreshRelationStates()
+    })
+  }
+
+  private refreshRelationParents() {
+    const { relationHosts, relations } = this.family
+    for (const node of relationHosts.keys()) {
+      let parent = this.host.parentOf(node)
+      const seen = new Set<object>([node])
+      while (parent && !relationHosts.has(parent)) {
+        if (seen.has(parent))
+          throw new Error('Toned: cyclic host parent topology')
+        seen.add(parent)
+        parent = this.host.parentOf(parent)
+      }
+      relations.move(node, parent)
+    }
+  }
+
+  private refreshRelationStates() {
+    for (const relation of this.relationQueries()) {
+      // These states are event facts; browser matching cannot replace a
+      // committed event snapshot (and native hosts have no selector engine).
+      if (eventState(relation.state)) continue
+      for (const [host, registration] of this.family.relationHosts) {
+        if (registration.part !== relation.part) continue
+        const active = this.host.readState(host, relation.state)
+        this.family.relations.setState(host, relation.state, active)
+      }
+    }
+  }
+
+  private syncRelationFacts() {
+    for (const relation of this.relationQueries())
+      this.modsState[relationFactKey(relation)] =
+        this.family.relations.matches(relation)
+  }
+
+  private validateRelationCapabilities() {
+    this.host.validateRelations(this.controllerPlan.relationStates)
+  }
+
+  private startRelations() {
+    for (const stop of this.family.stopRelations) stop()
+    this.family.stopRelations = []
+    const queries = this.relationQueries()
+    if (!queries.length) return
+    this.validateRelationCapabilities()
+    this.refreshRelations()
+    for (const relation of queries) {
+      let initial = true
+      const stop = this.family.relations.subscribe(relation, (value) => {
+        const current = this.family.current
+        const key = relationFactKey(relation)
+        if (initial) current.modsState[key] = value
+        else current.applyState({ [key]: value })
       })
-    } else {
-      // CSS mode or disabled: no runtime media listeners needed
-      this.modsState = { ...modsState }
+      initial = false
+      this.family.stopRelations.push(stop)
+    }
+    this.family.stopRelations.push(
+      this.host.subscribeRelations(
+        this.family.relationHosts.keys(),
+        () => this.family.current.refreshRelations(),
+        () => this.family.relationHosts.keys(),
+      ),
+    )
+  }
+
+  /** Snapshot only; this never changes the previous committed controller. */
+  prepare(previous?: Base) {
+    this.predecessor = previous
+    if (previous) {
+      // These entries are frozen outputs keyed by immutable matcher declarations;
+      // sharing the weak cache does not publish candidate facts or host ownership.
+      if (
+        this.rules === previous.rules &&
+        this.ref === previous.ref &&
+        this.tokens === previous.tokens &&
+        isImmutableSnapshot(this.tokens) &&
+        this.config.backend === previous.config.backend &&
+        (!this.config.backend || Object.isFrozen(this.config.backend)) &&
+        this.config.platform === previous.config.platform &&
+        this.config.useClassName === previous.config.useClassName &&
+        this.config.mediaMode === previous.config.mediaMode &&
+        this.config.pseudoMode === previous.config.pseudoMode &&
+        sameBridgeProps(this.config.bridgeProps, previous.config.bridgeProps)
+      )
+        this.tokenOutputs = previous.tokenOutputs
+      this._family = previous.family
+      for (const key in previous._activeEls)
+        this._activeEls[key] = new Set(previous._activeEls[key])
+      for (const key in previous.modsState) {
+        if (key.startsWith('@') || key.includes(':'))
+          this.modsState[key] = previous.modsState[key]
+      }
       this.matchStyles()
     }
+  }
+
+  /** Runs in React's layout phase, after declarative host mutations. */
+  commit() {
+    this.family.current = this
+    if (this.predecessor) {
+      for (const key in this.predecessor._activeEls) {
+        this._activeEls[key] = new Set(this.predecessor._activeEls[key])
+      }
+      this.predecessor = undefined
+    }
+    for (const key in this._activeEls) {
+      for (const node of this._activeEls[key]!)
+        if (!this.host.connected(node)) this._activeEls[key]!.delete(node)
+      this.modsState[key] = this._activeEls[key]!.size > 0
+    }
+    const mediaMode =
+      this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
+    if (mediaMode === 'runtime' && !this.stopMedia) {
+      const media = this.host.connectMedia(this.controllerPlan.keys, (state) =>
+        this.applyState(state),
+      )
+      this.stopMedia = media.stop
+      Object.assign(this.modsState, media.state)
+      if (this.lastContainerSizes)
+        Object.assign(
+          this.modsState,
+          this.conditionState(this.lastContainerSizes),
+        )
+    }
+    this.startRelations()
+    this.startHostStates()
+    this.validateHosts()
+    this.matchStyles()
+    // Theme changes can change output with an identical matching rule set.
+    // Host writers perform the final value diff.
+    this.modsStylePrev = undefined as AnyValue
+    this.applyElementStyles()
+  }
+
+  private mounts = 0
+  mount() {
+    this.mounts++
+    this.commit()
+    let mounted = true
+    return () => {
+      if (!mounted) return
+      mounted = false
+      if (--this.mounts === 0) this.dispose()
+    }
+  }
+
+  dispose() {
+    this.stopMedia?.()
+    this.stopMedia = undefined
+    const family = this._family
+    if (family?.current === this) {
+      for (const stop of family.stopRelations) stop()
+      family.stopRelations = []
+      family.stopStates?.()
+      family.stopStates = undefined
+    }
+  }
+
+  attach(
+    elementKey: string,
+    node: AnyValue,
+    toned: AnyValue,
+    caller?: AnyValue,
+  ) {
+    if (!node) return () => {}
+    this.validateRelationCapabilities()
+    this.host.semanticStates?.validate(this.semanticStateNames())
+
+    let refs = this.refs[elementKey]
+    if (!(refs instanceof Set)) refs = this.refs[elementKey] = new Set()
+    refs.add(node)
+    const generation = {}
+    let owners = ATTACHMENTS.get(node)
+    if (!owners) {
+      owners = new WeakMap()
+      ATTACHMENTS.set(node, owners)
+    }
+    const partOwner = this.family.partOwner(elementKey)
+    // The family entry answers "which controller handles events here"; the
+    // part entry tracks this part's own attachment, so a second part of the
+    // family on the same element cannot release or replace the first.
+    owners.set(this.family, { owner: this, generation })
+    owners.set(partOwner, { owner: this, generation })
+    this.queueHostValidation(node)
+    recordHostCommit(node, toned, caller, partOwner)
+    if (this.relationQueries().length) {
+      const existing = this.family.relationHosts.get(node)
+      if (existing && existing.part !== elementKey) {
+        existing.detach()
+        this.family.relationHosts.delete(node)
+      }
+      if (!this.family.relationHosts.has(node))
+        this.family.relationHosts.set(node, {
+          part: elementKey,
+          detach: this.family.relations.register(node, elementKey),
+        })
+      this.refreshRelations()
+      this.syncRelationFacts()
+      this.matchStyles()
+    }
+    const detachHost = this.host.attach(
+      node,
+      gridRegistrations(this.rules)[elementKey] ?? {},
+      (target) => this.queueHostValidation(target),
+    )
+    // Callback refs are commit work too. A child layout effect can dispatch
+    // an event before its parent's layout effect, so its candidate must already
+    // know the previously committed interaction state.
+    if (this.predecessor) {
+      for (const key in this.predecessor._activeEls)
+        this._activeEls[key] = new Set(this.predecessor._activeEls[key])
+    }
+    this.refreshHostStates()
+    this.reapplyInteraction(elementKey, node)
+    let attached = true
+    return () => {
+      if (!attached) return
+      attached = false
+      detachHost?.()
+      refs.delete(node)
+      if (ATTACHMENTS.get(node)?.get(partOwner)?.generation === generation) {
+        this.family.pendingHostValidation.delete(node)
+        prepareHostRelease(node, partOwner)
+      }
+      // React detaches and reattaches callback refs in one commit. Retain
+      // transient facts through that handoff, then discard true unmounts.
+      queueMicrotask(() => {
+        if (ATTACHMENTS.get(node)?.get(partOwner)?.generation !== generation)
+          return
+        ATTACHMENTS.get(node)?.delete(partOwner)
+        // Another part of this family may still be attached to the element.
+        if (ATTACHMENTS.get(node)?.get(this.family)?.generation === generation)
+          ATTACHMENTS.get(node)?.delete(this.family)
+        this.family.hostConditions.delete(node)
+        releaseHost(node, partOwner)
+        const relationship = this.family.relationHosts.get(node)
+        this.family.relationHosts.delete(node)
+        relationship?.detach()
+        this.pruneEl(elementKey, node)
+        const current = this.family.current
+        current.pruneEl(elementKey, node)
+        const changed: Record<string, boolean> = {}
+        for (const pseudo of current.trackedPseudos(elementKey)) {
+          const key = `${elementKey}${pseudo}`
+          const active = current.anyElementActive(elementKey, pseudo)
+          if (current.modsState[key] !== active) changed[key] = active
+        }
+        if (Object.keys(changed).length) current.applyState(changed)
+        current.refreshHostStates(true)
+        for (const cleanup of HOST_CLEANUPS.get(node)?.get(this.family) ?? [])
+          cleanup()
+        HOST_CLEANUPS.get(node)?.delete(this.family)
+      })
+    }
+  }
+
+  validateHosts() {
+    for (const key in this.refs) {
+      const refs = this.refs[key]
+      if (refs instanceof Set)
+        for (const node of refs) {
+          this.host.validate(node)
+          this.family.pendingHostValidation.delete(node)
+        }
+    }
+  }
+
+  /** A committed invalidation signal, independent of variants/style rendering.
+   * The revision never changes while flushing: a flush must not trigger itself. */
+  get hostValidationRevision(): number {
+    return this._family?.hostValidationRevision ?? 0
+  }
+
+  subscribeHostValidation(notify: () => void): () => void {
+    return this.family.subscribeHostValidation(notify)
+  }
+
+  private queueHostValidation(node: object): void {
+    this.family.queueHostValidation(node)
+  }
+
+  /** Flush committed ref changes after every ancestor ref has attached.
+   * Repeated requests validate each queued host once, and subsequent requests
+   * return without walking the mounted tree. */
+  validatePendingHosts(): void {
+    for (const node of this.family.pendingHostValidation) {
+      const attachment = ATTACHMENTS.get(node)?.get(this.family)
+      // A removed grid owner can invalidate a child whose own ref was retained
+      // (including a child from another family). Validate that local edge too;
+      // a fully detached child has no host registration and validates as a no-op.
+      ;(attachment?.owner ?? this.family.current).host.validate(node)
+      this.family.pendingHostValidation.delete(node)
+    }
+  }
+
+  eventOwner(node: AnyValue): Base {
+    return ATTACHMENTS.get(node)?.get(this.family)?.owner ?? this.family.current
+  }
+
+  /** Register committed host-local conditions. The adapter subscribes next,
+   * then calls refreshHostConditions to catch changes during the handoff.
+   * A render candidate only reads sizes; it never replaces a live environment. */
+  bindHostConditions(
+    part: string,
+    node: object,
+    readSizes: () => ContainerSizes,
+  ): () => void {
+    const registration = { part, readSizes }
+    this.family.hostConditions.set(node, registration)
+    return () => {
+      if (this.family.hostConditions.get(node) === registration)
+        this.family.hostConditions.delete(node)
+    }
+  }
+
+  /** Called by a host's measurement subscription, without rerendering React.
+   * During ref attachment the attachment owner can already be the new committed
+   * candidate, before the provider's layout effect publishes family.current. */
+  refreshHostConditions(part: string, node: object): void {
+    const registration = this.family.hostConditions.get(node)
+    if (!registration || registration.part !== part) return
+    const owner = this.eventOwner(node)
+    setStyles(
+      node,
+      owner.styleForHostConditions(part, node, registration.readSizes()),
+      this.family.partOwner(part),
+    )
+  }
+
+  onHostDetach(node: AnyValue, cleanup: () => void) {
+    let owners = HOST_CLEANUPS.get(node)
+    if (!owners) {
+      owners = new WeakMap()
+      HOST_CLEANUPS.set(node, owners)
+    }
+    let callbacks = owners.get(this.family)
+    if (!callbacks) {
+      callbacks = new Set()
+      owners.set(this.family, callbacks)
+    }
+    callbacks.add(cleanup)
+    return () => {
+      callbacks.delete(cleanup)
+    }
+  }
+
+  /**
+   * The real elements of this stylesheet, each with its declared `$$type`.
+   *
+   * A binding (useBind/bind) needs both the element list and the primitive each
+   * element selects. The list is exactly the matcher's `elementSet` minus the
+   * cross-element target keys it also carries (`source:state`, `[attr]`), and
+   * `$$type` rides on the merged rule the constructor stored in `this.rules`.
+   */
+  elementDescriptors(): Array<{ key: string; type?: ElementType }> {
+    const out: Array<{ key: string; type?: ElementType }> = []
+    for (const key of this.matcher.elementSet) {
+      if (key.includes(':') || key[0] === '[') continue
+      out.push({ key, type: this.elementKind(key) })
+    }
+    return out
+  }
+
+  /** A single host must not allocate/scan every part descriptor on each render. */
+  elementKind(key: ElementKey): ElementType | undefined {
+    const rule = this.rules[key] as
+      | { $kind?: ElementType; $$type?: ElementType }
+      | undefined
+    return rule?.$kind ?? rule?.$$type
+  }
+
+  /**
+   * The container NAME this element declares itself the root of, if any — the
+   * resting `container` declaration, read raw (a container is a structural
+   * fact, so it never varies by variant). The binding uses it to attach
+   * measurement and provide sizes to descendants in runtime mode.
+   */
+  containerName(elementKey: ElementKey): string | undefined {
+    const decl = (
+      this.rules as Record<string, { container?: unknown } | undefined>
+    )[elementKey]?.container
+    return typeof decl === 'string' ? decl : undefined
+  }
+
+  /** The container sizes last fed to conditionState — see applyState. */
+  private lastContainerSizes: ContainerSizes | null = null
+
+  /**
+   * Condition mods for the given measured ancestor sizes (px per container
+   * name), or null when this sheet holds no condition the runtime must
+   * evaluate here. In css mode the matcher flattens `'@…'` keys away, so this
+   * self-gates to runtime mode. Pure simple breakpoint atoms (`'@md'`) are
+   * skipped — sharedMedia owns those mods and the two channels must never
+   * fight over one key. Everything else (container atoms, and any algebraic
+   * expression) evaluates through utils/conditions.ts: an unmeasured
+   * container acts as width 0 — the mobile-first base styles.
+   */
+  conditionState(
+    sizes: ContainerSizes,
+    remember = true,
+  ): Record<string, boolean> | null {
+    const out = evaluateControllerConditions(
+      this.controllerPlan,
+      this.ref.system,
+      this.modsState,
+      sizes,
+      (this.config as { getDirection?: () => 'ltr' | 'rtl' }).getDirection?.(),
+    )
+    if (out && remember) this.lastContainerSizes = sizes
+    return out
+  }
+
+  containerDependencies(part?: string): readonly string[] {
+    return part === undefined
+      ? this.controllerPlan.containerNames
+      : (this.controllerPlan.partContainers[part] ?? EMPTY_CONTAINER_NAMES)
   }
 
   matchStyles() {
@@ -227,22 +1017,112 @@ export class Base {
     }
   }
 
-  getCurrentStyle(key: ElementKey) {
-    const result = this.applyTokens(this.modsStyle[key])
-
-    return result
+  getCurrentStyle(key: ElementKey, sizes?: ContainerSizes) {
+    if (sizes === undefined) return this.applyTokens(this.modsStyle[key], key)
+    const facts = { ...this.modsState, ...this.conditionState(sizes, false) }
+    return this.applyTokens(this.matcher.match(facts)[key], key, facts)
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on token system
-  applyTokens(value: ElementStyle): any {
-    return this.ref.exec(
-      {
-        tokens: this.tokens,
-        useClassName: this.config.useClassName,
-        ...this.modes,
-      },
-      value,
+  private tokenOutputs?: Map<
+    string | undefined,
+    WeakMap<object, { tokens: Tokens; output: AnyValue }>
+  >
+
+  applyTokens(
+    value: ElementStyle,
+    part?: string,
+    facts = this.modsState,
+  ): AnyValue {
+    const declaration = value ?? EMPTY_DECLARATION
+    // Public imperative callers may ask for arbitrary names. Keep the strong
+    // part index bounded to this plan; declaration keys below remain weak.
+    if (part !== undefined && !this.matcher.elementSet.has(part))
+      return immutableSnapshot(this.resolveTokens(declaration, part, facts))
+    this.tokenOutputs ??= new Map()
+    const outputs = this.tokenOutputs
+    let cache = outputs.get(part)
+    if (!cache) {
+      cache = new WeakMap()
+      outputs.set(part, cache)
+    }
+    const previous = cache.get(declaration)
+    if (previous?.tokens === this.tokens) return previous.output
+    const output = immutableSnapshot(
+      this.resolveTokens(declaration, part, facts),
     )
+    cache.set(declaration, { tokens: this.tokens, output })
+    return output
+  }
+
+  private resolveTokens(
+    value: ElementStyle,
+    part?: string,
+    facts = this.modsState,
+  ): AnyValue {
+    const backend = this.config.backend
+    if (backend?.resolvePlan && part) {
+      const plan = compileRules(this.ref, this.rules, backend.platform)
+      const selected = resolvePlan(plan, this.ref, this.tokens, facts, {
+        preserveConditions: backend.browserConditions,
+        part,
+      })
+      return backend.resolvePlan(selected[part] ?? [], {
+        system: this.ref,
+        part,
+      })
+    }
+    const portable =
+      this.config.platform === 'native' ||
+      (backend && backend.id !== 'css-vars')
+    const output: AnyValue = part
+      ? portable
+        ? foldOperations(
+            resolvePlan(
+              compileRules(this.ref, this.rules, this.config.platform ?? 'web'),
+              this.ref,
+              this.tokens,
+              facts,
+              { part },
+            )[part] ?? [],
+          )
+        : (resolveCssPlan(
+            compileRules(this.ref, this.rules, 'web'),
+            this.ref,
+            this.tokens,
+            facts,
+            {
+              part,
+              useClassName: this.config.useClassName,
+              mediaMode: this.config.mediaMode,
+              pseudoMode: this.config.pseudoMode,
+            },
+          )[part] ?? { style: {} })
+      : portable
+        ? resolveTokenStyle(
+            this.ref,
+            value ?? {},
+            this.tokens,
+            this.config.platform ?? 'web',
+          )
+        : this.ref.exec(
+            {
+              tokens: this.tokens,
+              useClassName: this.config.useClassName,
+              platform: this.config.platform,
+            },
+            value ?? {},
+          )
+    if (this.config.platform === 'native' && output.style) {
+      output.style = { ...output.style }
+      for (const variable in this.config.bridgeProps) {
+        if (!(variable in output.style)) continue
+        output[this.config.bridgeProps![variable]!] = output.style[variable]
+        delete output.style[variable]
+      }
+      delete output.style.containerType
+      delete output.style.containerName
+    }
+    return backend ? { ...output, ...backend.resolve(output) } : output
   }
 
   // --- per-element interaction state -------------------------------------
@@ -271,6 +1151,7 @@ export class Base {
     }
     if (on) set.add(el)
     else set.delete(el)
+    this.family.relations.setState(el, pseudo.replace(/^:/, ''), on)
   }
 
   // Are ANY mounted elements for this key in the pseudo-state? Drives the shared
@@ -283,7 +1164,7 @@ export class Base {
   // order (empty means "resting").
   private activePseudos(elementKey: ElementKey, el: AnyValue): string[] {
     const active: string[] = []
-    for (const pseudo of PSEUDO_STATES) {
+    for (const pseudo of this.trackedPseudos(elementKey)) {
       if (this._activeEls[this.stateKey(elementKey, pseudo)]?.has(el))
         active.push(pseudo)
     }
@@ -297,38 +1178,63 @@ export class Base {
     return activePseudos.join(PSEUDO_SIGNATURE_SEPARATOR)
   }
 
-  // The compiled match rule for an element with exactly `activePseudos` forced
-  // on (and every other interaction pseudo off), ignoring the shared global
-  // pseudo mods (which can only represent a single element's state at a time).
-  // StyleMatcher caches by mod bitmask, so the returned reference is stable
-  // across identical (pseudo + variant + media) state — which drives the
-  // redundant-write skip in applyElementStyles.
-  private matchedRule(
-    elementKey: ElementKey,
-    activePseudos: string[],
-  ): AnyValue {
-    const active = new Set(activePseudos)
-    const elMods = { ...this.modsState }
-    for (const pseudo of PSEUDO_STATES) {
-      elMods[this.stateKey(elementKey, pseudo)] = active.has(pseudo)
-    }
-    return this.matcher.match(elMods)[elementKey]
-  }
-
   // Resolve an element's style for exactly `activePseudos`.
   private styleForPseudos(
     elementKey: ElementKey,
     activePseudos: string[],
+    sizes?: ContainerSizes,
   ): AnyValue {
-    return this.applyTokens(this.matchedRule(elementKey, activePseudos))
+    const facts = {
+      ...this.modsState,
+      ...(sizes === undefined ? {} : this.conditionState(sizes, false)),
+    }
+    for (const pseudo of this.trackedPseudos(elementKey))
+      facts[this.stateKey(elementKey, pseudo)] = activePseudos.includes(pseudo)
+    return this.applyTokens(
+      this.matcher.match(facts)[elementKey],
+      elementKey,
+      facts,
+    )
   }
 
   // The "resting" style is the element resolved with all of its own interaction
   // pseudo-states forced off. The web binding spreads this declaratively so a
   // sibling's live hover/active/focus (tracked in the shared global modsState)
   // can never leak across instances when React re-applies props on re-render.
-  getRestingStyle(elementKey: ElementKey): AnyValue {
-    return this.styleForPseudos(elementKey, [])
+  getRestingStyle(elementKey: ElementKey, sizes?: ContainerSizes): AnyValue {
+    return this.styleForPseudos(elementKey, [], sizes)
+  }
+
+  private styleForHostConditions(
+    elementKey: ElementKey,
+    node: object,
+    sizes: ContainerSizes,
+  ): AnyValue {
+    const targets = this.refs[elementKey]
+    if (
+      !this.matcher.interactions[elementKey] &&
+      targets instanceof Set &&
+      targets.size > 1
+    ) {
+      // Preserve the existing rule for ambiguous cross-part interactions on
+      // repeated non-interactive targets, while keeping each host's geometry.
+      const facts = {
+        ...this.restingModsState(),
+        ...this.conditionState(sizes, false),
+      }
+      const style = this.applyTokens(
+        this.matcher.match(facts)[elementKey],
+        elementKey,
+        facts,
+      )
+      this.warnCrossElementMultiInstance(elementKey, style, sizes)
+      return style
+    }
+    return this.styleForPseudos(
+      elementKey,
+      this.activePseudos(elementKey, node),
+      sizes,
+    )
   }
 
   // Re-apply a single element's own interaction state imperatively. Called from
@@ -336,9 +1242,22 @@ export class Base {
   // resting style to every element, so an element that is genuinely hovered/
   // active/focused needs its state restored here (and only that element).
   reapplyInteraction(elementKey: ElementKey, el: AnyValue) {
+    const conditions = this.family.hostConditions.get(el)
+    if (conditions?.part === elementKey) {
+      setStyles(
+        el,
+        this.styleForHostConditions(elementKey, el, conditions.readSizes()),
+        this.family.partOwner(elementKey),
+      )
+      return
+    }
     const active = this.activePseudos(elementKey, el)
     if (active.length === 0) return
-    setStyles(el, this.styleForPseudos(elementKey, active))
+    setStyles(
+      el,
+      this.styleForPseudos(elementKey, active),
+      this.family.partOwner(elementKey),
+    )
   }
 
   // Remove a single unmounted element from refs and from every interaction set.
@@ -347,7 +1266,8 @@ export class Base {
   private pruneEl(elementKey: ElementKey, el: AnyValue) {
     const ref = this.refs[elementKey]
     if (ref instanceof Set) ref.delete(el)
-    for (const pseudo of PSEUDO_STATES) {
+    this.family.hostConditions.delete(el)
+    for (const pseudo of this.trackedPseudos(elementKey)) {
       this._activeEls[`${elementKey}${pseudo}`]?.delete(el)
     }
   }
@@ -358,7 +1278,7 @@ export class Base {
   private restingModsState(): ModState {
     const elMods = { ...this.modsState }
     for (const triggerKey in this.matcher.interactions) {
-      for (const pseudo of PSEUDO_STATES) {
+      for (const pseudo of this.trackedPseudos(triggerKey)) {
         elMods[this.stateKey(triggerKey, pseudo)] = false
       }
     }
@@ -372,10 +1292,12 @@ export class Base {
   private warnCrossElementMultiInstance(
     elementKey: ElementKey,
     restingStyle: AnyValue,
+    sizes?: ContainerSizes,
   ) {
-    if (IS_PRODUCTION || this._warnedCrossElement.has(elementKey)) return
-    const liveStyle = this.getCurrentStyle(elementKey)
+    if (IS_PRODUCTION || this._warnedCrossElement?.has(elementKey)) return
+    const liveStyle = this.getCurrentStyle(elementKey, sizes)
     if (JSON.stringify(liveStyle) === JSON.stringify(restingStyle)) return
+    this._warnedCrossElement ??= new Set()
     this._warnedCrossElement.add(elementKey)
     console.warn(
       `[toned] Cross-element interaction targeting "${elementKey}" is not ` +
@@ -385,8 +1307,9 @@ export class Base {
     )
   }
 
-  applyElementStyles(context?: ApplyContext) {
-    for (const elementKey of this.matcher.elementSet) {
+  applyElementStyles(context?: ApplyContext, parts = this.matcher.elementSet) {
+    const hasHostConditions = (this._family?.hostConditions.size ?? 0) > 0
+    for (const elementKey of parts) {
       const ref = this.refs[elementKey]
       // Web stores every mounted element for a key in a Set (O(1) add/has/delete);
       // native assigns a single element. `size > 1` is the multi-instance case.
@@ -394,6 +1317,25 @@ export class Base {
       const isMultiInstance = isSet && ref.size > 1
       const isSelfTarget = context?.triggerKey === elementKey
       const isInteractive = !!this.matcher.interactions[elementKey]
+
+      // A shared matched rule cannot tell us whether a host's local container
+      // crossed a threshold. Resolve registered hosts before the shared skip;
+      // the matcher/token caches and final writer still avoid redundant work.
+      if (hasHostConditions && isSet) {
+        for (const el of ref) {
+          const conditions = this.family.hostConditions.get(el)
+          if (conditions?.part !== elementKey) continue
+          if (!this.host.connected(el)) {
+            this.pruneEl(elementKey, el)
+            continue
+          }
+          setStyles(
+            el,
+            this.styleForHostConditions(elementKey, el, conditions.readSizes()),
+            this.family.partOwner(elementKey),
+          )
+        }
+      }
 
       // For multi-instance self-targets, bypass isEqual (element-level state differs)
       if (!(isMultiInstance && isSelfTarget)) {
@@ -411,26 +1353,32 @@ export class Base {
           // variant) — so the shared global modsState (which can only represent one
           // element's interaction, and may be stale after an unmount) can never leak
           // a sibling's live state onto other instances. Group by signature to reuse
-          // match() results, and skip elements whose resolved rule is unchanged to
-          // avoid no-op DOM writes; prune disconnected nodes in-place as we iterate
-          // (Set delete during for..of is safe).
+          // match() results; prune disconnected nodes in-place as we iterate (Set
+          // delete during for..of is safe).
           const styleBySignature = new Map<string, AnyValue>()
           for (const el of ref) {
-            if (!el.isConnected) {
+            if (
+              hasHostConditions &&
+              this.family.hostConditions.get(el)?.part === elementKey
+            )
+              continue
+            if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
               continue
             }
             const active = this.activePseudos(elementKey, el)
-            const rule = this.matchedRule(elementKey, active)
-            if (rule !== undefined && this._lastAppliedRule.get(el) === rule) {
-              continue
-            }
             const signature = this.pseudoSignature(active)
             if (!styleBySignature.has(signature)) {
-              styleBySignature.set(signature, this.applyTokens(rule))
+              styleBySignature.set(
+                signature,
+                this.styleForPseudos(elementKey, active),
+              )
             }
-            setStyles(el, styleBySignature.get(signature))
-            this._lastAppliedRule.set(el, rule)
+            setStyles(
+              el,
+              styleBySignature.get(signature),
+              this.family.partOwner(elementKey),
+            )
           }
         } else if (isMultiInstance) {
           // A non-interactive element shared across instances may still be a
@@ -442,29 +1390,45 @@ export class Base {
           // cross-element behavior in the branch below.
           const restingStyle = this.applyTokens(
             this.matcher.match(this.restingModsState())[elementKey],
+            elementKey,
+            this.restingModsState(),
           )
           this.warnCrossElementMultiInstance(elementKey, restingStyle)
           for (const el of ref) {
-            if (!el.isConnected) {
+            if (
+              hasHostConditions &&
+              this.family.hostConditions.get(el)?.part === elementKey
+            )
+              continue
+            if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
               continue
             }
-            setStyles(el, restingStyle)
+            setStyles(el, restingStyle, this.family.partOwner(elementKey))
           }
         } else {
           // Single shared instance: full cross-element behavior is safe.
           const style = this.getCurrentStyle(elementKey)
           for (const el of ref) {
-            if (!el.isConnected) {
+            if (
+              hasHostConditions &&
+              this.family.hostConditions.get(el)?.part === elementKey
+            )
+              continue
+            if (!this.host.connected(el)) {
               this.pruneEl(elementKey, el)
               continue
             }
-            setStyles(el, style)
+            setStyles(el, style, this.family.partOwner(elementKey))
           }
         }
       } else if (ref) {
-        // Single ref (native) — unchanged.
-        setStyles(ref, this.getCurrentStyle(elementKey))
+        // A single ref (native): apply its current style directly.
+        setStyles(
+          ref,
+          this.getCurrentStyle(elementKey),
+          this.family.partOwner(elementKey),
+        )
       }
     }
   }
@@ -477,11 +1441,31 @@ export class Base {
       })
     }
 
-    Object.assign(this.modsState, modsState)
+    const changed = new Set<string>()
+    const assign = (values: ModState) => {
+      for (const key in values) {
+        if (!Object.is(this.modsState[key], values[key])) changed.add(key)
+        this.modsState[key] = values[key]
+      }
+    }
+    assign(modsState)
 
-    this.matchStyles()
+    // A media change (the sharedMedia sub calls straight in here) must also
+    // refresh any ALGEBRAIC condition mods that reference breakpoint atoms —
+    // they were computed against the previous media state. Recompute from the
+    // last measured sizes; conditionState never calls back into applyState.
+    if (this.lastContainerSizes) {
+      const conditions = this.conditionState(this.lastContainerSizes)
+      if (conditions) assign(conditions)
+    }
 
-    this.applyElementStyles(context)
+    if (changed.size) this.matchStyles()
+    else this.modsStylePrev = this.modsStyle
+    const parts = this.matcher.partsForFacts(changed)
+    // Two repeated hosts can exchange local interaction while the aggregate
+    // boolean remains true. The originating part still requires reconciliation.
+    if (context?.triggerKey) parts.add(context.triggerKey)
+    this.applyElementStyles(context, parts)
   }
 
   setOn = (

@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import { Transform } from 'node:stream'
+
 import express from 'express'
 
 // Constants
@@ -22,6 +23,7 @@ let vite
 if (!isProduction) {
   const { createServer } = await import('vite')
   vite = await createServer({
+    configLoader: 'runner',
     server: { middlewareMode: true },
     appType: 'custom',
     base,

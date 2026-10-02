@@ -4,11 +4,12 @@ import { cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { createElement } from 'react'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
+
 import { useStyles } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
 // Install the web binding as the active global config. getTokens is overridden
-// with a plain function: the real one resolves tokens via React's `use(context)`,
+// with a plain function: the real one resolves tokens via React's `useContext`,
 // which can't run inside the interaction handlers (they fire outside render).
 const originalConfig = getConfig()
 setConfig({ ...reactWebConfig, getTokens: () => ({}) })
@@ -81,10 +82,10 @@ describe('react-web multi-instance interaction isolation', () => {
     expect(a.style.cursor).toBe('grab')
     expect(b.style.cursor).toBe('pointer')
 
-    // Re-render the list for an unrelated reason. Before the resting-style fix,
-    // React re-applied the *global* (pressed) style to every instance, leaking
-    // `grab` onto B. With the fix the declarative style stays pseudo-free and
-    // only A — restored via the ref callback — keeps its pressed state.
+    // Re-render the list for an unrelated reason. Re-applying the *global*
+    // (pressed) style to every instance would leak `grab` onto B; the
+    // declarative style stays pseudo-free and only A — restored via the ref
+    // callback — keeps its pressed state.
     rerender(createElement(List, { tick: 1 }))
 
     expect(a.style.cursor).toBe('grab')

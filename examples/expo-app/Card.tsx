@@ -1,22 +1,19 @@
-import { styles } from '@examples/shared/card'
-import { useStyles } from '@toned/react/index'
-import { t } from '@toned/systems/base'
+import { cardStyles } from '@examples/shared'
+import { useStyles } from '@toned/react'
 import { Text, View } from 'react-native'
 
 import { Button } from './Button'
 
-function Card() {
-  const s = useStyles(styles)
+export default function Card() {
+  const s = useStyles(cardStyles)
 
   return (
-    <View {...s.container}>
-      <Button label={String(Math.random())} />
+    <View {...s.Root}>
+      <Button label="Press me" />
 
-      <Text {...t({ textColor: 'status_info' })}>
-        Edit <Text {...s.code}>src/App.tsx</Text> and save to test HMR
+      <Text {...s.Hint}>
+        Edit <Text {...s.Code}>App.tsx</Text> and save to reload
       </Text>
     </View>
   )
 }
-
-export default Card

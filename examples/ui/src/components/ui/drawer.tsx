@@ -1,52 +1,51 @@
-import * as React from "react"
-import { Drawer as DrawerPrimitive } from "vaul"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import type * as React from 'react'
+import { Drawer as DrawerPrimitive } from 'vaul'
 
-import { cn } from "@/lib/utils"
-
-const drawerStyles = stylesheet({
+/*
+ * Where the panel sits, its rounded corners and the handle depend on vaul's
+ * `data-vaul-drawer-direction`, so those rules are structural CSS in styles.css.
+ */
+export const drawerStyles = stylesheet({
   overlay: {
     bgColor: 'overlay',
     position: 'fixed',
     zIndex: 50,
-    style: { inset: 0 },
+    // No token for the inset shorthand.
+    '@platform web': { $style: { inset: 0 } },
   },
   content: {
-    bgColor: 'default',
+    bgColor: 'elevated',
+    textColor: 'default',
+    borderColor: 'default',
     position: 'fixed',
     zIndex: 50,
     flexLayout: 'column',
-    height: 'auto',
+    shadow: 'xlarge',
   },
   handle: {
-    bgColor: 'action_secondary',
+    bgColor: 'interactive_muted',
     borderRadius: 'full',
-    display: 'none',
-    width: '100px',
-    height: '0.5rem',
+    width: '3rem',
+    height: '0.25rem',
     flexShrink: '0',
-    style: {
-      margin: '1rem auto 0',
-    },
+    marginX: 'auto',
+    marginTop: 3,
   },
   header: {
     flexLayout: 'column',
-    gap: 0.5,
-    padding: 4,
-    '@md': {
-      gap: 1.5,
-    },
+    gap: 1.5,
+    padding: 5,
   },
   footer: {
     flexLayout: 'column',
     gap: 2,
-    padding: 4,
-    style: { marginTop: 'auto' },
+    padding: 5,
+    marginTop: 'auto',
   },
   title: {
-    textColor: 'default',
-    fontWeight: 600,
+    typo: 'heading_4',
   },
   description: {
     textColor: 'muted',
@@ -105,20 +104,17 @@ function DrawerContent({
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
-        {...s.content.with({ className: cn("group/drawer-content", className) })}
+        {...s.content.with({ className })}
         {...props}
       >
-        <div
-          {...s.handle}
-          data-slot="drawer-handle"
-        />
+        <div {...s.handle} data-slot="drawer-handle" />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
   )
 }
 
-function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
+function DrawerHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(drawerStyles)
 
   return (
@@ -130,7 +126,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
+function DrawerFooter({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(drawerStyles)
 
   return (

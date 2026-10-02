@@ -3,7 +3,6 @@
  *
  * @module utils/css
  */
-
 import { unitlessNumbers } from './unitlessNumbers.ts'
 
 const camelToKebabRe = /([a-z0-9]|(?=[A-Z]))([A-Z])/g
@@ -19,6 +18,11 @@ const camelToKebabRe = /([a-z0-9]|(?=[A-Z]))([A-Z])/g
  */
 export function camelToKebab(str: string): string {
   return str.replace(camelToKebabRe, '$1-$2').toLowerCase()
+}
+
+/** The parameter custom property one bridge reads for one CSS property. */
+export function bridgeVarName(bridge: string, cssProp: string): string {
+  return `--toned-b-${camelToKebab(bridge)}-${camelToKebab(cssProp)}`
 }
 
 /**

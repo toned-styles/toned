@@ -1,0 +1,8 @@
+**
+!package.json
+!README.md
+!LICENSE
+!dist/extension.cjs
+!dist/server.cjs
+!dist/terminateProcess.sh
+!dist/vscode-languageclient-LICENSE.txt

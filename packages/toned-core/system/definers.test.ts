@@ -1,23 +1,28 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import type { Config, ExecConfig } from '../types/index.ts'
-import { __resetWarnings } from '../utils/warnOnce.ts'
-import { getConfig, resolveModes, setConfig } from './config.ts'
+import { describe, expect, test } from 'vitest'
+
+import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
+import { getConfig, setConfig } from './config.ts'
 import { defineSystem, defineToken, defineUnit } from './definers.ts'
 
-// biome-ignore lint/suspicious/noExplicitAny: test helper for dynamic style access
-type AnyStyle = Record<string, any>
+function expectConditions(
+  style: object,
+  field: string,
+  guards: readonly string[],
+  values: readonly (string | number | undefined)[],
+) {
+  expect(values).toHaveLength(2 ** guards.length)
+  for (let mask = 0; mask < values.length; mask++) {
+    const toggles = Object.fromEntries(
+      guards.map((guard, bit) => [guard, !!(mask & (1 << bit))]),
+    )
+    expect(
+      String(cssTestValue(style, field, toggles)),
+      JSON.stringify(toggles),
+    ).toBe(String(values[mask]))
+  }
+}
 
-/**
- * `exec()` requires the active media/pseudo modes. These tests assert CSS
- * custom property output, so they default to the mode that produces it.
- */
-const execCfg = (over: Partial<ExecConfig> = {}): ExecConfig => ({
-  tokens: {},
-  useClassName: false,
-  mediaMode: 'css',
-  pseudoMode: 'css',
-  ...over,
-})
+type AnyStyle = Record<string, any>
 
 describe('defineToken', () => {
   test('returns config unchanged (passthrough)', () => {
@@ -99,7 +104,10 @@ describe('defineSystem', () => {
     test('resolves token values through token configs', () => {
       const { exec } = defineSystem({ bgColor, textColor })
 
-      const result = exec(execCfg(), { bgColor: 'primary', textColor: 'black' })
+      const result = exec(
+        { tokens: {}, useClassName: false },
+        { bgColor: 'primary', textColor: 'black' },
+      )
 
       expect(result.style).toEqual({
         backgroundColor: '#007bff',
@@ -110,7 +118,10 @@ describe('defineSystem', () => {
     test('resolves a single token', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), { bgColor: 'secondary' })
+      const result = exec(
+        { tokens: {}, useClassName: false },
+        { bgColor: 'secondary' },
+      )
 
       expect(result.style).toEqual({
         backgroundColor: '#6c757d',
@@ -119,13 +130,61 @@ describe('defineSystem', () => {
   })
 
   describe('exec() with className mode', () => {
+    test('a responsive token breakpoint override becomes a class, not a chain', () => {
+      const maxW = defineToken({
+        values: ['gutter', '32'] as const,
+        resolve: (value: string) => ({
+          maxWidth: value === 'gutter' ? 'calc(100% - 2rem)' : '32rem',
+        }),
+      })
+      const { exec } = defineSystem(
+        { maxW },
+        {
+          breakpoints: { __breakpoints: { sm: 640 } },
+          responsiveTokens: ['maxW'],
+        },
+      )
+      const result = exec({ tokens: {}, useClassName: true }, {
+        maxW: 'gutter',
+        '@sm': { maxW: '32' },
+      } as any)
+      expect(result.className).toContain('maxW_gutter')
+      expect(result.className).toContain('@sm:maxW_32')
+      // no chain rides the inline style
+      expect(result.style).toEqual({})
+    })
+
+    test('an un-opted token keeps the breakpoint chain', () => {
+      const maxW = defineToken({
+        values: ['gutter', '32'] as const,
+        resolve: (value: string) => ({
+          maxWidth: value === 'gutter' ? 'calc(100% - 2rem)' : '32rem',
+        }),
+      })
+      const { exec } = defineSystem(
+        { maxW },
+        { breakpoints: { __breakpoints: { sm: 640 } } },
+      )
+      const result = exec({ tokens: {}, useClassName: true }, {
+        maxW: 'gutter',
+        '@sm': { maxW: '32' },
+      } as any)
+      const style = result.style as Record<string, unknown>
+      expectConditions(
+        style,
+        'maxWidth',
+        ['--media-sm'],
+        ['calc(100% - 2rem)', '32rem'],
+      )
+    })
+
     test('generates className strings for known token values', () => {
       const { exec } = defineSystem({ bgColor, textColor })
 
-      const result = exec(execCfg({ useClassName: true }), {
-        bgColor: 'primary',
-        textColor: 'white',
-      })
+      const result = exec(
+        { tokens: {}, useClassName: true },
+        { bgColor: 'primary', textColor: 'white' },
+      )
 
       expect(result.className).toContain('bgColor_primary')
       expect(result.className).toContain('textColor_white')
@@ -136,7 +195,10 @@ describe('defineSystem', () => {
     test('falls back to style resolution for unknown values when useClassName is false', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), { bgColor: 'primary' })
+      const result = exec(
+        { tokens: {}, useClassName: false },
+        { bgColor: 'primary' },
+      )
 
       expect(result.style).toEqual({ backgroundColor: '#007bff' })
     })
@@ -146,7 +208,7 @@ describe('defineSystem', () => {
     test('passes raw style objects through', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         style: { opacity: 0.5, zIndex: 10 },
       } as any)
 
@@ -156,7 +218,7 @@ describe('defineSystem', () => {
     test('merges style with resolved tokens', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         bgColor: 'primary',
         style: { opacity: 0.5 },
       } as any)
@@ -172,7 +234,7 @@ describe('defineSystem', () => {
     test('appends className strings', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         className: 'custom-class',
       } as any)
 
@@ -182,7 +244,7 @@ describe('defineSystem', () => {
     test('combines token classNames with custom className', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg({ useClassName: true }), {
+      const result = exec({ tokens: {}, useClassName: true }, {
         bgColor: 'primary',
         className: 'extra',
       } as any)
@@ -192,22 +254,29 @@ describe('defineSystem', () => {
     })
   })
 
-  describe('exec() skips pseudo/$ keys', () => {
-    test('keys starting with : are ignored', () => {
+  describe('exec() nested pseudo blocks and $ keys', () => {
+    // The stylesheet path pre-flattens nested pseudo blocks; exec flattens
+    // them itself, so t() carries pseudo and breakpoint blocks too.
+    test('a nested : block builds the pseudo chain', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         ':hover': { bgColor: 'secondary' },
         bgColor: 'primary',
       } as any)
 
-      expect(result.style).toEqual({ backgroundColor: '#007bff' })
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--toned_hover'],
+        ['#007bff', '#6c757d'],
+      )
     })
 
     test('keys starting with $ are ignored', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         $variant: 'large',
         bgColor: 'primary',
       } as any)
@@ -215,16 +284,21 @@ describe('defineSystem', () => {
       expect(result.style).toEqual({ backgroundColor: '#007bff' })
     })
 
-    test('both : and $ keys are ignored simultaneously', () => {
+    test('a nested : block chains while $ keys stay ignored', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         ':focus': { bgColor: 'secondary' },
         $size: 'lg',
         bgColor: 'primary',
       } as any)
 
-      expect(result.style).toEqual({ backgroundColor: '#007bff' })
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--toned_focus'],
+        ['#007bff', '#6c757d'],
+      )
     })
   })
 
@@ -232,7 +306,7 @@ describe('defineSystem', () => {
     test('undefined values are skipped', () => {
       const { exec } = defineSystem({ bgColor, textColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         bgColor: 'primary',
         textColor: undefined,
       } as any)
@@ -257,20 +331,16 @@ describe('defineSystem', () => {
         },
       )
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         bgColor: 'primary',
         '@sm_bgColor': 'secondary',
       } as any)
 
-      // Should have the CSS custom property for the sm breakpoint
-      expect(result.style).toHaveProperty('--media-sm__background-color')
-      expect((result.style as AnyStyle)['--media-sm__background-color']).toBe(
-        'var(--media-sm) #6c757d',
-      )
-
-      // The main property should be wrapped in a var() fallback chain
-      expect((result.style as AnyStyle)['backgroundColor']).toBe(
-        'var(--media-sm__background-color, #007bff)',
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--media-sm'],
+        ['#007bff', '#6c757d'],
       )
     })
 
@@ -294,26 +364,17 @@ describe('defineSystem', () => {
         },
       )
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         bgColor: 'primary',
         '@sm_bgColor': 'secondary',
         '@md_bgColor': 'danger',
       } as any)
 
-      // Both custom properties should exist
-      expect(result.style).toHaveProperty('--media-sm__background-color')
-      expect(result.style).toHaveProperty('--media-md__background-color')
-
-      expect((result.style as AnyStyle)['--media-sm__background-color']).toBe(
-        'var(--media-sm) #6c757d',
-      )
-      expect((result.style as AnyStyle)['--media-md__background-color']).toBe(
-        'var(--media-md) #dc3545',
-      )
-
-      // Chain should be nested: md wraps sm wraps base (sorted ascending)
-      expect((result.style as AnyStyle)['backgroundColor']).toBe(
-        'var(--media-md__background-color, var(--media-sm__background-color, #007bff))',
+      expectConditions(
+        result.style,
+        'backgroundColor',
+        ['--media-sm', '--media-md'],
+        ['#007bff', '#6c757d', '#dc3545', '#dc3545'],
       )
     })
 
@@ -353,7 +414,7 @@ describe('defineSystem', () => {
       expect(styles).toBeDefined()
     })
 
-    test('warns and keeps the base value when no breakpoints are configured', () => {
+    test('does not produce CSS variable output when no breakpoints are configured', () => {
       const { exec } = defineSystem({
         bgColor: defineToken({
           values: ['primary', 'secondary'] as const,
@@ -362,21 +423,82 @@ describe('defineSystem', () => {
           }),
         }),
       })
-      __resetWarnings()
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         bgColor: 'primary',
         '@sm_bgColor': 'secondary',
       } as any)
 
+      // Without breakpoints config, @-prefixed keys are consumed but no variable chain is generated
       expect(result.style).toEqual({ backgroundColor: '#007bff' })
-      expect(warn.mock.calls[0]?.[0]).toContain('defineSystem')
-      warn.mockRestore()
     })
   })
 
   describe('t() deep-merges style across arguments', () => {
+    test('canonical, legacy and composed raw styles retain fields in argument order', () => {
+      const { t } = defineSystem({ bgColor })
+      const base = t({ bgColor: 'primary', $style: { opacity: 0.5 } })
+      const composed = t(
+        base,
+        { $style: { minHeight: 24, opacity: 0.7 } },
+        { style: { minHeight: 32 } },
+      )
+
+      expect(composed.style).toEqual({
+        backgroundColor: '#007bff',
+        opacity: 0.7,
+        minHeight: 32,
+      })
+      expect(base.style).toEqual({
+        backgroundColor: '#007bff',
+        opacity: 0.5,
+      })
+      expect(
+        t({ style: { opacity: 0.5 } }, { $style: { opacity: 1 } }).style,
+      ).toEqual({ opacity: 1 })
+    })
+
+    test('getters resolve current installed tokens while exec uses only explicit tokens', () => {
+      const previous = { ...getConfig() }
+      let theme = { ink: 'red' }
+      let reads = 0
+      const ui = defineSystem({
+        ink: defineToken({
+          values: ['text'],
+          resolve: (_value, tokens) => ({ color: tokens['ink'] }),
+        }),
+      })
+      try {
+        setConfig({
+          platform: 'native',
+          useClassName: false,
+          getTokens: () => {
+            reads++
+            return theme
+          },
+        })
+        const bag = ui.t({ ink: 'text' })
+        const composed = ui.t(bag, { $style: { opacity: 0.5 } })
+        expect(reads).toBe(0)
+        expect(composed.style).toEqual({ color: 'red', opacity: 0.5 })
+        theme = { ink: 'blue' }
+        expect(composed.style).toEqual({ color: 'blue', opacity: 0.5 })
+        void composed.className
+        expect(reads).toBe(3)
+        const beforeExplicit = reads
+        expect(
+          ui.exec(
+            { tokens: { ink: 'green' }, platform: 'native' },
+            { ink: 'text' },
+          ).style,
+        ).toEqual({ color: 'green' })
+        expect(reads).toBe(beforeExplicit)
+        expect(composed.style).toEqual({ color: 'blue', opacity: 0.5 })
+      } finally {
+        setConfig(previous)
+      }
+    })
+
     test('combines style objects from multiple arguments', () => {
       const { t } = defineSystem({ bgColor })
 
@@ -433,16 +555,16 @@ describe('defineSystem', () => {
     test('raw style in a pseudo builds a var fallback chain', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         style: { cursor: 'pointer' },
         ':hover_style': { cursor: 'grab' },
       } as any)
 
-      expect((result.style as AnyStyle)['--toned_hover__cursor__style']).toBe(
-        'var(--toned_hover) grab',
-      )
-      expect((result.style as AnyStyle)['cursor']).toBe(
-        'var(--toned_hover__cursor__style, pointer)',
+      expectConditions(
+        result.style,
+        'cursor',
+        ['--toned_hover'],
+        ['pointer', 'grab'],
       )
     })
 
@@ -461,1136 +583,418 @@ describe('defineSystem', () => {
               ':hover_textColor': 'black',
               ':hover_style': { color: 'red' },
             }
-        return exec(execCfg(), input as any).style as AnyStyle
+        return exec({ tokens: {}, useClassName: false }, input as any)
+          .style as AnyStyle
       }
 
       for (const styleFirst of [false, true]) {
         const style = run(styleFirst)
-        // Token var is still emitted (kept as an inner fallback)…
-        expect(style['--toned_hover__color']).toBe('var(--toned_hover) #000')
-        // …the raw-style var lives in its own namespace…
-        expect(style['--toned_hover__color__style']).toBe(
-          'var(--toned_hover) red',
-        )
-        // …and style is outermost, so it wins on :hover, then token, then base.
-        expect(style['color']).toBe(
-          'var(--toned_hover__color__style, var(--toned_hover__color, #fff))',
-        )
+        expectConditions(style, 'color', ['--toned_hover'], ['#fff', 'red'])
       }
     })
 
-    test('token-only pseudo overrides are unaffected (no __style namespace)', () => {
+    test('token-only pseudo overrides preserve resting and active values', () => {
       const { exec } = defineSystem({ bgColor })
 
-      const result = exec(execCfg(), {
+      const result = exec({ tokens: {}, useClassName: false }, {
         bgColor: 'primary',
         ':hover_bgColor': 'secondary',
       } as any).style as AnyStyle
 
-      expect(result['--toned_hover__background-color']).toBe(
-        'var(--toned_hover) #6c757d',
-      )
-      expect(result['backgroundColor']).toBe(
-        'var(--toned_hover__background-color, #007bff)',
-      )
-      expect(result['--toned_hover__background-color__style']).toBeUndefined()
-    })
-  })
-})
-
-describe('t() nested selector blocks', () => {
-  const padding = defineToken({
-    values: ['small', 'large'] as const,
-    resolve: (v) => ({ padding: v === 'small' ? 4 : 16 }),
-  })
-
-  const gap = defineToken({
-    values: ['none', 'wide'] as const,
-    resolve: (v) => ({ gap: v === 'none' ? 0 : 12 }),
-  })
-
-  const bgColor = defineToken({
-    values: ['base', 'accent'] as const,
-    resolve: (v) => ({ backgroundColor: v === 'base' ? '#fff' : '#f00' }),
-  })
-
-  const breakpoints = { __breakpoints: { sm: 480, md: 768, xl: 1200 } }
-
-  const makeSystem = () =>
-    defineSystem({ padding, gap, bgColor }, { breakpoints })
-
-  const original = { ...getConfig() }
-
-  const useConfig = (overrides: Partial<Config>) => {
-    setConfig({ getTokens: () => ({}), useClassName: false, ...overrides })
-  }
-
-  beforeEach(() => {
-    __resetWarnings()
-  })
-
-  afterEach(() => {
-    setConfig(original)
-  })
-
-  describe('web (css mode)', () => {
-    beforeEach(() => {
-      useConfig({ mediaMode: 'css', pseudoMode: 'css' })
-    })
-
-    test('a nested breakpoint block resolves to a CSS variable chain', () => {
-      const { t } = makeSystem()
-
-      const style = t({ padding: 'small', '@md': { padding: 'large' } })
-        .style as AnyStyle
-
-      expect(style['--media-md__padding']).toBe('var(--media-md) 16px')
-      expect(style['padding']).toBe('var(--media-md__padding, 4px)')
-    })
-
-    test('a nested block matches the flattened form exactly', () => {
-      const { t } = makeSystem()
-
-      const nested = t({ padding: 'small', '@md': { padding: 'large' } }).style
-      const flat = t({
-        padding: 'small',
-        '@md_padding': 'large',
-      } as AnyStyle).style
-
-      expect(nested).toEqual(flat)
-    })
-
-    test('multiple breakpoints cascade with the largest outermost', () => {
-      const { t } = makeSystem()
-
-      const style = t({
-        padding: 'small',
-        '@md': { padding: 'large' },
-        '@xl': { padding: 'small' },
-      }).style as AnyStyle
-
-      // Distinct values, so this pins which one wins rather than just which
-      // variable names appear.
-      expect(style['--media-md__padding']).toBe('var(--media-md) 16px')
-      expect(style['--media-xl__padding']).toBe('var(--media-xl) 4px')
-      expect(style['padding']).toBe(
-        'var(--media-xl__padding, var(--media-md__padding, 4px))',
+      expectConditions(
+        result,
+        'backgroundColor',
+        ['--toned_hover'],
+        ['#007bff', '#6c757d'],
       )
     })
+  })
 
-    test('a nested pseudo block resolves to a CSS variable chain', () => {
-      const { t } = makeSystem()
-
-      const style = t({ bgColor: 'base', ':hover': { bgColor: 'accent' } })
-        .style as AnyStyle
-
-      expect(style['--toned_hover__background-color']).toBe(
-        'var(--toned_hover) #f00',
-      )
-      expect(style['backgroundColor']).toBe(
-        'var(--toned_hover__background-color, #fff)',
-      )
+  describe('per-platform token resolve (§4)', () => {
+    // A token whose resolve branches on the platform carried in the context —
+    // box-shadow on web, RN shadow* props on native. This is the one core-side
+    // affordance the bound-layer spec asks for (elevation, gradients, etc.).
+    const elevation = defineToken({
+      values: ['sm'] as const,
+      resolve: (_v, _tokens, ctx) =>
+        ctx?.platform === 'native'
+          ? { shadowRadius: 4, shadowOpacity: 0.2 }
+          : { boxShadow: '0 1px 4px rgba(0,0,0,0.2)' },
     })
 
-    test('separate arguments targeting one breakpoint compose', () => {
-      const { t } = makeSystem()
-
-      const style = t(
-        { padding: 'small', gap: 'none', '@md': { padding: 'large' } },
-        { '@md': { gap: 'wide' } },
+    test('web platform resolves to box-shadow', () => {
+      const { exec } = defineSystem({ elevation })
+      const style = exec(
+        { tokens: {}, useClassName: false, platform: 'web' },
+        { elevation: 'sm' },
       ).style as AnyStyle
-
-      // Merging the nested objects would have dropped the padding override.
-      expect(style['--media-md__padding']).toBe('var(--media-md) 16px')
-      expect(style['--media-md__gap']).toBe('var(--media-md) 12px')
-      // Both chains have to be assigned, not just the variables emitted.
-      expect(style['padding']).toBe('var(--media-md__padding, 4px)')
-      expect(style['gap']).toBe('var(--media-md__gap, 0px)')
+      expect(style['boxShadow']).toBe('0 1px 4px rgba(0,0,0,0.2)')
+      expect(style['shadowRadius']).toBeUndefined()
     })
 
-    test('a later argument overrides an earlier one for the same property', () => {
-      const { t } = makeSystem()
-
-      const style = t(
-        { padding: 'small', '@md': { padding: 'large' } },
-        { '@md': { padding: 'small' } },
+    test('native platform resolves to shadow* props', () => {
+      const { exec } = defineSystem({ elevation })
+      const style = exec(
+        { tokens: {}, useClassName: false, platform: 'native' },
+        { elevation: 'sm' },
       ).style as AnyStyle
-
-      expect(style['--media-md__padding']).toBe('var(--media-md) 4px')
-      expect(style['padding']).toBe('var(--media-md__padding, 4px)')
-    })
-
-    test('composes when a t() result is passed back into t()', () => {
-      const { t } = makeSystem()
-
-      const inner = t({ padding: 'small', '@md': { padding: 'large' } })
-      const style = t(inner).style as AnyStyle
-
-      expect(style['padding']).toBe('var(--media-md__padding, 4px)')
-    })
-
-    test('a t() result nested in a block matches the plain-object form', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const { t } = makeSystem()
-
-      const nested = t({ padding: 'small', '@md': t({ padding: 'large' }) })
-      const plain = t({ padding: 'small', '@md': { padding: 'large' } })
-
-      // Flattening the result's own keys would surface its style/className
-      // getters as '@md_style' / '@md_className' instead of its tokens.
-      expect(nested.style).toEqual(plain.style)
-      expect(warn).not.toHaveBeenCalled()
-      warn.mockRestore()
-    })
-
-    test('skips falsy arguments, so a conditional style can be inlined', () => {
-      const { t } = makeSystem()
-      const selected = false as boolean
-
-      const style = t(
-        { bgColor: 'base' },
-        selected && { bgColor: 'accent' },
-        null,
-        undefined,
-      ).style as AnyStyle
-
-      expect(style).toEqual({ backgroundColor: '#fff' })
-    })
-
-    test("does not mutate the caller's object", () => {
-      const { t } = makeSystem()
-      const input = {
-        padding: 'small',
-        '@md': { padding: 'large' },
-      } as const
-
-      void t(input).style
-
-      expect(input).toEqual({ padding: 'small', '@md': { padding: 'large' } })
-    })
-
-    test('an override with no base value emits a chain with no fallback', () => {
-      const { t } = makeSystem()
-
-      const style = t({ '@md': { padding: 'large' } }).style as AnyStyle
-
-      // Resolvers are not required to handle an absent value, so the base must
-      // not be resolved at all — a fallback here would be invented, not given.
-      expect(style['--media-md__padding']).toBe('var(--media-md) 16px')
-      expect(style['padding']).toBe('var(--media-md__padding)')
-    })
-  })
-
-  describe('web: raw style inside a breakpoint block', () => {
-    beforeEach(() => {
-      useConfig({ mediaMode: 'css', pseudoMode: 'css' })
-    })
-
-    test('wraps the base style value in a chain of its own namespace', () => {
-      const { t } = makeSystem()
-
-      const style = t({
-        style: { opacity: 1 },
-        '@md': { style: { opacity: 0.5 } },
-      } as AnyStyle).style as AnyStyle
-
-      expect(style['--media-md__opacity__style']).toBe('var(--media-md) 0.5')
-      expect(style['opacity']).toBe('var(--media-md__opacity__style, 1)')
-    })
-
-    test('emits a chain with no fallback when there is no base value', () => {
-      const { t } = makeSystem()
-
-      const style = t({ '@md': { style: { opacity: 0.5 } } } as AnyStyle)
-        .style as AnyStyle
-
-      expect(style['opacity']).toBe('var(--media-md__opacity__style)')
-    })
-
-    test('raw style wins over a token setting the same CSS property', () => {
-      const { t } = makeSystem()
-
-      const style = t({
-        padding: 'small',
-        '@md': { padding: 'large', style: { padding: 24 } },
-      } as AnyStyle).style as AnyStyle
-
-      // The token var stays as an inner fallback; raw style is outermost.
-      expect(style['--media-md__padding']).toBe('var(--media-md) 16px')
-      expect(style['--media-md__padding__style']).toBe('var(--media-md) 24px')
-      expect(style['padding']).toBe(
-        'var(--media-md__padding__style, var(--media-md__padding, 4px))',
-      )
-    })
-
-    test('a pseudo chain composes on top of a breakpoint chain', () => {
-      const { t } = makeSystem()
-
-      const style = t({
-        padding: 'small',
-        '@md': { padding: 'large' },
-        ':hover': { padding: 'large' },
-      }).style as AnyStyle
-
-      expect(style['padding']).toBe(
-        'var(--toned_hover__padding, var(--media-md__padding, 4px))',
-      )
-    })
-  })
-
-  describe('web: breakpoints that produce no output', () => {
-    beforeEach(() => {
-      useConfig({ mediaMode: 'css', pseudoMode: 'css' })
-    })
-
-    test('an unregistered breakpoint leaves the base value untouched', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const { t } = makeSystem()
-
-      const style = t({
-        padding: 'small',
-        '@nope': { padding: 'large' },
-      } as AnyStyle).style as AnyStyle
-
-      // Not stringified into a dead chain: a number still gets a px suffix
-      // when written to the DOM.
-      expect(style['padding']).toBe(4)
-      expect(style['--media-nope__padding']).toBeUndefined()
-      warn.mockRestore()
-    })
-
-    test('an unregistered breakpoint is reported by name', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const { t } = makeSystem()
-
-      void t({ padding: 'small', '@nope': { padding: 'large' } } as AnyStyle)
-        .style
-
-      expect(warn).toHaveBeenCalledTimes(1)
-      expect(warn.mock.calls[0]?.[0]).toContain("'@nope'")
-      warn.mockRestore()
-    })
-
-    test('a multi-word breakpoint reports the unregistered name it parsed', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const { t } = makeSystem()
-
-      // exec splits on the first underscore, so '@small_screen' is read as the
-      // breakpoint '@small'. Naming it beats dropping it in silence.
-      void t({
-        padding: 'small',
-        '@small_screen': { padding: 'large' },
-      } as AnyStyle).style
-
-      expect(warn.mock.calls[0]?.[0]).toContain("'@small'")
-      warn.mockRestore()
-    })
-  })
-
-  describe('native (non-css mode)', () => {
-    let warn: ReturnType<typeof vi.spyOn>
-
-    beforeEach(() => {
-      useConfig({ mediaMode: false, pseudoMode: 'runtime' })
-      warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    })
-
-    afterEach(() => {
-      warn.mockRestore()
-    })
-
-    test('drops breakpoint overrides but keeps the base value', () => {
-      const { t } = makeSystem()
-
-      const style = t({ padding: 'small', '@md': { padding: 'large' } })
-        .style as AnyStyle
-
-      expect(style).toEqual({ padding: 4 })
-    })
-
-    test('emits no unparseable CSS var() strings', () => {
-      const { t } = makeSystem()
-
-      const style = t({ padding: 'small', '@md': { padding: 'large' } })
-        .style as AnyStyle
-
-      for (const value of Object.values(style)) {
-        expect(String(value)).not.toContain('var(')
-      }
-    })
-
-    test('names the config that would enable breakpoints, not the platform', () => {
-      const { t } = makeSystem()
-
-      void t({ padding: 'small', '@md': { padding: 'large' } }).style
-
-      expect(warn).toHaveBeenCalledTimes(1)
-      const message = String(warn.mock.calls[0]?.[0])
-      expect(message).toContain('[toned]')
-      expect(message).toContain('breakpoint')
-      expect(message).toContain("mediaMode: 'css'")
-      // The active value is reported so the fix is obvious.
-      expect(message).toContain('mediaMode: false')
-      expect(message).not.toContain('this platform')
-    })
-
-    test("reports 'runtime', the default that most apps hit", () => {
-      useConfig({ mediaMode: 'runtime', pseudoMode: 'runtime' })
-      const { t } = makeSystem()
-
-      void t({ padding: 'small', '@md': { padding: 'large' } }).style
-
-      expect(String(warn.mock.calls[0]?.[0])).toContain('mediaMode: "runtime"')
-    })
-
-    test('warns only once for the same reason', () => {
-      const { t } = makeSystem()
-
-      void t({ padding: 'small', '@md': { padding: 'large' } }).style
-      void t({ gap: 'none', '@xl': { gap: 'wide' } }).style
-
-      expect(warn).toHaveBeenCalledTimes(1)
-    })
-
-    test('drops pseudo overrides but keeps the base value', () => {
-      const { t } = makeSystem()
-
-      const style = t({ bgColor: 'base', ':hover': { bgColor: 'accent' } })
-        .style as AnyStyle
-
-      expect(style).toEqual({ backgroundColor: '#fff' })
-      const message = String(warn.mock.calls[0]?.[0])
-      expect(message).toContain('pseudo-state')
-      expect(message).toContain("pseudoMode: 'css'")
-    })
-
-    test('breakpoint and pseudo drops are reported separately', () => {
-      const { t } = makeSystem()
-
-      void t({
-        padding: 'small',
-        '@md': { padding: 'large' },
-        ':hover': { bgColor: 'accent' },
-      }).style
-
-      expect(warn).toHaveBeenCalledTimes(2)
-    })
-
-    test('styles with no selector blocks are untouched and silent', () => {
-      const { t } = makeSystem()
-
-      const style = t({ padding: 'small' }).style as AnyStyle
-
-      expect(style).toEqual({ padding: 4 })
-      expect(warn).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('web with runtime pseudo mode', () => {
-    // examples/vite ships this exact combination: CSS media queries, but
-    // pseudo-states still handled by JS listeners.
-    beforeEach(() => {
-      useConfig({ mediaMode: 'css', pseudoMode: 'runtime' })
-    })
-
-    test('breakpoints still resolve while pseudo overrides are dropped', () => {
-      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const { t } = makeSystem()
-
-      const style = t({
-        padding: 'small',
-        '@md': { padding: 'large' },
-        ':hover': { bgColor: 'accent' },
-      }).style as AnyStyle
-
-      expect(style['padding']).toBe('var(--media-md__padding, 4px)')
-      expect(style['backgroundColor']).toBeUndefined()
-      expect(String(warn.mock.calls[0]?.[0])).toContain("pseudoMode: 'css'")
-      warn.mockRestore()
+      expect(style['shadowRadius']).toBe(4)
+      expect(style['shadowOpacity']).toBe(0.2)
+      expect(style['boxShadow']).toBeUndefined()
     })
   })
 })
 
-describe('exec() selector cascade ordering', () => {
-  const cfg = {
-    tokens: {},
-    useClassName: false,
-    mediaMode: 'css',
-    pseudoMode: 'css',
-  } as const
+describe('exec() chain fidelity (css pseudo mode, className on)', () => {
+  type AnyStyle = Record<string, any>
 
-  const padding = defineToken({
-    values: ['small', 'large'] as const,
-    resolve: (v) => ({ padding: v === 'small' ? 4 : 16 }),
+  const shadowStep = defineToken({
+    values: ['rest'] as const,
+    resolve: () => ({ boxShadow: '0 1px 2px 0 #000' }),
+  })
+  const ring = defineToken({
+    values: ['focus'] as const,
+    resolve: () => ({ boxShadow: '0 0 0 3px #f00' }),
+  })
+  const borderColor = defineToken({
+    values: ['input'] as const,
+    resolve: () => ({ borderColor: 'var(--input)' }),
+    alphaChannel: ['borderColor'],
   })
 
-  // Two token props that deliberately resolve to the same CSS property.
-  const color = defineToken({
-    values: ['white', 'black'] as const,
-    resolve: (v) => ({ color: v === 'white' ? '#fff' : '#000' }),
-  })
-  const textColor = defineToken({
-    values: ['white', 'black'] as const,
-    resolve: (v) => ({ color: v === 'white' ? '#fff' : '#000' }),
-  })
-
-  const breakpoints = { __breakpoints: { sm: 480, xl: 1200 } }
-
-  beforeEach(() => {
-    __resetWarnings()
-  })
-
-  test('a wider breakpoint outranks a narrower one raw style', () => {
-    const { exec } = defineSystem({ padding }, { breakpoints })
-
-    const style = exec(cfg, {
-      padding: 'small',
-      '@xl_padding': 'large',
-      '@sm_style': { padding: 99 },
-    } as AnyStyle).style as AnyStyle
-
-    // Both toggles are on above 1200px, so whichever var sits outermost wins.
-    // Width has to decide that, not whether the value came from `style`.
-    expect(style['padding']).toBe(
-      'var(--media-xl__padding, var(--media-sm__padding__style, 4px))',
-    )
-  })
-
-  test('raw style still outranks a token at the same breakpoint', () => {
-    const { exec } = defineSystem({ padding }, { breakpoints })
-
-    const style = exec(cfg, {
-      padding: 'small',
-      '@sm_padding': 'large',
-      '@sm_style': { padding: 99 },
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['padding']).toBe(
-      'var(--media-sm__padding__style, var(--media-sm__padding, 4px))',
-    )
-  })
-
-  test(':active outranks a :hover raw style', () => {
-    const { exec } = defineSystem({ padding }, { breakpoints })
-
-    const style = exec(cfg, {
-      padding: 'small',
-      ':active_padding': 'large',
-      ':hover_style': { padding: 99 },
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['padding']).toBe(
-      'var(--toned_active__padding, var(--toned_hover__padding__style, 4px))',
-    )
-  })
-
-  test('key order does not decide which breakpoint wins', () => {
-    const { exec } = defineSystem({ color, textColor }, { breakpoints })
-
-    const run = (input: AnyStyle) =>
-      (exec(cfg, input).style as AnyStyle)['color']
-
-    const expected = 'var(--media-xl__color, var(--media-sm__color, #fff))'
-
-    expect(
-      run({ color: 'white', '@sm_textColor': 'white', '@xl_color': 'black' }),
-    ).toBe(expected)
-    expect(
-      run({ color: 'white', '@xl_color': 'black', '@sm_textColor': 'white' }),
-    ).toBe(expected)
-  })
-
-  test('two props on one CSS property share a single custom property', () => {
-    const { exec } = defineSystem({ color, textColor }, { breakpoints })
-
-    const style = exec(cfg, {
-      color: 'white',
-      '@sm_color': 'black',
-      '@sm_textColor': 'white',
-    } as AnyStyle).style as AnyStyle
-
-    // One toggle, one property name — so one link, not the same var nested
-    // inside its own fallback.
-    expect(style['color']).toBe('var(--media-sm__color, #fff)')
-    // Later declaration wins, matching how their base values merge.
-    expect(style['--media-sm__color']).toBe('var(--media-sm) #fff')
-  })
-})
-
-describe('exec() reports overrides it cannot compile', () => {
-  const cfg = {
-    tokens: {},
-    useClassName: false,
-    mediaMode: 'css',
-    pseudoMode: 'css',
-  } as const
-
-  const padding = defineToken({
-    values: ['small', 'large'] as const,
-    resolve: (v) => ({ padding: v === 'small' ? 4 : 16 }),
-  })
-
-  const breakpoints = { __breakpoints: { sm: 480, md: 768 } }
-
-  let warn: ReturnType<typeof vi.spyOn>
-
-  beforeEach(() => {
-    __resetWarnings()
-    warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    warn.mockRestore()
-  })
-
-  const messages = () => warn.mock.calls.map((c) => String(c[0]))
-
-  test('an unsupported pseudo-state is named', () => {
-    const { exec } = defineSystem({ padding }, { breakpoints })
-
-    const style = exec(cfg, {
-      padding: 'small',
-      ':checked_padding': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style).toEqual({ padding: 4 })
-    expect(messages()[0]).toContain("':checked'")
-    expect(messages()[0]).toContain(':hover')
-  })
-
-  test('an override on something that is not a token is named', () => {
-    const { exec } = defineSystem({ padding }, { breakpoints })
-
-    const style = exec(cfg, {
-      padding: 'small',
-      '@md_paddingX': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style).toEqual({ padding: 4 })
-    expect(messages()[0]).toContain("'paddingX'")
-  })
-
-  test('a selector nested inside a selector block is named', () => {
-    const { t } = defineSystem({ padding }, { breakpoints })
-    const original = { ...getConfig() }
-    setConfig({ getTokens: () => ({}), mediaMode: 'css', pseudoMode: 'css' })
-
-    // Blocks are one level deep; ':hover' here is read as a token name.
-    const style = t({ '@md': { ':hover': { padding: 'large' } } } as AnyStyle)
-      .style as AnyStyle
-
-    expect(style).toEqual({})
-    expect(messages()[0]).toContain("':hover'")
-    setConfig(original)
-  })
-
-  test('two systems with different breakpoints each report their own', () => {
-    const a = defineSystem({ padding }, { breakpoints })
-    const b = defineSystem(
-      { padding },
-      { breakpoints: { __breakpoints: { tablet: 700, desktop: 1100 } } },
-    )
-
-    a.exec(cfg, { '@lg_padding': 'large' } as AnyStyle)
-    b.exec(cfg, { '@lg_padding': 'large' } as AnyStyle)
-
-    // Same selector, different systems: one message must not silence the other.
-    expect(warn).toHaveBeenCalledTimes(2)
-    expect(messages()[0]).toContain('@sm')
-    expect(messages()[1]).toContain('@tablet')
-  })
-
-  test('an identical problem is still only reported once', () => {
-    const { exec } = defineSystem({ padding }, { breakpoints })
-
-    exec(cfg, { '@lg_padding': 'large' } as AnyStyle)
-    exec(cfg, { '@lg_padding': 'small' } as AnyStyle)
-
-    expect(warn).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('exec() breakpoint toggle names', () => {
-  const cfg = {
-    tokens: {},
-    useClassName: false,
-    mediaMode: 'css',
-    pseudoMode: 'css',
-  } as const
-
-  const padding = defineToken({
-    values: ['small', 'large'] as const,
-    resolve: (v) => ({ padding: v === 'small' ? 4 : 16 }),
-  })
-
-  test('kebab-cases a camelCase breakpoint to match the generated @media rule', () => {
-    const { exec } = defineSystem(
-      { padding },
-      { breakpoints: { __breakpoints: { tabletLandscape: 900 } } },
-    )
-
-    const style = exec(cfg, {
-      padding: 'small',
-      '@tabletLandscape_padding': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    // dom/generate.ts declares `--media-tablet-landscape`, so referencing
-    // `--media-tabletLandscape` here would never fire.
-    expect(style['--media-tablet-landscape__padding']).toBe(
-      'var(--media-tablet-landscape) 16px',
-    )
-    expect(style['padding']).toBe('var(--media-tablet-landscape__padding, 4px)')
-  })
-
-  test('leaves a single-word breakpoint name untouched', () => {
-    const { exec } = defineSystem(
-      { padding },
-      { breakpoints: { __breakpoints: { md: 768 } } },
-    )
-
-    const style = exec(cfg, {
-      padding: 'small',
-      '@md_padding': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['--media-md__padding']).toBe('var(--media-md) 16px')
-  })
-})
-
-describe('t() merges raw style inside selector blocks', () => {
-  const bgColor = defineToken({
-    values: ['base', 'accent'] as const,
-    resolve: (v) => ({ backgroundColor: v === 'base' ? '#fff' : '#f00' }),
-  })
-  const breakpoints = { __breakpoints: { sm: 480 } }
-  const original = { ...getConfig() }
-
-  beforeEach(() => {
-    __resetWarnings()
-    setConfig({
-      getTokens: () => ({}),
-      useClassName: false,
-      mediaMode: 'css',
-      pseudoMode: 'css',
-    })
-  })
-
-  afterEach(() => {
-    setConfig(original)
-  })
-
-  test('a breakpoint style block extends an earlier argument', () => {
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    const style = t(
-      { '@sm': { style: { top: 1 } } } as AnyStyle,
-      { '@sm': { style: { left: 2 } } } as AnyStyle,
+  test('a resting value on ANOTHER token survives as the chain fallback', () => {
+    // In className mode the resting box-shadow is an atomic class, so the
+    // chain built for the state override must dig it out of the OTHER base
+    // token — without that, the resting paint vanishes the moment any state
+    // override touches the property (native-select lost its shadow-xs).
+    const { exec } = defineSystem({ shadowStep, ring })
+    const style = exec(
+      { tokens: {}, useClassName: true },
+      { shadowStep: 'rest', ':focus-visible_ring': 'focus' },
     ).style as AnyStyle
-
-    // Top-level `style` already composes across arguments; the per-selector
-    // form has to behave the same way or the rule is arbitrary.
-    expect(style['--media-sm__top__style']).toBe('var(--media-sm) 1px')
-    expect(style['--media-sm__left__style']).toBe('var(--media-sm) 2px')
-  })
-
-  test('a pseudo style block extends an earlier argument', () => {
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    const style = t(
-      { ':hover': { style: { top: 1 } } } as AnyStyle,
-      { ':hover': { style: { left: 2 } } } as AnyStyle,
-    ).style as AnyStyle
-
-    expect(style['--toned_hover__top__style']).toBe('var(--toned_hover) 1px')
-    expect(style['--toned_hover__left__style']).toBe('var(--toned_hover) 2px')
-  })
-
-  test('a later argument still overrides the same property', () => {
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    const style = t(
-      { '@sm': { style: { top: 1 } } } as AnyStyle,
-      { '@sm': { style: { top: 2 } } } as AnyStyle,
-    ).style as AnyStyle
-
-    expect(style['--media-sm__top__style']).toBe('var(--media-sm) 2px')
-  })
-
-  test('an array style in a block is flattened, not indexed', () => {
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    const style = t({
-      bgColor: 'base',
-      '@sm': { style: [{ top: 1 }, { left: 2 }] },
-    } as AnyStyle).style as AnyStyle
-
-    // React Native accepts array styles; indexing into one would emit a CSS
-    // property called "0" holding "[object Object]".
-    expect(style['--media-sm__top__style']).toBe('var(--media-sm) 1px')
-    expect(style['--media-sm__left__style']).toBe('var(--media-sm) 2px')
-    expect(style).not.toHaveProperty('0')
-  })
-
-  test('an array style at the base is flattened the same way', () => {
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    // Base and block styles have to agree; anything else is arbitrary.
-    const style = t({ style: [{ top: 1 }, { left: 2 }] } as AnyStyle)
-      .style as AnyStyle
-
-    expect(style).toEqual({ top: 1, left: 2 })
-  })
-
-  test('array styles compose across arguments', () => {
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    const style = t(
-      { style: [{ top: 1 }] } as AnyStyle,
-      { style: [{ left: 2 }] } as AnyStyle,
-    ).style as AnyStyle
-
-    expect(style).toEqual({ top: 1, left: 2 })
-  })
-
-  test('a $-prefixed key in a block is skipped as quietly as at the top level', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const { t } = defineSystem({ bgColor }, { breakpoints })
-
-    const style = t({
-      bgColor: 'base',
-      '@sm': { $$type: 'view' },
-    } as AnyStyle).style as AnyStyle
-
-    expect(style).toEqual({ backgroundColor: '#fff' })
-    expect(warn).not.toHaveBeenCalled()
-    warn.mockRestore()
-  })
-})
-
-describe('exec() unit suffixing through selector chains', () => {
-  // A resolver may return a length as a bare number, because the same style map
-  // has to serve React Native. On web that only renders because something later
-  // appends `px` — `applyStyles` for stylesheet(), React's `style` prop for
-  // t(). Both of those check `typeof value === 'number'`, so the moment a
-  // property holds a var() chain the check stops firing and the unit has to
-  // already be in the CSS text.
-
-  const padding = defineToken({
-    values: ['small', 'large'] as const,
-    resolve: (v) => ({ padding: v === 'small' ? 8 : 24 }),
-  })
-
-  const opacity = defineToken({
-    values: ['half', 'full'] as const,
-    resolve: (v) => ({ opacity: v === 'half' ? 0.5 : 1 }),
-  })
-
-  const inset = defineToken({
-    values: ['none', 'far'] as const,
-    resolve: (v) => ({
-      top: v === 'none' ? 0 : 12,
-      left: v === 'none' ? 0 : 12,
-    }),
-  })
-
-  const breakpoints = { __breakpoints: { sm: 480, md: 768 } }
-  const make = () => defineSystem({ padding, opacity, inset }, { breakpoints })
-
-  test('a numeric base with no override stays a number', () => {
-    // Nothing to chain, so the value must survive as a number for the usual
-    // downstream suffixing. Stringifying it here would be a silent behaviour
-    // change for every non-responsive style.
-    const { exec } = make()
-
-    const style = exec(execCfg(), { padding: 'small' }).style as AnyStyle
-
-    expect(style['padding']).toBe(8)
-  })
-
-  test('a numeric override and its numeric base both gain px', () => {
-    const { exec } = make()
-
-    const style = exec(execCfg(), {
-      padding: 'small',
-      '@md_padding': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['--media-md__padding']).toBe('var(--media-md) 24px')
-    expect(style['padding']).toBe('var(--media-md__padding, 8px)')
-  })
-
-  test('every level of a multi-breakpoint chain is a valid length', () => {
-    const { exec } = make()
-
-    const style = exec(execCfg(), {
-      padding: 'small',
-      '@sm_padding': 'large',
-      '@md_padding': 'small',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['--media-sm__padding']).toBe('var(--media-sm) 24px')
-    expect(style['--media-md__padding']).toBe('var(--media-md) 8px')
-    expect(style['padding']).toBe(
-      'var(--media-md__padding, var(--media-sm__padding, 8px))',
-    )
-
-    // No bare number may survive anywhere in the emitted CSS text.
-    for (const value of Object.values(style)) {
-      expect(String(value)).not.toMatch(/(?:^|[\s,])\d+(?:\.\d+)?(?:[,)]|$)/)
-    }
-  })
-
-  test('a pseudo chain layered on a breakpoint chain keeps units at every level', () => {
-    const { exec } = make()
-
-    const style = exec(execCfg(), {
-      padding: 'small',
-      '@md_padding': 'large',
-      ':hover_padding': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['padding']).toBe(
-      'var(--toned_hover__padding, var(--media-md__padding, 8px))',
-    )
-  })
-
-  test('unitless properties are left bare', () => {
-    const { exec } = make()
-
-    const style = exec(execCfg(), {
-      opacity: 'full',
-      '@md_opacity': 'half',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['--media-md__opacity']).toBe('var(--media-md) 0.5')
-    expect(style['opacity']).toBe('var(--media-md__opacity, 1)')
-  })
-
-  test('a zero length is suffixed rather than left bare', () => {
-    const { exec } = make()
-
-    const style = exec(execCfg(), {
-      inset: 'none',
-      '@md_inset': 'far',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['top']).toBe('var(--media-md__top, 0px)')
-    expect(style['left']).toBe('var(--media-md__left, 0px)')
-  })
-
-  test('a raw style block gets the same treatment as a token', () => {
-    const { exec } = make()
-
-    const style = exec(execCfg(), {
-      style: { top: 4 },
-      '@md_style': { top: 16 },
-    } as AnyStyle).style as AnyStyle
-
-    expect(style['--media-md__top__style']).toBe('var(--media-md) 16px')
-    expect(style['top']).toBe('var(--media-md__top__style, 4px)')
-  })
-
-  test('className mode still produces a unit-correct fallback', () => {
-    // The base is emitted as a class, so it is absent from acc.style and the
-    // fallback is resolved separately. If it were unitless the declaration
-    // would be invalid and would *not* fall back to the class rule.
-    const { exec } = make()
-
-    const result = exec(execCfg({ useClassName: true }), {
-      padding: 'small',
-      '@md_padding': 'large',
-    } as AnyStyle)
-    const style = result.style as AnyStyle
-
-    expect(result.className).toContain('padding_small')
-    expect(style['padding']).toBe('var(--media-md__padding, 8px)')
-  })
-
-  test('native drops the overrides and leaves the base a number', () => {
-    // React Native has no var() and no px strings; the number must reach the
-    // style map untouched.
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const { exec } = make()
-
-    const style = exec(execCfg({ mediaMode: false, pseudoMode: 'runtime' }), {
-      padding: 'small',
-      '@md_padding': 'large',
-    } as AnyStyle).style as AnyStyle
-
-    expect(style).toEqual({ padding: 8 })
-    warn.mockRestore()
-  })
-})
-
-describe('exec() mode resolution across platform setups', () => {
-  // The modes are optional on ExecConfig and resolved through `resolveModes`,
-  // the same rule a Config uses — so a hand-assembled config behaves like one
-  // spread from a Config, and an omitted mode can never mean 'css'.
-
-  const padding = defineToken({
-    values: ['small', 'large'] as const,
-    resolve: (v) => ({ padding: v === 'small' ? 8 : 24 }),
-  })
-
-  const textColor = defineToken({
-    values: ['base', 'muted'] as const,
-    resolve: (v) => ({ color: v === 'base' ? '#000' : '#888' }),
-  })
-
-  const breakpoints = { __breakpoints: { md: 768 } }
-  const make = () => defineSystem({ padding, textColor }, { breakpoints })
-
-  /** Carries one breakpoint override and one pseudo override. */
-  const responsive = {
-    padding: 'small',
-    textColor: 'base',
-    '@md_padding': 'large',
-    ':hover_textColor': 'muted',
-  } as AnyStyle
-
-  /** A chain was emitted for this property, rather than the base value. */
-  const chained = (value: unknown) => String(value).includes('var(')
-
-  const run = (over: Omit<Partial<ExecConfig>, 'tokens'>) => {
-    __resetWarnings()
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-
-    const style = make().exec({ tokens: {}, ...over }, responsive)
-      .style as AnyStyle
-
-    const warnings = warn.mock.calls.map((call) => String(call[0])).join(' ')
-    warn.mockRestore()
-
-    return {
+    expectConditions(
       style,
-      warnings,
-      media: chained(style['padding']),
-      pseudo: chained(style['color']),
-    }
-  }
-
-  test('web: css for both, both emitted, nothing warned', () => {
-    const { style, media, pseudo, warnings } = run({
-      mediaMode: 'css',
-      pseudoMode: 'css',
-    })
-
-    expect(media).toBe(true)
-    expect(pseudo).toBe(true)
-    expect(style['padding']).toBe('var(--media-md__padding, 8px)')
-    expect(style['color']).toBe('var(--toned_hover__color, #000)')
-    expect(warnings).toBe('')
+      'boxShadow',
+      ['--toned_focus-visible'],
+      ['0 1px 2px 0 #000', '0 0 0 3px #f00'],
+    )
   })
 
-  test('native: both dropped, base values kept in their native form', () => {
-    const { style, media, pseudo } = run({
-      mediaMode: false,
-      pseudoMode: 'runtime',
-    })
+  test('alpha-channel chain values carry the class-fidelity RCS wrapper', () => {
+    // The atomic class paints rgb(from X r g b / calc(alpha * var(…, 1))).
+    // The chain must paint the SAME expression for both the override var and
+    // the resting fallback, or the browser serializes the two forms a hair
+    // apart (a 1/255 alpha shift on every hairline the drain touched).
+    const { exec } = defineSystem({ borderColor })
+    const style = exec(
+      { tokens: {}, useClassName: true },
+      { borderColor: 'input', ':focus-visible_borderColor': 'input' },
+    ).style as AnyStyle
+    const wrapped =
+      'rgb(from var(--input) r g b / calc(alpha * var(--toned-alpha-border-color, 1)))'
+    expectConditions(
+      style,
+      'borderColor',
+      ['--toned_focus-visible'],
+      [wrapped, wrapped],
+    )
+  })
+})
 
-    expect(media).toBe(false)
-    expect(pseudo).toBe(false)
-    // A number, not an '8px' string — React Native would reject that.
-    expect(style).toEqual({ padding: 8, color: '#000' })
+describe('exec() media chains without a resting value', () => {
+  const makeSystem = () =>
+    defineSystem(
+      {
+        maxWidth: defineToken({
+          values: ['s', 'l'] as const,
+          resolve: (v) => ({ maxWidth: v === 's' ? '20rem' : '40rem' }),
+        }),
+      },
+      { breakpoints: { __breakpoints: { sm: 640, md: 768 } } },
+    )
+
+  test('a media-only prop ends its chain in revert-layer, yielding the cascade below', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      '@md_maxWidth': 'l',
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--media-md'],
+      ['revert-layer', '40rem'],
+    )
+    // css-hooks' trick: with every condition off the declaration rolls back
+    // past the style attribute, so a resting ATOMIC CLASS for the property
+    // still applies. (The open-ended chain this replaces computed to unset,
+    // stomping it; resolving the missing base through a unit before that
+    // produced calc(NaN), which computes to 0 and collapsed layouts.)
+    expect(String(style['maxWidth'])).toContain('revert-layer')
+    expect(JSON.stringify(style)).not.toContain('NaN')
   })
 
-  test('nothing configured behaves as native, not as web', () => {
-    // The default that matters. An ExecConfig carrying only tokens must not
-    // act as though the target reads CSS custom properties.
-    const bare = run({})
-    const native = run({ mediaMode: false, pseudoMode: 'runtime' })
+  test('a nested breakpoint BLOCK (the t() path) reaches the chain', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      '@md': { maxWidth: 'l' },
+    } as any)
 
-    expect(bare.style).toEqual(native.style)
-    expect(bare.style).toEqual({ padding: 8, color: '#000' })
+    const style = result.style as Record<string, unknown>
+    expectConditions(style, 'maxWidth', ['--media-md'], ['20rem', '40rem'])
   })
 
-  test('useMedia alone selects runtime media, which still emits nothing', () => {
-    const { style, media } = run({ useMedia: true })
+  test('a nested pseudo BLOCK (the t() path) reaches the pseudo chain', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      ':hover': { maxWidth: 'l' },
+    } as any)
 
-    expect(media).toBe(false)
-    expect(style['padding']).toBe(8)
+    const style = result.style as Record<string, unknown>
+    expectConditions(style, 'maxWidth', ['--toned_hover'], ['20rem', '40rem'])
+  })
+})
+
+describe('compound state+pseudo keys (css chain mode)', () => {
+  const makeSystem = () =>
+    defineSystem(
+      {
+        bgColor: defineToken({
+          values: ['a', 'b', 'c', 'd'] as const,
+          resolve: (v) => ({ backgroundColor: `#${v}` }),
+        }),
+      },
+      { states: { open: "[data-state='open']" } },
+    )
+
+  test("':open:hover' emits a var guarded by BOTH space toggles", () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      bgColor: 'a',
+      ':open:hover': { bgColor: 'b' },
+    } as any)
+    expectConditions(
+      result.style,
+      'backgroundColor',
+      ['--toned_open', '--toned_hover'],
+      ['#a', '#a', '#a', '#b'],
+    )
   })
 
-  test('a pre-mode caller loses its chains, and is told why', () => {
-    // Pins the one behavioural narrowing: exec used to emit breakpoint chains
-    // for any system that declared breakpoints, with no mode check. A direct
-    // caller passing only tokens was asserting a browser target implicitly;
-    // it now has to say so. The base values survive and the reason is logged,
-    // so the regression is visible rather than silent.
-    const { style, warnings } = run({})
-
-    expect(style).toEqual({ padding: 8, color: '#000' })
-    expect(warnings).toContain("mediaMode: 'css'")
-    expect(warnings).toContain("pseudoMode: 'css'")
+  test('a compound sits OUTSIDE its constituents in the chain', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      bgColor: 'a',
+      ':hover': { bgColor: 'b' },
+      ':open': { bgColor: 'c' },
+      ':open:hover': { bgColor: 'd' },
+    } as any)
+    expectConditions(
+      result.style,
+      'backgroundColor',
+      ['--toned_hover', '--toned_open'],
+      ['#a', '#b', '#c', '#d'],
+    )
   })
 
-  test('an explicit mediaMode outranks useMedia', () => {
-    expect(run({ useMedia: false, mediaMode: 'css' }).media).toBe(true)
-    expect(run({ useMedia: true, mediaMode: false }).media).toBe(false)
+  test('compound in the raw `style` escape rides the same guards', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      ':open:hover': { style: { outlineOffset: '2px' } },
+    } as any)
+    expectConditions(
+      result.style,
+      'outlineOffset',
+      ['--toned_open', '--toned_hover'],
+      [undefined, undefined, undefined, '2px'],
+    )
+  })
+})
+
+describe('container-condition chains', () => {
+  const makeCqSystem = () =>
+    defineSystem(
+      {
+        maxWidth: defineToken({
+          values: ['s', 'm', 'l'] as const,
+          resolve: (v) => ({
+            maxWidth: v === 's' ? '20rem' : v === 'm' ? '30rem' : '40rem',
+          }),
+        }),
+      },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { 'field-group': { md: '28rem' } },
+      },
+    )
+
+  test('an @name/step key chains against the --cq toggle', () => {
+    const { exec } = makeCqSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      '@field-group/md_maxWidth': 'l',
+    } as any)
+
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--cq-field-group-md'],
+      ['20rem', '40rem'],
+    )
   })
 
-  test('css media with runtime pseudo resolves each independently', () => {
-    // The shape a web app that drives interaction in JS would use.
-    const { style, media, pseudo } = run({ mediaMode: 'css' })
+  test('a container condition wins OUTERMOST over a media condition', () => {
+    const { exec } = makeCqSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      maxWidth: 's',
+      '@md_maxWidth': 'l',
+      '@field-group/md_maxWidth': 'm',
+    } as any)
 
-    expect(media).toBe(true)
-    expect(pseudo).toBe(false)
-    expect(style['padding']).toBe('var(--media-md__padding, 8px)')
-    expect(style['color']).toBe('#000')
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--media-md', '--cq-field-group-md'],
+      ['20rem', '40rem', '30rem', '30rem'],
+    )
   })
 
-  test('runtime media with css pseudo resolves the other way round', () => {
-    const { style, media, pseudo } = run({ pseudoMode: 'css' })
+  test('a container-only prop ends its chain in revert-layer', () => {
+    const { exec } = makeCqSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      '@field-group/md_maxWidth': 'l',
+    } as any)
 
-    expect(media).toBe(false)
-    expect(pseudo).toBe(true)
-    expect(style['padding']).toBe(8)
-    expect(style['color']).toBe('var(--toned_hover__color, #000)')
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--cq-field-group-md'],
+      ['revert-layer', '40rem'],
+    )
   })
 
-  test('no partial config can resolve to css', () => {
-    const partials: Omit<Partial<ExecConfig>, 'tokens'>[] = [
-      {},
-      { useMedia: true },
-      { useMedia: false },
-      { useClassName: true },
-      { mediaMode: 'runtime' },
-      { pseudoMode: 'runtime' },
-      { mediaMode: false, pseudoMode: false },
-    ]
+  test('container overrides never take the responsive-class path', () => {
+    const system = defineSystem(
+      {
+        maxWidth: defineToken({
+          values: ['s', 'l'] as const,
+          resolve: (v) => ({ maxWidth: v === 's' ? '20rem' : '40rem' }),
+        }),
+      },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { 'field-group': { md: '28rem' } },
+        responsiveTokens: ['maxWidth'],
+      },
+    )
+    const result = system.exec({ tokens: {}, useClassName: true }, {
+      maxWidth: 's',
+      '@field-group/md_maxWidth': 'l',
+    } as any)
 
-    for (const partial of partials) {
-      const { style, media, pseudo } = run(partial)
+    // There is no `@container` atomic class to fall back on — the override
+    // must ride the chain even for an opted, enumerated token.
+    expect(result.className ?? '').not.toContain('field-group')
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'maxWidth',
+      ['--cq-field-group-md'],
+      ['20rem', '40rem'],
+    )
+  })
+})
 
-      expect(media).toBe(false)
-      expect(pseudo).toBe(false)
-      for (const key of Object.keys(style)) {
-        expect(key.startsWith('--')).toBe(false)
-      }
-    }
+describe('condition algebra chains (css mode)', () => {
+  const makeSystem = () =>
+    defineSystem(
+      {
+        display: defineToken({
+          values: ['none', 'flex', 'grid', 'block'] as const,
+          resolve: (v) => ({ display: v }),
+        }),
+      },
+      {
+        breakpoints: { __breakpoints: { md: 768 } },
+        containers: { card: { sm: 320 } },
+      },
+    )
+
+  test('a negated condition guards on the -not complement toggle', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      '@!card/>=400_display': 'none',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'display',
+      ['--cq-card-gte400-not'],
+      ['revert-layer', 'none'],
+    )
   })
 
-  test('a dropped override names the option that would enable it', () => {
-    const { warnings } = run({})
-
-    expect(warnings).toContain('mediaMode')
-    expect(warnings).toContain('pseudoMode')
+  test('an AND condition guards on the product of its toggles', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@md&card/>=400_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'display',
+      ['--media-md', '--cq-card-gte400'],
+      ['none', 'none', 'none', 'flex'],
+    )
   })
 
-  test('a config spread in behaves as resolveModes on that config', () => {
-    // The parity that stops a hand-built ExecConfig drifting from a Config.
-    const configs: Partial<Config>[] = [
-      { useMedia: true },
-      { useMedia: true, mediaMode: 'css' },
-      { mediaMode: false, pseudoMode: 'css' },
-      { useMedia: false, mediaMode: 'runtime', pseudoMode: 'runtime' },
-    ]
+  test('an OR condition selects the value when either branch matches', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@md|card/>=400_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'display',
+      ['--media-md', '--cq-card-gte400'],
+      ['none', 'flex', 'flex', 'flex'],
+    )
+  })
 
-    for (const config of configs) {
-      const spread = run(config)
-      const explicit = run(resolveModes(config))
+  test('algebraic conditions sort AFTER the whole simple scale', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@!card/>=400_display': 'flex',
+      '@md_display': 'grid',
+      '@card/sm_display': 'block',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expectConditions(
+      style,
+      'display',
+      ['--media-md', '--cq-card-sm', '--cq-card-gte400-not'],
+      ['none', 'grid', 'block', 'block', 'flex', 'flex', 'flex', 'flex'],
+    )
+  })
 
-      expect(spread.style).toEqual(explicit.style)
-    }
+  test('an undeclared container name warns and DROPS the override', () => {
+    const { exec } = makeSystem()
+    const result = exec({ tokens: {}, useClassName: false }, {
+      display: 'none',
+      '@nope/>=400_display': 'flex',
+    } as any)
+    const style = result.style as Record<string, unknown>
+    expect(style['display']).toBe('none')
+    expect(Object.keys(style).some((k) => k.includes('nope'))).toBe(false)
   })
 })

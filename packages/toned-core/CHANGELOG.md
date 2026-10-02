@@ -3,6 +3,52 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# Next release
+
+### Added
+
+* **Descriptor systems.** `defineSystem({ id, tokens, conditions, themes })` declares a namespaced system; the returned object is what builds and renderers take. ([defineSystem](https://toned.style/api/define-system))
+* **Typed query builder.** `stylesheet(q => …)` and `.variants(($, q) => …)` receive `q.state`, `q.media`, `q.container`, `q.part(…).state`, `q.part(…).has`, `q.platform`, `q.all`, `q.any` and `q.not`. Each returns a literal key that is checked against the system. ([Conditions and selectors](https://toned.style/api/conditions))
+* **Readable key aliases.** `'@media md'`, `'@container field wide'` and `'@platform web'` are accepted beside `'@md'`, `'@field/wide'` and `'@platform.web'`; `$kind` and `$style` name what `$$type` and `style` did. ([Conditions and selectors](https://toned.style/api/conditions))
+* **Checked variants.** Annotating the callback parameter with `Variants<Mods>` infers the axes and checks every returned rule, including nested ones. A second argument, `{ defaults }`, makes an axis optional. ([variants](https://toned.style/api/variants))
+* **Container queries** on web and native, from containers declared in the system or a fixed `dp()` width at the use site.
+* **Declared states and cross-part states.** A system's `states` become `':open'`-style keys; `'Root:hover'` styles other parts from one part's state; `':focus-visible'`, `':focus-within'`, compound keys such as `':open:hover'`, and relationship queries with `q.part(…).has(…)`. ([Interactive styles](https://toned.style/guides/interactive))
+* **Platform blocks.** `'@platform web'` and `'@platform native'` hold platform-only declarations and widen `$style` to that platform's types.
+* **Themes in the build.** Themes declared on a system are written by `buildStyles` and the Vite plugin as custom properties: the first on `:root`, each under `[data-theme='<name>']`. `generateThemes` returns that CSS alone, and the `themes` option picks the default or turns it off. ([Theming](https://toned.style/guides/theming))
+* **Typed theme schemas** with `defineTokenFor<Theme>()`, and `definePalette` / `generatePalette`.
+* **Pure renderers** in `@toned/core/server`: `createWebRenderer`, `createNativeRenderer`, `createInlineRenderer` for email and static HTML, and `createPdfRenderer`. They resolve part props without hooks, so they run in Server Components. ([SSR and Server Components](https://toned.style/guides/ssr), [Web, email and PDF](https://toned.style/learn/renderers))
+* **Build output with a manifest.** `buildStyles` in `@toned/core/build` returns the CSS and a manifest that a renderer validates; the Vite plugin serves them as `virtual:toned.css` and `virtual:toned.manifest`. `assertBuildArtifact` checks the pair before publication.
+* **Authoritative overrides.** `overrideSheet(sheet, rules, variants?)` adds a higher-priority layer, and `null` removes an inherited declaration. `sheet.extend(rules)` derives new defaults that the sheet's variants still override. ([Extending and overriding](https://toned.style/guides/overrides))
+* **Typed web grid.** `defineGrid`, `$grid` and `$area`, with responsive plans from `.variant(…)`. ([Grid example](https://toned.style/examples#grid))
+* **Web-only selectors.** `$webRules: webRules({ … })` for pseudo-elements and DOM selectors, with explicit media groups.
+* **`t()` blocks.** The inline helper accepts `':hover'` and breakpoint blocks.
+* **Colour alpha.** `alpha('primary', 0.2)` for tokens that declare an alpha channel.
+* **Adaptive layouts** in `@toned/core/adaptive` and **motion** in `@toned/core/motion`. ([Adaptive layouts](https://toned.style/learn/adaptive), [Motion and presence](https://toned.style/learn/motion))
+* **Output backends** in `@toned/core/backends`, including a built Tailwind profile. ([Backend integrations](https://toned.style/learn/backends))
+* `externalCssVariables` keeps named custom properties of the host application out of a system's namespace.
+* `namespaceCss` is exported from `@toned/core/system`, to give a separately generated palette the system's prefix.
+* `defineAnimations` for named keyframes compiled with the system.
+
+### Changed
+
+* A `.variants()` callback without explicit type arguments is fully checked: keys that were silently accepted before, such as a misspelled part or token, are now errors.
+* The standalone `bp`, `cq`, `and`, `or` and `not` condition builders moved to `@toned/core/compat`. New declarations use the system's `q`.
+* The Vite plugin no longer adds a style element to the HTML; import `virtual:toned.css`. Injecting styles at runtime is a development helper in `@toned/core/dev/inject`.
+* Type checking a stylesheet costs less: parts are validated once against a shape shared by every sheet of a system.
+* Token names in the build manifest are compared in name order, so a bundler that reorders module exports does not invalidate an unchanged system.
+* The types are checked against TypeScript 5.9, 6 and 7; TypeScript 5.9 is the minimum supported version.
+
+### Fixed
+
+* Two parts of one family can be merged onto one element; each keeps its own styles and removing one leaves the other.
+* The build refuses a theme value that a generated class cannot apply, such as `3px 0 0 0` in a field read by a four-sided property.
+* Scoped CSS keeps the caller's scope for every selector, including `:root` and `[data-theme]` rules.
+* `t()` skips falsy arguments and unwraps nested `t()` results.
+* The alpha modifier multiplies a colour's own alpha instead of replacing it, and generated alpha colours work without relative colour syntax.
+* Custom properties pass through the style pipeline unchanged.
+* React Native array styles are flattened before merging.
+* An inherited property falls back to `inherit`, not `initial`, when a condition does not apply.
+
 # [0.6.0](https://github.com/lttb/toned/compare/@toned/core@0.4.0...@toned/core@0.6.0) (2026-09-30)
 
 ### Bug Fixes

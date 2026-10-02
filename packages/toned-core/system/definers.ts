@@ -3,72 +3,39 @@
  *
  * @module system/definers
  */
-
+import { createCssExecutor } from '../backends/css/execute.ts'
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
+import type { DefaultSystemKind } from '../types/stylesheet.ts'
+import { immutableSnapshot } from '../utils/immutable.ts'
+import {
+  fixedConditions,
+  type SystemDefinition,
+  type SystemOptions,
+} from './definition.ts'
+
+export type { SystemDefinition, SystemOptions } from './definition.ts'
+
 import type {
-  Breakpoints,
-  Config,
-  ExecConfig,
+  AnimationInput,
+  ResolveContext,
   StylesheetInput,
   StylesheetType,
+  TokenAlphaConfig,
   TokenConfig,
-  TokenStyle,
   TokenSystem,
   Tokens,
+  TokenTypeConfig,
 } from '../types/index.ts'
-import { camelToKebab } from '../utils/css.ts'
-import { mergeStyle, toStyleMap } from '../utils/mergeStyle.ts'
-import { PSEUDO_CASCADE_ORDER } from '../utils/pseudo.ts'
-import { flattenSelectorBlocks } from '../utils/selectorBlocks.ts'
-import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
-import { type VarChainLink, writeVarChain } from '../utils/varChain.ts'
-import { warnOnce } from '../utils/warnOnce.ts'
+import { isAnimationDefinition } from '../types/index.ts'
+import type { AnyDeclaration } from '../types/system.ts'
+import type { AnyTokenConfig } from '../types/tokens.ts'
 import { getConfig, resolveModes } from './config.ts'
+import { externalCssVariables, validateSystemId } from './namespace.ts'
+import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
+import { createQueries } from './queries.ts'
+import { createTokenComposer } from './token-composer.ts'
 
 export type { TokenSystem }
-
-/** One conditional override collected from a `'@bp_prop'` / `':pseudo_prop'` key. */
-type Override = { selector: string; value: unknown }
-
-/** `'style'` and its per-selector forms, `'@md_style'` and `':hover_style'`. */
-function isStyleKey(key: string): boolean {
-  return key === 'style' || key.endsWith('_style')
-}
-
-/** Build exec inputs from the active runtime config. */
-function execConfigFrom(config: Config): ExecConfig {
-  return {
-    tokens: config.getTokens(),
-    useClassName: config.useClassName,
-    ...resolveModes(config),
-  }
-}
-
-/**
- * Explain that overrides were collected but could not be emitted.
- *
- * Breakpoint and pseudo overrides compile to CSS custom properties, so they
- * need `mediaMode`/`pseudoMode: 'css'`. Under any other mode the keys are
- * dropped and the base token values still apply, which degrades to the
- * non-responsive style rather than emitting unparseable `var()` strings.
- *
- * Deferred rather than interpolated eagerly: this fires under the *default*
- * config, on the render path, so building the string here would cost every
- * production render of every React Native style that carries a block.
- */
-function warnModeUnsupported(
-  kind: 'breakpoint' | 'pseudo-state',
-  option: 'mediaMode' | 'pseudoMode',
-  active: Config['mediaMode'] | Config['pseudoMode'],
-) {
-  warnOnce(
-    () =>
-      `Ignored ${kind} overrides; base token values still apply. They compile ` +
-      `to CSS custom properties, so they need ${option}: 'css' — the active ` +
-      `config is ${option}: ${JSON.stringify(active)}. On React Native, use ` +
-      'stylesheet() with useStyles() instead.',
-  )
-}
 
 /**
  * Define a token with its possible values and resolution function.
@@ -84,12 +51,110 @@ function warnModeUnsupported(
  * ```
  */
 export function defineToken<
-  // biome-ignore lint/suspicious/noExplicitAny: Values must accept any const array for token definitions
-  const Values extends readonly any[],
+  const Values extends readonly unknown[],
+  Result extends {},
+  const Dynamic extends 'number' | 'string',
+  const Extra extends TokenAlphaConfig & TokenTypeConfig = {},
+>(
+  config: Omit<TokenConfig<Values, Result>, 'resolve' | 'dynamic'> & {
+    dynamic: Dynamic
+    resolve: (
+      value: Values[number] | (Dynamic extends 'number' ? number : string),
+      tokens: Tokens,
+      context?: ResolveContext,
+    ) => Result
+  } & Extra,
+): TokenConfig<Values, Result> & Extra & { dynamic: Dynamic }
+export function defineToken<
+  const Values extends readonly unknown[],
   // Result type is intentionally loose - could be CSSProperties but allows custom token styles
   Result extends {},
->(config: TokenConfig<Values, Result>) {
-  return config
+  // Preserved so TokenStyle can see whether the token declared an alphaChannel
+  // and widen its accepted values to `'value/alpha'`.
+  const Extra extends TokenAlphaConfig & TokenTypeConfig = {},
+>(
+  config: TokenConfig<Values, Result> & Extra,
+): TokenConfig<Values, Result> & Extra
+export function defineToken(config: AnyTokenConfig): AnyTokenConfig {
+  if (!config.properties) return config
+  const fields = new Set<string>(config.properties)
+  const resolve = config.resolve
+  return {
+    ...config,
+    properties: Object.freeze([...fields]),
+    resolve(value: unknown, tokens: Tokens, context?: ResolveContext) {
+      const result = resolve(value, tokens, context)
+      for (const field of Object.keys(result ?? {})) {
+        if (!fields.has(field))
+          throw new Error(
+            `Toned: token resolver wrote undeclared field ${field}; update its properties footprint`,
+          )
+      }
+      return result
+    },
+  }
+}
+
+/**
+ * Declare the system's named animations — the motion analogue of the token
+ * set: an enumerated, system-compiled vocabulary rather than per-component
+ * keyframes. `generate()` emits `@keyframes toned_<name>` for each, and the
+ * returned `animation` token resolves a name to its `animation-name`, so a
+ * stylesheet says `animation: 'fade-in'` (composable with duration/easing
+ * however the host tokenizes them). Platforms without CSS map the same names
+ * to their own motion backends.
+ *
+ * @example
+ * ```ts
+ * const motion = defineAnimations({
+ *   'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
+ * })
+ * const system = defineSystem({
+ *   id: 'app',
+ *   tokens: { ...tokens, animation: motion.animation },
+ *   conditions: { animations: motion.animations },
+ * })
+ * ```
+ */
+export function defineAnimations<
+  const A extends Record<string, AnimationInput>,
+>(animations: A) {
+  const ms = (v: number | string | undefined) =>
+    v === undefined ? undefined : typeof v === 'number' ? `${v}ms` : v
+  return {
+    animations,
+    animation: defineToken({
+      values: Object.keys(animations) as (keyof A & string)[],
+      resolve: (value) => {
+        const def = animations[value]
+        const timing =
+          def !== undefined && isAnimationDefinition(def) ? def : undefined
+        // Timing compiles INTO the animation's class, so `animation: 'pulse'`
+        // is self-contained; a consumer can still override any piece.
+        return {
+          animationName: `toned_${value}`,
+          ...(timing?.duration !== undefined && {
+            animationDuration: ms(timing.duration),
+          }),
+          ...(timing?.easing !== undefined && {
+            animationTimingFunction: timing.easing,
+          }),
+          ...(timing?.delay !== undefined && {
+            animationDelay: ms(timing.delay),
+          }),
+          ...(timing?.iterations !== undefined && {
+            animationIterationCount: String(timing.iterations),
+          }),
+          ...(timing?.direction !== undefined && {
+            animationDirection: timing.direction,
+          }),
+          ...(timing?.fillMode !== undefined && {
+            animationFillMode: timing.fillMode,
+          }),
+        }
+      },
+    }),
+  }
 }
 
 /**
@@ -112,298 +177,114 @@ export function defineUnit<T>(
  * Define a complete token system with all tokens and optional configuration.
  *
  * Returns an object with:
- * - `system` - The token definitions
- * - `t` - Function for inline token styles
+ * - `tokens` - The token definitions
+ * - `q` - The typed query builder for the system's conditions
  * - `stylesheet` - Function to create stylesheets with variants support
- * - `exec` - Function to resolve tokens to CSS styles
+ * - `style` - Pure declaration helper for a single part
+ * - `t` - Function for inline token styles
+ * - `exec` - Low-level resolver from token styles to output props
+ *
+ * The descriptor form (`id`, `tokens`, `conditions`) is canonical; the
+ * `defineSystem(tokens, config)` overload remains for compatibility.
  *
  * @example
  * ```ts
  * const { stylesheet, t } = defineSystem({
- *   bgColor,
- *   textColor,
- *   padding,
- * }, {
- *   breakpoints: { __breakpoints: { sm: 640, md: 768, lg: 1024 } }
+ *   id: 'app',
+ *   tokens: { bgColor, textColor, padding },
+ *   conditions: { media: { sm: 640, md: 768, lg: 1024 } },
  * })
  * ```
  */
 export function defineSystem<
-  // biome-ignore lint/suspicious/noExplicitAny: generic token system requires flexible types
-  const S extends Record<string, TokenConfig<any, any>>,
-  // biome-ignore lint/suspicious/noExplicitAny: breakpoints config uses generic parameter
-  const C extends { breakpoints?: Breakpoints<any> },
->(system: S, config?: C): TokenSystem<S & C, C> {
+  const S extends Record<string, AnyTokenConfig>,
+  const C extends SystemOptions = {},
+>(definition: SystemDefinition<S, C>): TokenSystem<S & C & DefaultSystemKind, C>
+export function defineSystem<
+  const S extends Record<string, AnyTokenConfig>,
+  const C extends SystemOptions = {},
+>(system: S, config?: C): TokenSystem<S & C, C>
+export function defineSystem<
+  const S extends Record<string, AnyTokenConfig>,
+  const C extends SystemOptions = {},
+>(input: S | SystemDefinition<S, C>, legacyConfig?: C): TokenSystem<S & C, C> {
+  const descriptor =
+    typeof input['id'] === 'string' && 'tokens' in input
+      ? (input as SystemDefinition<S, C>)
+      : undefined
+  const system = descriptor
+    ? immutableSnapshot(descriptor.tokens)
+    : (input as S)
+  const config = descriptor
+    ? (fixedConditions({
+        ...descriptor.conditions,
+        ...(descriptor.layout ? { layoutContext: descriptor.layout } : {}),
+        ...(descriptor.externalCssVariables
+          ? {
+              externalCssVariables: externalCssVariables(
+                descriptor.externalCssVariables,
+              ),
+            }
+          : {}),
+      }) as C)
+    : immutableSnapshot(legacyConfig)
+  const id = descriptor ? validateSystemId(descriptor.id) : undefined
+  for (const key of Object.keys(system)) {
+    if (
+      /^[$@:]/.test(key) ||
+      [
+        'layoutContext',
+        'media',
+        'breakpoints',
+        'containers',
+        'states',
+        'base',
+        'animations',
+        'bridges',
+        'responsiveTokens',
+        'externalCssVariables',
+      ].includes(key)
+    )
+      throw new Error(`Toned: reserved token name ${JSON.stringify(key)}`)
+  }
   const ref: TokenSystem<S & C, C> = {
-    system: { ...system, ...config } as S & C,
+    id,
+    tokens: Object.freeze({ ...system }) as unknown as TokenSystem<
+      S & C,
+      C
+    >['tokens'],
+    themes: descriptor?.themes
+      ? immutableSnapshot(descriptor.themes)
+      : undefined,
+    system: Object.freeze({ ...system, ...config }) as S & C,
     config,
-    t: (...values) => {
-      const value: Record<string, unknown> & { style?: unknown } = {}
-      for (const v of values) {
-        // `cond && { ... }` hands us false/undefined when the condition fails.
-        if (!v) continue
-
-        // A previous t() result already stores a flattened style; only
-        // caller-authored objects carry nested '@bp' / ':pseudo' blocks.
-        // Flattening before the merge is what makes repeated arguments for the
-        // same selector compose instead of replacing each other wholesale.
-        const src = (
-          SYMBOL_STYLE in v ? v[SYMBOL_STYLE] : flattenSelectorBlocks(v)
-        ) as Record<string, unknown> & { style?: unknown }
-
-        // Raw style maps are the only object-valued keys, and a later argument
-        // extends one rather than replacing it. Computing the merges first lets
-        // a single assign carry the symbol-keyed internals across too.
-        const merged: Record<string, unknown> = {}
-        for (const key of Object.keys(src)) {
-          if (!isStyleKey(key)) continue
-          const combined = mergeStyle(value[key], src[key])
-          if (combined !== undefined) merged[key] = combined
+    q: createQueries<C>(),
+    usedConditions: new Set<string>(),
+    // The generic builders, retyped to this system's declared names.
+    style: (value) => immutableSnapshot(normalizeDeclarations(value)),
+    t: createTokenComposer(
+      () => ref,
+      () => {
+        const config = getConfig()
+        return {
+          tokens: config.getTokens(),
+          useClassName: config.useClassName,
+          platform: config.platform,
+          ...resolveModes(config),
+          useMedia: config.useMedia,
         }
-
-        Object.assign(value, src, merged)
-      }
-
-      if (SYMBOL_REF in value) {
-        return value
-      }
-
-      const result = {
-        [SYMBOL_REF]: ref,
-        [SYMBOL_STYLE]: value,
-        [SYMBOL_ACCESS]: { ref, value },
-        get style() {
-          return ref.exec(
-            execConfigFrom(getConfig()),
-            value as TokenStyle<S & C>,
-          ).style
-        },
-        get className() {
-          return ref.exec(
-            execConfigFrom(getConfig()),
-            value as TokenStyle<S & C>,
-          ).className
-        },
-      }
-
-      // biome-ignore lint/suspicious/noExplicitAny: return type is dynamic based on S & C intersection
-      return result as any
-    },
-    stylesheet: (<T extends StylesheetInput<S & C, T>>(rules: T) => {
-      // biome-ignore lint/suspicious/noExplicitAny: complex type intersection requires cast
-      return createStylesheet(ref as any, rules)
+      },
+    ),
+    stylesheet: (<T extends StylesheetInput<S & C, T>>(
+      rules: T | ((q: TokenSystem<S & C, C>['q']) => T),
+    ) => {
+      const declaration = normalizeDeclarations(
+        typeof rules === 'function' ? rules(ref.q) : rules,
+      )
+      if (id) validateDeclarations(declaration, config ?? {})
+      return createStylesheet(ref as TokenSystem<AnyDeclaration>, declaration)
     }) as StylesheetType<S & C>,
-    exec: (execConfig, tokenStyle) => {
-      // '@bp_prop' / ':pseudo_prop' keys, grouped by the property they target.
-      // Created on first use, so a style with no overrides allocates neither.
-      let breakpointOverrides: Record<string, Override[]> | undefined
-      let pseudoOverrides: Record<string, Override[]> | undefined
-
-      const acc: { style: Record<string, unknown>; className?: string } = {
-        style: {},
-        className: '_',
-      }
-
-      for (const [k, v] of Object.entries(tokenStyle)) {
-        if (v == null) continue
-
-        // Selector overrides join on the first underscore, as StyleMatcher
-        // writes them: ':hover' + '_' + 'bgColor', '@md' + '_' + 'padding'.
-        const underscoreIdx = k.indexOf('_')
-        const isPseudo = k[0] === ':'
-
-        if (underscoreIdx > 0 && (isPseudo || k[0] === '@')) {
-          const prop = k.slice(underscoreIdx + 1)
-          const override = { selector: k.slice(0, underscoreIdx), value: v }
-
-          if (isPseudo) {
-            pseudoOverrides ??= {}
-            pseudoOverrides[prop] ??= []
-            pseudoOverrides[prop].push(override)
-          } else {
-            breakpointOverrides ??= {}
-            breakpointOverrides[prop] ??= []
-            breakpointOverrides[prop].push(override)
-          }
-          continue
-        }
-
-        if (isPseudo || k[0] === '$') continue
-
-        if (k === 'style') {
-          Object.assign(acc.style, toStyleMap(v))
-          continue
-        }
-
-        if (k === 'className') {
-          acc.className ??= ''
-          acc.className += ` ${v}`
-          continue
-        }
-
-        if (execConfig.useClassName && system[k]?.values.includes(v)) {
-          acc.className ??= ''
-          acc.className += ` ${k}_${v}`
-          continue
-        }
-
-        Object.assign(acc.style, system[k]?.resolve(v, execConfig.tokens))
-      }
-
-      if (!breakpointOverrides && !pseudoOverrides) return acc
-
-      /**
-       * Turn one group of overrides into CSS custom property chains.
-       *
-       * `order` lists selector keys lowest priority first, so each link lands
-       * outside the previous one and the last match wins. Links are keyed per
-       * CSS property rather than per token prop, which is what keeps `order` —
-       * not the caller's key order — deciding what ends up outermost.
-       */
-      const applyChains = (
-        kind: 'breakpoint' | 'pseudo-state',
-        overridesByProp: Record<string, Override[]>,
-        order: readonly string[],
-        prefixOf: (selector: string) => string,
-      ) => {
-        // Token props first, raw `style` last, so within one selector the
-        // escape hatch sits outside the token chain and wins there — without
-        // ever outranking a higher-priority selector.
-        const props = Object.entries(overridesByProp).sort(
-          ([a], [b]) => Number(a === 'style') - Number(b === 'style'),
-        )
-
-        const resolve = (prop: string, value: unknown) =>
-          prop === 'style'
-            ? toStyleMap(value)
-            : system[prop]?.resolve(value, execConfig.tokens)
-
-        // Resolve the base values, and report overrides that cannot contribute.
-        // Token resolvers need not handle an absent value, so only a base the
-        // caller actually set is resolved. Bases matter because className mode
-        // keeps them out of acc.style.
-        const bases: Record<string, unknown> = {}
-        for (const [prop, overrides] of props) {
-          const baseValue = prop === 'style' ? null : tokenStyle[prop]
-          if (baseValue != null) Object.assign(bases, resolve(prop, baseValue))
-
-          for (const { selector } of overrides) {
-            // Check the selector before the prop: a breakpoint named
-            // `small_screen` splits into the selector '@small', and naming that
-            // is far more useful than reporting 'screen_padding' as a token.
-            if (!order.includes(selector)) {
-              warnOnce(
-                () =>
-                  `Ignored the ${kind} override '${selector}'; base token ` +
-                  'values still apply. This system supports ' +
-                  `${order.join(', ')}.`,
-              )
-            } else if (prop !== 'style' && prop[0] !== '$' && !system[prop]) {
-              warnOnce(
-                () =>
-                  `Ignored the ${kind} override '${selector}_${prop}'; base ` +
-                  `token values still apply. '${prop}' is not a token of this ` +
-                  'system. Selector blocks are one level deep, so a selector ' +
-                  'nested inside one lands here too.',
-              )
-            }
-          }
-        }
-
-        // Walking `order` outermost-last means insertion order is already the
-        // cascade. Keying within a property collapses two token props that
-        // resolve to it the way their base values merge — last wins — instead
-        // of nesting a variable inside its own fallback.
-        const links = new Map<string, Map<string, VarChainLink>>()
-        for (const selector of order) {
-          for (const [prop, overrides] of props) {
-            const override = overrides.find((o) => o.selector === selector)
-            if (!override) continue
-
-            const suffix = prop === 'style' ? '__style' : undefined
-            for (const [cssProp, value] of Object.entries(
-              resolve(prop, override.value) ?? {},
-            )) {
-              const forProp = links.get(cssProp) ?? new Map()
-              links.set(cssProp, forProp)
-              forProp.set(selector + (suffix ?? ''), {
-                prefix: prefixOf(selector),
-                value,
-                suffix,
-              })
-            }
-          }
-        }
-
-        for (const [cssProp, forProp] of links) {
-          // Prefer whatever is already accumulated: pseudo chains compose on
-          // top of breakpoint chains for the same property. A null chain means
-          // nothing linked, so the base is left exactly as it was — still a
-          // number, for `applyStyles` to unit-suffix as usual.
-          const chain = writeVarChain(
-            acc.style,
-            cssProp,
-            acc.style[cssProp] ?? bases[cssProp],
-            [...forProp.values()],
-          )
-
-          if (chain !== null) acc.style[cssProp] = chain
-        }
-      }
-
-      // Breakpoint overrides. Anything collected but not emitted is reported
-      // rather than dropped in silence — the base token values still apply.
-      if (breakpointOverrides) {
-        // Resolved rather than read raw, so a hand-assembled ExecConfig
-        // defaults the same way a Config does.
-        const { mediaMode } = resolveModes(execConfig)
-        const bpValues = config?.breakpoints?.__breakpoints as
-          | Record<string, number>
-          | undefined
-
-        if (mediaMode !== 'css') {
-          warnModeUnsupported('breakpoint', 'mediaMode', mediaMode)
-        } else if (!bpValues) {
-          warnOnce(
-            'Ignored breakpoint overrides; base token values still apply. ' +
-              'This system declares no breakpoints — pass them to ' +
-              'defineSystem(tokens, { breakpoints }).',
-          )
-        } else {
-          // Ascending pixel value, so the widest breakpoint wins. Toggle names
-          // are kebab-cased to match the `@media` rules `dom/generate.ts`
-          // emits; a camelCase breakpoint would otherwise reference a custom
-          // property that is never declared.
-          applyChains(
-            'breakpoint',
-            breakpointOverrides,
-            Object.entries(bpValues)
-              .sort(([, a], [, b]) => a - b)
-              .map(([key]) => `@${key}`),
-            (selector) => `media-${camelToKebab(selector.slice(1))}`,
-          )
-        }
-      }
-
-      // Pseudo-state overrides, applied after breakpoints so an interaction
-      // outranks a media query for the same property.
-      if (pseudoOverrides) {
-        const { pseudoMode } = resolveModes(execConfig)
-
-        if (pseudoMode !== 'css') {
-          warnModeUnsupported('pseudo-state', 'pseudoMode', pseudoMode)
-        } else {
-          applyChains(
-            'pseudo-state',
-            pseudoOverrides,
-            PSEUDO_CASCADE_ORDER,
-            (selector) => `toned_${selector.slice(1)}`,
-          )
-        }
-      }
-
-      return acc
-    },
+    exec: createCssExecutor(system, config, id),
   }
 
   return ref

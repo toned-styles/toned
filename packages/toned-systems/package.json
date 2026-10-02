@@ -1,30 +1,51 @@
 {
   "name": "@toned/systems",
   "version": "0.3.0",
-  "author": "Kenzhaev Artur",
+  "description": "Reusable Toned token vocabularies, including the base design-system vocabulary.",
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "styling",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-systems"
+  },
   "type": "module",
+  "exports": {
+    "./base": "./base/index.ts",
+    "./defineCssToken": "./defineCssToken.ts"
+  },
   "publishConfig": {
     "access": "public",
     "directory": ".dist",
     "linkDirectory": false
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/systems"
-  },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun -e 'import(`@config/build`)'"
-  },
-  "peerDependencies": {
-    "@toned/core": "workspace:~"
+    "build": "bun -e 'import(`@toned-config/build`)'"
   },
   "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
     "@toned/core": "workspace:~",
     "@types/react": "catalog:"
+  },
+  "peerDependencies": {
+    "@toned/core": "workspace:~",
+    "@types/react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
   }
 }

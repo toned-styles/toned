@@ -1,33 +1,37 @@
 {
-  "name": "root",
+  "name": "@toned/monorepo",
   "private": true,
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "ci:lint": "biome ci --error-on-warnings .",
-    "ci:typecheck": "update-ts-references --check && tsc -b",
-    "ci:prettier": "prettier -c .",
-    "prepare": "update-ts-references --usecase update-ts-references.yaml"
+    "lint": "oxlint --deny-warnings --report-unused-disable-directives",
+    "format": "oxfmt",
+    "ci:lint": "oxlint --deny-warnings --report-unused-disable-directives",
+    "ci:format": "oxfmt --check",
+    "ci:typecheck": "tsc -b",
+    "test": "vitest run",
+    "ci:typecheck:compat": "node node_modules/typescript-5.9/bin/tsc -b packages/toned-core packages/toned-react packages/toned-systems packages/toned-themes && node node_modules/typescript-6/bin/tsc -b packages/toned-core packages/toned-react packages/toned-systems packages/toned-themes"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.1",
-    "@changesets/cli": "^2.29.7",
-    "@lerna-lite/changed": "^4.9.1",
-    "@lerna-lite/cli": "^4.9.1",
-    "@lerna-lite/diff": "^4.9.1",
-    "@lerna-lite/list": "^4.9.1",
-    "@lerna-lite/publish": "^4.9.1",
-    "@lerna-lite/version": "^4.9.1",
-    "@types/bun": "1.2.20",
-    "prettier": "^3.6.2",
+    "@lerna-lite/changed": "^5.6.2",
+    "@lerna-lite/cli": "^5.6.2",
+    "@lerna-lite/diff": "^5.6.2",
+    "@lerna-lite/list": "^5.6.2",
+    "@lerna-lite/publish": "^5.6.2",
+    "@lerna-lite/version": "^5.6.2",
+    "@types/bun": "1.4.2",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
     "typescript": "catalog:",
-    "update-ts-references": "^3.6.2",
-    "vitest": "^3.2.4"
+    "typescript-5.9": "npm:typescript@5.9.3",
+    "typescript-6": "npm:typescript@6.0.3",
+    "vitest": "^5.0.3"
   },
   "resolutions": {
-    "react": "catalog:",
-    "react-native": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:"
-  }
+    "@types/react-dom": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:"
+  },
+  "packageManager": "pnpm@12.8.1"
 }

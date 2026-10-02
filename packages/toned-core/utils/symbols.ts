@@ -11,38 +11,36 @@
  */
 
 // Type-level unique symbol declarations
-declare const _symRef: unique symbol
-declare const _symInit: unique symbol
+export declare const _symRef: unique symbol
+export declare const _symInit: unique symbol
 declare const _symVariants: unique symbol
 declare const _symStyle: unique symbol
 declare const _symAccess: unique symbol
 
 /** Symbol used to reference the parent TokenSystem from styled objects */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
 export const SYMBOL_REF: typeof _symRef = Symbol.for(
-	'@toned/core/SYMBOL_REF',
-) as any
+  '@toned/core/SYMBOL_REF',
+) as typeof _symRef
 
 /** Symbol used for lazy stylesheet initialization */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
 export const SYMBOL_INIT: typeof _symInit = Symbol.for(
-	'@toned/core/SYMBOL_INIT',
-) as any
+  '@toned/core/SYMBOL_INIT',
+) as typeof _symInit
 
 /** Symbol used to store variant definitions */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
 export const SYMBOL_VARIANTS: typeof _symVariants = Symbol.for(
-	'@toned/core/SYMBOL_VARIANTS',
-) as any
+  '@toned/core/SYMBOL_VARIANTS',
+) as typeof _symVariants
 
 /** Symbol used to store style values in t() results */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
 export const SYMBOL_STYLE: typeof _symStyle = Symbol.for(
-	'@toned/core/SYMBOL_STYLE',
-) as any
+  '@toned/core/SYMBOL_STYLE',
+) as typeof _symStyle
 
 /** Symbol used for accessing ref and value from styled objects */
-// biome-ignore lint/suspicious/noExplicitAny: bridging Symbol.for() to unique symbol type
 export const SYMBOL_ACCESS: typeof _symAccess = Symbol.for(
-	'@toned/core/SYMBOL_ACCESS',
-) as any
+  '@toned/core/SYMBOL_ACCESS',
+) as typeof _symAccess
+
+/** Immutable declared variant defaults, shared by mounted and pure resolution. */
+export const SYMBOL_DEFAULTS = Symbol.for('@toned/core/SYMBOL_DEFAULTS')

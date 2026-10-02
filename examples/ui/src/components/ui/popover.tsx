@@ -1,35 +1,34 @@
-import * as React from "react"
-import { Popover as PopoverPrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Popover as PopoverPrimitive } from 'radix-ui'
+import type * as React from 'react'
 
-const popoverStyles = stylesheet({
+// The open and close animations are keyed on `data-state` in styles.css.
+export const popoverStyles = stylesheet({
   content: {
     bgColor: 'elevated',
     textColor: 'default',
     zIndex: 50,
-    borderRadius: 'medium',
+    flexLayout: 'column',
+    gap: 3,
+    width: '18rem',
+    padding: 4,
+    borderRadius: 'large',
     borderColor: 'default',
     borderWidth: 'thin',
-    padding: 4,
-    shadow: 'medium',
-    width: '18rem',
-    style: {
-      outline: 'none',
-      transformOrigin: 'var(--radix-popover-content-transform-origin)',
-      animation: 'fade-in 0.15s ease, zoom-in 0.15s ease',
-    },
+    shadow: 'large',
+    typo: 'body_small',
   },
   header: {
     flexLayout: 'column',
     gap: 1,
-    typo: 'body_small',
   },
   title: {
-    fontWeight: 500,
+    typo: 'label_small',
   },
   description: {
     textColor: 'muted',
+    typo: 'body_small',
   },
 })
 
@@ -47,7 +46,7 @@ function PopoverTrigger({
 
 function PopoverContent({
   className,
-  align = "center",
+  align = 'center',
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
@@ -72,7 +71,7 @@ function PopoverAnchor({
   return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />
 }
 
-function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
+function PopoverHeader({ className, ...props }: React.ComponentProps<'div'>) {
   const s = useStyles(popoverStyles)
 
   return (
@@ -84,7 +83,7 @@ function PopoverHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function PopoverTitle({ className, ...props }: React.ComponentProps<"h2">) {
+function PopoverTitle({ className, ...props }: React.ComponentProps<'h2'>) {
   const s = useStyles(popoverStyles)
 
   return (
@@ -99,7 +98,7 @@ function PopoverTitle({ className, ...props }: React.ComponentProps<"h2">) {
 function PopoverDescription({
   className,
   ...props
-}: React.ComponentProps<"p">) {
+}: React.ComponentProps<'p'>) {
   const s = useStyles(popoverStyles)
 
   return (

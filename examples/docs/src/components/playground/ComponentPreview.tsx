@@ -1,6 +1,7 @@
 import { useStyles } from '@toned/react'
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+
 import { playgroundStyles } from '../../styles/playground.ts'
+import { PreviewBoundary } from './PreviewBoundary.tsx'
 
 interface ComponentPreviewProps {
   component: React.ComponentType<Record<string, unknown>> | null
@@ -15,7 +16,7 @@ export function ComponentPreview({
 
   if (!Comp) {
     return (
-      <div {...s.preview}>
+      <div {...s.preview} data-preview-stage data-gallery-themed>
         <span {...s.readOnly}>No component to preview</span>
       </div>
     )
@@ -33,47 +34,12 @@ export function ComponentPreview({
   }
 
   return (
-    <div {...s.preview}>
-      <ErrorBoundary>
+    <div {...s.preview} data-preview-stage data-gallery-themed>
+      <PreviewBoundary>
         <Comp {...cleanProps}>
           {children != null && children !== '' ? String(children) : undefined}
         </Comp>
-      </ErrorBoundary>
+      </PreviewBoundary>
     </div>
   )
-}
-
-class ErrorBoundary extends Component<
-  { children: ReactNode },
-  { error: Error | null }
-> {
-  state = { error: null as Error | null }
-
-  static getDerivedStateFromError(error: Error) {
-    return { error }
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ComponentPreview error:', error, info)
-  }
-
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: '6px',
-            background: '#fef2f2',
-            color: '#dc2626',
-            fontSize: '13px',
-            fontFamily: 'monospace',
-          }}
-        >
-          {this.state.error.message}
-        </div>
-      )
-    }
-    return this.props.children
-  }
 }

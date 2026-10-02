@@ -1,7 +1,8 @@
-import * as React from "react"
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slot } from 'radix-ui'
+import type * as React from 'react'
 
 const buttonStyles = stylesheet({
   root: {
@@ -14,132 +15,167 @@ const buttonStyles = stylesheet({
     typo: 'label_small',
     shadow: 'small',
     cursor: 'pointer',
-    style: {
-      whiteSpace: 'nowrap' as const,
-      transition: 'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s, text-decoration 0.15s',
+    // No tokens for text wrapping or transitions.
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition:
+          'color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.15s',
+      },
     },
+    ':focus-visible': { shadow: 'focus' },
   },
-  disabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
-  },
-}).variants<{
-  variant: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-  size: 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
-}>(($) => ({
-  // Variants
-  [$.variant('default')]: {
-    root: { bgColor: 'action', textColor: 'on_action' },
-    'root:hover': {
-      root: { opacity: 0.9 },
+}).variants(
+  (
+    $: Variants<{
+      variant:
+        | 'default'
+        | 'destructive'
+        | 'outline'
+        | 'secondary'
+        | 'ghost'
+        | 'link'
+      size:
+        | 'default'
+        | 'xs'
+        | 'sm'
+        | 'lg'
+        | 'icon'
+        | 'icon-xs'
+        | 'icon-sm'
+        | 'icon-lg'
+      disabled: boolean
+    }>,
+  ) => ({
+    // Variants
+    [$.variant('default')]: {
+      root: {
+        bgColor: 'action',
+        textColor: 'on_action',
+        ':hover': { opacity: 0.9 },
+        ':active': { opacity: 0.8 },
+      },
     },
-  },
-  [$.variant('destructive')]: {
-    root: {
-      bgColor: 'destructive',
-      textColor: 'on_destructive',
-      shadow: 'none',
+    [$.variant('destructive')]: {
+      root: {
+        bgColor: 'destructive',
+        textColor: 'on_destructive',
+        shadow: 'none',
+        ':hover': { opacity: 0.9 },
+        ':active': { opacity: 0.8 },
+      },
     },
-    'root:hover': {
-      root: { opacity: 0.9 },
+    [$.variant('outline')]: {
+      root: {
+        bgColor: 'default',
+        textColor: 'default',
+        borderColor: 'input',
+        borderWidth: 'thin',
+        ':hover': { bgColor: 'subtle' },
+      },
     },
-  },
-  [$.variant('outline')]: {
-    root: {
-      bgColor: 'default',
-      borderColor: 'default',
-      borderWidth: 'thin',
-      shadow: 'small',
+    [$.variant('secondary')]: {
+      root: {
+        bgColor: 'action_secondary',
+        textColor: 'on_action_secondary',
+        shadow: 'none',
+        ':hover': { opacity: 0.8 },
+        ':active': { opacity: 0.7 },
+      },
     },
-    'root:hover': {
-      root: { bgColor: 'subtle', textColor: 'subtle' },
+    [$.variant('ghost')]: {
+      root: {
+        textColor: 'default',
+        shadow: 'none',
+        ':hover': { bgColor: 'subtle' },
+      },
     },
-  },
-  [$.variant('secondary')]: {
-    root: {
-      bgColor: 'action_secondary',
-      textColor: 'on_action_secondary',
-      shadow: 'none',
+    [$.variant('link')]: {
+      root: {
+        textColor: 'action',
+        shadow: 'none',
+        // No token for the underline offset.
+        '@platform web': { $style: { textUnderlineOffset: '4px' } },
+        ':hover': { textDecoration: 'underline' },
+      },
     },
-    'root:hover': {
-      root: { opacity: 0.8 },
+    // Sizes
+    [$.size('default')]: {
+      root: { height: '2.25rem', paddingX: 4, paddingY: 2 },
     },
-  },
-  [$.variant('ghost')]: {
-    root: {
-      shadow: 'none',
+    [$.size('xs')]: {
+      root: {
+        height: '1.5rem',
+        gap: 1,
+        borderRadius: 'medium',
+        paddingX: 2,
+        fontSize: '0.75rem',
+      },
     },
-    'root:hover': {
-      root: { bgColor: 'subtle', textColor: 'subtle' },
+    [$.size('sm')]: {
+      root: { height: '2rem', borderRadius: 'medium', gap: 1.5, paddingX: 3 },
     },
-  },
-  [$.variant('link')]: {
-    root: {
-      textColor: 'action',
-      shadow: 'none',
-      style: { textUnderlineOffset: '4px' },
+    [$.size('lg')]: {
+      root: { height: '2.5rem', borderRadius: 'medium', paddingX: 6 },
     },
-    'root:hover': {
-      root: { style: { textDecoration: 'underline' } },
+    [$.size('icon')]: {
+      root: { width: '2.25rem', height: '2.25rem' },
     },
-  },
-  // Sizes
-  [$.size('default')]: {
-    root: { height: '2.25rem', paddingX: 4, paddingY: 2 },
-  },
-  [$.size('xs')]: {
-    root: {
-      height: '1.5rem',
-      gap: 1,
-      borderRadius: 'medium',
-      paddingX: 2,
-      fontSize: '0.75rem',
+    [$.size('icon-xs')]: {
+      root: { width: '1.5rem', height: '1.5rem', borderRadius: 'medium' },
     },
-  },
-  [$.size('sm')]: {
-    root: { height: '2rem', borderRadius: 'medium', gap: 1.5, paddingX: 3 },
-  },
-  [$.size('lg')]: {
-    root: { height: '2.5rem', borderRadius: 'medium', paddingX: 6 },
-  },
-  [$.size('icon')]: {
-    root: { width: '2.25rem', height: '2.25rem' },
-  },
-  [$.size('icon-xs')]: {
-    root: { width: '1.5rem', height: '1.5rem', borderRadius: 'medium' },
-  },
-  [$.size('icon-sm')]: {
-    root: { width: '2rem', height: '2rem' },
-  },
-  [$.size('icon-lg')]: {
-    root: { width: '2.5rem', height: '2.5rem' },
-  },
-}))
+    [$.size('icon-sm')]: {
+      root: { width: '2rem', height: '2rem' },
+    },
+    [$.size('icon-lg')]: {
+      root: { width: '2.5rem', height: '2.5rem' },
+    },
+    [$.disabled(true)]: {
+      root: { pointerEvents: 'none', opacity: 0.5 },
+    },
+  }),
+  { defaults: { variant: 'default', size: 'default', disabled: false } },
+)
 
-type ButtonVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-type ButtonSize = 'default' | 'xs' | 'sm' | 'lg' | 'icon' | 'icon-xs' | 'icon-sm' | 'icon-lg'
+type ButtonVariant =
+  | 'default'
+  | 'destructive'
+  | 'outline'
+  | 'secondary'
+  | 'ghost'
+  | 'link'
+type ButtonSize =
+  | 'default'
+  | 'xs'
+  | 'sm'
+  | 'lg'
+  | 'icon'
+  | 'icon-xs'
+  | 'icon-sm'
+  | 'icon-lg'
 
 function Button({
   className,
-  variant = "default",
-  size = "default",
+  style,
+  variant = 'default',
+  size = 'default',
   asChild = false,
   disabled,
   ...props
-}: React.ComponentProps<"button"> & {
+}: React.ComponentProps<'button'> & {
   variant?: ButtonVariant
   size?: ButtonSize
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "button"
-  const s = useStyles(buttonStyles, { variant, size })
+  const Comp = asChild ? Slot.Root : 'button'
+  const s = useStyles(buttonStyles, { variant, size, disabled: !!disabled })
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      {...s.root.with(disabled && s.disabled).with({ className })}
+      {...s.root.with({ className, style })}
       disabled={disabled}
       {...props}
     />

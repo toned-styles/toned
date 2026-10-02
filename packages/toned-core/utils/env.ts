@@ -18,4 +18,5 @@
  * `process` is undefined — meaning dev warnings still print in production.
  * Noisy, never broken, and the reason `warnOnce` takes a thunk.
  */
-export const IS_PRODUCTION = globalThis.process?.env?.NODE_ENV === 'production'
+export const IS_PRODUCTION =
+  globalThis.process?.env?.['NODE_ENV'] === 'production'

@@ -1,0 +1,111 @@
+{
+  "name": "toned-vscode",
+  "displayName": "Toned",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Source-aware Toned token completion, navigation, diagnostics and scoped edits.",
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "language-server",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
+  "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "editors/vscode"
+  },
+  "publisher": "toned",
+  "main": "./dist/extension.cjs",
+  "scripts": {
+    "build": "bun build.ts",
+    "package": "bun build.ts && ./node_modules/.bin/vsce package --no-dependencies --out dist/toned-vscode.vsix",
+    "test:editor": "bun build.ts && bun test-editor.ts"
+  },
+  "dependencies": {
+    "@toned/compiler": "workspace:*",
+    "vscode-languageclient": "10.1.2"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "@types/node": "catalog:",
+    "@types/vscode": "1.100.0",
+    "@vscode/vsce": "4.0.0",
+    "typescript": "6.0.3"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "toned.restart",
+        "title": "Toned: Restart Language Server"
+      },
+      {
+        "command": "toned.inspectSelection",
+        "title": "Toned: Inspect Current Declaration"
+      },
+      {
+        "command": "toned.indexStatus",
+        "title": "Toned: Show Index Status"
+      }
+    ],
+    "configuration": {
+      "title": "Toned",
+      "properties": {
+        "toned.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Enable Toned source intelligence alongside TypeScript."
+        },
+        "toned.include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "."
+          ],
+          "scope": "resource",
+          "description": "Relative source directories to index. Dependency and generated directories are always excluded."
+        },
+        "toned.modules": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default": {},
+          "scope": "resource",
+          "description": "Static module mappings to workspace-relative source paths. A single wildcard is supported; config code is never executed."
+        }
+      }
+    }
+  },
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Toned starts a local language-server process and provides source edits."
+    },
+    "virtualWorkspaces": false
+  }
+}

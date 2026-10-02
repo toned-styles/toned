@@ -1,5 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
+
+import { withCompilerOptions } from 'react-docgen-typescript'
+import ts from 'typescript'
 import type { Plugin, ViteDevServer } from 'vite'
 
 const VIRTUAL_PREFIX = 'virtual:component-docs/'
@@ -22,39 +25,45 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
   const cache = new Map<string, { mtimeMs: number; data: string }>()
   let server: ViteDevServer | undefined
 
-  let parserPromise: ReturnType<typeof createParser> | null = null
+  let parser: ReturnType<typeof createParser> | undefined
+  let program: ts.Program | undefined
+  const compilerOptions: ts.CompilerOptions = {
+    noEmit: true,
+    jsx: ts.JsxEmit.ReactJSX,
+    strict: true,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ESNext,
+    skipLibCheck: true,
+    allowImportingTsExtensions: true,
+    baseUrl: path.dirname(options.tsconfigPath),
+    paths: { '@/*': ['./src/*'] },
+  }
 
-  async function createParser() {
-    const docgen = await import('react-docgen-typescript')
-    return docgen.withCompilerOptions(
-      {
-        noEmit: true,
-        jsx: 4 /* JsxEmit.ReactJSX */,
-        strict: true,
-        moduleResolution: 100 /* ModuleResolutionKind.Bundler */,
-        target: 9 /* ScriptTarget.ES2022 */,
-        module: 99 /* ModuleKind.ESNext */,
-        skipLibCheck: true,
-        allowImportingTsExtensions: true,
-        baseUrl: path.dirname(options.tsconfigPath),
-        paths: { '@/*': ['./src/*'] },
-      },
-      {
-        propFilter: (prop: { parent?: { fileName: string } }) => {
-          if (prop.parent?.fileName.includes('node_modules')) return false
-          return true
-        },
-        shouldExtractLiteralValuesFromEnum: true,
-        savePropValueAsString: true,
-      },
+  function getProgram() {
+    program ??= ts.createProgram(
+      getComponentNames(options.componentsDir).map((name) =>
+        path.join(options.componentsDir, `${name}.tsx`),
+      ),
+      compilerOptions,
     )
+    return program
+  }
+
+  function createParser() {
+    return withCompilerOptions(compilerOptions, {
+      propFilter: (prop: { parent?: { fileName: string } }) => {
+        if (prop.parent?.fileName.includes('node_modules')) return false
+        return true
+      },
+      shouldExtractLiteralValuesFromEnum: true,
+      savePropValueAsString: true,
+    })
   }
 
   function getParser() {
-    if (!parserPromise) {
-      parserPromise = createParser()
-    }
-    return parserPromise
+    parser ??= createParser()
+    return parser
   }
 
   return {
@@ -64,7 +73,7 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
     },
     resolveId(id) {
       if (id.startsWith(VIRTUAL_PREFIX)) {
-        return '\0' + id
+        return `\0${id}`
       }
     },
     async load(id) {
@@ -89,8 +98,8 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
 
       // Per-component metadata
       const filePath = path.join(options.componentsDir, `${name}.tsx`)
-      if (!fs.existsSync(filePath)) {
-        return `export default [];`
+      if (!getComponentNames(options.componentsDir).includes(name)) {
+        return 'export default [];'
       }
 
       // Check cache
@@ -100,8 +109,10 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
         return cached.data
       }
 
-      const parser = await getParser()
-      const docs = parser.parse(filePath)
+      const parser = getParser()
+      // All component modules share one compiler graph instead of rebuilding
+      // React, Toned and third-party declarations for every virtual module.
+      const docs = parser.parseWithProgramProvider(filePath, getProgram)
 
       // Process docs to extract @preview tags
       const processed = docs.map(
@@ -156,26 +167,26 @@ export function componentDocs(options: ComponentDocsOptions): Plugin {
         }),
       )
 
-      const data = `export default ${JSON.stringify(processed)};`
+      const source = fs.readFileSync(filePath, 'utf8')
+      const sheets = stylesheetSources(source, filePath)
+      const data = `export default ${JSON.stringify(processed)};\nexport const source = ${JSON.stringify(source)};\nexport const sheets = ${JSON.stringify(sheets)};`
       cache.set(name, { mtimeMs: stat.mtimeMs, data })
       return data
     },
-    handleHotUpdate({ file }) {
-      if (!file.startsWith(options.componentsDir) || !file.endsWith('.tsx'))
+    handleHotUpdate({ file, modules }) {
+      const sourceRoot = path.join(path.dirname(options.tsconfigPath), 'src')
+      if (!file.startsWith(`${sourceRoot}${path.sep}`) || !/\.tsx?$/.test(file))
         return
-
-      const name = path.basename(file, '.tsx')
-      cache.delete(name)
-
-      // Invalidate just the specific virtual module, not the whole page
-      const virtualId = RESOLVED_PREFIX + name
-      const mod = server?.moduleGraph.getModuleById(virtualId)
-      if (mod) {
-        server!.moduleGraph.invalidateModule(mod)
-        // Return empty array to prevent Vite's default full-reload behavior
-        return []
-      }
-      return []
+      // A shared type/helper can change several components' public props.
+      program = undefined
+      cache.clear()
+      const graph = server?.moduleGraph
+      if (!graph) return
+      const metadataModules = [...graph.idToModuleMap.values()].filter((mod) =>
+        mod.id?.startsWith(RESOLVED_PREFIX),
+      )
+      for (const mod of metadataModules) graph.invalidateModule(mod)
+      return [...modules, ...metadataModules]
     },
   }
 }
@@ -199,4 +210,50 @@ function extractPreview(description: string): {
     preview: match?.[1]?.trim(),
     cleanDescription: description.replace(/@preview\s+.+?(?:\n|$)/, '').trim(),
   }
+}
+
+/** Read declarations at build time; never execute editor text or ship TypeScript's parser. */
+function stylesheetSources(source: string, filePath: string) {
+  const file = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  )
+  const sheets: { name: string; source: string; parts: string[] }[] = []
+  for (const statement of file.statements) {
+    if (!ts.isVariableStatement(statement)) continue
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || !declaration.initializer)
+        continue
+      let expression = declaration.initializer
+      while (
+        ts.isCallExpression(expression) &&
+        ts.isPropertyAccessExpression(expression.expression)
+      ) {
+        expression = expression.expression.expression
+      }
+      if (
+        !ts.isCallExpression(expression) ||
+        expression.expression.getText(file) !== 'stylesheet'
+      )
+        continue
+      const rules = expression.arguments[0]
+      if (!rules || !ts.isObjectLiteralExpression(rules)) continue
+      const parts = rules.properties.flatMap((property) => {
+        if (!ts.isPropertyAssignment(property)) return []
+        const name = property.name
+        const key =
+          ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : ''
+        return /^[a-zA-Z][a-zA-Z0-9_]*$/.test(key) ? [key] : []
+      })
+      sheets.push({
+        name: declaration.name.text,
+        source: `const ${declaration.getText(file)}`,
+        parts,
+      })
+    }
+  }
+  return sheets
 }

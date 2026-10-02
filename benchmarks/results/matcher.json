@@ -1,0 +1,76 @@
+{
+  "measuredAt": "2026-10-01T23:24:52.297Z",
+  "baseline": null,
+  "platform": "darwin",
+  "arch": "arm64",
+  "bun": "1.4.2",
+  "rounds": 7,
+  "units": "microseconds per operation; median/min/max",
+  "note": "Matcher only. Does not measure React renders, host writes, layout, or device performance. A baseline with reference mismatches is not a valid faster implementation.",
+  "results": [
+    {
+      "fixture": "small-16-facts",
+      "version": "current",
+      "facts": 16,
+      "rules": 17,
+      "reference_mismatches": 0,
+      "compile": {
+        "median_us": 58.89,
+        "min_us": 56.344,
+        "max_us": 86.058
+      },
+      "cache_hit": {
+        "median_us": 0.093,
+        "min_us": 0.083,
+        "max_us": 0.248
+      },
+      "uncached_match": {
+        "median_us": 0.827,
+        "min_us": 0.561,
+        "max_us": 1.198
+      },
+      "membership_equal": {
+        "median_us": 0.013,
+        "min_us": 0.013,
+        "max_us": 0.036
+      },
+      "reference_evaluator": {
+        "median_us": 1.37,
+        "min_us": 1.327,
+        "max_us": 1.701
+      }
+    },
+    {
+      "fixture": "large-80-facts",
+      "version": "current",
+      "facts": 80,
+      "rules": 81,
+      "reference_mismatches": 0,
+      "compile": {
+        "median_us": 328.51,
+        "min_us": 310.436,
+        "max_us": 436.493
+      },
+      "cache_hit": {
+        "median_us": 0.489,
+        "min_us": 0.448,
+        "max_us": 1.279
+      },
+      "uncached_match": {
+        "median_us": 3.112,
+        "min_us": 2.844,
+        "max_us": 3.583
+      },
+      "membership_equal": {
+        "median_us": 0.027,
+        "min_us": 0.023,
+        "max_us": 0.48
+      },
+      "reference_evaluator": {
+        "median_us": 6.36,
+        "min_us": 6.135,
+        "max_us": 7.621
+      }
+    }
+  ]
+}

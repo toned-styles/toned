@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { flattenSelectorBlocks } from './selectorBlocks.ts'
 import { SYMBOL_STYLE } from './symbols.ts'
 

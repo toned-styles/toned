@@ -1,16 +1,32 @@
-// Note: Media handling could be made configurable for SSR/custom implementations
-// Currently uses window.matchMedia directly which works for web and expo-media
+// Web viewport facts read window.matchMedia (and stay inert without a window);
+// native hosts use media.native.ts.
 
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 
-export const initMedia = <S extends TokenStyleDeclaration>({
-  config,
-}: TokenSystem<S>) => {
+export const initMedia = <S extends TokenStyleDeclaration>(
+  { config }: TokenSystem<S>,
+  additional: Readonly<Record<string, number>> = {},
+) => {
   const w = typeof window === 'undefined' ? null : window
 
   const medias = Object.fromEntries(
-    Object.entries(config?.breakpoints?.__breakpoints ?? {}).map(
-      ([key, value]) => [key, w?.matchMedia(`(min-width: ${value}px)`)],
+    Object.entries({
+      ...config?.breakpoints?.__breakpoints,
+      ...additional,
+    } as Record<string, number | string>).map(
+      // A number is px; a string length passes through as-is (appending px to
+      // '30rem' would produce the invalid '30rempx'); a parenthesised string is
+      // a raw condition and IS the query.
+      ([key, value]) => [
+        key,
+        w?.matchMedia(
+          typeof value === 'number'
+            ? `(min-width: ${value}px)`
+            : value.startsWith('(')
+              ? value
+              : `(min-width: ${value})`,
+        ),
+      ],
     ),
   )
 
@@ -24,24 +40,33 @@ export const initMedia = <S extends TokenStyleDeclaration>({
     ),
   )
 
-  // NOTE: have to use `addListener` for expo-media compat
-
-  Object.entries(medias).forEach(([key, value]) => {
-    const emitterKey = key.startsWith('@') ? key : `@${key}`
-    // has to use deprecated `addListener` for expo compat
-    value?.addListener((e) => {
-      mediaEmitter.emit({ [emitterKey]: e.matches })
-    })
-  })
+  // MediaQueryLists are shared per system; listeners belong to committed
+  // controllers and disappear when the last controller unmounts.
+  mediaEmitter.connect = () => {
+    const cleanups: Array<() => void> = []
+    for (const [key, value] of Object.entries(medias)) {
+      const emitterKey = key.startsWith('@') ? key : `@${key}`
+      if (!value) continue
+      mediaEmitter.data[emitterKey] = value.matches
+      const listener = (event: { matches: boolean }) =>
+        mediaEmitter.emit({ [emitterKey]: event.matches })
+      value.addListener(listener)
+      cleanups.push(() => value.removeListener(listener))
+    }
+    return () => {
+      for (const cleanup of cleanups) cleanup()
+    }
+  }
 
   return mediaEmitter
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: generic emitter requires flexible value types
-class Emitter<T extends Record<string, any>> {
+class Emitter<T extends Record<string, unknown>> {
   private listeners = new Set<(data: Partial<T>) => void>()
 
   data: T
+  connect?: () => () => void
+  private disconnect?: () => void
   constructor(data: T) {
     this.data = data
   }
@@ -55,8 +80,14 @@ class Emitter<T extends Record<string, any>> {
   }
 
   sub(listener: (data: Partial<T>) => void) {
+    if (this.listeners.size === 0) this.disconnect = this.connect?.()
     this.listeners.add(listener)
-
-    return () => this.listeners.delete(listener)
+    return () => {
+      this.listeners.delete(listener)
+      if (this.listeners.size === 0) {
+        this.disconnect?.()
+        this.disconnect = undefined
+      }
+    }
   }
 }

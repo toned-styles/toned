@@ -1,31 +1,66 @@
 {
   "name": "@toned/core",
   "version": "0.6.0",
-  "author": "Kenzhaev Artur",
+  "description": "Typed design tokens, named parts and variants for platform- and framework-agnostic styling.",
+  "keywords": [
+    "css",
+    "design-system",
+    "design-tokens",
+    "react-native",
+    "styling",
+    "toned",
+    "typescript"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-core"
+  },
   "type": "module",
   "exports": {
-    ".": "./index.js",
-    "./dom": "./dom/index.js",
-    "./types": "./types/index.js",
-    "./stylesheet": "./stylesheet/index.js",
-    "./system": "./system/index.js",
-    "./utils": "./utils/index.js",
-    "./vite": "./vite/index.js"
+    ".": "./index.ts",
+    "./dom": "./dom/index.ts",
+    "./types": "./types/index.ts",
+    "./stylesheet": "./stylesheet/index.ts",
+    "./system": "./system/index.ts",
+    "./compat": "./compat/index.ts",
+    "./utils": "./utils/index.ts",
+    "./vite": "./vite/index.ts",
+    "./registry": "./registry.ts",
+    "./types/stylesheet": "./types/stylesheet.ts",
+    "./grid": "./grid/index.ts",
+    "./build": "./build/index.ts",
+    "./dev/inject": "./dom/inject.ts",
+    "./server": "./server/index.ts",
+    "./backends": "./backends/index.ts",
+    "./core": "./core/index.ts",
+    "./motion": "./motion/index.ts",
+    "./adaptive": "./adaptive/index.ts",
+    "./adaptive/web": "./adaptive/web.ts",
+    "./adaptive/native": "./adaptive/native.ts"
   },
   "publishConfig": {
     "access": "public",
     "directory": ".dist",
     "linkDirectory": false
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/core"
-  },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun --bun -e 'import(`@config/build`)'"
+    "build": "bun --bun -e 'import(`@toned-config/build`)'"
+  },
+  "dependencies": {
+    "csstype": "^3.2.3"
+  },
+  "devDependencies": {
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
+    "vite": "^8.3.1"
   },
   "peerDependencies": {
     "vite": ">=5"
@@ -34,10 +69,5 @@
     "vite": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
-    "vite": "^6.3.5"
   }
 }

@@ -1,9 +1,10 @@
-"use client"
+'use client'
 
-import * as React from "react"
-import { Toggle as TogglePrimitive } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Toggle as TogglePrimitive } from 'radix-ui'
+import * as React from 'react'
 
 const toggleStyles = stylesheet({
   root: {
@@ -11,89 +12,92 @@ const toggleStyles = stylesheet({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
+    flexShrink: '0',
     borderRadius: 'medium',
-    typo: 'body_small',
-    fontWeight: 500,
+    typo: 'label_small',
+    textColor: 'default',
     cursor: 'pointer',
-    style: {
-      whiteSpace: 'nowrap',
-      outline: 'none',
-      transition: 'color 0.15s, box-shadow 0.15s',
-      border: 'none',
+    // No tokens for text wrapping or transitions.
+    '@platform web': {
+      $style: {
+        whiteSpace: 'nowrap',
+        transition: 'color 0.15s, background-color 0.15s, box-shadow 0.15s',
+      },
     },
-    ':hover': {
-      bgColor: 'muted',
-      textColor: 'muted',
-    },
+    ':hover': { bgColor: 'subtle' },
+    ':focus-visible': { shadow: 'focus' },
   },
-  disabled: {
-    pointerEvents: 'none',
-    opacity: 0.5,
-  },
-}).variants<{
-  variant: 'default' | 'outline'
-  size: 'default' | 'sm' | 'lg'
-  pressed: boolean
-}>(($) => ({
-  [$.variant('default')]: {
-    root: {
-      style: { background: 'transparent' },
+}).variants(
+  (
+    $: Variants<{
+      variant: 'default' | 'outline'
+      size: 'default' | 'sm' | 'lg'
+      pressed: boolean
+      disabled: boolean
+    }>,
+  ) => ({
+    [$.variant('outline')]: {
+      root: {
+        bgColor: 'default',
+        borderColor: 'input',
+        borderWidth: 'thin',
+        shadow: 'small',
+      },
     },
-  },
-  [$.variant('outline')]: {
-    root: {
-      borderColor: 'default',
-      borderWidth: 'thin',
-      shadow: 'small',
-      style: { background: 'transparent' },
+    [$.size('default')]: {
+      root: { height: '2.25rem', minWidth: '2.25rem', paddingX: 2.5 },
     },
-    'root:hover': {
-      root: { bgColor: 'subtle', textColor: 'subtle' },
+    [$.size('sm')]: {
+      root: { height: '2rem', minWidth: '2rem', paddingX: 2 },
     },
-  },
-  [$.size('default')]: {
-    root: {
-      height: '2.25rem',
-      paddingX: 2,
-      minWidth: '2.25rem',
+    [$.size('lg')]: {
+      root: { height: '2.5rem', minWidth: '2.5rem', paddingX: 3 },
     },
-  },
-  [$.size('sm')]: {
-    root: {
-      height: '2rem',
-      minWidth: '2rem',
-      paddingY: 0, paddingX: 1.5,
+    [$.pressed(true)]: {
+      root: {
+        bgColor: 'action_secondary',
+        textColor: 'on_action_secondary',
+        ':hover': { bgColor: 'action_secondary' },
+      },
     },
-  },
-  [$.size('lg')]: {
-    root: {
-      height: '2.5rem',
-      minWidth: '2.5rem',
-      paddingY: 0, paddingX: 2.5,
+    [$.disabled(true)]: {
+      root: { pointerEvents: 'none', opacity: 0.5 },
+    },
+  }),
+  {
+    defaults: {
+      variant: 'default',
+      size: 'default',
+      pressed: false,
+      disabled: false,
     },
   },
-  [$.pressed(true)]: {
-    root: { bgColor: 'subtle', textColor: 'subtle' },
-  },
-}))
+)
 
 function Toggle({
   className,
   disabled,
-  variant = "default",
-  size = "default",
+  variant = 'default',
+  size = 'default',
   pressed: pressedProp,
   defaultPressed,
   onPressedChange,
   ...props
 }: React.ComponentProps<typeof TogglePrimitive.Root> & {
-  variant?: "default" | "outline"
-  size?: "default" | "sm" | "lg"
+  variant?: 'default' | 'outline'
+  size?: 'default' | 'sm' | 'lg'
 }) {
-  const [internal, setInternal] = React.useState(pressedProp ?? defaultPressed ?? false)
+  const [internal, setInternal] = React.useState(
+    pressedProp ?? defaultPressed ?? false,
+  )
   const pressed = pressedProp ?? internal
 
-  const s = useStyles(toggleStyles, { variant, size, pressed })
+  const s = useStyles(toggleStyles, {
+    variant,
+    size,
+    pressed,
+    disabled: !!disabled,
+  })
 
   return (
     <TogglePrimitive.Root
@@ -104,7 +108,7 @@ function Toggle({
         setInternal(val)
         onPressedChange?.(val)
       }}
-      {...s.root.with(disabled && s.disabled).with({ className })}
+      {...s.root.with({ className })}
       disabled={disabled}
       {...props}
     />

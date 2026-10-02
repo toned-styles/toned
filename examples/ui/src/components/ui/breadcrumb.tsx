@@ -1,12 +1,10 @@
-import * as React from "react"
-import { ChevronRight, MoreHorizontal } from "lucide-react"
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { ChevronRight, MoreHorizontal } from 'lucide-react'
+import { Slot } from 'radix-ui'
+import type * as React from 'react'
 
-import { cn } from "@/lib/utils"
-
-const breadcrumbStyles = stylesheet({
+export const breadcrumbStyles = stylesheet({
   list: {
     textColor: 'muted',
     display: 'flex',
@@ -14,12 +12,7 @@ const breadcrumbStyles = stylesheet({
     gap: 1.5,
     typo: 'body_small',
     flexWrap: 'wrap',
-    style: {
-      wordBreak: 'break-word',
-    },
-    '@sm': {
-      gap: 2.5,
-    },
+    '@media sm': { gap: 2 },
   },
   item: {
     display: 'inline-flex',
@@ -27,36 +20,40 @@ const breadcrumbStyles = stylesheet({
     gap: 1.5,
   },
   link: {
-    style: {
-      transition: 'color 0.15s',
+    borderRadius: 'small',
+    // No token: the transition list is specific to this part.
+    '@platform web': {
+      $style: { transition: 'color 0.15s, box-shadow 0.15s' },
     },
-    ':hover': {
-      textColor: 'default',
-    },
+    ':hover': { textColor: 'default' },
+    ':focus-visible': { shadow: 'focus' },
   },
   page: {
     textColor: 'default',
-    fontWeight: 400,
+    fontWeight: 500,
+  },
+  separator: {
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  separatorIcon: {
+    width: '0.875rem',
+    height: '0.875rem',
   },
   ellipsis: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    style: {
-      width: '2.25rem',
-      height: '2.25rem',
-    },
-    ':hover': {
-      textColor: 'default',
-    },
+    width: '1.5rem',
+    height: '1.5rem',
   },
 })
 
-function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
+function Breadcrumb({ ...props }: React.ComponentProps<'nav'>) {
   return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
 }
 
-function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
+function BreadcrumbList({ className, ...props }: React.ComponentProps<'ol'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
@@ -68,7 +65,7 @@ function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
   )
 }
 
-function BreadcrumbItem({ className, ...props }: React.ComponentProps<"li">) {
+function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
@@ -84,10 +81,10 @@ function BreadcrumbLink({
   asChild,
   className,
   ...props
-}: React.ComponentProps<"a"> & {
+}: React.ComponentProps<'a'> & {
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "a"
+  const Comp = asChild ? Slot.Root : 'a'
   const s = useStyles(breadcrumbStyles)
 
   return (
@@ -99,14 +96,12 @@ function BreadcrumbLink({
   )
 }
 
-function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+function BreadcrumbPage({ className, ...props }: React.ComponentProps<'span'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
     <span
       data-slot="breadcrumb-page"
-      role="link"
-      aria-disabled="true"
       aria-current="page"
       {...s.page.with({ className })}
       {...props}
@@ -118,16 +113,18 @@ function BreadcrumbSeparator({
   children,
   className,
   ...props
-}: React.ComponentProps<"li">) {
+}: React.ComponentProps<'li'>) {
+  const s = useStyles(breadcrumbStyles)
+
   return (
     <li
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden="true"
-      className={cn(className)}
+      {...s.separator.with({ className })}
       {...props}
     >
-      {children ?? <ChevronRight style={{ width: '0.875rem', height: '0.875rem' }} />}
+      {children ?? <ChevronRight {...s.separatorIcon} />}
     </li>
   )
 }
@@ -135,19 +132,18 @@ function BreadcrumbSeparator({
 function BreadcrumbEllipsis({
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<'span'>) {
   const s = useStyles(breadcrumbStyles)
 
   return (
     <span
       data-slot="breadcrumb-ellipsis"
-      role="presentation"
-      aria-hidden="true"
+      role="img"
+      aria-label="More"
       {...s.ellipsis.with({ className })}
       {...props}
     >
-      <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
+      <MoreHorizontal />
     </span>
   )
 }

@@ -1,11 +1,11 @@
 {
-  "extends": "@config/typescript/lib",
+  "extends": "@toned-config/typescript/lib",
   "references": [
     {
-      "path": "../../packages/toned-systems"
+      "path": "../../packages/toned-core"
     },
     {
-      "path": "../../packages/toned-themes"
+      "path": "../../packages/toned-systems"
     }
   ]
 }

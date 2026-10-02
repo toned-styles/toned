@@ -1,67 +1,40 @@
-import { stylesheet } from '@toned/systems/base'
+import type { Variants } from '@toned/core'
 
-export const styles = stylesheet({
-  container: {
-    $$type: 'view',
+import { ui } from './system.ts'
 
-    borderRadius: 'medium',
-    borderWidth: 'none',
-
-    style: {
-      cursor: 'pointer',
-    },
-  },
-
-  label: {
-    $$type: 'text',
-  },
-}).variants<{
+type ButtonVariants = {
   size: 'm' | 's'
   variant: 'accent' | 'danger'
   alignment?: 'icon-only' | 'icon-left' | 'icon-right'
-}>(($) => ({
-  [$.variant('accent')]: {
-    container: {
-      bgColor: 'action',
-    },
-    label: {
-      textColor: 'on_action',
-    },
+}
 
-    'container:hover': {
-      container: {
-        bgColor: 'action_secondary',
+export const buttonStyles = ui
+  .stylesheet((q) => ({
+    Root: {
+      $kind: 'pressable',
+      borderRadius: 'medium',
+      borderWidth: 'none',
+      [q.platform('web')]: { $style: { cursor: 'pointer' } },
+    },
+    Label: { $kind: 'text' },
+  }))
+  .variants(($: Variants<ButtonVariants>, q) => ({
+    [$.variant('accent')]: {
+      Root: { bgColor: 'action' },
+      Label: { textColor: 'on_action' },
+      [q.part('Root').state('hover')]: {
+        Root: { bgColor: 'action_secondary' },
+        Label: { textColor: 'on_action_secondary' },
       },
-      label: {
-        textColor: 'on_action_secondary',
-      },
     },
-  },
-
-  [$.size('m')]: {
-    container: {
-      paddingX: 3,
+    [$.variant('danger')]: {
+      Root: { bgColor: 'destructive' },
+      Label: { textColor: 'on_destructive' },
     },
-  },
-
-  [$.size('m').alignment('icon-only')]: {
-    container: {
-      paddingX: 2,
-      paddingY: 2,
+    [$.size('m')]: { Root: { paddingX: 3, paddingY: 2 } },
+    [$.size('m').alignment('icon-only')]: { Root: { paddingX: 2 } },
+    [$.size('s')]: { Root: { paddingX: 2, paddingY: 1 } },
+    [$.size('s').alignment('icon-only')]: {
+      Root: { paddingX: 1, paddingY: 2 },
     },
-  },
-
-  [$.size('s')]: {
-    container: {
-      paddingX: 2,
-      paddingY: 1,
-    },
-  },
-
-  [$.size('s').alignment('icon-only')]: {
-    container: {
-      paddingX: 1,
-      paddingY: 2,
-    },
-  },
-}))
+  }))

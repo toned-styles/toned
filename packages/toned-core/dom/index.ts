@@ -6,3 +6,5 @@
 
 export { generate } from './generate.ts'
 export { getStyleNodeById, inject } from './inject.ts'
+export type { GeneratePaletteOptions } from './palette.ts'
+export { generatePalette } from './palette.ts'

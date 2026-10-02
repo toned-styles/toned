@@ -1,72 +1,123 @@
-import { stylesheet } from '@toned/systems/base'
+import { webRules } from '@toned/core'
 
+import { brand } from './brand.ts'
+import { stylesheet } from './system.ts'
+
+/** Long-form documentation typography: guides, API pages and references. */
 export const proseStyles = stylesheet({
+  tableScroll: {
+    overflowX: 'auto',
+    maxWidth: '100%',
+    marginY: 5,
+    radius: 'lg',
+    border: 'all',
+    borderTone: 'default',
+  },
+  table: {
+    width: '100%',
+    textStyle: 'ui',
+    textAlign: 'left',
+    '@platform web': {
+      // No token: table layout has no native counterpart.
+      $style: { borderCollapse: 'collapse' },
+      // Selector escape hatch: cells come from rendered Markdown, so they
+      // cannot be named parts. Raw values here mirror the token roles.
+      $webRules: webRules({
+        '& th': {
+          fontWeight: 600,
+          color: brand.ink,
+          backgroundColor: brand.blueTint,
+          padding: '10px 14px',
+          borderBottom: `1px solid ${brand.border}`,
+          whiteSpace: 'nowrap',
+        },
+        '& td': {
+          padding: '10px 14px',
+          borderBottom: `1px solid ${brand.divider}`,
+          verticalAlign: 'top',
+        },
+        '& tr:last-child td': { borderBottom: 'none' },
+        // Identifiers stay whole; the table scrolls instead.
+        '& td code': { whiteSpace: 'nowrap' },
+        '& p code': { overflowWrap: 'anywhere' },
+      }),
+    },
+  },
   container: {
-    lineHeight: 1.7,
-    fontSize: '16px',
-    textColor: 'default',
+    textStyle: 'prose',
+    text: 'body',
+    '@platform web': {
+      // Selector escape hatch: Markdown output is unclassed HTML.
+      $webRules: webRules({
+        '& > h1 + p': {
+          fontSize: '19px',
+          lineHeight: 1.6,
+          color: brand.muted,
+          marginTop: '16px',
+          marginBottom: '32px',
+          paddingBottom: '32px',
+          borderBottom: `1px solid ${brand.divider}`,
+        },
+        '& p': { marginTop: '16px' },
+        '& a': {
+          color: brand.blue,
+          fontWeight: 500,
+          textDecoration: 'underline',
+          textDecorationColor: '#284bdd55',
+          textUnderlineOffset: '3px',
+        },
+        '& a:hover': { textDecorationColor: brand.blue },
+        '& strong': { color: brand.ink, fontWeight: 600 },
+        '& ul': { paddingInlineStart: '22px', marginTop: '14px' },
+        '& ol': { paddingInlineStart: '22px', marginTop: '14px' },
+        '& li': { marginTop: '6px', paddingInlineStart: '4px' },
+        '& li::marker': { color: brand.faint },
+        '& blockquote': {
+          marginTop: '20px',
+          padding: '4px 0 4px 18px',
+          borderLeft: `3px solid ${brand.blue}`,
+          color: brand.muted,
+        },
+        '& hr': {
+          border: 'none',
+          borderTop: `1px solid ${brand.divider}`,
+          margin: '40px 0',
+        },
+        '& h2 + p': { marginTop: '8px' },
+        '& h3 + p': { marginTop: '8px' },
+      }),
+    },
   },
   h1: {
-    fontSize: '32px',
-    fontWeight: 700,
-    marginBottom: 1.5,
-    lineHeight: 1.15,
-    letterSpacing: '-0.02em',
-    style: {
-      background: 'var(--gradient-brand-text)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent',
-      backgroundClip: 'text',
-    },
-    '@md': {
-      fontSize: '36px',
-    },
+    textStyle: 'title',
+    weight: 'bold',
+    text: 'default',
+    wrap: 'balance',
   },
   h2: {
-    fontSize: '22px',
-    fontWeight: 600,
-    marginTop: 5,
-    marginBottom: 1.5,
-    lineHeight: 1.3,
-    letterSpacing: '-0.01em',
-    paddingBottom: 1,
-    borderColor: 'subtle',
-    borderWidth: 'thin',
-    style: {
-      borderTop: 'none',
-      borderLeft: 'none',
-      borderRight: 'none',
-    },
-    '@md': {
-      fontSize: '24px',
-    },
+    marginTop: 12,
+    textStyle: 'heading',
+    weight: 'bold',
+    text: 'default',
+    anchor: 'below-header',
   },
   h3: {
-    fontSize: '18px',
-    fontWeight: 600,
-    marginTop: 3,
-    marginBottom: 1,
-    lineHeight: 1.4,
+    marginTop: 8,
+    textStyle: 'subheading',
+    weight: 'bold',
+    text: 'default',
+    anchor: 'below-header',
   },
   code: {
-    bgColor: 'muted',
-    borderRadius: 'small',
     paddingY: 0.25,
-    paddingX: 0.5,
-    fontSize: '0.875em',
-    fontFamily: '"SF Mono", "Fira Code", "Cascadia Code", monospace',
-    fontWeight: 500,
-  },
-  codeBlock: {
-    borderRadius: 'medium',
-    borderColor: 'subtle',
-    borderWidth: 'thin',
-    overflowX: 'auto',
-    marginY: 2,
-    style: {
-      // Let shiki control fonts and colors; provide fallback for plain code
-      fontSize: '13px',
-      lineHeight: 1.6,
-    },
+    paddingX: 1.25,
+    radius: 'sm',
+    textStyle: 'code-inline',
+    weight: 'medium',
+    text: 'code',
+    fill: 'accent-soft',
+    // No token: a key such as '@>=600px' or '=>' must show the characters to
+    // type, not the code font's ligature for them.
+    '@platform web': { $style: { fontVariantLigatures: 'none' } },
   },
 })

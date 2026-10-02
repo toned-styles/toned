@@ -1,8 +1,11 @@
 import { writeFile } from 'node:fs/promises'
+
 import { createElement } from 'react'
-import { renderToString } from 'react-dom/server'
+import { render } from 'react-email'
 
 import App from './App.tsx'
 
-const stream = renderToString(createElement(App))
-await writeFile(`${__dirname}/example.html`, stream)
+await writeFile(
+  `${import.meta.dirname}/example.html`,
+  await render(createElement(App)),
+)

@@ -1,0 +1,178 @@
+# `@toned/compiler`
+
+`@toned/compiler` connects Toned declarations to their source. Its language
+server, CLI, inspector and programmatic edit operations use the same bounded
+source index. It is optional: normal core/React imports do not load TypeScript,
+filesystem or editor code. Install it as a development dependency alongside Toned.
+
+Source extraction is not required to build or render styles. Explicit sheet
+inventories passed to `@toned/core/build` remain authoritative for CSS delivery;
+the source index adds editor intelligence, diagnostics and scoped edits on top.
+
+## Source intelligence
+
+```ts
+import {
+  DesignProject,
+  proposeValueEdit,
+  applyDesignEdit,
+} from '@toned/compiler'
+
+const project = new DesignProject()
+project.update('file:///app/button.ts', sourceText, 1)
+const page = project.query({ kind: 'sheet', limit: 50 })
+// Follow page.next using query({ ...filter, offset: page.next }).
+const declarations = project.query({
+  owner: 'buttonStyles',
+  kind: 'declaration',
+  limit: 50,
+})
+```
+
+The graph includes systems, finite token vocabularies, sheets, parts, literal
+values, variant axes, component families and declared module dependencies. Each
+node has UTF-16 source ranges, an owning declaration and a condition path. Source
+revisions invalidate changed documents; warm navigation and completion reuse the
+index. Shared symbolic bindings and token vocabularies invalidate through recorded
+import dependencies, including unresolved import candidates and reexports. An
+unrelated source edit does not discard a system vocabulary. Token names and
+finite diagnostic domains reuse the same vocabulary objects across consumers.
+`statistics` reports parse/reuse counts and symbolic-resolution cache work.
+`dispose()` releases the retained indexes and caches.
+
+Source analysis never executes application modules, token resolvers or factories.
+It reads supported static object/factory declarations and local type definitions.
+Computed JavaScript, unsupported control flow, imported type domains and spreads
+that cannot be established statically are explicitly opaque. The TypeScript
+service remains authoritative for type checking; the runtime plan and renderer
+remain authoritative for precedence and resolved values. A dependency report is
+an impact inventory, not proof that every affected rendering has been exercised.
+
+Default budgets are 4096 documents, 32 million source characters, one million
+characters per document and 20,000 design nodes per document. Queries return at
+most 500 nodes and include total/next/revision. Narrow the workspace or adjust
+supported limits explicitly when an index is incomplete.
+
+See [source analysis boundaries](./SOURCE.md) for the supported syntax, symbol
+resolution, per-operation budgets and edit validation. These limits also apply
+to the LSP, inspector and CLI; an opaque source expression stays opaque through
+each interface.
+
+## Language server and CLI
+
+```sh
+toned-lsp --stdio
+toned inspect ./src sheet
+toned inspect ./src declaration --offset=0 --limit=100
+toned propose ./src '<JSON scoped edit request>'
+```
+
+Configure an LSP 3.17 client to run `toned-lsp --stdio` for TypeScript, TSX,
+JavaScript and JSX files, alongside its usual TypeScript language server.
+Completion, hover, definition, references, document symbols, diagnostics and
+literal-value code actions share the design index. Open-document snapshots
+take precedence over disk. The server requests full-document synchronization:
+this lets it discard oversized text while retaining a bounded open marker, then
+recover on the next valid snapshot without losing unsaved-editor ownership.
+Parsing is coalesced and restricted to changed documents; this trades
+additional editor-to-server bytes for bounded memory and reliable recovery.
+Closed files are restored from disk; watched
+file notifications refresh unopened documents. Clients with dynamic file watching
+receive registrations; other clients must send `workspace/didChangeWatchedFiles`.
+Workspace roots are fixed at initialization (restart after changing roots).
+
+Custom JSON-RPC requests:
+
+| Request             | Input                        | Result                                    |
+| ------------------- | ---------------------------- | ----------------------------------------- |
+| `toned/inspect`     | query filters, offset, limit | bounded design page                       |
+| `toned/statistics`  | none                         | work counts and workspace indexing status |
+| `toned/proposeEdit` | scoped edit request          | change report + versioned WorkspaceEdit   |
+
+`toned.setValue` is an explicit execute-command operation that asks the editor to
+apply that edit. Open documents carry their editor version; closed documents use
+`version: null` as required by LSP, while the proposal still validates the indexed
+source revision. The editor controls applying closed-file edits.
+
+For embedding, `@toned/compiler/lsp` exports
+`startLanguageServer({ input, output })`, returning an idempotent `dispose()`.
+Without a transport, `@toned/compiler/language-service` exports
+`DesignLanguageService` and `DesignProject` alone. That entry imports no Node
+built-in and no LSP transport, so it bundles for a browser or a Web Worker: feed
+it documents with `project.update(uri, text, version)` and call `hover`,
+`completions`, `diagnostics`, `definition`, `references` and `symbols` directly.
+The docs playground runs it this way beside TypeScript's own language service.
+The server accepts up to 16 file workspace roots. Initial indexing yields between
+files, skips generated/dependency directories and reports budget failures.
+No whole-project typecheck runs on a completion request.
+
+Interactive requests prioritize the requested document and its current transitive
+imports. During the initial scan they can read an included dependency closure
+(up to 256 files / 1024 candidate reads), while completion remains marked
+incomplete until the workspace scan finishes successfully. Initial, eager and
+watched disk reads share a per-URI queue: at most 128 active files, each with one
+coalesced subsequent read after the active writer settles. Publication rechecks
+editor ownership; unsaved buffers always win. Delete notifications read current
+disk state too, so a recreated file wins over an earlier deletion notification.
+Background editor updates yield after eight files or six milliseconds; diagnostics coalesce per
+open document and do not republish identical content for the same version.
+Workspace-wide inspection and reference requests flush pending snapshots before
+querying. Requests recheck versions after yielding, accept protocol cancellation,
+and are limited to 32 concurrent operations, 64 revalidation passes and a
+15-second cooperative deadline. Traversal retains only indexed or pending module
+targets, bounded by the project/open-document budgets; it does not accumulate
+negative lexical candidates or reject large closures at an arbitrary candidate
+count. Per-document dependency revisions include transitive reexports and missing
+import candidates, so a newly indexed dependency invalidates a yielded traversal.
+When only the requested buffer is pending, it is processed without a closure walk.
+An individual bounded file parse is synchronous and cannot be interrupted midway.
+Admission limits and expired requests return `ServerCancelled`; unresolved
+document churn returns `ContentModified`, allowing the client to retry current work.
+
+Symbolic binding caches retain at most 512 entries and 100,000 conservatively
+counted graph nodes/member edges; a single graph above 20,000 is not retained.
+The consumer vocabulary cache and LSP text-document cache each retain at most
+256 entries. URI indexes remove cache entries directly on invalidation/eviction.
+Diagnostic publication state is owned by the bounded open-document set and is
+released on close/dispose. `toned/statistics` also reports diagnostic work,
+pending editor work and observational process memory. These process snapshots
+are not a retained-heap measurement or a leak guarantee. See
+[authoring benchmarks](../../benchmarks/design-tools.md) for measured limits.
+
+An edit request supplies `nodeId`, `value`, `expectedVersion` and
+`scope: { uri, owner, path? }`. `proposeValueEdit` returns an exact before/after
+patch; `applyDesignEdit(text, version, change.edit)` validates the revision and
+preimage and returns new text. These pure APIs do not write files. Proposals
+cannot edit opaque expressions or escape their declared source scope. Run the
+project's typecheck/build and relevant contract tests after applying a patch.
+
+## Inspector and persistence
+
+The [browser inspector](./inspector/README.md) edits the same declarations using
+an async transport. The [source bridge](./bridge/README.md) supplies development
+persistence for an explicit file allowlist, version checks and issued proposals.
+An inspector integration passes source URI/sheet/part selection explicitly; it
+must not guess a shared token's ownership from a computed color. Inspector code
+has no runtime compiler imports and does not require React or a JSX pragma.
+
+Import browser UI and its HTTP transport from `@toned/compiler/inspector`.
+Import filesystem persistence, the HTTP handler and `sourceBridgePlugin` from
+`@toned/compiler/bridge` in development server code. The Vite plugin uses an
+explicit file allowlist and exposes `virtual:toned-source-bridge` only during
+development; its capability and write transport must stay out of production
+entries. The bridge documentation covers cancellation, atomic replacement and
+the remaining race with unrelated external file writers.
+
+## Verification and interchange
+
+- [Contracts](./contracts/README.md): bounded scenarios, measured policies and
+  counterexamples with declaration provenance. Missing observations produce an
+  inconclusive result. Sampling is explicitly reported; it is not exhaustive or
+  pairwise coverage.
+- [DTCG](./tokens/README.md): explicit import/export, metadata/alias retention,
+  theme mapping and finite context resolution. Unsupported types are diagnosed;
+  this is a documented subset, not a claim of complete DTCG conformance.
+
+These tools do not replace the build's explicit sheet inventory. Use
+`buildStyles` from `@toned/core/build` and its manifest to deliver CSS, and
+`renderer.explain` to connect contract failures to resolved declaration origins.

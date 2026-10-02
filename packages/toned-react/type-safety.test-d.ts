@@ -1,0 +1,300 @@
+/**
+ * Compile-time contracts for `useStyles` — `tsc` IS the test: every
+ * `@ts-expect-error` line fails the build if the error disappears.
+ *
+ * The load-bearing guarantee: `{...s.container}` is only spreadable for
+ * elements the stylesheet DECLARED — a typo'd element name is a compile
+ * error, not a silent `any`.
+ */
+import type { Variants } from '@toned/core'
+import { alpha, defineSystem, defineToken, overrideSheet } from '@toned/core'
+
+import { bind, overrideStyles, useBind, useStyles } from './index.ts'
+
+const bgColor = defineToken({
+  values: ['base', 'accent'] as const,
+  resolve: (value) => ({ backgroundColor: value }),
+})
+
+const system = defineSystem({ bgColor })
+
+const plain = system.stylesheet({
+  container: { bgColor: 'base' },
+  label: { bgColor: 'accent' },
+})
+
+const varianted = system
+  .stylesheet({ root: { bgColor: 'base' } })
+  .variants<{ tone: 'calm' | 'loud' }>(($) => ({
+    [$.tone('loud')]: { root: { bgColor: 'accent' } },
+  }))
+
+export function Plain() {
+  const s = useStyles(plain)
+  void s.container.className
+  void s.label.style
+  s.container.with({ className: 'x' })
+  // @ts-expect-error — no such element was declared
+  void s.nope
+  return null
+}
+
+export function Varianted() {
+  const s = useStyles(varianted, { tone: 'calm' })
+  void s.root.className
+  // @ts-expect-error — no such element was declared
+  void s.typo
+  return null
+}
+
+export function VariantedMods() {
+  // @ts-expect-error — 'shouty' is not a declared tone
+  useStyles(varianted, { tone: 'shouty' })
+  // @ts-expect-error — a varianted stylesheet requires its mods
+  useStyles(varianted)
+  return null
+}
+
+// useBind/bind share useStyles' contract: the bound set is exactly the declared
+// elements (a component that also carries `.with`), and mods type identically.
+export function BoundPlain() {
+  const s = useBind(plain)
+  s.container.with({ className: 'x' })
+  // @ts-expect-error — no such element was declared
+  void s.nope
+  return null
+}
+
+export function BoundVarianted() {
+  const s = useBind(varianted, { tone: 'calm' })
+  void s.root
+  // @ts-expect-error — no such element was declared
+  void s.typo
+  return null
+}
+
+export function BoundVariantedMods() {
+  // @ts-expect-error — 'shouty' is not a declared tone
+  useBind(varianted, { tone: 'shouty' })
+  // @ts-expect-error — a varianted stylesheet requires its mods
+  useBind(varianted)
+  return null
+}
+
+// `as` infers the target's interface: intrinsic props for a tag, the
+// component's own props for a component. The no-`as` signature forbids `as`,
+// so a failed `as` call cannot fall through to it and silently pass.
+export function BoundAs() {
+  const s = useBind(plain)
+  const Needs = (_props: { x: number; className?: string }) => null
+
+  s.container({ as: 'button', type: 'submit' })
+  s.container({ as: Needs, x: 1, className: 'y' })
+  // @ts-expect-error — 'href' is not a button prop
+  s.container({ as: 'button', href: '/nope' })
+  // @ts-expect-error — an anchor's `type` is a string, not a number
+  s.container({ as: 'a', type: 2 })
+  // @ts-expect-error — Needs requires `x`
+  s.container({ as: Needs })
+  // @ts-expect-error — `x` must be a number
+  s.container({ as: Needs, x: 'one' })
+  return null
+}
+
+export function ModlessBind() {
+  const { container } = bind(plain)
+  container.with({ className: 'x' })
+  // @ts-expect-error — no such element was declared
+  void bind(plain).nope
+  return null
+}
+
+/*
+ * `overrideStyles` says what the stylesheet says, about the elements the
+ * target declared. Each `@ts-expect-error` below holds because a sheet
+ * exported for overriding keeps its declared type.
+ */
+const overridable = system
+  .stylesheet({ root: { bgColor: 'base' }, icon: { bgColor: 'accent' } })
+  .variants<{ size: 'sm' | 'lg' }>(($) => ({
+    [$.size('sm')]: { root: { bgColor: 'accent' } },
+  }))
+
+// Base rules: the nested blocks the stylesheet accepts, an override accepts.
+overrideStyles(overridable, {
+  root: { bgColor: 'accent', ':hover': { bgColor: 'base' } },
+})
+
+// @ts-expect-error — an element the sheet never declared
+overrideStyles(overridable, { nope: { bgColor: 'base' } })
+
+// @ts-expect-error — a value the token does not have
+overrideStyles(overridable, { root: { bgColor: 'nope' } })
+
+// Variants: the sheet's own axes, replacing a matcher or adding one.
+overrideStyles(overridable, {}).variants(($) => ({
+  [$.size('sm')]: { root: { bgColor: 'base' } },
+  [$.size('lg')]: { icon: { ':hover': { bgColor: 'accent' } } },
+}))
+
+overrideStyles(overridable, {}).variants(($) => ({
+  // @ts-expect-error — a value the axis does not have
+  [$.size('xl')]: { root: { bgColor: 'base' } },
+}))
+
+overrideStyles(overridable, {}).variants(($) => {
+  // @ts-expect-error — an axis the sheet does not declare
+  $.tone('quiet')
+  return {}
+})
+
+// @ts-expect-error — an unknown element inside a matcher
+overrideStyles(overridable, {}).variants(($) => ({
+  [$.size('sm')]: { nope: { bgColor: 'base' } },
+}))
+
+// @ts-expect-error — a bad token value inside a matcher
+overrideStyles(overridable, {}).variants(($) => ({
+  [$.size('sm')]: { root: { bgColor: 'nope' } },
+}))
+
+export function TypedHostProps() {
+  const s = useStyles(plain)
+  s.container.withProps<'button'>({
+    type: 'submit',
+    disabled: true,
+    'data-testid': 'save',
+  })
+  s.container.withProps<'input'>({
+    value: 'text',
+    onChange: (event) => event.currentTarget.value,
+  })
+  // @ts-expect-error button type is restricted by the selected host
+  s.container.withProps<'button'>({ type: 'arbitrary' })
+  // @ts-expect-error semantic tokens are declarations, not host props
+  s.container.withProps({ bgColor: 'accent' })
+  return null
+}
+
+// Override factories share the same finite query builder and check inferred keys.
+overrideStyles(overridable, (q) => ({
+  root: { [q.state('hover')]: { bgColor: 'base' } },
+}))
+overrideStyles(overridable, {}).variants(($, q) => ({
+  [$.size('sm')]: { root: { [q.state('hover')]: { bgColor: 'accent' } } },
+}))
+// @ts-expect-error override variants reject a token typo beside a computed atom
+overrideStyles(overridable, {}).variants(($, q) => ({
+  [$.size('sm')]: {
+    root: { [q.state('hover')]: { bgColor: 'accent' }, bgClor: 'base' },
+  },
+}))
+// @ts-expect-error override factories reject extra token keys
+overrideStyles(overridable, (q) => ({
+  root: { [q.state('hover')]: { bgColor: 'base' }, bgClor: 'base' },
+}))
+
+export function CompletionContracts() {
+  // Defaulted axes may be omitted; non-defaulted axes stay required.
+  const defaultedSheet = system.stylesheet({ Root: {} }).variants(
+    ($: Variants<{ size: 's' | 'm'; tone: 'quiet' | 'accent' }>) => ({
+      [$.size('s')]: { Root: {} },
+    }),
+    { defaults: { size: 'm' } },
+  )
+  useStyles(defaultedSheet, { tone: 'quiet' })
+  useStyles(defaultedSheet, { tone: 'quiet', size: undefined })
+  // @ts-expect-error tone has no default
+  useStyles(defaultedSheet, {})
+  // @ts-expect-error a default does not widen the declared values
+  useStyles(defaultedSheet, { tone: 'quiet', size: 'xl' })
+  // @ts-expect-error declarations are composed before calling the hook
+  useStyles(defaultedSheet, { variants: { tone: 'quiet' }, overrides: {} })
+  // @ts-expect-error unknown declared override part
+  overrideSheet(defaultedSheet, { Missing: {} })
+
+  // Platform vocabulary widens, but the declared element kind still applies.
+  const portableSystem = defineSystem({
+    id: 'host-kind-types',
+    tokens: { bgColor },
+  })
+  portableSystem.stylesheet({
+    Root: {
+      $kind: 'view',
+      '@platform.web': {
+        // @ts-expect-error view parts cannot acquire text-only fields through a web gate
+        $style: { fontSize: 12 },
+      },
+    },
+  })
+  portableSystem.stylesheet({
+    Root: { $kind: 'text', '@platform.web': { $style: { fontSize: '1rem' } } },
+  })
+
+  const derived = overrideSheet(defaultedSheet, { Root: { bgColor: null } })
+  useStyles(derived, { tone: 'quiet' })
+  // @ts-expect-error composition preserves required axes
+  useStyles(derived)
+  // @ts-expect-error composition preserves variant value checking
+  useStyles(derived, { tone: 'missing' })
+  system.stylesheet({ Root: {} }).variants(
+    ($: Variants<{ size: 's' | 'm' }>) => ({ [$.size('s')]: { Root: {} } }),
+    // @ts-expect-error undefined is not a declared default value
+    { defaults: { size: undefined } },
+  )
+
+  const alphaSystem = defineSystem({
+    id: 'alpha-types',
+    tokens: {
+      bg: defineToken({
+        values: ['primary'] as const,
+        alphaChannel: ['backgroundColor'],
+        resolve: () => ({ backgroundColor: '#fff' }),
+      }),
+      plain: defineToken({
+        values: ['primary'] as const,
+        resolve: () => ({ color: '#fff' }),
+      }),
+    },
+  })
+  alphaSystem.stylesheet({ Root: { bg: alpha('primary', 0.2) } })
+  // @ts-expect-error the helper preserves the exact named token value
+  alphaSystem.stylesheet({ Root: { bg: alpha('missing', 0.2) } })
+  // @ts-expect-error alpha syntax requires an alpha-enabled token
+  alphaSystem.stylesheet({ Root: { plain: alpha('primary', 0.2) } })
+
+  // Legacy untyped parts retain their web escape vocabulary.
+  system.stylesheet({
+    Legacy: { '@platform web': { $style: { fontSize: '1rem' } } },
+  })
+  portableSystem.stylesheet({
+    Root: {
+      '@platform web': {
+        // @ts-expect-error descriptor systems default the part kind to view
+        $style: { fontSize: '1rem' },
+      },
+    },
+  })
+
+  // Authoritative composition is available to pure server/build code too.
+  const pureOverride = overrideSheet(
+    defaultedSheet,
+    { Root: { bgColor: null } },
+    ($) => ({
+      [$.tone('quiet')]: { Root: { bgColor: 'base' } },
+    }),
+  )
+  useStyles(pureOverride, { tone: 'quiet' })
+  // @ts-expect-error unknown override part
+  overrideSheet(defaultedSheet, { Missing: {} })
+  overrideSheet(defaultedSheet, {}, ($) => ({
+    // @ts-expect-error unknown variant value in pure override
+    [$.tone('missing')]: { Root: {} },
+  }))
+  // @ts-expect-error unknown token in pure override variant
+  overrideSheet(defaultedSheet, {}, ($) => ({
+    [$.tone('quiet')]: { Root: { bogus: true } },
+  }))
+
+  return null
+}

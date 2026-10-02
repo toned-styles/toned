@@ -1,5 +1,5 @@
 {
-  "extends": ["expo/tsconfig.base", "@config/typescript"],
+  "extends": ["expo/tsconfig.base", "@toned-config/typescript"],
   "compilerOptions": {
     "strict": true
   },
@@ -9,9 +9,6 @@
     },
     {
       "path": "../../packages/toned-react"
-    },
-    {
-      "path": "../../packages/toned-systems"
     },
     {
       "path": "../../packages/toned-themes"

@@ -1,95 +1,14 @@
+/** Legacy configuration entry. New integrations import hosts/native. */
 import { defineConfig } from '@toned/core'
-import type { Base } from '@toned/core/stylesheet'
+import { nativeBackend } from '@toned/core/backends'
+
 import reactConfig from './config.native.ts'
-
-// biome-ignore lint/suspicious/noExplicitAny: ignore
-type AnyValue = any
-
-type Ref = AnyValue
-
-function attachWith(result: Record<string, AnyValue>) {
-  Object.defineProperty(result, 'with', {
-    value: (props: Record<string, AnyValue>) => {
-      const merged: Record<string, AnyValue> = {}
-
-      for (const key in result) {
-        merged[key] = result[key]
-      }
-
-      for (const key in props) {
-        if (props[key] == null) continue
-
-        if (key === 'style') {
-          const tonedStyle = merged[key]
-          const userStyle = props[key]
-
-          if (typeof tonedStyle === 'function') {
-            merged[key] = (state: AnyValue) => ({
-              ...tonedStyle(state),
-              ...userStyle,
-            })
-          } else {
-            merged[key] = merged[key]
-              ? { ...merged[key], ...userStyle }
-              : userStyle
-          }
-        } else if (key === 'ref') {
-          const tonedRef = merged[key]
-          const userRef = props[key]
-          merged[key] = (node: AnyValue) => {
-            tonedRef(node)
-            if (typeof userRef === 'function') return userRef(node)
-            if (userRef) userRef.current = node
-          }
-        } else if (key.startsWith('on') && typeof merged[key] === 'function') {
-          const tonedHandler = merged[key]
-          const userHandler = props[key]
-          merged[key] = (...args: AnyValue[]) => {
-            tonedHandler(...args)
-            userHandler(...args)
-          }
-        } else {
-          merged[key] = props[key]
-        }
-      }
-
-      attachWith(merged)
-      return merged
-    },
-    enumerable: false,
-    configurable: false,
-  })
-}
-
-function getProps(this: Base, elementKey: string) {
-  const ref = (current: Ref) => {
-    this.refs[elementKey] = current
-  }
-
-  let result: Record<string, AnyValue>
-
-  if (this.matcher.interactions[elementKey]) {
-    result = {
-      ref,
-      ...this.getCurrentStyle(elementKey),
-      ...this.setOn(elementKey, ':active', 'onPressIn', 'onPressOut'),
-      ...this.setOn(elementKey, ':hover', 'onHoverIn', 'onHoverOut'),
-      ...this.setOn(elementKey, ':focus', 'onFocus', 'onBlur'),
-    }
-  } else {
-    result = {
-      ref,
-
-      ...this.getCurrentStyle(elementKey),
-    }
-  }
-
-  attachWith(result)
-
-  return result
-}
+import { nativeHost } from './hosts/native.ts'
 
 export default defineConfig({
   ...reactConfig,
-  getProps,
+  ...nativeHost,
+  initRef: reactConfig.initRef,
+  initInteraction: reactConfig.initInteraction,
+  backend: nativeBackend,
 })

@@ -1,51 +1,57 @@
-import { Slot } from "radix-ui"
-import { useStyles } from "@toned/react"
-import { stylesheet } from "@toned/systems/base"
+import type { Variants } from '@toned/core'
+import { useStyles } from '@toned/react'
+import { stylesheet } from '@toned/systems/base'
+import { Slot } from 'radix-ui'
 
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { Separator } from '@/components/ui/separator.tsx'
 
-const buttonGroupStyles = stylesheet({
+/*
+ * Joined corners and shared borders between neighbours are structural rules
+ * in styles.css: they depend on a child's position in the group.
+ */
+export const buttonGroupStyles = stylesheet({
   root: {
     display: 'flex',
     alignItems: 'stretch',
-    style: {
-      width: 'fit-content',
-    },
+    width: 'fit-content',
   },
   text: {
-    bgColor: 'action_secondary',
+    bgColor: 'muted',
+    textColor: 'muted',
     display: 'flex',
     alignItems: 'center',
     gap: 2,
-    borderColor: 'default',
+    borderColor: 'input',
     borderWidth: 'thin',
     borderRadius: 'medium',
-    typo: 'body_small',
-    fontWeight: 500,
+    typo: 'label_small',
     shadow: 'small',
-    paddingX: 4,
+    paddingX: 3,
   },
-})
+}).variants(
+  ($: Variants<{ orientation: 'horizontal' | 'vertical' }>) => ({
+    [$.orientation('vertical')]: {
+      root: { flexLayout: 'column' },
+    },
+  }),
+  { defaults: { orientation: 'horizontal' } },
+)
 
 function ButtonGroup({
   className,
-  orientation = "horizontal",
+  orientation = 'horizontal',
   ...props
-}: React.ComponentProps<"div"> & {
-  orientation?: "horizontal" | "vertical"
+}: React.ComponentProps<'div'> & {
+  orientation?: 'horizontal' | 'vertical'
 }) {
-  const s = useStyles(buttonGroupStyles)
+  const s = useStyles(buttonGroupStyles, { orientation })
 
   return (
     <div
       role="group"
       data-slot="button-group"
       data-orientation={orientation}
-      {...s.root.with({
-        className,
-        style: orientation === 'vertical' ? { flexDirection: 'column' } : undefined,
-      })}
+      {...s.root.with({ className })}
       {...props}
     />
   )
@@ -55,14 +61,15 @@ function ButtonGroupText({
   className,
   asChild = false,
   ...props
-}: React.ComponentProps<"div"> & {
+}: React.ComponentProps<'div'> & {
   asChild?: boolean
 }) {
-  const Comp = asChild ? Slot.Root : "div"
+  const Comp = asChild ? Slot.Root : 'div'
   const s = useStyles(buttonGroupStyles)
 
   return (
     <Comp
+      data-slot="button-group-text"
       {...s.text.with({ className })}
       {...props}
     />
@@ -70,23 +77,16 @@ function ButtonGroupText({
 }
 
 function ButtonGroupSeparator({
-  className,
-  orientation = "vertical",
+  orientation = 'vertical',
   ...props
 }: React.ComponentProps<typeof Separator>) {
   return (
     <Separator
       data-slot="button-group-separator"
       orientation={orientation}
-      className={cn(className)}
-      style={{ margin: 0, alignSelf: 'stretch', ...(orientation === 'vertical' ? { height: 'auto' } : undefined) }}
       {...props}
     />
   )
 }
 
-export {
-  ButtonGroup,
-  ButtonGroupSeparator,
-  ButtonGroupText,
-}
+export { ButtonGroup, ButtonGroupSeparator, ButtonGroupText }

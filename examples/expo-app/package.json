@@ -1,6 +1,7 @@
 {
   "name": "@examples/expo-app",
   "version": "1.0.0",
+  "private": true,
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -10,25 +11,21 @@
   },
   "dependencies": {
     "@examples/shared": "workspace:*",
-    "@expo/match-media": "^0.4.0",
-    "@expo/metro-runtime": "~5.0.4",
+    "@expo/metro-runtime": "~57.0.16",
     "@toned/core": "workspace:*",
     "@toned/react": "workspace:*",
-    "@toned/systems": "workspace:*",
     "@toned/themes": "workspace:*",
-    "expo": "~53.0.22",
-    "expo-screen-orientation": "~8.1.7",
-    "expo-status-bar": "~2.2.3",
+    "expo": "~57.0.26",
+    "expo-status-bar": "~57.0.1",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-native": "catalog:",
     "react-native-web": "catalog:"
   },
   "devDependencies": {
-    "@config/typescript": "workspace:*",
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^7.29.7",
+    "@toned-config/typescript": "workspace:*",
     "@types/react": "catalog:",
     "typescript": "catalog:"
-  },
-  "private": true
+  }
 }

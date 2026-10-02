@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+
 import { mergeStyle, toStyleMap } from './mergeStyle.ts'
 
 describe('mergeStyle', () => {
@@ -93,7 +94,7 @@ describe('mergeStyle with arrays', () => {
   })
 
   test('never spreads an array by index', () => {
-    // The old behaviour produced { "0": { left: 2 } }.
+    // Spreading by index would produce { "0": { left: 2 } }.
     expect(mergeStyle([{ top: 1 }], [{ left: 2 }])).not.toHaveProperty('0')
   })
 })

@@ -1,11 +1,12 @@
 import { describe, expect, test, vi } from 'vitest'
-import type {
-  Config,
-  TokenStyleDeclaration,
-  TokenSystem,
-} from '../types/index.ts'
-import { SYMBOL_INIT } from '../utils/symbols.ts'
+
+import { defineSystem, defineToken } from '../system/index.ts'
+import { registerFixtureHost } from '../testing/native-host.test.fixture.ts'
+import type { Config, TokenSystem } from '../types/index.ts'
+import type { Variants } from '../types/stylesheet.ts'
+import { SYMBOL_INIT, SYMBOL_REF } from '../utils/symbols.ts'
 import { setStyles } from './applyStyles.ts'
+import { overrideSheet } from './overrideSheet.ts'
 import { StyleMatcher } from './StyleMatcher.ts'
 import { Base, createStylesheet } from './StyleSheet.ts'
 import {
@@ -14,9 +15,55 @@ import {
   isNamedStyleKey,
 } from './variantSelector.ts'
 
-// Mock TokenSystem for testing
+/* Identity field resolvers keep controller assertions focused on ownership and
+ * matched declarations while exercising the real shared evaluation pipeline. */
+const testTokens = {
+  bgColor: defineToken({
+    values: [
+      'base',
+      'blue',
+      'green',
+      'hover',
+      'muted',
+      'red',
+      'yellow',
+    ] as const,
+    resolve: (value) => ({ backgroundColor: String(value) }),
+  }),
+  textColor: defineToken({
+    values: ['base', 'black', 'white'] as const,
+    resolve: (value) => ({ color: String(value) }),
+  }),
+  color: defineToken({
+    values: ['hover'] as const,
+    resolve: (value) => ({ color: String(value) }),
+  }),
+  borderRadius: defineToken({
+    values: ['medium'] as const,
+    resolve: (value) => ({ borderRadius: String(value) }),
+  }),
+  paddingX: defineToken({
+    values: [0, 2, 4] as const,
+    resolve: (value) => ({
+      paddingLeft: Number(value),
+      paddingRight: Number(value),
+    }),
+  }),
+}
+
 const mockTokenSystem = {
-  system: {},
+  system: Object.fromEntries(
+    [
+      ...Object.keys(testTokens),
+      'pad',
+      'borderColor',
+      'outlineColor',
+      'container',
+    ].map((key) => [
+      key,
+      { values: [], resolve: (value: unknown) => ({ [key]: value }) },
+    ]),
+  ),
   config: undefined,
   t: () => ({}),
   stylesheet: () => ({}),
@@ -24,7 +71,7 @@ const mockTokenSystem = {
     style: tokenStyle as object,
     className: '',
   }),
-} as unknown as TokenSystem<TokenStyleDeclaration>
+} as unknown as TokenSystem<typeof testTokens>
 
 // Mock Config
 const mockConfig: Config = {
@@ -59,18 +106,14 @@ describe('createStylesheet', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
 
-      expect(typeof stylesheet[Symbol.for('@toned/core/SYMBOL_INIT')]).toBe(
-        'function',
-      )
+      expect(typeof stylesheet[SYMBOL_INIT]).toBe('function')
     })
 
     test('stylesheet has SYMBOL_REF for system reference', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
 
-      expect(stylesheet[Symbol.for('@toned/core/SYMBOL_REF')]).toBe(
-        mockTokenSystem,
-      )
+      expect(stylesheet[SYMBOL_REF]).toBe(mockTokenSystem)
     })
   })
 
@@ -85,6 +128,57 @@ describe('createStylesheet', () => {
 
       expect(withVariants).toBeDefined()
       expect(withVariants).not.toBe(stylesheet)
+    })
+
+    test('part composition resolves base declarations before variant overrides', () => {
+      const stylesheet = createStylesheet(mockTokenSystem, {
+        container: { bgColor: 'blue', paddingX: 2 },
+        label: {},
+      }).variants(($: Variants<{ size: 'sm' }>) => ({
+        [$.size('sm')]: { label: { $compose: 'container', paddingX: 4 } },
+      }))
+      const controller = stylesheet[SYMBOL_INIT](mockConfig, { size: 'sm' })
+      expect((controller as unknown as Base).rules['[size=sm]'].label).toEqual({
+        bgColor: 'blue',
+        paddingX: 4,
+      })
+    })
+
+    test('composition uses effective overridden defaults and respects removed leaves', () => {
+      type Mods = { size: 'sm' }
+      const sheet = createStylesheet(mockTokenSystem, {
+        source: { bgColor: 'blue', paddingX: 2, borderRadius: 'medium' },
+        target: {},
+      }).variants(($: Variants<Mods>) => ({
+        [$.size('sm')]: { target: {} },
+      }))
+      const first = overrideSheet(sheet, {
+        source: { bgColor: 'red', paddingX: null },
+      })
+      const composed = ($: Variants<Mods>) => ({
+        [$.size('sm')]: { target: { $compose: 'source' as const } },
+      })
+      const withoutRadius = overrideSheet(first, {
+        source: { borderRadius: null },
+      })
+      for (const derived of [
+        overrideSheet(first, { source: { borderRadius: null } }, composed),
+        withoutRadius.variants(composed),
+        withoutRadius.extend({}, composed),
+      ]) {
+        const controller = derived[SYMBOL_INIT](mockConfig, {
+          size: 'sm',
+        }) as unknown as Base
+        expect(controller.modsStyle['target']).toEqual({ bgColor: 'red' })
+      }
+      const original = sheet[SYMBOL_INIT](mockConfig, {
+        size: 'sm',
+      }) as unknown as Base
+      expect(original.rules.source).toEqual({
+        bgColor: 'blue',
+        paddingX: 2,
+        borderRadius: 'medium',
+      })
     })
 
     test('variants can be chained multiple times', () => {
@@ -105,6 +199,40 @@ describe('createStylesheet', () => {
   })
 
   describe('extend method', () => {
+    test('extend changes defaults while variants retain their precedence', () => {
+      const rules = { container: { bgColor: 'base' } }
+      const sheet = createStylesheet(mockTokenSystem, rules).variants({
+        '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
+      })
+      const extended = (sheet as any).extend({
+        container: { bgColor: 'green' },
+      })
+      const base = extended[SYMBOL_INIT](
+        { getProps() {}, getTokens: () => ({}), tokens: {} } as any,
+        {},
+      )
+      expect(base.rules['[size=icon]'].container.bgColor).toBe('blue')
+      expect(base.rules['[size=icon]'].container.textColor).toBe('black')
+      expect(base.rules.container.bgColor).toBe('green')
+    })
+
+    test('explicit override layers beat matching variants without rewriting their declarations', () => {
+      const sheet = createStylesheet(mockTokenSystem, {
+        container: { bgColor: 'base' },
+      }).variants({
+        '[size=icon]': { container: { bgColor: 'blue', textColor: 'black' } },
+      })
+      const overridden = (sheet as any)[Symbol.for('@toned/override')]({
+        container: { bgColor: 'green' },
+      })
+      const base = overridden[SYMBOL_INIT](mockConfig, { size: 'icon' })
+      expect(base.modsStyle.container).toMatchObject({
+        bgColor: 'green',
+        textColor: 'black',
+      })
+      expect(base.rules['[size=icon]'].container.bgColor).toBe('blue')
+    })
+
     test('extend method returns new stylesheet', () => {
       const rules = { container: { bgColor: 'blue' } }
       const stylesheet = createStylesheet(mockTokenSystem, rules)
@@ -298,9 +426,9 @@ describe('Base class', () => {
   })
 })
 
-describe('integration: new API with StyleMatcher', () => {
+describe('integration: stylesheet rules with StyleMatcher', () => {
   test('inline pseudo class affects only self element', () => {
-    // New API: inline pseudo only affects the element it's defined in
+    // An inline pseudo only affects the element it's defined in
     const transformedRules = {
       container: {
         bgColor: 'blue',
@@ -422,14 +550,14 @@ describe('variantSelector', () => {
     expect(key2).toBe('[size=sm][variant=accent]')
   })
 
-  test('uses wildcard for unspecified variants', () => {
+  test('omitted axes remain wildcard without adding fictitious typed segments', () => {
     const $ = createVariantSelector<{
       size: 'sm' | 'md'
       variant: 'accent' | 'danger'
     }>(['size', 'variant'])
 
     const key = String($.size('sm'))
-    expect(key).toBe('[size=sm][variant=*]')
+    expect(key).toBe('[size=sm]')
   })
 
   test('handles multi-value selectors', () => {
@@ -487,7 +615,6 @@ describe('callback-based variants API', () => {
     }
 
     const stylesheet = createStylesheet(mockTokenSystem, rules)
-    // biome-ignore lint/suspicious/noExplicitAny: test callback variants
     const withVariants = (stylesheet as any).variants(($: any) => ({
       [$.menuOpen('true')]: {
         sidebar: { bgColor: 'yellow' },
@@ -507,7 +634,6 @@ describe('callback-based variants API', () => {
     }
 
     const stylesheet = createStylesheet(mockTokenSystem, rules)
-    // biome-ignore lint/suspicious/noExplicitAny: test callback variants
     const withVariants = (stylesheet as any).variants(($: any) => ({
       [$.active('true')]: {
         container: { bgColor: 'red' },
@@ -546,11 +672,16 @@ describe('multi-instance interaction state', () => {
     const el = {
       isConnected: true,
       recorded: undefined as Record<string, unknown> | undefined,
+      visible: {} as Record<string, unknown>,
       setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
-        el.recorded = style
+        for (const key in style) {
+          if (style[key] === null) delete el.visible[key]
+          else el.visible[key] = style[key]
+        }
+        el.recorded = { ...el.visible }
       },
     }
-    return el
+    return registerFixtureHost(el)
   }
 
   function setup() {
@@ -671,17 +802,24 @@ const interactiveRules = {
   },
 }
 
+// The fake models native merge patches; `recorded` is the resulting visible
+// style, while resetting it to undefined still detects an unnecessary write.
 function fakeInteractiveEl() {
   const el = {
     isConnected: true,
     recorded: undefined as Record<string, unknown> | undefined,
+    visible: {} as Record<string, unknown>,
     // Mimic a DOM node closely enough for setStyles' web branch AND the RN
     // branch. We drive setStyles through setNativeProps to avoid needing a DOM.
     setNativeProps: ({ style }: { style: Record<string, unknown> }) => {
-      el.recorded = style
+      for (const key in style) {
+        if (style[key] === null) delete el.visible[key]
+        else el.visible[key] = style[key]
+      }
+      el.recorded = { ...el.visible }
     },
   }
-  return el
+  return registerFixtureHost(el)
 }
 
 function setupPair() {
@@ -794,7 +932,7 @@ describe('contextless updates do not leak interaction across instances', () => {
   // box reacts to BOTH an interaction pseudo (:hover) and a non-interaction mod
   // (a `size` variant). The variant lets a *contextless* applyState genuinely
   // change box (so isEqual doesn't short-circuit the paint), exercising the
-  // path that previously fell back to the shared global style.
+  // path that must not fall back to the shared global style.
   const rules = {
     box: {
       bgColor: 'base',
@@ -929,8 +1067,8 @@ describe('cross-element interaction isolation (multi-instance)', () => {
     expect(c1.recorded).toEqual({ bgColor: 'hover' })
     expect(c2.recorded).toEqual({ bgColor: 'base' })
 
-    // Regression guard: before the fix both labels were painted with the
-    // cross-element hover ('hovered'). They must now both render resting.
+    // Neither label may be painted with the cross-element hover ('hovered'):
+    // both render resting.
     expect(l1.recorded).toEqual({ textColor: 'base' })
     expect(l2.recorded).toEqual({ textColor: 'base' })
 
@@ -1014,77 +1152,228 @@ describe('redundant write elision (multi-instance)', () => {
   })
 })
 
-describe('exec config forwarding', () => {
-  // `exec` gates breakpoint/pseudo chains on the media/pseudo modes, so it must
-  // see the same normalized values the constructor hands to StyleMatcher.
-  const capturingBase = (config: Config) => {
-    const seen: Record<string, unknown>[] = []
-    const ref = {
-      ...mockTokenSystem,
-      exec: (execConfig: unknown, tokenStyle: unknown) => {
-        seen.push(execConfig as Record<string, unknown>)
-        return { style: tokenStyle as object, className: '' }
-      },
-    } as unknown as TokenSystem<TokenStyleDeclaration>
+describe('elementDescriptors', () => {
+  test('enumerates real elements with their $$type', () => {
+    const rules = {
+      root: { $$type: 'view', bgColor: 'blue' },
+      label: { $$type: 'text', textColor: 'white' },
+      plain: { bgColor: 'red' },
+    }
+    const stylesheet = createStylesheet(mockTokenSystem, rules)
+    const base = stylesheet[SYMBOL_INIT](mockConfig, undefined)
 
-    const base = new Base({
-      ref,
-      rules: { container: { bgColor: 'blue' } },
-      config,
-    })
+    const got = base
+      .elementDescriptors()
+      .sort((a, b) => a.key.localeCompare(b.key))
 
-    return { base, seen }
+    expect(got).toEqual([
+      { key: 'label', type: 'text' },
+      { key: 'plain', type: undefined },
+      { key: 'root', type: 'view' },
+    ])
+  })
+})
+
+describe('runtime container queries (Base)', () => {
+  // conditionState reads container metadata alongside the identity resolvers.
+  const cqTokenSystem = {
+    ...(mockTokenSystem as unknown as Record<string, unknown>),
+    system: {
+      ...mockTokenSystem.system,
+      containers: { card: { sm: 80, md: '28rem' } },
+    },
+  } as unknown as TokenSystem<typeof testTokens>
+
+  const rules = {
+    Root: { container: 'card', bgColor: 'base' },
+    Label: { bgColor: 'base', '@card/sm': { bgColor: 'blue' } },
   }
 
-  const withoutModes = (over: Partial<Config> = {}) =>
-    ({
-      ...mockConfig,
-      mediaMode: undefined,
-      pseudoMode: undefined,
-      ...over,
-    }) as unknown as Config
-
-  test('normalizes an absent pseudoMode to runtime', () => {
-    const { base, seen } = capturingBase(withoutModes())
-
-    base.getCurrentStyle('container')
-
-    expect(seen.at(-1)).toMatchObject({ pseudoMode: 'runtime' })
-  })
-
-  test('normalizes an absent mediaMode using useMedia', () => {
-    const off = capturingBase(withoutModes({ useMedia: false }))
-    off.base.getCurrentStyle('container')
-    expect(off.seen.at(-1)).toMatchObject({ mediaMode: false })
-
-    const on = capturingBase(withoutModes({ useMedia: true }))
-    on.base.getCurrentStyle('container')
-    expect(on.seen.at(-1)).toMatchObject({ mediaMode: 'runtime' })
-  })
-
-  test('passes explicit modes through unchanged', () => {
-    const { base, seen } = capturingBase({
-      ...mockConfig,
-      mediaMode: 'css',
-      pseudoMode: 'css',
+  const make = () =>
+    new Base({
+      ref: cqTokenSystem,
+      rules,
+      config: mockConfig,
+      modsState: {},
     })
 
-    base.getCurrentStyle('container')
-
-    expect(seen.at(-1)).toMatchObject({ mediaMode: 'css', pseudoMode: 'css' })
+  test('containerName reads the resting declaration, and only that', () => {
+    const base = make()
+    expect(base.containerName('Root')).toBe('card')
+    expect(base.containerName('Label')).toBeUndefined()
   })
 
-  test('never forwards an undefined mode', () => {
-    const { base, seen } = capturingBase(withoutModes())
-
-    base.getCurrentStyle('container')
-    base.getRestingStyle('container')
-
-    for (const execConfig of seen) {
-      expect(execConfig).toHaveProperty('mediaMode')
-      expect(execConfig).toHaveProperty('pseudoMode')
-      expect(execConfig['mediaMode']).not.toBeUndefined()
-      expect(execConfig['pseudoMode']).not.toBeUndefined()
-    }
+  test('conditionState maps measured sizes to @name/step mods', () => {
+    const base = make()
+    expect(base.conditionState({ card: 400 })).toEqual({ '@card/sm': true })
+    expect(base.conditionState({ card: 100 })).toEqual({ '@card/sm': false })
+    // Unmeasured (no provider above, or before first layout): false — the
+    // mobile-first base styles.
+    expect(base.conditionState({})).toEqual({ '@card/sm': false })
   })
+
+  test('a sheet with no container keys answers null', () => {
+    const base = new Base({
+      ref: cqTokenSystem,
+      rules: { Root: { bgColor: 'base' } },
+      config: mockConfig,
+      modsState: {},
+    })
+    expect(base.conditionState({ card: 400 })).toBeNull()
+  })
+
+  test('the mod drives matching through applyState like any breakpoint', () => {
+    const base = make()
+    expect(base.getCurrentStyle('Label').style.bgColor).toBe('base')
+    base.applyState({ '@card/sm': true })
+    expect(base.getCurrentStyle('Label').style.bgColor).toBe('blue')
+  })
+})
+
+describe('runtime condition algebra (Base)', () => {
+  const cqTokenSystem = {
+    ...(mockTokenSystem as unknown as Record<string, unknown>),
+    // sm: 80 units × the default base (4px) = 320px — container numbers
+    // ride the universal spacing scale.
+    system: { ...mockTokenSystem.system, containers: { card: { sm: 80 } } },
+    usedConditions: new Set<string>(),
+  } as unknown as TokenSystem<typeof testTokens>
+
+  test('negated and compound expressions evaluate against sizes AND media mods', () => {
+    const base = new Base({
+      ref: cqTokenSystem,
+      rules: {
+        Root: {
+          bgColor: 'base',
+          '@!card/>=100': { bgColor: 'red' },
+          '@md&card/>=100': { bgColor: 'blue' },
+        },
+      },
+      config: mockConfig,
+      modsState: { '@md': true },
+    })
+    expect(base.conditionState({ card: 200 })).toEqual({
+      '@card/>=100': false,
+      '@!card/>=100': true,
+      '@md&card/>=100': false,
+    })
+    expect(base.conditionState({ card: 500 })).toEqual({
+      '@card/>=100': true,
+      '@!card/>=100': false,
+      '@md&card/>=100': true,
+    })
+    // an unmeasured container is width 0 — the below-condition holds
+    expect(base.conditionState({})).toEqual({
+      '@card/>=100': false,
+      '@!card/>=100': true,
+      '@md&card/>=100': false,
+    })
+  })
+
+  test('a MEDIA change re-evaluates compound conditions from the last sizes', () => {
+    const base = new Base({
+      ref: cqTokenSystem,
+      rules: {
+        Root: { bgColor: 'base', '@md&card/>=100': { bgColor: 'blue' } },
+      },
+      config: mockConfig,
+      modsState: {},
+    })
+    // useStyles path: evaluate, apply
+    base.applyState(base.conditionState({ card: 500 }) ?? {})
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('base')
+    // the sharedMedia sub path: only the media mod arrives — the compound
+    // must refresh from the remembered sizes
+    base.applyState({ '@md': true })
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('blue')
+    base.applyState({ '@md': false })
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('base')
+  })
+
+  test('createStylesheet registers ad-hoc atoms on the system ref', () => {
+    const sheet = createStylesheet(cqTokenSystem, {
+      Root: { bgColor: 'base', '@!card/>=612': { bgColor: 'red' } },
+    })
+    expect(sheet).toBeDefined()
+    expect([
+      ...(cqTokenSystem as unknown as { usedConditions: Set<string> })
+        .usedConditions,
+    ]).toContain('card/>=612')
+  })
+})
+
+describe("the ':rtl' runtime half (getDirection seam)", () => {
+  const rtlSystem = {
+    ...(mockTokenSystem as unknown as Record<string, unknown>),
+    system: { ...mockTokenSystem.system, states: { rtl: ':dir(rtl)' } },
+  } as unknown as TokenSystem<typeof testTokens>
+
+  const make = (getDirection?: () => 'ltr' | 'rtl') =>
+    new Base({
+      ref: rtlSystem,
+      rules: { Root: { bgColor: 'base', ':rtl': { bgColor: 'red' } } },
+      config: { ...mockConfig, getDirection } as typeof mockConfig,
+      modsState: {},
+    })
+
+  test('answers every :rtl mod from the seam', () => {
+    const base = make(() => 'rtl')
+    expect(base.conditionState({})).toEqual({ 'Root:rtl': true })
+    base.applyState(base.conditionState({}) ?? {})
+    expect(base.getCurrentStyle('Root').style.bgColor).toBe('red')
+  })
+
+  test('ltr answers false; no seam answers nothing (web half owns it)', () => {
+    expect(make(() => 'ltr').conditionState({})).toEqual({ 'Root:rtl': false })
+    expect(make(undefined).conditionState({})).toBeNull()
+  })
+})
+
+test('Base chooses legacy parent precedence or descriptor source order and keeps their plans separate', () => {
+  const rules = {
+    container: {},
+    label: {},
+    '[accent]': {
+      container: { ':hover': { $label: { textColor: 'white' } } },
+      label: { textColor: 'black' },
+    },
+  }
+  const legacy = new Base({
+    ref: defineSystem(testTokens),
+    rules,
+    config: mockConfig,
+  })
+  const descriptor = new Base({
+    ref: defineSystem({ id: 'precedence', tokens: testTokens }),
+    rules,
+    config: mockConfig,
+  })
+  const state = { accent: true, 'container:hover': true }
+  expect(legacy.matcher.match(state).label.textColor).toBe('white')
+  expect(descriptor.matcher.match(state).label.textColor).toBe('black')
+  expect(descriptor.matcher).not.toBe(legacy.matcher)
+})
+
+test('controllers use the shared semantic plan on web and native without the legacy exec boundary', () => {
+  const ui = defineSystem({
+    id: 'controller-plan',
+    tokens: {
+      gap: defineToken({ values: [0, 4], resolve: (gap) => ({ gap }) }),
+    },
+  })
+  const spy = vi.spyOn(ui, 'exec').mockImplementation(() => {
+    throw new Error('legacy executor called')
+  })
+  for (const platform of ['web', 'native'] as const) {
+    const base = new Base({
+      ref: ui,
+      rules: { Root: { gap: 0, ':hover': { gap: 4 } } },
+      config: { ...mockConfig, platform },
+      modsState: {},
+    })
+    expect(base.getCurrentStyle('Root').style).toEqual({ gap: 0 })
+    base.applyState({ 'Root:hover': true })
+    expect(base.getCurrentStyle('Root').style).toEqual({ gap: 4 })
+  }
+  expect(spy).not.toHaveBeenCalled()
 })

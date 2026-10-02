@@ -1,0 +1,318 @@
+/** Pure resolution: no React imports, global config installation or host writes. */
+import { resolveCssPlan } from '../backends/css/plan.ts'
+import type { OutputBackend, ResolvedProps } from '../backends/index.ts'
+import {
+  cssVariablesBackend,
+  inlineBackend,
+  nativeBackend,
+  pdfBackend,
+} from '../backends/index.ts'
+import type { BuildManifest } from '../build/index.ts'
+import {
+  assertManifestConditions,
+  systemDefinition,
+} from '../build/manifest.ts'
+import {
+  compilePlan,
+  compileRules,
+  explain as explainPlan,
+  foldOperations,
+  resolvePlan,
+} from '../core/plan.ts'
+import { getStylesheetPlan } from '../stylesheet/plans.ts'
+import type { SystemTheme } from '../system/theme-types.ts'
+import { createTokenComposer } from '../system/token-composer.ts'
+import type {
+  TokenStyleDeclaration,
+  TokenSystem,
+  Tokens,
+} from '../types/index.ts'
+import {
+  certifyImmutableReference,
+  immutableSnapshot,
+} from '../utils/immutable.ts'
+import { resolvePlatformKeys } from '../utils/platform.ts'
+import { SYMBOL_DEFAULTS } from '../utils/symbols.ts'
+
+type SheetMeta<T> = T extends { readonly __toned__?: infer M } ? M : never
+type SheetVariants<T> =
+  SheetMeta<T> extends {
+    mods: infer M
+    defaults: infer D
+  }
+    ? [M] extends [never]
+      ? never
+      : Omit<M, keyof D> & Partial<Pick<M, Extract<keyof D, keyof M>>>
+    : SheetMeta<T> extends { mods: infer M }
+      ? M
+      : never
+type SheetOutput<T> =
+  SheetMeta<T> extends { elements: infer E }
+    ? Readonly<{ [K in keyof E]: ResolvedProps }>
+    : Readonly<Record<string, ResolvedProps>>
+type RuntimeInput = {
+  variants?: object
+  facts?: Readonly<Record<string, unknown>>
+  tokens?: Tokens
+}
+type Input<T, Theme> = {
+  variants: SheetVariants<T>
+  facts?: Readonly<Record<string, string | number | boolean>>
+  tokens?: Theme
+}
+type Arguments<T, Theme> = [SheetVariants<T>] extends [never]
+  ? [input?: Omit<RuntimeInput, 'variants' | 'tokens'> & { tokens?: Theme }]
+  : {} extends SheetVariants<T>
+    ? [input?: Partial<Input<T, Theme>>]
+    : [input: Input<T, Theme>]
+
+/** Public, declaration-portable contract for pure server and document renderers. */
+export interface PureRenderer<S extends TokenStyleDeclaration> {
+  readonly backend: OutputBackend
+  readonly system: TokenSystem<S>
+  readonly tokens: SystemTheme<S>
+  readonly manifest: BuildManifest | undefined
+  validate(sheet: object): void
+  readonly t: TokenSystem<S>['t']
+  resolve<T extends object>(
+    sheet: T,
+    ...args: Arguments<T, SystemTheme<S>>
+  ): SheetOutput<T>
+  explain<T extends object>(
+    sheet: T,
+    ...args: Arguments<T, SystemTheme<S>>
+  ): ReturnType<typeof explainPlan> & { output: SheetOutput<T> }
+}
+
+/** CSS custom-property references without mutable process-global token state. */
+export function cssVariableTokens(): Tokens {
+  return certifyImmutableReference(
+    new Proxy(Object.freeze(Object.create(null)) as Tokens, {
+      get: (_target, key) =>
+        typeof key === 'string' ? `var(--${key})` : undefined,
+    }),
+  )
+}
+
+/** Explicit lightweight token composition, usable before a CSS manifest exists. */
+export function createTokenStyles<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: {
+    tokens: SystemTheme<NoInfer<S>>
+    platform: 'web' | 'native'
+    useClassName?: boolean
+  },
+): TokenSystem<S>['t'] {
+  const context = Object.freeze({
+    ...options,
+    tokens: immutableSnapshot(options.tokens),
+  })
+  return createTokenComposer(
+    () => system,
+    () => context,
+    undefined,
+    true,
+  )
+}
+
+export function createRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: {
+    backend: OutputBackend
+    manifest?: BuildManifest
+    tokens: SystemTheme<NoInfer<S>>
+  },
+): PureRenderer<S> {
+  const backendManifest = options.backend.manifest
+  const sourceManifest = options.manifest ?? backendManifest
+  // Renderer validation is identity-cached; its build contract must not change
+  // when a caller mutates the manifest object or its condition/extension arrays.
+  const manifest =
+    sourceManifest &&
+    immutableSnapshot({
+      ...sourceManifest,
+      conditions: [...sourceManifest.conditions],
+      ...(sourceManifest.extensions
+        ? { extensions: [...sourceManifest.extensions] }
+        : {}),
+    })
+  const backend = Object.freeze({
+    ...options.backend,
+    ...(backendManifest ? { manifest } : {}),
+  })
+  if (backend.requiresBuild && !backendManifest)
+    throw new Error(
+      'Toned renderer: backend requires a validated build artifact; use buildTailwind and createTailwindRuntime',
+    )
+  if (
+    backend.requiresBuild &&
+    options.manifest &&
+    options.manifest.fingerprint !== backendManifest?.fingerprint
+  )
+    throw new Error(
+      'Toned renderer: supplied manifest does not match the bound backend artifact',
+    )
+  if (
+    manifest &&
+    (manifest.systemId !== (system.id ?? 'legacy') ||
+      manifest.namespace !== (system.id ?? null))
+  )
+    throw new Error(
+      'Toned renderer: build manifest belongs to a different system namespace',
+    )
+  if (manifest && manifest.definition !== systemDefinition(system.system))
+    throw new Error(
+      'Toned renderer: build manifest has a different system definition; regenerate CSS',
+    )
+  const tokens = immutableSnapshot(options.tokens)
+  const validated = new WeakSet<object>()
+  const validate = (sheet: object) => {
+    if (validated.has(sheet)) return
+    const plan = getStylesheetPlan(sheet)
+    if (plan.ref !== (system as unknown))
+      throw new Error(
+        'Toned renderer: stylesheet belongs to a different system',
+      )
+    if (backend.browserConditions && !manifest)
+      throw new Error(
+        'Toned web renderer: a pre-generated CSS manifest is required',
+      )
+    if (backend.id === 'css-vars' && manifest)
+      assertManifestConditions(
+        manifest,
+        resolvePlatformKeys(plan.rules, backend.platform),
+      )
+    backend.validatePlan?.(compilePlan(system, sheet, backend.platform))
+    validated.add(sheet)
+  }
+  const inputs = (sheet: object, input: RuntimeInput) => ({
+    ...(sheet as Record<symbol, object>)[SYMBOL_DEFAULTS],
+    ...Object.fromEntries(
+      Object.entries(input.variants ?? {}).filter(
+        ([, value]) => value !== undefined,
+      ),
+    ),
+    ...input.facts,
+  })
+  const renderer = Object.freeze({
+    backend,
+    system,
+    tokens,
+    manifest,
+    validate,
+    t: createTokenComposer(
+      () => system,
+      () => ({
+        tokens,
+        platform: backend.platform,
+        useClassName: backend.id === 'css-vars',
+      }),
+      (value) => {
+        const rules = resolvePlatformKeys({ Root: value }, backend.platform)
+        if (backend.browserConditions && !manifest)
+          throw new Error(
+            'Toned web renderer: a pre-generated CSS manifest is required',
+          )
+        if (backend.id === 'css-vars' && manifest)
+          assertManifestConditions(manifest, rules)
+        const plan = compileRules(system, rules, backend.platform)
+        backend.validatePlan?.(plan)
+        if (backend.id === 'css-vars')
+          return resolveCssPlan(plan, system, tokens, {})['Root']!
+        const selected =
+          resolvePlan(
+            plan,
+            system,
+            tokens,
+            {},
+            { preserveConditions: backend.browserConditions },
+          )['Root'] ?? []
+        return backend.resolvePlan
+          ? backend.resolvePlan(selected, { system, part: 'Root' })
+          : backend.resolve(foldOperations(selected))
+      },
+      true,
+    ),
+    explain<T extends object>(
+      sheet: T,
+      ...args: Arguments<T, SystemTheme<S>>
+    ): ReturnType<typeof explainPlan> & { output: SheetOutput<T> } {
+      validate(sheet)
+      const input = (args[0] ?? {}) as RuntimeInput
+      return {
+        ...explainPlan(
+          compilePlan(system, sheet, backend.platform),
+          system,
+          input.tokens ?? tokens,
+          inputs(sheet, input),
+        ),
+        output: renderer.resolve(sheet, ...args),
+      }
+    },
+    resolve<T extends object>(
+      sheet: T,
+      ...args: Arguments<T, SystemTheme<S>>
+    ): SheetOutput<T> {
+      validate(sheet)
+      const input = (args[0] ?? {}) as RuntimeInput
+      const facts = inputs(sheet, input)
+      const activeTokens = input.tokens ?? tokens
+      const result: Record<string, ResolvedProps> = {}
+      if (backend.id !== 'css-vars') {
+        const plan = compilePlan(system, sheet, backend.platform)
+        const selected = resolvePlan(plan, system, activeTokens, facts, {
+          preserveConditions: backend.browserConditions,
+        })
+        for (const part of plan.parts)
+          result[part] = backend.resolvePlan
+            ? backend.resolvePlan(selected[part]!, { system, part })
+            : backend.resolve(foldOperations(selected[part]!))
+      } else {
+        Object.assign(
+          result,
+          resolveCssPlan(
+            compilePlan(system, sheet, 'web'),
+            system,
+            activeTokens,
+            facts,
+          ),
+        )
+      }
+      return immutableSnapshot(result) as SheetOutput<T>
+    },
+  })
+  return renderer
+}
+
+export function createWebRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: { manifest: BuildManifest; tokens?: SystemTheme<NoInfer<S>> },
+) {
+  return createRenderer(system, {
+    ...options,
+    tokens: options.tokens ?? (cssVariableTokens() as SystemTheme<NoInfer<S>>),
+    backend: cssVariablesBackend,
+  })
+}
+export function createNativeRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: { tokens: SystemTheme<NoInfer<S>> },
+) {
+  return createRenderer(system, { ...options, backend: nativeBackend })
+}
+
+/** Static HTML/email output with explicit literal theme tokens and no global installation. */
+export function createInlineRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: { tokens: SystemTheme<NoInfer<S>> },
+) {
+  return createRenderer(system, { ...options, backend: inlineBackend })
+}
+
+/** Static PDF point values in the supported React PDF/Forme profile. */
+export function createPdfRenderer<S extends TokenStyleDeclaration>(
+  system: TokenSystem<S>,
+  options: { tokens: SystemTheme<NoInfer<S>> },
+) {
+  return createRenderer(system, { ...options, backend: pdfBackend })
+}

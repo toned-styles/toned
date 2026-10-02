@@ -1,82 +1,81 @@
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useStyles } from '@toned/react'
-import { stylesheet } from '@toned/systems/base'
+import { useId, useState } from 'react'
+
 import { componentNames } from '../lib/component-registry.ts'
+import { indexStyles, sidebarStyles } from '../styles/site.ts'
 
-const uiSidebarStyles = stylesheet({
-  sidebar: {
-    width: '200px',
-    flexShrink: '0',
-    display: 'none',
-    '@md': {
-      display: 'block',
-    },
-  },
-  sectionTitle: {
-    fontSize: '11px',
-    fontWeight: 600,
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-    paddingY: 0.5,
-    paddingX: 1.5,
-    marginBottom: 0.75,
-    textColor: 'muted',
-    opacity: 0.7,
-  },
-  link: {
-    display: 'block',
-    paddingY: 0.75,
-    paddingX: 1.5,
-    borderRadius: 'large',
-    textDecoration: 'none',
-    fontSize: '13.5px',
-    lineHeight: 1.5,
-    cursor: 'pointer',
-    textColor: 'subtle',
-    style: {
-      transition: 'background-color 0.15s ease, color 0.15s ease',
-    },
-    ':hover': {
-      bgColor: 'subtle',
-    },
-  },
-}).variants<{
-  active?: 'true'
-}>(($) => ({
-  [$.active('true')]: {
-    link: {
-      textColor: 'on_action',
-      fontWeight: 500,
-      style: {
-        background: 'var(--gradient-brand)',
-      },
-      ':hover': {
-        style: {
-          background: 'var(--gradient-brand)',
-        },
-      },
-    },
-  },
-}))
+function title(name: string) {
+  return name
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
 
-export function UiSidebar() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-
+function ComponentLink({
+  to,
+  label,
+  active,
+  params,
+}: {
+  to: '/ui' | '/ui/$component'
+  label: string
+  active: boolean
+  params?: { component: string }
+}) {
+  const s = useStyles(sidebarStyles, { active })
   return (
-    <nav {...useStyles(uiSidebarStyles, {}).sidebar}>
-      <div {...useStyles(uiSidebarStyles, {}).sectionTitle}>Components</div>
-      {componentNames.map((name) => (
-        <NavLink key={name} name={name} isActive={pathname === `/ui/${name}`} />
-      ))}
-    </nav>
+    <Link
+      to={to}
+      params={params}
+      {...s.Link}
+      aria-current={active ? 'page' : undefined}
+    >
+      {label}
+    </Link>
   )
 }
 
-function NavLink({ name, isActive }: { name: string; isActive: boolean }) {
-  const s = useStyles(uiSidebarStyles, { active: isActive ? 'true' : undefined })
+export function UiSidebar() {
+  const s = useStyles(sidebarStyles)
+  const i = useStyles(indexStyles, { density: 'compact' })
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname.replace(/\/$/, ''),
+  })
+  // Rendered twice (sidebar and mobile drawer), so each needs its own id.
+  const searchId = useId()
+  const [query, setQuery] = useState('')
+  const names = componentNames.filter((name) =>
+    name.includes(query.toLowerCase().trim()),
+  )
   return (
-    <Link to={`/ui/${name}` as string} {...s.link}>
-      {name.charAt(0).toUpperCase() + name.slice(1)}
-    </Link>
+    <nav aria-label="UI components">
+      <div {...s.Group}>
+        <ComponentLink to="/ui" label="Showcase" active={pathname === '/ui'} />
+      </div>
+      <div {...s.Group}>
+        <label {...s.Heading} htmlFor={searchId}>
+          {componentNames.length} components
+        </label>
+        <input
+          id={searchId}
+          {...i.Input}
+          type="search"
+          placeholder="Filter components…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {names.map((name) => (
+          <ComponentLink
+            key={name}
+            to="/ui/$component"
+            params={{ component: name }}
+            label={title(name)}
+            active={pathname === `/ui/${name}`}
+          />
+        ))}
+        {names.length === 0 && <p {...i.Count}>No matching components.</p>}
+      </div>
+    </nav>
   )
 }

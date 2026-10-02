@@ -1,0 +1,63 @@
+{
+  "runtime": "v26.10.0",
+  "machine": {
+    "platform": "darwin",
+    "release": "27.0.0",
+    "arch": "arm64",
+    "cpu": "Apple M1 Pro"
+  },
+  "files": 1000,
+  "cold": {
+    "samples": 1,
+    "medianMs": 118.107583,
+    "p95Ms": 118.107583
+  },
+  "firstConsumers": {
+    "samples": 1000,
+    "medianMs": 0.00925000000000864,
+    "p95Ms": 0.020375000000001364
+  },
+  "warm": {
+    "samples": 1000,
+    "medianMs": 0.0027919999999994616,
+    "p95Ms": 0.004666999999983545
+  },
+  "unrelatedEdit": {
+    "samples": 100,
+    "medianMs": 0.026624999999967258,
+    "p95Ms": 0.1674160000000029
+  },
+  "sharedEdit": {
+    "samples": 20,
+    "medianMs": 2.1695000000000277,
+    "p95Ms": 3.6159169999999676
+  },
+  "statistics": {
+    "parses": 1121,
+    "unchanged": 0,
+    "files": 1002,
+    "characters": 83461,
+    "revision": 1121,
+    "resolution": {
+      "entries": 4,
+      "weight": 427,
+      "hits": 1998,
+      "evaluations": 1086
+    }
+  },
+  "memoryBefore": {
+    "rss": 159875072,
+    "heapTotal": 21250048,
+    "heapUsed": 18705808,
+    "external": 33388625,
+    "arrayBuffers": 9289771
+  },
+  "memoryAfter": {
+    "rss": 197672960,
+    "heapTotal": 54525952,
+    "heapUsed": 35472384,
+    "external": 33402689,
+    "arrayBuffers": 9303831
+  },
+  "limits": "One shared 70-token system; synthetic timings include source parsing and symbolic evaluation, not I/O or protocol. Memory snapshots are unforced process observations, not retained-heap comparisons."
+}

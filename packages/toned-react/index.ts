@@ -1,62 +1,176 @@
-import { getConfig, type Stylesheet, SYMBOL_INIT } from '@toned/core'
-import { useRef } from 'react'
+'use client'
+
+import type { QueryBuilder } from '@toned/core/system'
+import type {
+  ExtractNamedStyles,
+  ValidateDeclaration,
+} from '@toned/core/types/stylesheet'
+
+export {
+  ConfigProvider,
+  type ReactHost,
+  type ReactRenderer,
+  TonedProvider,
+} from './runtime-config.ts'
+
+import {
+  type Config,
+  type EditorOnly,
+  type ModType,
+  type OverrideRulesContext,
+  type OverrideSheetRules,
+  type OverrideSheetVariantRules,
+  type OverrideVariantContext,
+  SYMBOL_INIT,
+  type TokenStyleDeclaration,
+  type VariantSelector,
+} from '@toned/core'
+import {
+  type ComponentPropsWithRef,
+  type ElementType as HostElement,
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from 'react'
+
+import { bind as _bind, useBind as _useBind } from './bind.tsx'
+import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
+import { createElements as _createElements } from './create-elements.tsx'
+import {
+  overrideStyles as _overrideStyles,
+  type StyleOverrideEntry,
+  useOverriddenSheet,
+} from './overrides.tsx'
+import { useRuntimeConfig, VALIDATE_SHEET } from './runtime-config.ts'
+import { styleView } from './style-view.ts'
+import { useTokenConfig } from './token-config.ts'
 
 /**
  * Props returned for each element in a stylesheet.
  * Includes known properties (style, className) plus dynamic attributes.
  */
-type ElementProps = {
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic style object
-  style?: Record<string, any>
+type ElementProps<S extends TokenStyleDeclaration = TokenStyleDeclaration> = {
+  /** Resolved host fields; use withProps<Host>() for the host's precise style type. */
+  style?: Readonly<Record<string, unknown>>
   className?: string
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic merge result
-  with: (props: Record<string, any> | false | null | undefined) => ElementProps
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic element attributes
-  [key: string]: any
-}
+  /** Present so React re-attaches interaction state on commit — safe to spread. */
+  ref?: (node: unknown) => void
+  /**
+   * Merge host props onto this element. Token overrides belong in overrideStyles().
+   *
+   * Implemented by `addWith` through the web and native hosts' `getProps`, so
+   * it exists only when a host is installed — `@toned/react/config` alone has
+   * no `getProps` and yields bare elements with no `with`.
+   *
+   * The return type CARRIES the passed props: `{...s.root.with({ value })}`
+   * must still satisfy a consumer whose `value` is required — with() merges
+   * className/style/ref/handlers and passes everything else through.
+   */
+  with: <P extends Record<string, unknown> | false | null | undefined>(
+    props: P,
+  ) => ElementProps<S> &
+    (P extends Record<string, unknown>
+      ? Omit<P, 'className' | 'style' | 'ref' | 'with'>
+      : {})
+  /** Explicit host-prop composition; `with` is its compatibility alias. */
+  withProps: <As extends HostElement = 'div'>(
+    props:
+      | (ComponentPropsWithRef<As> & { [K in `data-${string}`]?: unknown })
+      | false
+      | null
+      | undefined,
+  ) => Omit<ElementProps<S>, 'style' | 'ref'> & ComponentPropsWithRef<As>
+} & InteractionHandlerProps
+
+/**
+ * The event handlers the platform binding attaches when a stylesheet declares
+ * runtime interactions for an element (react-web: mouse/focus; react-native:
+ * press/hover/focus). Spread them; do not rely on their presence — css pseudo
+ * mode attaches none. Typed explicitly rather than through an index signature
+ * so `s.el.anything` does not silently type as `any`.
+ */
+type InteractionHandlerProps = Partial<{
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onMouseEnter: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onMouseLeave: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onMouseDown: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onFocus: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onBlur: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onPressIn: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onPressOut: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onHoverIn: (event: any) => void
+  // oxlint-disable-next-line typescript/no-explicit-any -- platform event types vary
+  onHoverOut: (event: any) => void
+}>
+
+/** Composition methods on a stylesheet — never element names. */
+type StylesheetMethod = 'variants' | 'extend'
 
 /**
  * Base type for stylesheets that can be used with useStyles.
  * Uses structural typing to accept any object with SYMBOL_INIT.
  */
 type StylesheetLike = {
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic function signature
+  // oxlint-disable-next-line typescript/no-explicit-any -- dynamic function signature
   [SYMBOL_INIT]: (...args: any[]) => any
 }
 
 /**
- * Extract element types from a Stylesheet generic.
- * Uses conditional type inference to pull out the element record T
- * from the Stylesheet<S, T, M> intersection, avoiding index signature pollution.
+ * Recover a stylesheet's generic parameters from its phantom brand.
+ *
+ * Matching `S extends Stylesheet<any, infer T, any>` does NOT work: Stylesheet
+ * expands to an intersection containing a mapped type and is self-referential
+ * through StylesheetWithVariants, which defeats inference through the generic
+ * reference. The brand is a plain property, so it can be inferred.
  */
-type InferElements<S> = S extends Stylesheet<
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any,
-  infer T,
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any
->
-  ? { [K in keyof T as K extends string ? K : never]: ElementProps }
-  : { [K in keyof S as K extends string ? K : never]: ElementProps }
+type InferMeta<S> = S extends { readonly __toned__?: infer Meta } ? Meta : never
 
-/**
- * Infer the mods type from a Stylesheet generic.
- */
-type InferMods<S> = S extends Stylesheet<
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any,
-  // biome-ignore lint/suspicious/noExplicitAny: inference wildcard
-  any,
-  infer M
->
-  ? M
-  : never
+type InferElements<S> =
+  InferMeta<S> extends {
+    system: infer Sys extends TokenStyleDeclaration
+    elements: infer T
+  }
+    ? { [K in keyof T as K extends string ? K : never]: ElementProps<Sys> }
+    : {
+        // Fallback for a stylesheet without a recoverable brand. Maps EVERY string
+        // key, so the composition methods have to be excluded by name — otherwise
+        // `s.extend` types as an element and a typo'd element name resolves to it.
+        [
+          K in keyof S as K extends StylesheetMethod
+            ? never
+            : K extends string
+              ? K
+              : never
+        ]: ElementProps
+      }
 
+type InferMods<S> = InferMeta<S> extends { mods: infer M } ? M : never
+type InferDefaults<S> = InferMeta<S> extends { defaults: infer D } ? D : {}
+type InputMods<S> = Omit<InferMods<S>, keyof InferDefaults<S>> &
+  Partial<
+    Pick<InferMods<S>, Extract<keyof InferDefaults<S>, keyof InferMods<S>>>
+  >
+type VariantArgs<S> = [InferMods<S>] extends [never]
+  ? []
+  : {} extends InputMods<S>
+    ? [state?: InputMods<S>]
+    : [state: InputMods<S>]
 /**
  * Hook to use a stylesheet in a React component.
  *
  * @param stylesheet - The stylesheet created with `stylesheet()` or `stylesheet().variants()`
- * @param state - Optional state object for variant selection
+ * @param args - The variant state; required when the stylesheet has axes without defaults
  * @returns An object with element keys that can be spread onto React elements
  *
  * @example
@@ -67,32 +181,265 @@ type InferMods<S> = S extends Stylesheet<
  */
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
-  ...args: InferMods<T> extends never ? [] : [state: InferMods<T>]
+  ...args: VariantArgs<T>
 ): InferElements<T>
 
 export function useStyles<T extends StylesheetLike>(
   stylesheet: T,
-  state?: object,
+  mods?: object,
 ) {
-  const ref = useRef<{
-    stylesheet: T
-    state?: object
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic result type
-    result: any
-  }>(null)
-
-  if (ref.current?.stylesheet !== stylesheet) {
-    const config = getConfig()
-    ref.current = {
-      stylesheet,
-      state,
-      result: stylesheet[SYMBOL_INIT](config, state),
+  // Declared local composition belongs in overrideSheet(); ambient entries
+  // target this exact sheet identity and apply after its authored layers.
+  const sheet = useOverriddenSheet(stylesheet)
+  const legacySizes = useContext(ContainerSizesContext)
+  const containerScope = useContext(ContainerStoreContext)
+  const readSizes = useCallback(
+    () =>
+      containerScope
+        ? containerScope.legacy === legacySizes
+          ? containerScope.store.snapshot()
+          : { ...containerScope.store.snapshot(), ...legacySizes }
+        : legacySizes,
+    [containerScope, legacySizes],
+  )
+  const containerSizes = readSizes()
+  const committed = useRef<{ stylesheet: object; candidate: unknown } | null>(
+    null,
+  )
+  const config: Config & { [VALIDATE_SHEET]?: (sheet: object) => void } =
+    useTokenConfig(useRuntimeConfig(sheet))
+  // oxlint-disable-next-line react/void-use-memo -- renderer validation diagnoses an unsupported sheet by throwing; memoized so it runs once per renderer and sheet identity.
+  useMemo(() => config[VALIDATE_SHEET]?.(sheet), [config, sheet])
+  // A candidate is private to this render. In particular a suspended render
+  // cannot publish mods, refs, subscriptions, or token values to the live tree.
+  const candidate = sheet[SYMBOL_INIT](config, mods)
+  candidate.prepare?.(
+    // oxlint-disable-next-line react/refs -- reads, never writes, the committed candidate so this render can carry its state forward; publication happens in the layout effect.
+    committed.current?.stylesheet === stylesheet
+      ? committed.current.candidate
+      : undefined,
+  )
+  const conditions = candidate.conditionState?.(containerSizes)
+  if (conditions) {
+    Object.assign(candidate.modsState, conditions)
+    candidate.matchStyles()
+  }
+  useLayoutEffect(() => {
+    committed.current = { stylesheet, candidate }
+    const unmount = candidate.mount?.()
+    const syncMeasurements = () => {
+      const conditions = candidate.conditionState?.(readSizes())
+      if (conditions) candidate.applyState(conditions)
     }
-  }
+    const unsubscribe = containerScope?.store.subscribe(
+      syncMeasurements,
+      candidate.containerDependencies(),
+    )
+    // A measurement can change after render or during child attachment. Read
+    // it again in the commit phase before the browser/native host paints.
+    if (containerScope) syncMeasurements()
+    return () => {
+      unsubscribe?.()
+      unmount?.()
+    }
+  }, [candidate, stylesheet, containerScope, readSizes])
+  return styleView(candidate)
+}
 
-  if (ref.current?.state !== state) {
-    ref.current.result.applyState(state)
-  }
+/**
+ * A bound element component (`<s.Root/>`).
+ *
+ * Without `as`, it renders the primitive its `$kind` selects through the
+ * config's `resolveElement`. The host element is configuration, unknown
+ * statically, so that signature's props stay open.
+ *
+ * With `as`, it renders exactly that intrinsic or component, and the props are
+ * INFERRED from it: `<s.Root as="button" type="submit"/>` checks against
+ * 'button', `<s.Root as={Comp}/>` against Comp's own props — required props
+ * required, wrong values rejected. The no-`as` signature forbids `as`
+ * entirely, so a mistyped `as` call cannot fall through to the open signature
+ * and silently pass.
+ *
+ * `const` keeps `as="div"` inferred as the literal 'div'. Without it the
+ * literal widens to `string` whenever the host's `JSX.IntrinsicElements`
+ * carries a PATTERN key — React Three Fiber's `ThreeElements` is keyed
+ * `Uncapitalize<string>` — and `ComponentPropsWithRef<string>` is `{}`, which
+ * would reject every child and host prop.
+ */
+type BoundCallable = {
+  <const As extends HostElement>(
+    props: { as: As } & Omit<ComponentPropsWithRef<As>, 'as'>,
+  ): ReactElement
+  (props?: { as?: never } & Record<string, unknown>): ReactElement
+}
 
-  return ref.current?.result
+/**
+ * A bound stylesheet: each declared element becomes a component that renders the
+ * primitive its `$kind` selects (via the config's `resolveElement`) — or the
+ * `as` target — with the resolved styles applied, and ALSO carries the raw
+ * prop-bag (`.with`/`.style`/`.className`) for escape-hatch spreading. Keys are
+ * exactly the declared elements — `s.Nope` is a compile error, not `any`.
+ */
+type BoundElementsOf<T> = {
+  [K in keyof InferElements<T>]: BoundCallable & InferElements<T>[K]
+}
+
+/** Stable parts and an optional, hostless variant provider. Parts used outside
+ * their family provider resolve base styles plus declared defaults. */
+export type ElementsOf<T> = ((
+  props: ([InferMods<T>] extends [never] ? {} : InputMods<T>) & {
+    children?: ReactNode
+  },
+) => ReactElement) & { [K in keyof InferElements<T>]: BoundCallable }
+
+type ReservedElementName =
+  | keyof CallableFunction
+  // oxlint-disable-next-line typescript/no-wrapper-object-types -- the Object interface lists the prototype members a part name would shadow; `keyof object` is never.
+  | keyof Object
+  // Legacy Object.prototype members also satisfy the runtime `part in Elements`
+  // check, although modern TypeScript's Object interface omits them.
+  | '__proto__'
+  | '__defineGetter__'
+  | '__defineSetter__'
+  | '__lookupGetter__'
+  | '__lookupSetter__'
+  | 'displayName'
+  | '$$typeof'
+  | 'render'
+  | 'defaultProps'
+  | 'propTypes'
+type ElementsConstraint<T> =
+  Extract<keyof InferElements<T>, ReservedElementName> extends never
+    ? [InferMods<T>] extends [never]
+      ? unknown
+      : Extract<keyof InferMods<T>, 'children' | 'key' | 'ref'> extends never
+        ? unknown
+        : {
+            readonly 'Toned: variant axes cannot be children, key or ref': never
+          }
+    : { readonly 'Toned: part name conflicts with component metadata': never }
+
+/** Call at module scope; no host configuration or token values are read here. */
+export const createElements = _createElements as unknown as <
+  T extends StylesheetLike,
+>(
+  stylesheet: T & ElementsConstraint<T>,
+) => ElementsOf<T>
+
+/**
+ * Mod-less module-level binding for a stylesheet with no variants:
+ * `const { Root, Label } = bind(styles)`. The general form is `useBind`.
+ */
+export const bind = _bind as <T extends StylesheetLike>(
+  stylesheet: T,
+) => BoundElementsOf<T>
+
+/** Pure and ambient overrides share the same nullable declaration vocabulary. */
+export type StyleOverrideRules<T extends StylesheetLike> = OverrideSheetRules<T>
+/** Kept as a public compatibility alias; call-site validation infers exact names. */
+export type StyleOverrideVariantRules<
+  T extends StylesheetLike,
+  Named extends string = string,
+> = OverrideSheetVariantRules<T, Named>
+
+/**
+ * An override entry, with the stylesheet's own `.variants()` on it.
+ *
+ * `$` is built from the TARGET sheet's axes, so an override selects on what
+ * the component already passes to `useBind` — there are no new axes to
+ * invent, and one that could be invented would be dead code that type-checks.
+ * A matcher the sheet declared is replaced; one it did not is added.
+ */
+type OverrideSystem<T> =
+  InferMeta<T> extends {
+    system: infer S extends TokenStyleDeclaration
+  }
+    ? S
+    : TokenStyleDeclaration
+type OverrideParts<T> =
+  InferMeta<T> extends { elements: infer E } ? keyof E & string : string
+export interface OverrideEntry<
+  T extends StylesheetLike,
+> extends StyleOverrideEntry {
+  variants<const Rules extends Record<string, unknown>>(
+    callback: (
+      selector: VariantSelector<
+        InferMods<T> extends ModType ? InferMods<T> : never
+      >,
+      q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
+    ) => EditorOnly<
+      | Rules
+      | Record<
+          string,
+          OverrideVariantContext<T, ExtractNamedStyles<NoInfer<Rules>>>
+        >,
+      Rules
+    > &
+      ValidateDeclaration<
+        NoInfer<Rules>,
+        Record<
+          string,
+          OverrideSheetVariantRules<T, ExtractNamedStyles<NoInfer<Rules>>>
+        >,
+        OverrideSystem<T>,
+        OverrideParts<T>
+      >,
+  ): OverrideEntry<T>
+}
+
+export const overrideStyles = _overrideStyles as <
+  T extends StylesheetLike,
+  const Rules extends Record<string, unknown>,
+>(
+  sheet: T,
+  /*
+   * Contextually typed by OverrideRulesContext (shared element shapes);
+   * validated by ValidateDeclaration against the full rules type. The rules
+   * type as the constraint re-derived itself against each call's literal.
+   * The callback is validated through a separate `NoInfer` signature so that
+   * TypeScript before 7 still infers `Rules` from its return value.
+   */
+  rules:
+    | (((
+        q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
+      ) => EditorOnly<Rules | NoInfer<OverrideRulesContext<T>>, Rules>) &
+        NoInfer<
+          (
+            q: QueryBuilder<OverrideSystem<T>, OverrideParts<T>>,
+          ) => ValidateDeclaration<
+            Rules,
+            StyleOverrideRules<T>,
+            OverrideSystem<T>,
+            OverrideParts<T>
+          >
+        >)
+    | (EditorOnly<Rules | OverrideRulesContext<T>, Rules> &
+        ValidateDeclaration<
+          Rules,
+          StyleOverrideRules<T>,
+          OverrideSystem<T>,
+          OverrideParts<T>
+        >),
+  opts?: { scope?: string },
+) => OverrideEntry<T>
+
+export { ContainerSizesContext } from './containers.tsx'
+export type { StyleOverrideEntry } from './overrides.tsx'
+export { StyleOverrides } from './overrides.tsx'
+
+/**
+ * An EXPORTABLE stylesheet type for override targeting. A full sheet's
+ * inferred type can exceed TypeScript's declaration-emit limits (TS7056), so
+ * a module exporting its sheet for `overrideStyles` annotates with this —
+ * trading per-element rule typing at foreign call sites for an emittable
+ * declaration. Inside the owning module, `typeof <sheet>` stays fully typed.
+ */
+export type OverridableStylesheet = StylesheetLike
+
+export const useBind = _useBind as <T extends StylesheetLike>(
+  stylesheet: T,
+  ...args: VariantArgs<T>
+) => BoundElementsOf<T> & {
+  readonly $props: InferElements<T>
+  $scope: (children: ReactNode) => ReactElement
 }

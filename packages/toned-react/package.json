@@ -1,38 +1,70 @@
 {
   "name": "@toned/react",
   "version": "0.4.0",
-  "author": "Kenzhaev Artur",
+  "description": "React bindings for Toned on the web and React Native.",
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "react",
+    "react-native",
+    "styling",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-react"
+  },
   "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./config": "./config.ts",
+    "./config.native": "./config.native.ts",
+    "./config.18": "./config.18.ts",
+    "./config.19": "./config.19.ts",
+    "./config.auto": "./config.auto.ts",
+    "./context": "./context.ts",
+    "./context.native": "./context.native.ts",
+    "./react-web": "./react-web.ts",
+    "./react-native": "./react-native.ts",
+    "./style-types.web": "./style-types.web.ts",
+    "./style-types.universal": "./style-types.universal.ts",
+    "./motion": "./motion.tsx",
+    "./adaptive": "./adaptive.tsx",
+    "./hosts/web": "./hosts/web.ts",
+    "./hosts/native": "./hosts/native.ts"
+  },
   "publishConfig": {
     "access": "public",
     "directory": ".dist",
     "linkDirectory": false
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/react"
-  },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun -e 'import(`@config/build`)'"
+    "build": "bun -e 'import(`@toned-config/build`)'"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*",
+    "@toned/core": "workspace:~",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/react18": "npm:@types/react@^18.3.31",
+    "@types/react19": "npm:@types/react@^19.3.0",
+    "happy-dom": "^20.14.5",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "peerDependencies": {
     "@toned/core": "workspace:~",
     "react": ">=18"
-  },
-  "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.2",
-    "@toned/core": "workspace:~",
-    "@types/react": "^19.2.2",
-    "@types/react18": "npm:@types/react@^18.3.26",
-    "@types/react19": "npm:@types/react@^19.2.2",
-    "happy-dom": "^20.11.1",
-    "react": "catalog:",
-    "react-dom": "catalog:"
   }
 }

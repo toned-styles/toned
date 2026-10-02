@@ -1,27 +1,41 @@
 {
   "name": "@toned/themes",
   "version": "0.2.0",
-  "author": "Kenzhaev Artur",
+  "description": "Theme values for the @toned/systems base vocabulary.",
+  "keywords": [
+    "css-variables",
+    "design-tokens",
+    "shadcn",
+    "theme",
+    "toned"
+  ],
+  "homepage": "https://toned.style",
+  "bugs": {
+    "url": "https://github.com/toned-styles/toned/issues"
+  },
   "license": "MIT",
+  "author": "Artur Kenzhaev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toned-styles/toned.git",
+    "directory": "packages/toned-themes"
+  },
   "type": "module",
+  "exports": {
+    "./shadcn": "./shadcn/config.ts",
+    "./shadcn/config.css": "./shadcn/config.css"
+  },
   "publishConfig": {
     "access": "public",
     "directory": ".dist",
     "linkDirectory": false
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lttb/toned.git",
-    "directory": "@toned/themes"
-  },
   "scripts": {
     "prepublishOnly": "bun run build",
-    "build": "bun -e 'import(`@config/build`)'"
+    "build": "bun -e 'import(`@toned-config/build`)'"
   },
   "devDependencies": {
-    "@config/build": "workspace:*",
-    "@config/typescript": "workspace:*",
-    "rollup-copy-transform-css": "^2.1.0",
-    "rollup-plugin-copy": "^3.5.0"
+    "@toned-config/build": "workspace:*",
+    "@toned-config/typescript": "workspace:*"
   }
 }
