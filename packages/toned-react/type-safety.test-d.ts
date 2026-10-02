@@ -296,5 +296,13 @@ export function CompletionContracts() {
     [$.tone('quiet')]: { Root: { bogus: true } },
   }))
 
+  // `$`-prefixed keys are stylesheet language, not host props.
+  const hostBag = useStyles(plain)
+  hostBag.container.with({ style: { transform: 'none' } })
+  // @ts-expect-error $style is declared in the stylesheet, never passed to with()
+  hostBag.container.with({ $style: { transform: 'none' } })
+  // @ts-expect-error the same holds for withProps()
+  hostBag.container.withProps({ $style: { transform: 'none' } })
+
   return null
 }
