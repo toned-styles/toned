@@ -37,6 +37,22 @@ describe('generate', () => {
       // focus-within joins the self pseudo toggles too
       expect(result).toContain('._:focus-within {--toned_focus-within: ;}')
     })
+
+    test('a sibling toggle is kept off descendants by registration, not by a rule', () => {
+      const result = generate({
+        breakpoints: { __breakpoints: { sm: 480 } },
+        states: { 'data-active': '[data-active]' },
+      })
+      // `._s… ~ ._ ._` asks every styled element, for every styled ancestor,
+      // to scan that ancestor's previous siblings: quadratic in a long list.
+      expect(result).not.toContain('~ ._ ._')
+      expect(result).toContain(
+        "@property --toned_sib-hover {syntax:'*';inherits:false;}",
+      )
+      expect(result).toContain(
+        "@property --toned_sib-data-active {syntax:'*';inherits:false;}",
+      )
+    })
   })
 
   describe('responsive atomic classes', () => {

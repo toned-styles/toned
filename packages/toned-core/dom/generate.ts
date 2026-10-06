@@ -112,11 +112,19 @@ export function generate<const S extends TokenStyleDeclaration>(
 
         // SIBLING source channel: the same state on a `_s` source toggles
         // `--toned_sib-<alias>` on its FOLLOWING SIBLINGS (the `~` combinator
-        // the sidebar's peer-recolor css used), self-scoped: a sibling's own
-        // subtree resets, so only the sibling element itself answers.
+        // the sidebar's peer-recolor css used), self-scoped: only the sibling
+        // element itself answers.
+        //
+        // Self-scoped by REGISTRATION (`inherits: false`), not by a reset rule
+        // on the sibling's subtree. That rule was `._s… ~ ._ ._`, and its
+        // rightmost `._` is every styled element: each one, for each styled
+        // ancestor, scans that ancestor's previous siblings for a source, once
+        // per state. Under a long flat list (a document's blocks, a table's
+        // rows) that is quadratic — a 7,000-cell page spent over a second in
+        // style recalculation on every hover change.
         const sibName = `--toned_sib-${alias}`
-        stateToggles += `html {${sibName}: initial;}`
-        stateToggles += `${scope}${ssel} ~ ._ {${sibName}: ;} ${scope}${ssel} ~ ._ ._ {${sibName}: initial;}`
+        stateToggles += `@property ${sibName} {syntax:'*';inherits:false;}`
+        stateToggles += `${scope}${ssel} ~ ._ {${sibName}: ;}`
       }
     }
     styles += stateToggles
@@ -248,11 +256,12 @@ export function generate<const S extends TokenStyleDeclaration>(
     // The SIBLING hover channel: a hovered source toggles
     // `--toned_sib-hover` on its FOLLOWING SIBLINGS (`~`), self-scoped to the
     // sibling element itself — the peer-recolor shape (`.button:hover ~
-    // .action`) the descendant channel cannot say.
+    // .action`) the descendant channel cannot say. Registered non-inheriting
+    // rather than reset on the subtree, as the sibling state toggles above.
     rootRule += '--toned_sib-hover: initial;'
     rules +=
-      `@media (hover: hover) {${scope}._s:hover ~ ._ {--toned_sib-hover: ;} ` +
-      `${scope}._s:hover ~ ._ ._ {--toned_sib-hover: initial;}}`
+      `@property --toned_sib-hover {syntax:'*';inherits:false;}` +
+      `@media (hover: hover) {${scope}._s:hover ~ ._ {--toned_sib-hover: ;}}`
 
     for (const [key, value] of Object.entries(bpValues)) {
       const varName = `--media-${camelToKebab(key).replace('@', '')}`
