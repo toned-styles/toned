@@ -59,7 +59,10 @@ async function emitTypeOnlyExports(exports: unknown): Promise<void> {
 /** Every file the published export map names must exist in the package. */
 async function assertExportTargets(value: unknown, key = 'exports') {
   if (typeof value === 'string') {
-    if (!value.includes('*') && !(await Bun.file(path.join(dist, value)).exists()))
+    if (
+      !value.includes('*') &&
+      !(await Bun.file(path.join(dist, value)).exists())
+    )
       throw new Error(`Export ${key} points at ${value}, which was not built`)
   } else if (value && typeof value === 'object') {
     for (const [name, target] of Object.entries(value))

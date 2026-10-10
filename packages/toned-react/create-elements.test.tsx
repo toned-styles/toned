@@ -8,12 +8,7 @@ import { renderToString } from 'react-dom/server'
 import { afterEach, beforeEach, expect, test } from 'vitest'
 
 import { createElements as runtimeCreateElements } from './create-elements.tsx'
-import {
-  ConfigProvider,
-  createElements,
-  overrideStyles,
-  StyleOverrides,
-} from './index.ts'
+import { ConfigProvider, createElements, StyleOverrides } from './index.ts'
 import web from './react-web.ts'
 
 const original = { ...getConfig() }
@@ -424,7 +419,7 @@ test('a suspended descendant cannot publish pending variants to committed events
 test('ambient overrides apply to both provider-owned and standalone parts', () => {
   const base = system.stylesheet({ Label: { opacity: 0 } })
   const Elements = createElements(base)
-  const override = overrideStyles(base, { Label: { opacity: 1 } })
+  const override = base.extend({ Label: { opacity: 1 } })
   const view = render(
     <StyleOverrides value={[override]}>
       <Elements>

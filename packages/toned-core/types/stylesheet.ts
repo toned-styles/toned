@@ -112,7 +112,7 @@ export type ModType = Record<string, string | boolean | number>
  * (`:focus-visible`, `:focus-within`, and the cross-element channels) cannot
  * drift out of the type. StylesheetInput is used as a CONSTRAINT, which does
  * no excess property checking, so a missing state would go unnoticed there and
- * surface only in `overrideStyles`, which checks its rules exactly.
+ * surface only in `extend`, which checks its rules exactly.
  */
 export type Pseudo = PseudoState | CssOnlyPseudoState
 
@@ -431,9 +431,9 @@ type IsCrossElementKey<
  * One element's rules, exactly as `StylesheetInput` accepts them.
  *
  * The single source for "what may be written about an element": the authoring
- * surface below and `overrideStyles`' rules type both use THIS, so the two
+ * surface below and `extend`'s rules type both use THIS, so the two
  * cannot drift. Re-deriving the pseudo and breakpoint arguments at a second
- * site would let overrides reject `:focus-visible` and `@field-group/md`
+ * site would let an extension reject `:focus-visible` and `@field-group/md`
  * while the stylesheet accepts them.
  */
 export type AuthoredElementStyle<
@@ -1185,24 +1185,17 @@ export type VariantsCallback<
 /**
  * Stylesheet with variants() method for adding conditional styles.
  */
-type ExtendKinds<Existing, Extension> = {
-  [
-    E in (keyof Existing | PickString<ExtractElements<Extension>>) & string
-  ]: E extends keyof Existing ? Existing[E] : InferElementType<Extension, E>
-}
-
 export interface StylesheetWithVariants<
   S extends TokenStyleDeclaration,
   Elements extends string,
-  /** The axes declared so far. Carried so `extend` can hand them back rather
-   * than collapsing to `never`, which would stop an override from
-   * selecting on the axes its target sheet already has. */
-  Mods extends ModType = never,
+  /** The axes declared so far. `extend` reads them from the sheet's own
+   * type, so this only keeps the parameter list stable for its callers. */
+  _Mods extends ModType = never,
   Kinds extends Record<Elements, ElementType | undefined> = Record<
     Elements,
     undefined
   >,
-  Defaults extends object = {},
+  _Defaults extends object = {},
 > {
   /**
    * Define variants with a reusable selector annotation. The declared parts
@@ -1265,9 +1258,14 @@ export interface StylesheetWithVariants<
   ): Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
 
   /**
-   * Compose a new stylesheet by deep-merging additional rules into this one.
-   * The result is itself composable, so `.extend()` and `.variants()` chain in
-   * any order.
+   * Derive a new stylesheet whose rules sit above this one's, variants
+   * included: what the extension says wins. It restyles the parts the sheet
+   * has; a part it does not have is an error, so a typo cannot pass. A value
+   * of `null` removes an inherited one. The rules may be a callback over the
+   * sheet's query builder, and the optional second argument adds variant
+   * rules over the axes the sheet already has.
+   *
+   * The same derived sheet restyles a subtree when given to `StyleOverrides`.
    *
    * @example
    * ```ts
@@ -1275,43 +1273,14 @@ export interface StylesheetWithVariants<
    * ```
    */
   extend<
-    const Extension extends StylesheetInput<
-      S,
-      Extension,
-      Elements | PickString<ExtractElements<Extension>>,
-      Kinds
-    >,
+    This extends object,
+    const Rules extends Record<string, unknown>,
+    const Variants extends Record<string, unknown> = {},
   >(
-    rules: Extension &
-      NoInfer<
-        StylesheetValidation<
-          S,
-          Extension,
-          Elements | PickString<ExtractElements<Extension>>,
-          Kinds
-        >
-      >,
-    /**
-     * Variant rules to merge into the sheet's own table, over the SHEET's
-     * axes. A matcher the sheet declared is replaced; one it did not is
-     * added. Resolved against the sheet's own key order, so
-     * `$.size('sm').variant('ghost')` names the same matcher here as it does
-     * there regardless of the order it is written in.
-     */
-    variants?: VariantsCallback<
-      S,
-      Elements | PickString<ExtractElements<Extension>>,
-      Mods,
-      ExtendKinds<Kinds, Extension>
-    >,
-  ): Stylesheet<S, ExtendKinds<Kinds, Extension>, Mods, Defaults> &
-    StylesheetWithVariants<
-      S,
-      Elements | PickString<ExtractElements<Extension>>,
-      Mods,
-      ExtendKinds<Kinds, Extension>,
-      Defaults
-    >
+    this: This,
+    rules: ExtensionRules<This, Rules>,
+    variants?: ExtensionVariants<This, Variants>,
+  ): This
 }
 
 /**
@@ -1418,7 +1387,7 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
   /*
    * Element name → the ELEMENT TYPE it declared, and nothing more.
    *
-   * `overrideStyles` reads this to type its rules, and it needs two things
+   * `extend` reads this to type its rules, and it needs two things
    * from each element: that the name exists, and which `$$type` constrains
    * its tokens. It reconstructs `AuthoredElementStyle` from those on demand,
    * so the two surfaces cannot drift while the brand stays small — recording
@@ -1437,4 +1406,8 @@ export type StylesheetType<S extends TokenStyleDeclaration> = <
 >
 
 // Forward reference for TokenSystem (defined in system.ts)
+import type {
+  ExtensionRules,
+  ExtensionVariants,
+} from '../stylesheet/extension.ts'
 import type { TokenSystem } from './system.ts'
