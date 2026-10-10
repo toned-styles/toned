@@ -24,16 +24,15 @@ function GuideSsr() {
           render, so hydration matches.
         </li>
         <li>
-          <strong>Server Components:</strong>{' '}
-          <code {...s.code}>renderer.resolve(sheet)</code> returns plain props
-          for each part. No hook, context or{' '}
+          <strong>Server Components:</strong> <code {...s.code}>useStyles</code>{' '}
+          and <code {...s.code}>createElements</code> are the same calls as on
+          the client. There they resolve without hooks or context, so no{' '}
           <code {...s.code}>'use client'</code> is needed.
         </li>
         <li>
-          <strong>Client Components:</strong>{' '}
-          <code {...s.code}>@toned/react</code> declares its own client
-          boundary, so <code {...s.code}>createElements</code> families can be
-          rendered from a Server Component.
+          <strong>Client Components:</strong> the same imports give the
+          hook-based versions, which read their renderer from{' '}
+          <code {...s.code}>TonedProvider</code>.
         </li>
       </ul>
       <h2 {...s.h2} id="vite-delivery">
@@ -112,33 +111,62 @@ hydrateRoot(root, <App />)`}</CodeBlock>
         React Server Components
       </h2>
       <p>
-        A Server Component cannot use hooks or context. Create the renderer in a
-        server module and resolve the sheet directly: the result is plain props
-        for each part. Variants are ordinary arguments. Hover, focus and media
-        conditions are CSS, so they work without any client JavaScript.
+        A Server Component cannot use hooks or context, so{' '}
+        <code {...s.code}>@toned/react</code> has a second build for them. The
+        bundler picks it through the <code {...s.code}>react-server</code>{' '}
+        export condition; your imports do not change. Write the component as you
+        would on the client:
       </p>
-      <CodeBlock title="SaveButton.tsx">{`// A Server Component: no 'use client', no hooks.
-import { renderer } from './renderer.ts'
+      <CodeBlock title="SaveButton.tsx">{`// A Server Component: no 'use client'.
+import { createElements } from '@toned/react'
 import { buttonStyles } from './styles.ts'
 
+const S = createElements(buttonStyles)
+
 export function SaveButton({ size }: { size: 's' | 'm' }) {
-  const s = renderer.resolve(buttonStyles, { variants: { size } })
   return (
-    <button type="button" {...s.Root}>
-      <span {...s.Label}>Save</span>
-    </button>
+    <S size={size}>
+      <S.Root as="button" type="button">
+        <S.Label as="span">Save</S.Label>
+      </S.Root>
+    </S>
   )
 }`}</CodeBlock>
+      <p>
+        With no context to read, the server build finds its renderer in a
+        registry. Register the renderer once, where you create it:
+      </p>
       <CodeBlock title="renderer.ts">{`import manifest from 'virtual:toned.manifest'
 import { createWebRenderer } from '@toned/core/server'
+import { registerRenderer } from '@toned/react'
 import { ui } from './system.ts'
 
-export const renderer = createWebRenderer(ui, { manifest })`}</CodeBlock>
+export const renderer = registerRenderer(createWebRenderer(ui, { manifest }))`}</CodeBlock>
+      <p>What is different on the server:</p>
+      <ul>
+        <li>
+          Nothing is interactive. Hover, focus and media conditions are CSS, so
+          they still apply; a variant that follows browser state needs a Client
+          Component.
+        </li>
+        <li>
+          A family hands its variants to the parts written inside its own JSX,
+          however deeply they are nested there. A part rendered by another
+          component is out of its reach and throws; use{' '}
+          <code {...s.code}>useStyles(sheet, variants)</code> in that component
+          instead.
+        </li>
+        <li>
+          <code {...s.code}>TonedProvider</code> and{' '}
+          <code {...s.code}>StyleOverrides</code> need context, and their props
+          cannot cross from a Server Component to a client one. Render them from
+          a file marked <code {...s.code}>'use client'</code>.
+        </li>
+      </ul>
       <p>
         Use a Client Component when the styles depend on state held in the
-        browser. <code {...s.code}>createElements</code> families are client
-        components and can be imported into a Server Component as they are; they
-        need a <code {...s.code}>TonedProvider</code> above them, as in{' '}
+        browser. The component below is the same code as above plus state; it
+        needs a <code {...s.code}>TonedProvider</code> above it, as in{' '}
         <Link to="/getting-started">Getting Started</Link>.
       </p>
       <CodeBlock title="LikeButton.tsx">{`'use client'
@@ -163,10 +191,11 @@ export function LikeButton() {
       </h2>
       <p>
         <code {...s.code}>@toned/core/server</code> can resolve part props
-        without importing React, reading browser globals or mounting hosts.
-        React SSR uses the separate React binding. Module-level{' '}
-        <code {...s.code}>createElements</code> creates stable component
-        identities without reading host configuration.
+        without importing React, reading browser globals or mounting hosts:{' '}
+        <code {...s.code}>renderer.resolve(sheet, {'{ variants }'})</code>{' '}
+        returns the props for each part. React SSR uses the separate React
+        binding. Module-level <code {...s.code}>createElements</code> creates
+        stable component identities without reading host configuration.
       </p>
       <p>
         <code {...s.code}>@toned/core/dev/inject</code> is an explicit

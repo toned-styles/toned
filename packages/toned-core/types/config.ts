@@ -95,7 +95,7 @@ export type Config = Readonly<{
    * The ambient SCOPE for stylesheet overrides — the host integration's hook
    * (React rules apply: it is called unconditionally on every override
    * resolution, so it must be a hook or a plain stable function). A scoped
-   * override entry (overrideStyles(sheet, rules, { scope })) applies only
+   * override entry (`{ sheet: sheet.extend(rules), scope }`) applies only
    * where matchStyleOverrideScope(entry.scope, ambient) holds. Unset: scoped
    * entries never apply.
    */

@@ -34,6 +34,10 @@ export function addWith(
 
     for (const key in props) {
       if (props[key] == null) continue
+      if (key[0] === '$')
+        throw new Error(
+          `[toned] with() takes host props, and "${key}" is a stylesheet key. Pass "style" for an inline value, or declare it in the stylesheet.`,
+        )
 
       if (key === 'className') {
         merged[key] = merged[key] ? `${merged[key]} ${props[key]}` : props[key]

@@ -1,11 +1,17 @@
 // @vitest-environment happy-dom
 
 import { cleanup, render } from '@testing-library/react'
-import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
+import {
+  defineSystem,
+  defineToken,
+  derivationOf,
+  getConfig,
+  setConfig,
+} from '@toned/core'
 import { createContext, useContext } from 'react'
 import { afterAll, afterEach, describe, expect, test } from 'vitest'
 
-import { overrideStyles, StyleOverrides, useBind, useStyles } from './index.ts'
+import { StyleOverrides, useBind, useStyles } from './index.ts'
 import reactWebConfig from './react-web.ts'
 
 const originalConfig = getConfig()
@@ -40,9 +46,7 @@ describe('StyleOverrides', () => {
       )
     }
     const { container } = render(
-      <StyleOverrides
-        value={[overrideStyles(styles, { Root: { cur: 'grab' } })]}
-      >
+      <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
         <Probe />
       </StyleOverrides>,
     )
@@ -65,9 +69,7 @@ describe('StyleOverrides', () => {
       return <s.Root data-slot="r" />
     }
     const { container } = render(
-      <StyleOverrides
-        value={[overrideStyles(other, { Root: { cur: 'text' } })]}
-      >
+      <StyleOverrides value={[other.extend({ Root: { cur: 'text' } })]}>
         <Probe />
       </StyleOverrides>,
     )
@@ -83,12 +85,8 @@ describe('StyleOverrides', () => {
       return <s.Root data-slot="r" />
     }
     const { container } = render(
-      <StyleOverrides
-        value={[overrideStyles(styles, { Root: { cur: 'grab' } })]}
-      >
-        <StyleOverrides
-          value={[overrideStyles(styles, { Root: { cur: 'text' } })]}
-        >
+      <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
+        <StyleOverrides value={[styles.extend({ Root: { cur: 'text' } })]}>
           <Probe />
         </StyleOverrides>
       </StyleOverrides>,
@@ -106,9 +104,7 @@ describe('StyleOverrides', () => {
     }
     const { container } = render(
       <>
-        <StyleOverrides
-          value={[overrideStyles(styles, { Root: { cur: 'grab' } })]}
-        >
+        <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
           <Probe slot="in" />
         </StyleOverrides>
         <Probe slot="out" />
@@ -132,9 +128,7 @@ describe('StyleOverrides', () => {
       return null
     }
     render(
-      <StyleOverrides
-        value={[overrideStyles(styles, { Root: { cur: 'grab' } })]}
-      >
+      <StyleOverrides value={[styles.extend({ Root: { cur: 'grab' } })]}>
         <Probe />
       </StyleOverrides>,
     )
@@ -154,16 +148,11 @@ describe('StyleOverrides', () => {
         return <s.Root data-slot={slot} />
       }
       const entries = [
-        overrideStyles(
-          styles,
-          { Root: { cur: 'grab' } },
-          { scope: 'checkout' },
-        ),
-        overrideStyles(
-          styles,
-          { Root: { cur: 'text' } },
-          { scope: 'checkout/summary' },
-        ),
+        { sheet: styles.extend({ Root: { cur: 'grab' } }), scope: 'checkout' },
+        {
+          sheet: styles.extend({ Root: { cur: 'text' } }),
+          scope: 'checkout/summary',
+        },
       ]
       const { container } = render(
         <StyleOverrides value={entries}>
@@ -196,7 +185,7 @@ describe('StyleOverrides', () => {
 
   test('the derived sheet is cached: stable identity across renders with stable entries', () => {
     const styles = stylesheet({ Root: { $$type: 'view', cur: 'pointer' } })
-    const entries = [overrideStyles(styles, { Root: { cur: 'grab' } })]
+    const entries = [styles.extend({ Root: { cur: 'grab' } })]
     const seen: unknown[] = []
     const Probe = () => {
       // reach the internal: two renders must resolve the same derived instance,
@@ -257,7 +246,7 @@ describe('StyleOverrides + .variants()', () => {
   test('a matcher the sheet declared is REPLACED, not duplicated', () => {
     const styles = sized()
     const entries = [
-      overrideStyles(styles, {}).variants(($) => ({
+      styles.extend({}, ($) => ({
         [$.size('sm')]: { Root: { cur: 'text' } },
       })),
     ]
@@ -271,7 +260,7 @@ describe('StyleOverrides + .variants()', () => {
   test('a matcher the sheet never declared is ADDED', () => {
     const styles = sized()
     const entries = [
-      overrideStyles(styles, {}).variants(($) => ({
+      styles.extend({}, ($) => ({
         [$.size('lg')]: { Label: { cur: 'text' } },
       })),
     ]
@@ -292,7 +281,7 @@ describe('StyleOverrides + .variants()', () => {
       [$.size('sm').tone('quiet')]: { Root: { cur: 'grab' } },
     }))
     const entries = [
-      overrideStyles(styles, {}).variants(($) => ({
+      styles.extend({}, ($) => ({
         // written tone-first, deliberately
         [$.tone('quiet').size('sm')]: { Root: { cur: 'text' } },
       })),
@@ -320,7 +309,7 @@ describe('StyleOverrides + .variants()', () => {
       [$.size('sm')]: { Root: { cur: 'grab' }, Label: { cur: 'grab' } },
     }))
     const entries = [
-      overrideStyles(styles, {}).variants(($) => ({
+      styles.extend({}, ($) => ({
         [$.size('sm')]: { Root: { cur: 'text' } },
       })),
     ]
@@ -333,14 +322,13 @@ describe('StyleOverrides + .variants()', () => {
     expect(classesOf(c.querySelector('[data-slot="l"]')!)).toContain('cur_grab')
   })
 
-  test('an entry without .variants() is unchanged, and .variants() returns a NEW entry', () => {
+  test('an extension with variant rules is a new sheet, and the plain one is unchanged', () => {
     const styles = sized()
-    const plain = overrideStyles(styles, { Root: { cur: 'text' } })
-    const withVariants = plain.variants(($) => ({
+    const plain = styles.extend({ Root: { cur: 'text' } })
+    const withVariants = styles.extend({ Root: { cur: 'text' } }, ($) => ({
       [$.size('lg')]: { Root: { cur: 'grab' } },
     }))
     expect(withVariants).not.toBe(plain)
-    expect((plain as { variantRules?: unknown }).variantRules).toBeUndefined()
     // the base rules survive the chain
     const c = renderWith(styles, [withVariants], { size: 'sm', tone: 'quiet' })
     expect(classesOf(c.querySelector('[data-slot="r"]')!)).toContain('cur_text')
@@ -387,7 +375,7 @@ describe('StyleOverrides + overlapping CSS properties', () => {
 
   test("the override's side goes inline; the base token keeps the side it still owns", () => {
     const styles = sizing({ Root: { $$type: 'view', padX: 3 } })
-    const el = probe(styles, [overrideStyles(styles, { Root: { padLeft: 2 } })])
+    const el = probe(styles, [styles.extend({ Root: { padLeft: 2 } })])
     // The contested field has an explicit inline winner, independent of
     // generated atomic CSS order. Retaining the atomic class is harmless.
     expect(el.style.paddingLeft).toBe('2px')
@@ -397,29 +385,49 @@ describe('StyleOverrides + overlapping CSS properties', () => {
 
   test('a token that overlaps nothing stays a class', () => {
     const styles = sizing({ Root: { $$type: 'view', padX: 3 } })
-    const el = probe(styles, [overrideStyles(styles, { Root: { gapper: 2 } })])
+    const el = probe(styles, [styles.extend({ Root: { gapper: 2 } })])
     expect(classesOf(el)).toContain('gapper_2')
     expect(el.style.gap).toBe('')
   })
 
   test('the same token name is still the deep merge, not an inline', () => {
     const styles = sizing({ Root: { $$type: 'view', padX: 3 } })
-    const el = probe(styles, [overrideStyles(styles, { Root: { padX: 1 } })])
+    const el = probe(styles, [styles.extend({ Root: { padX: 1 } })])
     expect(classesOf(el)).toContain('padX_1')
     expect(classesOf(el)).not.toContain('padX_3')
     expect(el.style.paddingLeft).toBe('')
   })
 })
 
-test('override entries snapshot caller rules before identity-based derivation caching', () => {
+test('an extension snapshots its rules, so a later change by the caller does not reach it', () => {
   const ui = defineSystem({
     gap: defineToken({ values: [0, 4], resolve: (value) => ({ gap: value }) }),
   })
   const sheet = ui.stylesheet({ Root: { gap: 0 } })
   const rules = { Root: { gap: 4 as 0 | 4 } }
-  const entry = overrideStyles(sheet, rules)
+  const derived = sheet.extend(rules)
   rules.Root.gap = 0
-  expect(entry.rules['Root'].gap).toBe(4)
-  expect(Object.isFrozen(entry)).toBe(true)
-  expect(Object.isFrozen(entry.rules['Root'])).toBe(true)
+  const step = derivationOf(derived)
+  if (!step) throw new Error('expected a derivation step')
+  const recorded = step.rules as typeof rules
+  expect(recorded.Root.gap).toBe(4)
+  expect(Object.isFrozen(step)).toBe(true)
+  expect(Object.isFrozen(recorded.Root)).toBe(true)
+})
+
+test('StyleOverrides refuses a sheet that is not derived', () => {
+  const ui = defineSystem({
+    gap: defineToken({ values: [0, 4], resolve: (value) => ({ gap: value }) }),
+  })
+  const sheet = ui.stylesheet({ Root: { gap: 0 } })
+  function Probe() {
+    return <div {...useStyles(sheet).Root} />
+  }
+  expect(() =>
+    render(
+      <StyleOverrides value={[sheet]}>
+        <Probe />
+      </StyleOverrides>,
+    ),
+  ).toThrow(/takes derived stylesheets/)
 })

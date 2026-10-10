@@ -15,13 +15,19 @@ export {
   registerNativeHost,
 } from './native-host.ts'
 export {
+  type DerivationStep,
+  derivationOf,
+  derivationSteps,
+} from './derivations.ts'
+export {
+  type ExtensionRules,
+  type ExtensionVariants,
   type NullableOverride,
   type OverrideRulesContext,
   type OverrideSheetRules,
   type OverrideSheetVariantRules,
   type OverrideVariantContext,
-  overrideSheet,
-} from './overrideSheet.ts'
+} from './extension.ts'
 export {
   getStylesheetPlan,
   stylesheetParts,

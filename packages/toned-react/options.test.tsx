@@ -7,7 +7,6 @@ import {
   defineSystem,
   defineToken,
   getConfig,
-  overrideSheet,
   setConfig,
 } from '@toned/core'
 import { cssVariablesBackend } from '@toned/core/backends'
@@ -20,7 +19,6 @@ import config19 from './config.19.ts'
 import { TokensContext } from './context.ts'
 import {
   ConfigProvider,
-  overrideStyles,
   StyleOverrides,
   TonedProvider,
   useBind,
@@ -55,7 +53,7 @@ const config = defineConfig({
 
 test('flat variant inputs preserve defaults through declared override composition', () => {
   const derived = sheet.extend({ Root: { ink: true } })
-  const overridden = overrideSheet(derived, { Root: { opacity: 1 } })
+  const overridden = derived.extend({ Root: { opacity: 1 } })
   function View({ size, override }: { size?: 's' | 'm'; override?: boolean }) {
     const s = useStyles(override ? overridden : derived, { size })
     return <div {...s.Root} data-testid="target" />
@@ -76,9 +74,9 @@ test('flat variant inputs preserve defaults through declared override compositio
 })
 
 test('ambient overrides target the exact composed sheet and apply after declared layers', () => {
-  const derived = overrideSheet(sheet, { Root: { opacity: 1 } })
-  const forBase = overrideStyles(sheet, { Root: { opacity: 0 } })
-  const forDerived = overrideStyles(derived, { Root: { opacity: 0.5 } })
+  const derived = sheet.extend({ Root: { opacity: 1 } })
+  const forBase = sheet.extend({ Root: { opacity: 0 } })
+  const forDerived = derived.extend({ Root: { opacity: 0.5 } })
   function View() {
     const s = useStyles(derived)
     return <div {...s.Root} data-testid="target" />
@@ -212,7 +210,7 @@ test('defaulted axes agree with pure resolution for omitted and explicit undefin
 
 test('declared null removes the inherited base field', () => {
   const base = system.stylesheet({ Root: { opacity: 0.5 } })
-  const derived = overrideSheet(base, { Root: { opacity: null } })
+  const derived = base.extend({ Root: { opacity: null } })
   function View() {
     const s = useStyles(derived)
     return <div {...s.Root} data-testid="removed" />
@@ -245,7 +243,7 @@ test('alternating sibling override sequences reuse their immutable derivations',
   const base = system.stylesheet({ Root: { opacity: 0 } })
   let factoryCalls = 0
   const entry = (opacity: 0.5 | 1) =>
-    overrideStyles(base, () => {
+    base.extend(() => {
       factoryCalls++
       return { Root: { opacity } }
     })
@@ -316,7 +314,7 @@ test('declared overrides support parts named sheet and rules', () => {
     sheet: { opacity: 0 },
     rules: { opacity: 0 },
   })
-  const derived = overrideSheet(named, {
+  const derived = named.extend({
     sheet: { opacity: 0.5 },
     rules: { opacity: 1 },
   })
@@ -414,11 +412,10 @@ test('scope hooks read nested contexts and provider replacement requires an expl
     return prefix + '/' + React.useContext(Scope)
   }
   const scoped = { ...config, useStyleOverrideScope: useScope }
-  const entry = overrideStyles(
-    sheet,
-    { Root: { opacity: 0 } },
-    { scope: 'inside' },
-  )
+  const entry = {
+    sheet: sheet.extend({ Root: { opacity: 0 } }),
+    scope: 'inside',
+  }
   function View() {
     const s = useStyles(sheet)
     return <div {...s.Root} data-testid="scope-host" />

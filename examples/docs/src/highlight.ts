@@ -163,5 +163,12 @@ export const languageLabel: Record<CodeLanguage, string> = {
 }
 
 export function highlight(code: string, lang: CodeLanguage) {
-  return highlighter.codeToTokens(code, { lang, theme: 'toned-light' })
+  return highlighter.codeToTokens(code, {
+    lang,
+    theme: 'toned-light',
+    // Shiki stops tokenizing a line after 500 ms and returns the rest as plain
+    // text. On a slow or busy device that changes the markup, which no longer
+    // matches the prerendered page. The snippets here are short and fixed.
+    tokenizeTimeLimit: 0,
+  })
 }

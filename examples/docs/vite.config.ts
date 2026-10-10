@@ -37,6 +37,11 @@ export default defineConfig({
   // The playground's language worker loads TypeScript and its type payload as
   // separate lazy chunks, which only the ES worker format can split.
   worker: { format: 'es' },
+  // Pinned to this project's tsconfig. The playground reads the Toned packages
+  // as raw source, and automatic discovery would otherwise walk up to the
+  // repository's root config and load every example it references, installed
+  // or not.
+  tsconfig: './tsconfig.json',
   // Loaded only from effects, so the dev server would otherwise discover them
   // on first visit and reload the page mid-session.
   optimizeDeps: {

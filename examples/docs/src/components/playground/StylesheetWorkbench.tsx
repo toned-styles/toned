@@ -1,8 +1,4 @@
-import {
-  type StyleOverrideEntry,
-  StyleOverrides,
-  useStyles,
-} from '@toned/react'
+import { type StyleOverride, StyleOverrides, useStyles } from '@toned/react'
 import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import type { SheetSource } from 'virtual:component-docs/*'
 
@@ -88,9 +84,16 @@ export function StylesheetWorkbench({
   }, [error, rules])
   const sheet = metadata?.sheets[selected]
   const target = sheet ? mod[sheet.name] : undefined
-  const overrides = useMemo<StyleOverrideEntry[]>(
+  // parseLiveStyles has already limited the rules to this sheet's parts and
+  // the playground's tokens, so extend() is given nothing it would refuse.
+  const overrides = useMemo<StyleOverride[]>(
     () =>
-      target && typeof target === 'object' ? [{ sheet: target, rules }] : [],
+      target &&
+      typeof target === 'object' &&
+      'extend' in target &&
+      typeof target.extend === 'function'
+        ? [target.extend(rules) as object]
+        : [],
     [target, rules],
   )
   function update(value: string) {
@@ -250,7 +253,7 @@ export function StylesheetWorkbench({
                       <summary {...s.summary}>
                         Use this override in your app
                       </summary>
-                      <CodeBlock>{`import { overrideStyles, StyleOverrides } from '@toned/react'\n\nconst overrides = [overrideStyles(${sheet.name}, ${JSON.stringify(rules, null, 2)})]\n\n<StyleOverrides value={overrides}>\n  {/* Your components */}\n</StyleOverrides>`}</CodeBlock>
+                      <CodeBlock>{`import { StyleOverrides } from '@toned/react'\n\nconst overrides = [${sheet.name}.extend(${JSON.stringify(rules, null, 2)})]\n\n<StyleOverrides value={overrides}>\n  {/* Your components */}\n</StyleOverrides>`}</CodeBlock>
                     </details>
                   </>
                 ) : (
