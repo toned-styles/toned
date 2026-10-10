@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.0.1](https://github.com/toned-styles/toned/compare/toned%401.0.0...toned%401.0.1) (2026-10-10)
+
+**Note:** Version bump only for package toned
+
 # [1.0.0](https://github.com/toned-styles/toned/compare/toned%400.3.0...toned%401.0.0) (2026-10-02)
 
 ### Features

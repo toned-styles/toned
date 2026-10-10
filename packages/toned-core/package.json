@@ -1,6 +1,6 @@
 {
   "name": "@toned/core",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Typed design tokens, named parts and variants for platform- and framework-agnostic styling.",
   "keywords": [
     "css",

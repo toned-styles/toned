@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.1.0](https://github.com/toned-styles/toned/compare/%40toned%2Freact%401.0.0...%40toned%2Freact%401.1.0) (2026-10-10)
+
+### Bug Fixes
+
+* **react:** ship the style-types entries; the build checks every export target exists ([ad7e0ac](https://github.com/toned-styles/toned/commit/ad7e0ace0e6d4a8e7c2ccd4ebe37279622e6dc2a))
+* **react:** with() rejects stylesheet keys such as $style, in types and at runtime ([86ca4fb](https://github.com/toned-styles/toned/commit/86ca4fbb3104df760e8fde8ba7f269c0107ce6b0))
+
+### Features
+
+* **react:** useStyles and createElements work in React Server Components ([0e82bb0](https://github.com/toned-styles/toned/commit/0e82bb025c819b5bf12c85c6f42ae920356b11de))
+
 # [1.0.0](https://github.com/toned-styles/toned/compare/%40toned%2Freact%400.4.0...%40toned%2Freact%401.0.0) (2026-10-02)
 
 ### Bug Fixes

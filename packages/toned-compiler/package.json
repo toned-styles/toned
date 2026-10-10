@@ -1,6 +1,6 @@
 {
   "name": "@toned/compiler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Source index, language server, CLI and source-editing tools for Toned declarations.",
   "keywords": [
     "codemod",

@@ -1,6 +1,6 @@
 {
   "name": "@toned/eslint-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Optional import-aware Toned and React rules for ESLint and Oxlint.",
   "keywords": [
     "eslint",
