@@ -231,6 +231,49 @@ collector; it cannot collect sheets or check their runtime namespace.
 The plugin does not insert a style node into HTML; the application imports the
 CSS module.
 
+### Named outputs: nothing generated is committed
+
+When a host has several systems, extra generated stylesheets, or consumers that
+do not run Vite (tests, Metro), declare **outputs modules** instead of writing
+files. An outputs module default-exports a record of named outputs, finishing
+its work while it is imported (top-level `await`):
+
+```ts
+// toned.outputs.ts
+import { buildStyles } from '@toned/core/build'
+import { artifactOutput } from '@toned/core/outputs'
+
+export default {
+  ui: artifactOutput(
+    buildStyles(ui, { sheets: [button], layer: 'components' }),
+  ),
+  palette: { css: paletteCss() },
+}
+```
+
+Each output may carry `css` and `data`. A stylesheet imports the CSS at any
+depth, keeping its own cascade order: `@import 'toned:ui' layer(components);`.
+Code imports data as `toned:<name>/<key>` (`artifactOutput` puts the manifest at
+`toned:ui/manifest`), and `toned:<name>/css` is the CSS as a string. Modules are
+collected in order; a later one may import an earlier one's outputs, which is
+how a usage inventory can feed the system it narrows.
+
+| Consumer             | Entry                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| Vite                 | `tonedOutputs({ modules: ['toned.outputs.ts'], watch: ['src'] })` from `@toned/core/vite` |
+| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ modules, root }))` from `@toned/core/bun`, in a preload      |
+| Metro                | `await withTonedOutputs(config, { modules })` from `@toned/core/metro`                    |
+
+The Vite plugin evaluates the modules with Vite's module runner (Vite 6 or
+later) on every build and dev start, and again in dev when a `watch` path
+changes, so a declaration change is always seen. Pass `runner` for config the
+modules need, such as `{ oxc: { jsx: { runtime: 'automatic' } } }`. CSS
+`@import` resolves through aliases rather than plugin hooks, so the CSS is
+written to `<vite cacheDir>/toned/<name>.css`, outside the source tree, and an
+unknown name fails as that missing file. Metro reads the same cache layout from
+`node_modules/.cache/toned`; restart it to collect changed declarations. Add
+`@toned/core/vite/client` to `types` for the `toned:` module declarations.
+
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
 checks the original generated asset's fingerprint before publication; after
 minification, hash the final delivery bytes in the application's asset pipeline.
