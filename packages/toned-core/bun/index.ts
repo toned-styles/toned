@@ -1,108 +1,73 @@
 import { resolve } from 'node:path'
 
+import { discoverOutputs } from '../outputs/discover.ts'
 import {
   OUTPUT_PREFIX,
-  type TonedOutputs,
-  collectOutputs,
-  outputFor,
+  type TonedOutput,
+  outputFile,
   outputModuleSource,
   parseOutputSpecifier,
+  toOutput,
 } from '../outputs/index.ts'
 
 /** The part of Bun's plugin API this uses, so the package needs no Bun types. */
 interface BunPluginBuilder {
-  module(
-    specifier: string,
-    callback: () => Promise<{ contents: string; loader: 'js' }>,
-  ): void
+  module(specifier: string, callback: () => Promise<{ contents: string; loader: 'js' }>): void
   onResolve(
     options: { filter: RegExp },
-    callback: (args: {
-      path: string
-    }) => { path: string; namespace: string } | undefined,
+    callback: (args: { path: string }) => { path: string; namespace: string } | undefined,
   ): void
   onLoad(
     options: { filter: RegExp; namespace: string },
-    callback: (args: {
-      path: string
-    }) => Promise<{ contents: string; loader: 'js' }>,
+    callback: (args: { path: string }) => Promise<{ contents: string; loader: 'js' }>,
   ): void
 }
 
-/** An outputs module, optionally naming the outputs it provides so it loads only when asked for. */
-export type TonedBunModule =
-  | string
-  | { module: string; provides: readonly string[] }
-
 export interface TonedBunPluginOptions {
-  /** Outputs modules, relative to `root`. Unnamed ones load in order until one provides the output. */
-  modules: readonly TonedBunModule[]
+  /** Globs, relative to `root`, matching `<name>.toned.ts` output files. */
+  outputs: readonly string[]
   root?: string
 }
 
 /**
  * A Bun runtime plugin serving the same `toned:` specifiers to tests and
  * scripts. Register it from a preload with `Bun.plugin(tonedBunPlugin(...))`.
- * A module is imported only when one of its outputs is first loaded, and may
- * itself import other modules' outputs. `toned:<name>` loads the CSS as a
- * string, as `toned:<name>/css` does.
+ * An output file is imported only when one of its specifiers is first loaded.
+ * `toned:<name>` loads the CSS as a string, as `toned:<name>/css` does.
  */
 export function tonedBunPlugin(options: TonedBunPluginOptions) {
-  const root = resolve(options.root ?? process.cwd())
-  const entries = options.modules.map((entry) =>
-    typeof entry === 'string' ? { module: entry, provides: undefined } : entry,
-  )
-  const outputs: TonedOutputs = {}
-  const loaded = new Map<number, Promise<void>>()
-  const loading = new Set<number>()
-  const load = (index: number): Promise<void> => {
-    // Concurrent imports of one module's outputs share its load. (A module must
-    // not import its own outputs: that load would wait on itself.)
-    const existing = loaded.get(index)
+  const files = discoverOutputs(resolve(options.root ?? process.cwd()), options.outputs)
+  const loaded = new Map<string, Promise<TonedOutput>>()
+  // Concurrent imports of one output share its load.
+  const load = (name: string) => {
+    const existing = loaded.get(name)
     if (existing) return existing
-    const { module } = entries[index]!
-    loading.add(index)
-    const promise = collectOutputs(
-      [module],
-      () => import(resolve(root, module)),
-    )
-      .then((collected) => void Object.assign(outputs, collected))
-      .finally(() => loading.delete(index))
-    loaded.set(index, promise)
+    const file = outputFile(files, name)
+    const promise = import(file).then(module => toOutput(module, file))
+    loaded.set(name, promise)
     return promise
   }
-  const outputNamed = async (name: string) => {
-    const hinted = entries.findIndex((entry) => entry.provides?.includes(name))
-    if (hinted >= 0) await load(hinted)
-    for (let index = 0; !(name in outputs) && index < entries.length; index++)
-      if (!entries[index]!.provides && !loading.has(index)) await load(index)
-    return outputFor(outputs, name)
-  }
+  const source = async (name: string, key: string) => ({
+    contents: outputModuleSource(await load(name), key),
+    loader: 'js' as const,
+  })
   return {
     name: 'toned:outputs',
     setup(build: BunPluginBuilder) {
+      // Bun's resolve hooks do not see dynamic `import()`, so each output's CSS and
+      // manifest are also registered as modules, which it does.
+      for (const name of Object.keys(files))
+        for (const key of ['css', 'manifest'])
+          build.module(`${OUTPUT_PREFIX}${name}/${key}`, () => source(name, key))
       build.onResolve({ filter: /^toned:/ }, ({ path }) =>
         parseOutputSpecifier(path) ? { path, namespace: 'toned' } : undefined,
       )
-      // Bun's resolve hooks do not see dynamic `import()`, so the CSS and manifest of
-      // every named output are also registered as modules, which it does.
-      for (const name of entries.flatMap((entry) => entry.provides ?? []))
-        for (const key of ['css', 'manifest'])
-          build.module(`${OUTPUT_PREFIX}${name}/${key}`, async () => ({
-            contents: outputModuleSource(await outputNamed(name), key),
-            loader: 'js',
-          }))
-      build.onLoad({ filter: /.*/, namespace: 'toned' }, async ({ path }) => {
+      build.onLoad({ filter: /.*/, namespace: 'toned' }, ({ path }) => {
         // Bun reads `toned:` as this plugin's namespace, so the path may arrive without it.
         const specifier =
-          parseOutputSpecifier(path) ??
-          parseOutputSpecifier(`${OUTPUT_PREFIX}${path}`)
+          parseOutputSpecifier(path) ?? parseOutputSpecifier(`${OUTPUT_PREFIX}${path}`)
         if (!specifier) throw new Error(`not a Toned output specifier: ${path}`)
-        const output = await outputNamed(specifier.name)
-        return {
-          contents: outputModuleSource(output, specifier.key ?? 'css'),
-          loader: 'js',
-        }
+        return source(specifier.name, specifier.key ?? 'css')
       })
     },
   }

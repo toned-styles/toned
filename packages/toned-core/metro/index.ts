@@ -4,17 +4,11 @@ import { fileURLToPath } from 'node:url'
 
 import type { InlineConfig } from 'vite'
 
-import {
-  cssCachePath,
-  moduleCachePath,
-  writeOutputCache,
-} from '../outputs/cache.ts'
-import { outputFor, parseOutputSpecifier } from '../outputs/index.ts'
-import { loadOutputs } from '../outputs/runner.ts'
+import { cssCachePath, moduleCachePath, writeOutputCache } from '../outputs/cache.ts'
+import { outputFile, parseOutputSpecifier } from '../outputs/index.ts'
+import { createOutputsLoader } from '../outputs/runner.ts'
 
-type Resolution =
-  | { type: 'sourceFile'; filePath: string }
-  | { type: string; [key: string]: unknown }
+type Resolution = { type: 'sourceFile'; filePath: string } | { type: string; [key: string]: unknown }
 type ResolveRequest = (
   context: { resolveRequest: ResolveRequest; [key: string]: unknown },
   moduleName: string,
@@ -29,38 +23,36 @@ interface MetroLikeConfig {
 }
 
 export interface TonedMetroOptions {
-  /** Outputs modules, relative to `root`, collected in order. */
-  modules: readonly string[]
-  /** What `modules` and `cacheDir` are relative to. Defaults to the config's project root. */
+  /** Globs, relative to `root`, matching `<name>.toned.ts` output files. */
+  outputs: readonly string[]
+  /** What `outputs` and `cacheDir` are relative to. Defaults to the config's project root. */
   root?: string
   /** Where outputs are written for Metro to read. Defaults to `node_modules/.cache/toned`. */
   cacheDir?: string
-  /** Extra Vite config for the runner that evaluates the modules. */
+  /** Extra Vite config for the runner that evaluates output files. */
   runner?: InlineConfig
 }
+
+type WithResolver<C> = C & { resolver: { resolveRequest: ResolveRequest } }
 
 /**
  * Add Toned outputs to a Metro config: `toned:<name>` resolves to the output's
  * CSS and `toned:<name>/<key>` to its data, both written to a cache directory
- * when the config loads. Restart Metro to collect changed declarations.
+ * when the config loads. Restart Metro to rebuild changed declarations.
  */
 export async function withTonedOutputs<C extends MetroLikeConfig>(
   config: C,
   options: TonedMetroOptions,
 ): Promise<WithResolver<C>> {
   const { root, cacheDir } = locations(config, options)
-  const outputs = await loadOutputs({
-    modules: options.modules,
-    root,
-    runner: options.runner,
-  })
-  await writeOutputCache(cacheDir, outputs)
-  return withResolver(config, cacheDir, Object.keys(outputs))
+  const loader = createOutputsLoader({ outputs: options.outputs, root, runner: options.runner })
+  await writeOutputCache(cacheDir, await loader.loadAll())
+  return withResolver(config, cacheDir, loader.names)
 }
 
 /**
- * The same, for a Metro config that must be synchronous: collection runs in a
- * child Node process (Vite's module runner is asynchronous).
+ * The same, for a Metro config that must be synchronous: the outputs are built in
+ * a child Node process (Vite's module runner is asynchronous).
  */
 export function withTonedOutputsSync<C extends MetroLikeConfig>(
   config: C,
@@ -70,28 +62,15 @@ export function withTonedOutputsSync<C extends MetroLikeConfig>(
   const collector = fileURLToPath(new URL('./collect.ts', import.meta.url))
   const names = execFileSync(
     process.execPath,
-    [
-      collector,
-      JSON.stringify({
-        root,
-        modules: options.modules,
-        cacheDir,
-        runner: options.runner,
-      }),
-    ],
+    [collector, JSON.stringify({ root, outputs: options.outputs, cacheDir, runner: options.runner })],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
   )
   return withResolver(config, cacheDir, JSON.parse(names) as string[])
 }
 
-type WithResolver<C> = C & { resolver: { resolveRequest: ResolveRequest } }
-
 function locations(config: MetroLikeConfig, options: TonedMetroOptions) {
   const root = resolve(options.root ?? config.projectRoot ?? process.cwd())
-  return {
-    root,
-    cacheDir: resolve(root, options.cacheDir ?? 'node_modules/.cache/toned'),
-  }
+  return { root, cacheDir: resolve(root, options.cacheDir ?? 'node_modules/.cache/toned') }
 }
 
 function withResolver<C extends MetroLikeConfig>(
@@ -99,13 +78,12 @@ function withResolver<C extends MetroLikeConfig>(
   cacheDir: string,
   names: readonly string[],
 ): WithResolver<C> {
-  const known = Object.fromEntries(names.map((name) => [name, {}]))
+  const known = Object.fromEntries(names.map(name => [name, name]))
   const next = config.resolver?.resolveRequest
   const resolveRequest: ResolveRequest = (context, moduleName, platform) => {
     const specifier = parseOutputSpecifier(moduleName)
-    if (!specifier)
-      return (next ?? context.resolveRequest)(context, moduleName, platform)
-    outputFor(known, specifier.name)
+    if (!specifier) return (next ?? context.resolveRequest)(context, moduleName, platform)
+    outputFile(known, specifier.name)
     return {
       type: 'sourceFile',
       filePath: specifier.key
@@ -117,9 +95,7 @@ function withResolver<C extends MetroLikeConfig>(
   const watched = [config.projectRoot, ...(config.watchFolders ?? [])].filter(
     (folder): folder is string => typeof folder === 'string',
   )
-  const covered = watched.some(
-    (folder) => !relative(resolve(folder), cacheDir).startsWith('..'),
-  )
+  const covered = watched.some(folder => !relative(resolve(folder), cacheDir).startsWith('..'))
   return {
     ...config,
     watchFolders: covered

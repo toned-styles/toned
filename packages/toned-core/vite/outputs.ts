@@ -3,39 +3,37 @@ import { basename, join, resolve } from 'node:path'
 import type { InlineConfig, Plugin, ViteDevServer } from 'vite'
 
 import { cssCachePath, writeOutputCache } from '../outputs/cache.ts'
-import type { TonedOutputs } from '../outputs/index.ts'
-import { loadOutputs, outputsModulePlugin } from '../outputs/runner.ts'
+import { type TonedOutput, outputModuleSource, parseOutputSpecifier } from '../outputs/index.ts'
+import { createOutputsLoader } from '../outputs/runner.ts'
 
 export interface TonedOutputsPluginOptions {
-  /** Outputs modules, relative to the Vite root, collected in order. */
-  modules: readonly string[]
-  /** Files or directories (relative to the root) whose changes recollect in dev. */
-  watch?: readonly string[]
+  /** Globs, relative to the Vite root, matching `<name>.toned.ts` output files. */
+  outputs: readonly string[]
   /** Where CSS outputs are written for `@import`. Defaults to `<cacheDir>/toned`. */
   cacheDir?: string
-  /** Extra Vite config for the runner that evaluates the modules. */
+  /** Extra Vite config for the runner that evaluates output files. */
   runner?: InlineConfig
 }
 
 /**
- * Serves named Toned outputs to a Vite app: `@import 'toned:<name>'` in any
- * stylesheet (at any depth, with `layer(...)`), and `toned:<name>/<key>` from code.
- * Nothing is committed: outputs are collected when the build or dev server
- * starts, and again in dev when a watched file changes.
+ * Serves Toned outputs to a Vite app: `@import 'toned:<name>'` in any stylesheet
+ * (at any depth, with `layer(...)`), and `toned:<name>/<key>` from code. Outputs
+ * are built when the build or dev server starts; in dev, editing any file an
+ * output read rebuilds that output and the outputs that import it.
  */
 export function tonedOutputs(options: TonedOutputsPluginOptions): Plugin {
   let root = process.cwd()
   let cacheDir = ''
-  let outputs: TonedOutputs = {}
+  let loader: ReturnType<typeof createOutputsLoader> | undefined
+  let outputs: Record<string, TonedOutput> = {}
+  let server: ViteDevServer | undefined
   const collect = async () => {
-    outputs = await loadOutputs({
-      modules: options.modules,
-      root,
-      runner: options.runner,
-    })
+    loader ??= createOutputsLoader({ outputs: options.outputs, root, runner: options.runner })
+    outputs = await loader.loadAll()
+    // In dev, watch exactly the files the outputs read.
+    server?.watcher.add(loader.watchedFiles())
     return writeOutputCache(cacheDir, outputs)
   }
-  const modules = outputsModulePlugin(() => outputs)
 
   return {
     name: 'toned:outputs',
@@ -44,46 +42,37 @@ export function tonedOutputs(options: TonedOutputsPluginOptions): Plugin {
       root = resolve(config.root ?? process.cwd())
       cacheDir = resolve(
         root,
-        options.cacheDir ??
-          join(config.cacheDir ?? 'node_modules/.vite', 'toned'),
+        options.cacheDir ?? join(config.cacheDir ?? 'node_modules/.vite', 'toned'),
       )
       // CSS `@import` resolves through aliases, not plugin hooks, so a bare
       // `toned:<name>` points at the output's file in the cache directory.
       return {
         resolve: {
-          alias: [
-            {
-              find: /^toned:([\w.-]+)$/,
-              replacement: cssCachePath(cacheDir, '$1'),
-            },
-          ],
+          alias: [{ find: /^toned:([\w.-]+)$/, replacement: cssCachePath(cacheDir, '$1') }],
         },
       }
     },
     async buildStart() {
       await collect()
     },
-    resolveId: modules.resolveId,
-    load: modules.load,
-    configureServer(server) {
-      const watched = (options.watch ?? []).map((path) => resolve(root, path))
-      if (watched.length === 0) return
-      server.watcher.add(watched)
-      let timer: ReturnType<typeof setTimeout> | undefined
+    resolveId(id) {
+      if (parseOutputSpecifier(id)?.key) return `\0${id}`
+    },
+    load(id) {
+      if (!id.startsWith('\0toned:')) return
+      const specifier = parseOutputSpecifier(id.slice(1))
+      const output = specifier && outputs[specifier.name]
+      if (!specifier?.key || !output) return
+      return outputModuleSource(output, specifier.key)
+    },
+    configureServer(devServer) {
+      server = devServer
       let running = Promise.resolve()
-      const recollect = () => {
+      devServer.watcher.on('change', file => {
+        if (!loader || file.startsWith(cacheDir) || loader.invalidate(file).length === 0) return
         running = running
-          .then(async () => reload(server, await collect()))
-          .catch((error: unknown) => server.config.logger.error(String(error)))
-      }
-      server.watcher.on('change', (file) => {
-        if (
-          file.startsWith(cacheDir) ||
-          !watched.some((path) => file.startsWith(path))
-        )
-          return
-        clearTimeout(timer)
-        timer = setTimeout(recollect, 50)
+          .then(async () => reload(devServer, await collect()))
+          .catch((error: unknown) => devServer.config.logger.error(String(error)))
       })
     },
   }

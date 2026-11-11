@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { type TonedOutputs, outputModuleSource } from './index.ts'
+import { type TonedOutput, outputModuleSource } from './index.ts'
 
 /** Where an output's CSS lives in a cache directory. */
 export const cssCachePath = (cacheDir: string, name: string) =>
@@ -24,7 +24,7 @@ async function writeIfChanged(path: string, content: string): Promise<boolean> {
  */
 export async function writeOutputCache(
   cacheDir: string,
-  outputs: TonedOutputs,
+  outputs: Readonly<Record<string, TonedOutput>>,
 ): Promise<string[]> {
   await mkdir(cacheDir, { recursive: true })
   const changed: string[] = []

@@ -1,11 +1,11 @@
 /**
- * Child-process entry for `withTonedOutputsSync`: collects the outputs and
- * writes them to the cache directory. Arguments: a JSON `{ root, modules, cacheDir, runner }`.
+ * Child-process entry for `withTonedOutputsSync`: builds every output and writes
+ * it to the cache directory. Argument: a JSON `{ root, outputs, cacheDir, runner }`.
  */
 import { writeOutputCache } from '../outputs/cache.ts'
-import { loadOutputs } from '../outputs/runner.ts'
+import { createOutputsLoader } from '../outputs/runner.ts'
 
-const { root, modules, cacheDir, runner } = JSON.parse(process.argv[2] ?? '{}')
-const outputs = await loadOutputs({ root, modules, runner })
-await writeOutputCache(cacheDir, outputs)
-process.stdout.write(JSON.stringify(Object.keys(outputs)))
+const { root, outputs, cacheDir, runner } = JSON.parse(process.argv[2] ?? '{}')
+const loader = createOutputsLoader({ root, outputs, runner })
+await writeOutputCache(cacheDir, await loader.loadAll())
+process.stdout.write(JSON.stringify(loader.names))
