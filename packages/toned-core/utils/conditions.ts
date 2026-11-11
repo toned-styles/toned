@@ -1,3 +1,6 @@
+import type { QueryPredicate } from '../system/queries.ts'
+import { isQueryKey, queryExpression } from '../system/query-key.ts'
+import { camelToKebab } from './css.ts'
 /**
  * The condition model behind every `'@…'` stylesheet key.
  *
@@ -29,9 +32,7 @@
  *
  * @module utils/conditions
  */
-import type { QueryPredicate } from '../system/queries.ts'
-import { isQueryKey, queryExpression } from '../system/query-key.ts'
-import { camelToKebab } from './css.ts'
+import { isMediaCondition } from './media-query.ts'
 
 export type ConditionAtom = {
   /** Container name, or null for a viewport breakpoint atom. */
@@ -178,7 +179,7 @@ export function clauseGuard(clause: ConditionClause): string {
  */
 export function lengthToPx(value: number | string, unitPx = 1): number {
   if (typeof value === 'number') return value * unitPx
-  if (value.startsWith('(')) return Number.POSITIVE_INFINITY
+  if (isMediaCondition(value)) return Number.POSITIVE_INFINITY
   return (
     Number.parseFloat(value) *
     (value.endsWith('rem') || value.endsWith('em') ? 16 : 1)

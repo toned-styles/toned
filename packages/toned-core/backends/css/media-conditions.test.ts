@@ -31,6 +31,34 @@ describe('named media conditions', () => {
     expect(JSON.stringify(style)).toContain('var(--mc-media-motionless)')
   })
 
+  it('a query led by a media type, such as print, is a named condition too', () => {
+    const paged = defineSystem({
+      id: 'mp',
+      tokens: {
+        gap: defineToken({
+          values: [4, 8],
+          resolve: (gap: number) => ({ gap }),
+        }),
+      },
+      conditions: {
+        media: { print: 'print', wide: 'screen and (min-width: 64rem)' },
+      },
+    })
+    const artifact = buildStyles(paged, { sheets: [] })
+    expect(artifact.css).toContain(
+      '@media print { html { --mp-media-print: ; --mp-media-print-not: initial; } }',
+    )
+    expect(artifact.css).toContain(
+      '@media screen and (min-width: 64rem) { html {',
+    )
+    const sheet = paged.stylesheet({ Root: { gap: 4, '@print': { gap: 8 } } })
+    const style = createWebRenderer(paged, {
+      tokens: {},
+      manifest: artifact.manifest,
+    }).resolve(sheet).Root.style
+    expect(JSON.stringify(style)).toContain('var(--mp-media-print)')
+  })
+
   it('still refuses a length that is not a fixed threshold', () => {
     expect(() =>
       defineSystem({

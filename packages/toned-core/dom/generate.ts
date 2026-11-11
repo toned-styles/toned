@@ -1,8 +1,3 @@
-/**
- * CSS generation utilities.
- *
- * @module dom/generate
- */
 import {
   resolveAlphaChannels,
   resolveConfiguredToken,
@@ -23,6 +18,12 @@ import {
 } from '../utils/conditions.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
 import { bridgeVarName, camelToKebab } from '../utils/css.ts'
+/**
+ * CSS generation utilities.
+ *
+ * @module dom/generate
+ */
+import { isMediaCondition } from '../utils/media-query.ts'
 
 const tokens = new Proxy(Object.create(null), {
   get(_target, prop: string) {
@@ -274,10 +275,9 @@ export function generate<const S extends TokenStyleDeclaration>(
       // declare a rem-based scale that tracks the user's root font size. A
       // parenthesised string is a raw media CONDITION ('(pointer: coarse)') —
       // the same toggle machinery, gated on the condition instead of a width.
-      const condition =
-        typeof value === 'string' && value.startsWith('(')
-          ? value
-          : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
+      const condition = isMediaCondition(value)
+        ? value
+        : `(min-width: ${typeof value === 'number' ? `${value}px` : value})`
       rules += `@media ${condition} { html { ${varName}: ; ${varName}-not: initial; } }`
     }
 
@@ -335,10 +335,9 @@ export function generate<const S extends TokenStyleDeclaration>(
       cqResets += `${varName}: initial;${varName}-not: ;`
       // A string length passes through (web-only escape); a parenthesised
       // string is a raw container CONDITION, same as the media scale.
-      const condition =
-        typeof value === 'string' && value.startsWith('(')
-          ? value
-          : `(min-width: ${typeof value === 'number' ? `${value * unitPx}px` : value})`
+      const condition = isMediaCondition(value)
+        ? value
+        : `(min-width: ${typeof value === 'number' ? `${value * unitPx}px` : value})`
       cqRules += `@container ${name} ${condition} { ${scope}._ { ${varName}: ; ${varName}-not: initial; } }`
     }
     for (const [name, steps] of Object.entries(
@@ -506,7 +505,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     const px = (v: number | string): number =>
       typeof v === 'number'
         ? v
-        : v.startsWith('(')
+        : isMediaCondition(v)
           ? Number.POSITIVE_INFINITY
           : Number.parseFloat(v) *
             (v.endsWith('rem') || v.endsWith('em') ? 16 : 1)
@@ -514,10 +513,9 @@ export function generate<const S extends TokenStyleDeclaration>(
       breakpoints.__breakpoints as Record<string, number | string>,
     ).sort(([, a], [, b]) => px(a) - px(b))
     for (const [bpKey, bpValue] of sorted) {
-      const condition =
-        typeof bpValue === 'string' && bpValue.startsWith('(')
-          ? bpValue
-          : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
+      const condition = isMediaCondition(bpValue)
+        ? bpValue
+        : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
       let block = ''
       for (const key of responsiveTokens) {
         // oxlint-disable-next-line typescript/no-explicit-any -- same structural narrowing as the token loop

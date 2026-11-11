@@ -6,10 +6,10 @@ import type {
   BridgeConfig,
 } from '../types/index.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
+import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
 import type { SystemTheme } from './theme-types.ts'
 
-/** A raw web media condition, e.g. `(prefers-reduced-motion: reduce)`. */
-export type MediaCondition = `(${string})`
+export type { MediaCondition } from '../utils/media-query.ts'
 
 export type SystemOptions = {
   layoutContext?: LayoutContext
@@ -67,8 +67,6 @@ type FixedConditions<C> = {
         }
       : C[K]
 }
-const isMediaCondition = (value: unknown): value is MediaCondition =>
-  typeof value === 'string' && value.startsWith('(') && value.endsWith(')')
 
 export function fixedConditions<C extends SystemOptions>(
   conditions: C | undefined,
