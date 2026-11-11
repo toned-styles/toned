@@ -94,6 +94,13 @@ const emphasis = ui.stylesheet((q) => ({
 }))
 ```
 
+A system's `media` names fixed width thresholds, and may also name a raw web
+media condition as a parenthesised query:
+`media: { md: 768, motionless: '(prefers-reduced-motion: reduce)' }`. It is a
+condition like any other (`'@motionless': { … }`, `q.media('motionless')`),
+toggled by the build. Native has no such query and refuses it unless the host
+declares one.
+
 The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
 compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
 methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
@@ -253,12 +260,12 @@ imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS a
 a string. An output file may import another output, which is how a usage
 inventory can feed the system it narrows.
 
-| Consumer | Entry |
-| -------- | ----- |
-| Vite | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite` |
-| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload |
-| Metro | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
-| Anything else | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner` |
+| Consumer             | Entry                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
+| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
+| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
+| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
 
 `outputs` are globs relative to the root. The Vite plugin builds the outputs with
 Vite's module runner (Vite 6 or later) when the build or dev server starts. In

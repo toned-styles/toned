@@ -8,10 +8,21 @@ import type {
 import { immutableSnapshot } from '../utils/immutable.ts'
 import type { SystemTheme } from './theme-types.ts'
 
+/** A raw web media condition, e.g. `(prefers-reduced-motion: reduce)`. */
+export type MediaCondition = `(${string})`
+
 export type SystemOptions = {
   layoutContext?: LayoutContext
-  /** Canonical named viewport thresholds in fixed logical pixels. */
-  media?: Record<string, number | (LogicalLength & { unit: 'dp' })>
+  /**
+   * Canonical named viewport thresholds in fixed logical pixels, and named web
+   * media conditions written as a parenthesised query, e.g.
+   * `motionless: '(prefers-reduced-motion: reduce)'`. A raw condition is web
+   * only: native refuses it unless the host declares it.
+   */
+  media?: Record<
+    string,
+    number | (LogicalLength & { unit: 'dp' }) | MediaCondition
+  >
   // oxlint-disable-next-line typescript/no-explicit-any -- matches TokenStyleDeclaration.breakpoints, which keeps the key set open
   breakpoints?: Breakpoints<any>
   animations?: Record<string, AnimationInput>
@@ -38,6 +49,7 @@ type FixedConditions<C> = {
             [N in keyof B]: B[N] extends
               | number
               | (LogicalLength & { unit: 'dp' })
+              | MediaCondition
               ? B[N]
               : never
           }
@@ -55,6 +67,9 @@ type FixedConditions<C> = {
         }
       : C[K]
 }
+const isMediaCondition = (value: unknown): value is MediaCondition =>
+  typeof value === 'string' && value.startsWith('(') && value.endsWith(')')
+
 export function fixedConditions<C extends SystemOptions>(
   conditions: C | undefined,
 ): C | undefined {
@@ -84,7 +99,7 @@ export function fixedConditions<C extends SystemOptions>(
     __breakpoints: Object.fromEntries(
       Object.entries(widths).map(([name, value]) => [
         name,
-        fixed(value, `media.${name}`),
+        isMediaCondition(value) ? value : fixed(value, `media.${name}`),
       ]),
     ),
   }

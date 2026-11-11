@@ -243,14 +243,14 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
-    | Record<string, number | LogicalLength>
+    | Record<string, number | LogicalLength | `(${string})`>
     | Containers
     | readonly string[]
     | number
     | undefined
   // oxlint-disable-next-line typescript/no-explicit-any -- an open key set; a precise Record breaks breakpoint-key indexing on generic sheets (TS2536 under TS 6)
   breakpoints?: Breakpoints<any>
-  media?: Record<string, number | LogicalLength>
+  media?: Record<string, number | LogicalLength | `(${string})`>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
   /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
