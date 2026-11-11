@@ -23,6 +23,7 @@ import {
 } from '../utils/conditions.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
 import { bridgeVarName, camelToKebab } from '../utils/css.ts'
+import { pseudoElementParameter } from '../utils/pseudo-element.ts'
 
 const tokens = new Proxy(Object.create(null), {
   get(_target, prop: string) {
@@ -55,6 +56,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     animations,
     bridges,
     states,
+    pseudoElements,
     responsiveTokens,
     containers,
     base,
@@ -127,6 +129,21 @@ export function generate<const S extends TokenStyleDeclaration>(
       }
     }
     styles += stateToggles
+  }
+
+  // Declared pseudo-elements: one generic rule per pseudo-element and property,
+  // reading a custom property the element sets inline (see
+  // `pseudoElementParameter`). Every bound element resets those parameters, so
+  // a value set on one element never reaches a descendant's pseudo-element; the
+  // element's own inline value outranks its reset.
+  if (pseudoElements) {
+    for (const [name, element] of Object.entries(pseudoElements)) {
+      for (const property of element.properties) {
+        const variable = pseudoElementParameter(name, property)
+        styles += `${scope}._ {${variable}: initial;}`
+        styles += `${scope}._${element.selector} {${camelToKebab(property)}: var(${variable}, revert-layer);}`
+      }
+    }
   }
 
   // Bridges: one static parameter-reading rule per target, plus the `._`

@@ -100,6 +100,7 @@ export function systemDefinition(system: TokenStyleDeclaration): string {
     breakpoints: system.breakpoints,
     containers: system.containers,
     states: system.states,
+    pseudoElements: system.pseudoElements,
     base: system.base,
     animations: system.animations,
     bridges: system.bridges,

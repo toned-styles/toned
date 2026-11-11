@@ -6,7 +6,7 @@ import {
   type ResolvedOperation,
   resolvePlan,
 } from '../../core/plan.ts'
-import { evaluatePredicate, FALSE } from '../../core/predicates.ts'
+import { evaluatePredicate, FALSE, TRUE } from '../../core/predicates.ts'
 import { resolveAlphaChannels } from '../../core/resolve.ts'
 import { namespaceOutput } from '../../system/namespace.ts'
 import type { TokenSystem, Tokens } from '../../types/index.ts'
@@ -20,6 +20,7 @@ import {
 } from '../../utils/alpha.ts'
 import { atomSlug, lengthToPx } from '../../utils/conditions.ts'
 import { serializeCssValue } from '../../utils/css-value.ts'
+import { pseudoElementParameter } from '../../utils/pseudo-element.ts'
 import { PSEUDO_CASCADE_ORDER } from '../../utils/pseudo.ts'
 import { warnOnce } from '../../utils/warn.ts'
 import { compileWebRules, isWebRules } from '../../web/rules.ts'
@@ -293,6 +294,83 @@ function pruneParameters(
   for (const name of candidates) if (!reachable.has(name)) delete style[name]
 }
 
+const isPseudoAtom = (
+  predicate: Predicate,
+): predicate is { op: 'atom'; fact: { kind: 'pseudo'; name: string } } =>
+  predicate.op === 'atom' && predicate.fact.kind === 'pseudo'
+
+const containsPseudo = (predicate: Predicate): boolean =>
+  predicate.op === 'atom'
+    ? predicate.fact.kind === 'pseudo'
+    : predicate.op === 'not'
+      ? containsPseudo(predicate.operand)
+      : predicate.operands.some(containsPseudo)
+
+/** A pseudo-element must be a plain conjunct: inside `not` or `any` it would
+ * mean "this value, or the element's own", which CSS cannot say. */
+function splitPseudoElement(
+  predicate: Predicate,
+): { name: string; rest: Predicate } | undefined {
+  if (isPseudoAtom(predicate)) return { name: predicate.fact.name, rest: TRUE }
+  const operands = predicate.op === 'all' ? predicate.operands : []
+  const pseudo = operands.filter(isPseudoAtom)
+  const others = operands.filter((operand) => !isPseudoAtom(operand))
+  if (
+    (predicate.op !== 'all' && containsPseudo(predicate)) ||
+    pseudo.length > 1 ||
+    others.some(containsPseudo)
+  )
+    throw new Error(
+      'Toned: a pseudo-element condition must enclose its declarations directly, once, outside any not/any',
+    )
+  if (!pseudo.length) return undefined
+  return {
+    name: pseudo[0]!.fact.name,
+    rest:
+      others.length === 0
+        ? TRUE
+        : others.length === 1
+          ? others[0]!
+          : { op: 'all', operands: others },
+  }
+}
+
+/**
+ * Values under a declared pseudo-element (`'::placeholder'`) never touch the
+ * element's own property: each becomes the inline parameter the system's
+ * generated rule for that pseudo-element reads. A distinct token and origin
+ * keep them out of atomic classes; any other condition still guards them.
+ */
+function routePseudoElements(
+  operations: readonly ResolvedOperation[],
+  system: TokenSystem<AnyDeclaration>,
+): readonly ResolvedOperation[] {
+  if (!operations.some((operation) => containsPseudo(operation.predicate)))
+    return operations
+  const declared = system.system.pseudoElements ?? {}
+  return operations.map((operation) => {
+    const split = splitPseudoElement(operation.predicate)
+    if (!split) return operation
+    const element = declared[split.name]
+    if (!element)
+      throw new Error(`Toned: undeclared pseudo-element ::${split.name}`)
+    if (!element.properties.includes(operation.field))
+      throw new Error(
+        `Toned: ::${split.name} does not declare ${operation.field}; add it to the system's pseudoElements`,
+      )
+    return {
+      ...operation,
+      field: pseudoElementParameter(split.name, operation.field),
+      predicate: split.rest,
+      origin: {
+        ...operation.origin,
+        id: `${operation.origin.id}::${split.name}`,
+        token: `${operation.origin.token}::${split.name}`,
+      },
+    }
+  })
+}
+
 /** Lower the shared, already-resolved field stream to legacy atomic classes and
  * bounded custom-property chains. Token resolvers are never invoked by lowering. */
 function lowerCssOperations(
@@ -302,9 +380,10 @@ function lowerCssOperations(
   useClassName = true,
   namespace = true,
 ): ResolvedProps {
+  const routed = routePseudoElements(input, system)
   const operations = system.id
-    ? input
-    : legacyOrder(input, system, useClassName)
+    ? routed
+    : legacyOrder(routed, system, useClassName)
   const config = system.system
   const parameters: Record<string, unknown> = {}
   const classes = new Set<string>(['_'])

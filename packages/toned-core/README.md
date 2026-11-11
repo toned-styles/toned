@@ -94,6 +94,37 @@ const emphasis = ui.stylesheet((q) => ({
 }))
 ```
 
+**Pseudo-elements** are declared on the system with the properties each one
+accepts, and styled with a `'::<name>'` key like any other condition:
+
+```ts
+const ui = defineSystem({
+  id: 'app',
+  tokens,
+  conditions: {
+    pseudoElements: {
+      placeholder: { selector: '::placeholder', properties: ['color'] },
+      'search-cancel': {
+        selector: '::-webkit-search-cancel-button',
+        properties: ['display'],
+      },
+    },
+  },
+})
+
+const field = ui.stylesheet({
+  Input: { textColor: 'foreground', '::placeholder': { textColor: 'muted' } },
+})
+```
+
+The element sets the value inline as a custom property, and the build emits one
+generic rule per declared pseudo-element and property that reads it (custom
+properties inherit into pseudo-elements). Every bound element resets those
+parameters, so a value never reaches a descendant's pseudo-element. Values may be
+nested under states and media queries as usual; a pseudo-element cannot sit
+inside `not`/`any`. No stylesheet has to be in the build for this. Native has no
+pseudo-elements, so these values are left out there.
+
 The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
 compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
 methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
@@ -253,12 +284,12 @@ imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS a
 a string. An output file may import another output, which is how a usage
 inventory can feed the system it narrows.
 
-| Consumer | Entry |
-| -------- | ----- |
-| Vite | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite` |
-| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload |
-| Metro | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
-| Anything else | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner` |
+| Consumer             | Entry                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
+| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
+| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
+| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
 
 `outputs` are globs relative to the root. The Vite plugin builds the outputs with
 Vite's module runner (Vite 6 or later) when the build or dev server starts. In

@@ -67,6 +67,7 @@ export function validateDeclarations(
     breakpoints?: { __breakpoints: Record<string, number | string> }
     containers?: Record<string, Record<string, unknown>>
     states?: Record<string, string>
+    pseudoElements?: Record<string, unknown>
   },
 ): void {
   const knownStates = new Set([
@@ -117,6 +118,11 @@ export function validateDeclarations(
             )
           }
         }
+      } else if (key.startsWith('::')) {
+        if (!system.pseudoElements?.[key.slice(2)])
+          throw new Error(
+            `Toned: undeclared pseudo-element ${key}; declare it in the system's pseudoElements`,
+          )
       } else if (key.includes(':') && !key.startsWith('[')) {
         for (const state of key.slice(key.indexOf(':') + 1).split(':')) {
           if (!knownStates.has(state.replace(/^(src|sib)-/, '')))

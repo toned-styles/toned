@@ -266,6 +266,14 @@ export type TokenStyleDeclaration = {
    */
   states?: Record<string, string>
   /**
+   * Pseudo-elements a `'::<name>'` condition may style, each with the CSS
+   * properties it accepts. See `SystemOptions.pseudoElements`.
+   */
+  pseudoElements?: Record<
+    string,
+    { selector: string; properties: readonly string[] }
+  >
+  /**
    * Tokens whose breakpoint overrides compile to RESPONSIVE ATOMIC CLASSES
    * instead of inline var-fallback chains. A chain rides the element's style
    * attribute and beats every stylesheet rule — the right winner for state
@@ -295,6 +303,7 @@ export type TokenKeys<S> = Exclude<
   | 'media'
   | 'breakpoints'
   | 'responsiveTokens'
+  | 'pseudoElements'
   | 'containers'
   | 'base'
   | 'externalCssVariables'

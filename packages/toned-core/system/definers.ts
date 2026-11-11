@@ -238,6 +238,7 @@ export function defineSystem<
         'breakpoints',
         'containers',
         'states',
+        'pseudoElements',
         'base',
         'animations',
         'bridges',

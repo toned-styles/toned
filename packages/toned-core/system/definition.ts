@@ -8,6 +8,13 @@ import type {
 import { immutableSnapshot } from '../utils/immutable.ts'
 import type { SystemTheme } from './theme-types.ts'
 
+export interface PseudoElement {
+  /** The CSS pseudo-element, e.g. `::placeholder`. */
+  selector: string
+  /** CSS properties (camelCase, as token resolvers return them) it accepts. */
+  properties: readonly string[]
+}
+
 export type SystemOptions = {
   layoutContext?: LayoutContext
   /** Canonical named viewport thresholds in fixed logical pixels. */
@@ -17,6 +24,13 @@ export type SystemOptions = {
   animations?: Record<string, AnimationInput>
   bridges?: Record<string, BridgeConfig>
   states?: Record<string, string>
+  /**
+   * Pseudo-elements a declaration may style with a `'::<name>'` condition key.
+   * Each lists the CSS properties it accepts: the build emits one generic rule
+   * per property that reads a custom property the element sets inline, so no
+   * sheet needs compiling. Web only; native leaves these values out.
+   */
+  pseudoElements?: Record<string, PseudoElement>
   /** See `TokenStyleDeclaration.responsiveTokens`. */
   responsiveTokens?: readonly string[]
   /** See `TokenStyleDeclaration.containers`. */

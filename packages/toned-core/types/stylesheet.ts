@@ -93,6 +93,13 @@ type InferStatePseudos<R> = R extends { states?: infer States }
     : never
   : never
 
+/** Declared pseudo-elements (`pseudoElements` config) → their `::name` keys. */
+type InferPseudoElements<R> = R extends { pseudoElements?: infer Elements }
+  ? Elements extends Record<string, unknown>
+    ? `::${keyof Elements & string}`
+    : never
+  : never
+
 type InferStateChannels<S> =
   InferStatePseudos<S> extends infer P extends string
     ? P extends `:${infer Name}`
@@ -558,69 +565,83 @@ type ValidateSpecial<
    * their leaves are always checked here.
    */
   Light extends boolean = false,
-> = K extends QueryKey
-  ? ValidQueryKey<K, S, Parts, Local> extends true
+> = K extends `::${string}`
+  ? // A declared pseudo-element encloses ordinary declarations.
+    K extends InferPseudoElements<S>
     ? K extends ShapeKeys<Shape>
       ? ValidateDeclaration<
           Input[K],
           NonNullable<Shape[K]>,
           S,
           Parts,
-          K extends Parts ? true : Local,
+          Local,
           Light
         >
       : never
     : never
-  : [
-        typeof CROSS_ELEMENT extends ShapeKeys<Shape> ? true : false,
-        IsCrossElementKey<K, Parts, S>,
-      ] extends [true, true]
-    ? ValidateDeclaration<
-        Input[K],
-        NonNullable<Shape[typeof CROSS_ELEMENT & ShapeKeys<Shape>]>,
-        S,
-        Parts,
-        Local
-      >
-    : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
-      // per written key would make each sheet cost parts × pseudos again.
-      K extends `${infer _Part extends Parts}:${infer Rest}`
-      ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
-        ? K extends ShapeKeys<Shape>
-          ? ValidateDeclaration<
-              Input[K],
-              NonNullable<Shape[K]>,
-              S,
-              Parts,
-              K extends Parts ? true : Local
-            >
-          : typeof CROSS_PART extends ShapeKeys<Shape>
-            ? ValidateDeclaration<
-                Input[K],
-                NonNullable<Shape[typeof CROSS_PART]>,
-                S,
-                never,
-                Local
-              >
-            : never
+  : K extends QueryKey
+    ? ValidQueryKey<K, S, Parts, Local> extends true
+      ? K extends ShapeKeys<Shape>
+        ? ValidateDeclaration<
+            Input[K],
+            NonNullable<Shape[K]>,
+            S,
+            Parts,
+            K extends Parts ? true : Local,
+            Light
+          >
         : never
-      : K extends `:${string}:${string}`
-        ? ValidCompound<
-            K,
-            Pseudo | InferStatePseudos<S> | InferStateChannels<S>
-          > extends true
+      : never
+    : [
+          typeof CROSS_ELEMENT extends ShapeKeys<Shape> ? true : false,
+          IsCrossElementKey<K, Parts, S>,
+        ] extends [true, true]
+      ? ValidateDeclaration<
+          Input[K],
+          NonNullable<Shape[typeof CROSS_ELEMENT & ShapeKeys<Shape>]>,
+          S,
+          Parts,
+          Local
+        >
+      : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
+        // per written key would make each sheet cost parts × pseudos again.
+        K extends `${infer _Part extends Parts}:${infer Rest}`
+        ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
           ? K extends ShapeKeys<Shape>
             ? ValidateDeclaration<
                 Input[K],
                 NonNullable<Shape[K]>,
                 S,
                 Parts,
-                K extends Parts ? true : Local,
-                Light
+                K extends Parts ? true : Local
               >
+            : typeof CROSS_PART extends ShapeKeys<Shape>
+              ? ValidateDeclaration<
+                  Input[K],
+                  NonNullable<Shape[typeof CROSS_PART]>,
+                  S,
+                  never,
+                  Local
+                >
+              : never
+          : never
+        : K extends `:${string}:${string}`
+          ? ValidCompound<
+              K,
+              Pseudo | InferStatePseudos<S> | InferStateChannels<S>
+            > extends true
+            ? K extends ShapeKeys<Shape>
+              ? ValidateDeclaration<
+                  Input[K],
+                  NonNullable<Shape[K]>,
+                  S,
+                  Parts,
+                  K extends Parts ? true : Local,
+                  Light
+                >
+              : never
             : never
           : never
-        : never
 
 /**
  * A LEAF of a validated declaration: what a written value is checked, and

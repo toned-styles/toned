@@ -383,6 +383,12 @@ export function normalizeRules(
         )
       } else if (key[0] === ':' && key.includes('_')) {
         emit(conditions, element, prefix + key, node[key])
+      } else if (key.startsWith('::')) {
+        // A declared pseudo-element of this element: a condition of its own,
+        // not an interaction state, so it registers no runtime tracking.
+        withConditions(conditions, new Map([[key, ['true']]]), (next) =>
+          walk(next, localMap(element, node[key]), prefix),
+        )
       } else if (key[0] === ':' || key[0] === '@') {
         const pseudo = key[0] === ':'
         if (!pseudo) hasMediaRules = true

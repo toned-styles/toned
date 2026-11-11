@@ -20,6 +20,8 @@ export type Fact =
       unit?: 'scale' | 'px'
     }
   | { kind: 'platform'; name: 'web' | 'native' }
+  /** A declared pseudo-element (`'::placeholder'`); web only. */
+  | { kind: 'pseudo'; name: string }
   | {
       kind: 'relation'
       relation: {
@@ -89,6 +91,7 @@ export function conditionPredicate(
       })),
     }
   }
+  if (key.startsWith('::')) return atom({ kind: 'pseudo', name: key.slice(2) })
   const colon = key.indexOf(':')
   if (colon !== -1)
     return atom({
@@ -129,6 +132,8 @@ export function factKey(fact: Fact): string {
       return `@${fact.name}/${fact.step ?? `>=${fact.min}`}`
     case 'platform':
       return '@platform'
+    case 'pseudo':
+      return `::${fact.name}`
     case 'relation':
       return relationFactKey(fact.relation)
   }
