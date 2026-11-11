@@ -95,8 +95,9 @@ const emphasis = ui.stylesheet((q) => ({
 ```
 
 A system's `media` names fixed width thresholds, and may also name a raw web
-media condition as a parenthesised query:
-`media: { md: 768, motionless: '(prefers-reduced-motion: reduce)' }`. It is a
+media condition: a parenthesised query, or one led by a media type
+(`all`, `print`, `screen`):
+`media: { md: 768, motionless: '(prefers-reduced-motion: reduce)', print: 'print' }`. It is a
 condition like any other (`'@motionless': { … }`, `q.media('motionless')`),
 toggled by the build. Native has no such query and refuses it unless the host
 declares one.

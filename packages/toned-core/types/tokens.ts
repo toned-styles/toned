@@ -5,6 +5,7 @@
  */
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
+import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
 import type { PlatformStyle } from './style.ts'
 
@@ -243,14 +244,14 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, string>
-    | Record<string, number | LogicalLength | `(${string})`>
+    | Record<string, number | LogicalLength | MediaCondition>
     | Containers
     | readonly string[]
     | number
     | undefined
   // oxlint-disable-next-line typescript/no-explicit-any -- an open key set; a precise Record breaks breakpoint-key indexing on generic sheets (TS2536 under TS 6)
   breakpoints?: Breakpoints<any>
-  media?: Record<string, number | LogicalLength | `(${string})`>
+  media?: Record<string, number | LogicalLength | MediaCondition>
   /** Named animations compiled with the system css — see `defineAnimations`. */
   animations?: Record<string, AnimationInput>
   /** Bridge declarations compiled with the system css — see `BridgeConfig`. */
