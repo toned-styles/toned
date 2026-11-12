@@ -184,3 +184,28 @@ test('the synchronous Metro form builds in a child process and resolves the same
   expect(await readFile(String(css.filePath), 'utf8')).toBe('.y { color: red }')
   expect(() => resolve('toned:nope')).toThrow(/toned:nope is not a Toned output; the outputs are: demo/)
 })
+
+test('an edit after a failed rebuild, or during one, still rebuilds the output', async () => {
+  const root = await project({
+    'usage.ts': "export const used = 'first'\n",
+    'site.toned.ts':
+      "import { used } from './usage.ts'\nexport default { css: `.used-${used} {}` }\n",
+  })
+  const usage = join(root, 'usage.ts')
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  expect((await loader.load('site')).css).toBe('.used-first {}')
+
+  // A typo: the rebuild fails, and the output keeps the files it last read.
+  await writeFile(usage, "throw new Error('typo')\n")
+  expect(loader.invalidate(usage)).toEqual(['site'])
+  await expect(loader.load('site')).rejects.toThrow('typo')
+
+  // Fixing it rebuilds.
+  await writeFile(usage, "export const used = 'fixed'\n")
+  expect(loader.invalidate(usage)).toEqual(['site'])
+  // A second save while that rebuild runs is not lost either.
+  const rebuilding = loader.load('site')
+  expect(loader.invalidate(usage)).toEqual(['site'])
+  await rebuilding
+  expect((await loader.load('site')).css).toBe('.used-fixed {}')
+})
