@@ -95,10 +95,9 @@ export function createOutputsLoader(options: OutputsOptions) {
           added = true
         }
       }
-      for (const name of stale) {
-        loaded.delete(name)
-        sources.delete(name)
-      }
+      // Sources stay until a rebuild replaces them: a rebuild that fails, or one
+      // still running, must not leave the next edit with nothing to match.
+      for (const name of stale) loaded.delete(name)
       return [...stale]
     },
   }
