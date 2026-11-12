@@ -1,4 +1,5 @@
-import { resolve } from 'node:path'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
 
 import { discoverOutputs } from '../outputs/discover.ts'
 import {
@@ -27,6 +28,31 @@ export interface TonedBunPluginOptions {
   /** Globs, relative to `root`, matching `<name>.toned.ts` output files. */
   outputs: readonly string[]
   root?: string
+  /**
+   * A directory shared by the processes of one run, such as a test runner's
+   * workers. The first process to load an output builds it and writes it here;
+   * the others read it instead of building their own. Nothing is invalidated, so
+   * give each run a fresh directory.
+   */
+  cacheDir?: string
+}
+
+/** Read an output another process built, or build it and leave it for the next. */
+async function cachedOutput(
+  cacheDir: string,
+  name: string,
+  build: () => Promise<TonedOutput>,
+): Promise<TonedOutput> {
+  const path = join(cacheDir, `${name}.output.json`)
+  const cached = await readFile(path, 'utf8').catch(() => undefined)
+  if (cached !== undefined) return JSON.parse(cached) as TonedOutput
+  const output = await build()
+  await mkdir(cacheDir, { recursive: true })
+  // Renamed into place whole, so a reader never sees a partial file.
+  const temporary = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`
+  await writeFile(temporary, JSON.stringify(output))
+  await rename(temporary, path)
+  return output
 }
 
 /**
@@ -43,7 +69,8 @@ export function tonedBunPlugin(options: TonedBunPluginOptions) {
     const existing = loaded.get(name)
     if (existing) return existing
     const file = outputFile(files, name)
-    const promise = import(file).then(module => toOutput(module, file))
+    const build = () => import(file).then(module => toOutput(module, file))
+    const promise = options.cacheDir ? cachedOutput(options.cacheDir, name, build) : build()
     loaded.set(name, promise)
     return promise
   }

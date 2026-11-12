@@ -275,7 +275,9 @@ the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
 for other Vite config the files need. CSS `@import` resolves through aliases
 rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
 outside the source tree, and an unknown name fails as that missing file. Bun
-imports an output file only when one of its specifiers is first loaded. Metro
+imports an output file only when one of its specifiers is first loaded; give
+`cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
+test files) build each output once and read it after. Metro
 reads the same cache layout from `node_modules/.cache/toned`; restart it after
 changing declarations. Add `@toned/core/vite/client` to `types` (or a
 triple-slash reference) for the `toned:` module declarations.
