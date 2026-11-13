@@ -488,10 +488,30 @@ a condition-only grid registration instead of silently skipping host checks.
 - `stylesheet/applyStyles.ts`: ownership-aware host patching and stale-field reset.
 - `backends/`, `server/`, `build/`: output, pure resolution and build delivery.
 - `grid/`: geometry compilation and host identity checks.
+- `scorecard/`: the measured gates behind toned's quality numbers (below).
 
 Tests cover bit boundaries, reference evaluation, zero/conditional properties,
 selector types, suspended React work, ref cleanup, theme updates and owned native
 patches. A fixture is not certification of a React Native/Fabric device integration.
+
+## Scorecard
+
+`bun scorecard/scorecard.ts` (in this package) runs four gates that need no
+agent and prints a markdown table, then JSON; `--json` prints only the JSON
+`{ library, version, metrics, details }`, whose metric names are stable.
+
+- **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
+  stage each mistake is caught at (compile, build, runtime or silent) and
+  whether the report names the fix, computed with the same `tsc` and runtime.
+- **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
+  its canonical spelling and every alias in use; spellings per intent.
+- **Build purity**: which outputs change when a fixture sheet is added,
+  edited or deleted.
+- **Target conformance**: each feature on the web, native, inline and PDF
+  renderers: works, rejected at runtime, or a type error.
+
+Each gate's test fails only when a number gets worse than its recorded
+baseline. When one improves, update the baseline beside the case.
 
 ## Variant defaults and alpha
 
