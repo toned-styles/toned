@@ -12,7 +12,7 @@ export default defineCase({
   description:
     'A Vite app importing an output that no `*.toned.ts` declares (`toned:nope/manifest`)',
   category: 'outputs',
-  baseline: { stage: 'build', namesFix: false },
+  baseline: { stage: 'build', namesFix: true },
   fix: /\bsample\b/,
   build: () =>
     build({
