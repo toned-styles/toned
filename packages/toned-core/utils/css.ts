@@ -6,6 +6,8 @@
 import { unitlessNumbers } from './unitlessNumbers.ts'
 
 const camelToKebabRe = /([a-z0-9]|(?=[A-Z]))([A-Z])/g
+const MAX_KEBAB_NAMES = 1024
+const kebabNames = new Map<string, string>()
 
 /**
  * Convert camelCase to kebab-case.
@@ -17,7 +19,15 @@ const camelToKebabRe = /([a-z0-9]|(?=[A-Z]))([A-Z])/g
  * ```
  */
 export function camelToKebab(str: string): string {
-  return str.replace(camelToKebabRe, '$1-$2').toLowerCase()
+  let kebab = kebabNames.get(str)
+  if (kebab === undefined) {
+    kebab = str.replace(camelToKebabRe, '$1-$2').toLowerCase()
+    // Property names are a small, repeated set; arbitrary custom names reset
+    // the memo instead of growing it.
+    if (kebabNames.size >= MAX_KEBAB_NAMES) kebabNames.clear()
+    kebabNames.set(str, kebab)
+  }
+  return kebab
 }
 
 /** The parameter custom property one bridge reads for one CSS property. */

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import { camelToKebab, withCssUnit } from './css.ts'
 
@@ -18,6 +18,27 @@ describe('camelToKebab', () => {
 
   test('splits a name containing digits', () => {
     expect(camelToKebab('grid2Column')).toBe('grid2-column')
+  })
+
+  test('converts a repeated name once, and stays bounded for unbounded input', () => {
+    expect(camelToKebab('borderTopLeftRadius')).toBe('border-top-left-radius')
+    const replace = vi.spyOn(String.prototype, 'replace')
+    try {
+      for (let i = 0; i < 100; i++)
+        expect(camelToKebab('borderTopLeftRadius')).toBe(
+          'border-top-left-radius',
+        )
+      expect(replace).not.toHaveBeenCalled()
+      // Arbitrary names (custom properties, user keys) cannot grow the memo
+      // without bound: the earliest names are evicted and recomputed.
+      for (let i = 0; i < 5000; i++)
+        expect(camelToKebab(`custom${i}Name`)).toBe(`custom${i}-name`)
+      replace.mockClear()
+      expect(camelToKebab('custom0Name')).toBe('custom0-name')
+      expect(replace).toHaveBeenCalledTimes(1)
+    } finally {
+      replace.mockRestore()
+    }
   })
 })
 
