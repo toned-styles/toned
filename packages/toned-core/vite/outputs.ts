@@ -3,7 +3,12 @@ import { basename, join, resolve } from 'node:path'
 import type { InlineConfig, Plugin, ViteDevServer } from 'vite'
 
 import { cssCachePath, writeOutputCache } from '../outputs/cache.ts'
-import { type TonedOutput, outputModuleSource, parseOutputSpecifier } from '../outputs/index.ts'
+import {
+  type TonedOutput,
+  outputModuleSource,
+  parseOutputSpecifier,
+  unknownOutputError,
+} from '../outputs/index.ts'
 import { createOutputsLoader } from '../outputs/runner.ts'
 
 export interface TonedOutputsPluginOptions {
@@ -45,10 +50,22 @@ export function tonedOutputs(options: TonedOutputsPluginOptions): Plugin {
         options.cacheDir ?? join(config.cacheDir ?? 'node_modules/.vite', 'toned'),
       )
       // CSS `@import` resolves through aliases, not plugin hooks, so a bare
-      // `toned:<name>` points at the output's file in the cache directory.
+      // `toned:<name>` points at the output's file in the cache directory. The
+      // alias's own resolver rejects a name no output declares, with the same
+      // error code imports get, instead of a missing-file error.
       return {
         resolve: {
-          alias: [{ find: /^toned:([\w.-]+)$/, replacement: cssCachePath(cacheDir, '$1') }],
+          alias: [
+            {
+              find: /^toned:([\w.-]+)$/,
+              replacement: cssCachePath(cacheDir, '$1'),
+              customResolver(path) {
+                const name = basename(path).replace(/\.css$/, '')
+                if (!outputs[name]) throw unknownOutputError(name, Object.keys(outputs))
+                return path
+              },
+            },
+          ],
         },
       }
     },
@@ -61,8 +78,9 @@ export function tonedOutputs(options: TonedOutputsPluginOptions): Plugin {
     load(id) {
       if (!id.startsWith('\0toned:')) return
       const specifier = parseOutputSpecifier(id.slice(1))
-      const output = specifier && outputs[specifier.name]
-      if (!specifier?.key || !output) return
+      if (!specifier?.key) return
+      const output = outputs[specifier.name]
+      if (!output) throw unknownOutputError(specifier.name, Object.keys(outputs))
       return outputModuleSource(output, specifier.key)
     },
     configureServer(devServer) {

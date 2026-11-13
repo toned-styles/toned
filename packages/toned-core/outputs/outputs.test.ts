@@ -119,7 +119,7 @@ test('in dev, editing a file an output read rebuilds it and the outputs importin
   }
 })
 
-test('an unknown output is a build error naming its missing file', async () => {
+test('an unknown output imported from CSS is a build error naming the outputs there are', async () => {
   const root = await project({
     'index.html': html,
     'entry.js': "import './app.css'",
@@ -127,7 +127,18 @@ test('an unknown output is a build error naming its missing file', async () => {
     'demo.toned.ts': "export default { css: '' }\n",
   })
   await expect(compile(root, tonedOutputs({ outputs: ['*.toned.ts'] }))).rejects.toThrow(
-    /missing\.css/,
+    'toned:missing is not a Toned output; the outputs are: demo',
+  )
+})
+
+test('an unknown output imported from code is a build error naming the outputs there are', async () => {
+  const root = await project({
+    'index.html': html,
+    'entry.js': "import manifest from 'toned:nope/manifest'\nconsole.log(manifest)",
+    'demo.toned.ts': "export default { css: '', manifest: {} }\n",
+  })
+  await expect(compile(root, tonedOutputs({ outputs: ['*.toned.ts'] }))).rejects.toThrow(
+    'toned:nope is not a Toned output; the outputs are: demo',
   )
 })
 

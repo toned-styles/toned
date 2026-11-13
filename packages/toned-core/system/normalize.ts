@@ -69,14 +69,21 @@ export function validateDeclarations(
     states?: Record<string, string>
   },
 ): void {
-  const knownStates = new Set([
+  const builtInStates = [
     'hover',
     'active',
     'focus',
     'focus-visible',
     'focus-within',
-    ...Object.keys(system.states ?? {}),
-  ])
+  ]
+  const declaredStates = Object.keys(system.states ?? {})
+  const knownStates = new Set([...builtInStates, ...declaredStates])
+  const quoted = (names: readonly string[], prefix: string) =>
+    names.length ? names.map((name) => `'${prefix}${name}'`).join(', ') : 'none'
+  const undeclaredState = (state: string, key: string) =>
+    new Error(
+      `Toned: undeclared state ':${state}' in '${key}'; declared states: ${quoted(declaredStates, ':')}; built-in: ${quoted(builtInStates, ':')}`,
+    )
   const walk = (node: unknown): void => {
     if (Array.isArray(node)) {
       node.forEach(walk)
@@ -106,21 +113,26 @@ export function validateDeclarations(
               fixedQueryWidth(container!) === undefined &&
               !(container! in (system.breakpoints?.__breakpoints ?? {}))
             )
-              throw new Error(`Toned: undeclared media condition ${key}`)
+              throw new Error(
+                `Toned: undeclared media condition '${atom}' in '${key}'; declared media: ${quoted(Object.keys(system.breakpoints?.__breakpoints ?? {}), '@')}, or a fixed width such as '@>=768px'`,
+              )
           } else if (
             !system.containers?.[container!] ||
             (fixedQueryWidth(step) === undefined &&
               !(step in system.containers[container!]!))
           ) {
+            const declared = Object.entries(system.containers ?? {}).flatMap(
+              ([name, steps]) => Object.keys(steps).map((s) => `${name}/${s}`),
+            )
             throw new Error(
-              `Toned: undeclared container condition ${key}; portable conditions must be named fixed thresholds or explicit dp lengths`,
+              `Toned: undeclared container condition '${atom}' in '${key}'; declared containers: ${quoted(declared, '@')}; portable conditions must be named fixed thresholds or explicit dp lengths`,
             )
           }
         }
       } else if (key.includes(':') && !key.startsWith('[')) {
         for (const state of key.slice(key.indexOf(':') + 1).split(':')) {
           if (!knownStates.has(state.replace(/^(src|sib)-/, '')))
-            throw new Error(`Toned: undeclared state ${state}`)
+            throw undeclaredState(state, key)
         }
       }
       if (
@@ -141,7 +153,7 @@ export function validateDeclarations(
       if (!sourcePart || !part || !['child', 'descendant'].includes(scope))
         throw new Error('Toned: malformed relation query')
       if (!knownStates.has(state))
-        throw new Error(`Toned: undeclared state ${state}`)
+        throw undeclaredState(state, `${sourcePart}:${state}`)
     } else if (query.op === 'not') validateQuery(query.operand)
     else for (const operand of query.operands) validateQuery(operand)
   }

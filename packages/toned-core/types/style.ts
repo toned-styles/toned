@@ -6,6 +6,7 @@ import type {
   ThemeReference,
 } from '../core/values.ts'
 import type { Platform } from './config.ts'
+import type { TonedError } from './errors.ts'
 import type { ElementType } from './tokens.ts'
 
 type Dimension = number | `${number}%`
@@ -248,6 +249,20 @@ export type NativeInlineStyle<Kind> = ForKind<
         tintColor?: string
       }
     : {})
+/**
+ * CSS variables outside a web block, rejected with a message. Being an index
+ * signature, it also keeps the portable and native shapes from being WEAK
+ * types (all-optional, no index): a `$style` written with only web-only
+ * properties (`{ cursor: 'pointer' }`) would otherwise fail the stylesheet's
+ * constraint outright and report an excess property instead of the
+ * validation's message naming `'@platform web'`.
+ */
+type WebOnlyVariables = {
+  [
+    K in `--${string}`
+  ]?: TonedError<"CSS variables are web-only: put them under '@platform web': { $style: { … } }">
+}
+
 /** The portable escape is always checked, independently of the active host.
  * Host gates widen property/value vocabulary without losing the part kind. */
 export type PlatformStyle<
@@ -258,5 +273,5 @@ export type PlatformStyle<
     ? WebInlineStyle
     : ForKind<WebInlineStyle, Kind>
   : Host extends 'native'
-    ? NativeInlineStyle<Kind>
-    : ForKind<PortableInlineStyle, Kind>
+    ? NativeInlineStyle<Kind> & WebOnlyVariables
+    : ForKind<PortableInlineStyle, Kind> & WebOnlyVariables
