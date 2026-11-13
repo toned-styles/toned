@@ -208,18 +208,22 @@ export function useStyles<T extends StylesheetLike>(
   useMemo(() => config[VALIDATE_SHEET]?.(sheet), [config, sheet])
   // A candidate is private to this render. In particular a suspended render
   // cannot publish mods, refs, subscriptions, or token values to the live tree.
-  const candidate = sheet[SYMBOL_INIT](config, mods)
-  candidate.prepare?.(
+  const prepared = sheet[SYMBOL_INIT](config, mods)
+  prepared.prepare?.(
     // oxlint-disable-next-line react/refs -- reads, never writes, the committed candidate so this render can carry its state forward; publication happens in the layout effect.
     committed.current?.stylesheet === stylesheet
       ? committed.current.candidate
       : undefined,
   )
-  const conditions = candidate.conditionState?.(containerSizes)
+  const conditions = prepared.conditionState?.(containerSizes)
   if (conditions) {
-    Object.assign(candidate.modsState, conditions)
-    candidate.matchStyles()
+    Object.assign(prepared.modsState, conditions)
+    prepared.matchStyles()
   }
+  // A candidate that would commit exactly what is committed yields the
+  // committed controller: the layout effect's dependencies are then equal, so
+  // its commit and host write-back do not run. Nothing is written either way.
+  const candidate = prepared.retained?.() ?? prepared
   useLayoutEffect(() => {
     committed.current = { stylesheet, candidate }
     const unmount = candidate.mount?.()

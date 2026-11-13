@@ -194,3 +194,58 @@ test('independent controllers of one immutable output context share resolved out
     ).style.color,
   ).toBe('purple')
 })
+
+test('a candidate is equivalent to its mounted predecessor only when nothing it would commit differs', () => {
+  const system = defineSystem({
+    ink: defineToken({
+      values: ['rest', 'active'],
+      resolve: (value, tokens) => ({
+        color: value === 'rest' ? tokens['ink'] : 'blue',
+      }),
+    }),
+  })
+  const rules = {
+    Root: { ink: 'rest' },
+    '[active=true]': { Root: { ink: 'active' } },
+  }
+  const tokens = immutableSnapshot({ ink: 'red' })
+  const config = {
+    ...getConfig(),
+    platform: 'native' as const,
+    getTokens: () => tokens,
+    useClassName: false,
+    mediaMode: false as const,
+  }
+  const candidate = (modsState?: object, overrides?: object) => {
+    const next = new Base({
+      ref: system,
+      rules,
+      config: { ...config, ...overrides },
+      modsState,
+    })
+    next.prepare(current)
+    return next
+  }
+  const current = new Base({ ref: system, rules, config })
+  // Not yet committed: nothing to keep.
+  expect(candidate().equivalentTo(current)).toBe(false)
+  const unmount = current.mount()
+  expect(candidate().equivalentTo(current)).toBe(true)
+  expect(candidate().retained()).toBe(current)
+  const changed = candidate({ active: true })
+  expect(changed.retained()).toBe(changed)
+  expect(candidate({ active: true }).equivalentTo(current)).toBe(false)
+  expect(
+    candidate(undefined, {
+      getTokens: () => immutableSnapshot({ ink: 'green' }),
+    }).equivalentTo(current),
+  ).toBe(false)
+  expect(
+    candidate(undefined, { useClassName: true }).equivalentTo(current),
+  ).toBe(false)
+  expect(new Base({ ref: system, rules, config }).equivalentTo(current)).toBe(
+    false,
+  )
+  unmount()
+  expect(candidate().equivalentTo(current)).toBe(false)
+})

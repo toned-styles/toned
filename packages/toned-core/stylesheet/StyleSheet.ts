@@ -67,6 +67,31 @@ import { createVariantSelector } from './variantSelector.ts'
 // oxlint-disable-next-line typescript/no-explicit-any -- internal type alias for dynamic stylesheet values
 type AnyValue = any
 
+function sameBridgeProps(
+  first?: Record<string, string>,
+  second?: Record<string, string>,
+): boolean {
+  if (first === second) return true
+  if (!first || !second) return false
+  const keys = Object.keys(first)
+  return (
+    keys.length === Object.keys(second).length &&
+    keys.every((key) => first[key] === second[key])
+  )
+}
+
+/** Own string and symbol keys hold identical values, except those skipped. */
+function sameRecord(first: object, second: object, skip?: string): boolean {
+  const keys = Reflect.ownKeys(first)
+  if (keys.length !== Reflect.ownKeys(second).length) return false
+  return keys.every(
+    (key) =>
+      key === skip ||
+      (Object.hasOwn(second, key) &&
+        Reflect.get(first, key) === Reflect.get(second, key)),
+  )
+}
+
 type OutputScope = WeakMap<object, Map<string | undefined, AnyValue>>
 type ModeScopes = Map<string, OutputScope>
 
@@ -733,6 +758,44 @@ export class Base {
       }
       this.matchStyles()
     }
+  }
+
+  /**
+   * True when committing this prepared candidate would commit exactly what
+   * `previous` already holds: the same family, immutable inputs, output
+   * configuration, facts and matched declarations, with `previous` still the
+   * mounted current controller. A binding may then keep `previous` and skip
+   * the commit and its host write-back. Read-only for both controllers.
+   */
+  equivalentTo(previous: Base): boolean {
+    const backend = this.config.backend
+    if (
+      this.predecessor !== previous ||
+      previous.mounts === 0 ||
+      previous._family?.current !== previous ||
+      this._family !== previous._family ||
+      this.rules !== previous.rules ||
+      this.ref !== previous.ref ||
+      this.matcher !== previous.matcher ||
+      this.tokens !== previous.tokens ||
+      // Mutable tokens or backends can change output under one identity.
+      !isImmutableSnapshot(this.tokens) ||
+      (backend !== undefined && !Object.isFrozen(backend)) ||
+      !sameRecord(this.config, previous.config, 'bridgeProps') ||
+      !sameBridgeProps(this.config.bridgeProps, previous.config.bridgeProps) ||
+      !sameRecord(this.modsState, previous.modsState)
+    )
+      return false
+    for (const part of this.matcher.elementSet)
+      if (this.modsStyle[part] !== previous.modsStyle[part]) return false
+    return true
+  }
+
+  /** The controller a render should use: the prepared predecessor when this
+   * candidate is equivalent to it, otherwise this candidate. */
+  retained(): Base {
+    const previous = this.predecessor
+    return previous && this.equivalentTo(previous) ? previous : this
   }
 
   /** Runs in React's layout phase, after declarative host mutations. */

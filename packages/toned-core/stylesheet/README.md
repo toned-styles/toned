@@ -29,6 +29,12 @@ controller, so successor candidates resolve them afresh. Opaque theme values
 prevent certification; CSS-variable references are a locally constructed,
 certified immutable proxy.
 
+A prepared candidate that would commit exactly what its mounted predecessor
+holds (same family, inputs, immutable tokens, configuration, facts and matched
+declarations) is redundant: `retained()` returns the predecessor, and a binding
+renders with it so that no commit or host write-back runs. The check only
+reads, and mutable tokens never qualify.
+
 Commit remains the only place to publish the family owner or start host/media
 subscriptions. Ref attachment and detachment preserve generation checks and
 queued ownership validation. See [`../hosts/README.md`](../hosts/README.md) for
