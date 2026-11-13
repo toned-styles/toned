@@ -1,11 +1,13 @@
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { defineSystem, defineToken, getConfig, setConfig } from '@toned/core'
 import { createTailwindBackend } from '@toned/core/backends'
+import { Base } from '@toned/core/stylesheet'
+import { immutableSnapshot } from '@toned/core/utils'
 // @vitest-environment happy-dom
 import * as React from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 
 import { ConfigProvider, useBind, useStyles } from './index.ts'
 import web from './react-web.ts'
@@ -344,4 +346,53 @@ test('repeated props snapshot reads bind independent hosts and interaction state
   fireEvent.mouseEnter(second)
   expect(first.style.opacity).toBe('0')
   expect(second.style.opacity).toBe('0.5')
+})
+
+test('an unchanged re-render keeps the committed controller: no commit and no host writes', () => {
+  // Renderers install immutable token snapshots; mutable tokens always commit.
+  const tokens = immutableSnapshot({})
+  setConfig({
+    ...web,
+    getTokens: () => tokens,
+    useClassName: false,
+    mediaMode: false,
+    pseudoMode: 'runtime',
+  })
+  const commit = vi.spyOn(Base.prototype, 'commit')
+  try {
+    function View({ on, label }: { on: boolean; label: string }) {
+      const s = useStyles(sheet, { on })
+      return (
+        <div {...s.Root} data-testid="target">
+          {label}
+        </div>
+      )
+    }
+    const { rerender, getByTestId } = render(<View on={false} label="a" />)
+    const target = getByTestId('target')
+    expect(target.style.opacity).toBe('0')
+    commit.mockClear()
+    const observer = new MutationObserver(() => {})
+    observer.observe(target, { attributes: true })
+    rerender(<View on={false} label="b" />)
+    expect(target.textContent).toBe('b')
+    expect(observer.takeRecords()).toEqual([])
+    expect(commit).not.toHaveBeenCalled()
+    // Interaction still flows through the kept controller, across a re-render.
+    fireEvent.mouseEnter(target)
+    expect(target.style.opacity).toBe('0.5')
+    rerender(<View on={false} label="c" />)
+    expect(target.style.opacity).toBe('0.5')
+    fireEvent.mouseLeave(target)
+    expect(target.style.opacity).toBe('0')
+    observer.disconnect()
+    // A changed variant is a different candidate and commits as before.
+    rerender(<View on label="d" />)
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(target.style.opacity).toBe('1')
+    rerender(<View on={false} label="e" />)
+    expect(target.style.opacity).toBe('0')
+  } finally {
+    commit.mockRestore()
+  }
 })
