@@ -202,6 +202,29 @@ channel. For each state your sheets read as `'Part:state'` or `'Part~:state'`,
 rewrite `name: selector` to `name: { selector, relations: [...] }`; the type
 errors list every such key.
 
+### Shorthands and CSS-wide keywords under conditions
+
+On the web a part's conditions compile into one inline style, where each
+conditional field reads `var(--rule, <value at rest>)`. Two consequences:
+
+- A shorthand and one of its longhands in different blocks of one part
+  (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
+  write the longhands, or set the whole shorthand in each condition. Sheets the
+  types cannot see whole (`extend`, variants, untyped callers) are handled at
+  resolve time: the shorthand is split into its longhands (`transition`,
+  `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
+  `margin`, `inset`, `gap`, `flex`, `flexFlow`, the `place*` pairs, and a
+  single-colour `background`), so each longhand has one chain. A value that
+  cannot be split without the browser (a `var()`, an `animation`, a layered
+  `background`) throws, naming both fields and the fix; when every field
+  involved is unconditional it is left as written. Chromium's computed styles
+  for the split forms are checked by `node benchmarks/cascade-browser.mjs`.
+- A CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`, `revert-layer`)
+  under a condition is a type error and throws at resolve time: a keyword that
+  reaches a property through a custom property computes as `unset`. At rest it
+  is the chain's fallback, where it works. Set the value the state should take,
+  or write a selector rule with `$webRules`.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant

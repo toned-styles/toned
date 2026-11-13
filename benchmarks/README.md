@@ -25,6 +25,7 @@ go to the OS temporary directory, and results are printed as JSON on stdout.
 | `bun benchmarks/design-tools.ts [files] [coldSamples]`                        | Compiler indexing, incremental updates, queries and token completion        |
 | `node --experimental-strip-types benchmarks/design-tools-shared.ts [files]`   | Invalidation when many consumers share one design system                    |
 | `node benchmarks/state-recalc.mjs [revision] [--rows=…] [--states=…]`         | Chromium style recalculation per declared state, by list length             |
+| `node benchmarks/cascade-browser.mjs`                                         | A check, not a timing: Chromium computes the shorthand splits correctly     |
 
 The three `.mjs` runners accept an optional Git revision of this repository. The
 runner extracts that revision's `packages/toned-core` (and `toned-react` where
@@ -35,9 +36,15 @@ A revision older than the APIs a worker uses will fail to run; that is expected.
 
 The design-tools details and results are in [design-tools.md](design-tools.md).
 
-`state-recalc.mjs` needs Playwright with Chromium. It resolves `playwright`
+`state-recalc.mjs` and `cascade-browser.mjs` need Playwright with Chromium. It resolves `playwright`
 from the working directory first, so run it from a checkout that has it (HQ's
 root does): `node vendor/toned/benchmarks/state-recalc.mjs <revision>`.
+`cascade-browser.mjs` renders each case of `cascade-browser-cases.ts` (a
+shorthand and its longhand, one of them conditional) with the state off, on,
+and on an ancestor only, and exits non-zero on the first computed value that
+differs from the expected one. On 2026-11-13, Chromium 148: 9 cases, 60
+computed values, no failures; with the split disabled, the `transition` and
+legacy `padding` cases fail.
 
 ### Matcher
 

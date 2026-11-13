@@ -23,6 +23,7 @@ import type { QueryBuilder } from '../system/queries.ts'
 import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
 import type { StateDeclaration, StateRelation } from '../system/states.ts'
 import type { WebRules } from '../web/rules.ts'
+import type { PartCascadeCheck } from './cascade.ts'
 import type { EditorOnly } from './editor-mode.ts'
 export declare const DEFAULT_KIND: unique symbol
 /** Type-only key carrying the target a cross-part shorthand key is checked
@@ -845,7 +846,8 @@ export type StylesheetValidation<
             Elements,
             true,
             true
-          >
+          > &
+            PartCascadeCheck<T[K]>
       : RootKeyValidation<S, T, K, Elements, Kinds>
 }
 
