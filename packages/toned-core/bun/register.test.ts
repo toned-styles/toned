@@ -12,16 +12,22 @@ const hasBun = spawnSync('bun', ['--version']).status === 0
 
 const dirs: string[] = []
 afterEach(async () => {
-  for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true })
+  for (const dir of dirs.splice(0))
+    await rm(dir, { recursive: true, force: true })
 })
 
 test.skipIf(!hasBun)(
   'a plain script reaches toned: imports with `bun --preload @toned/core/bun/register`',
   async () => {
-    const root = await realpath(await mkdtemp(join(tmpdir(), 'toned-register-')))
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'toned-register-')),
+    )
     dirs.push(root)
     const files: Record<string, string> = {
-      'package.json': JSON.stringify({ name: 'app', toned: { outputs: ['styles/*.toned.ts'] } }),
+      'package.json': JSON.stringify({
+        name: 'app',
+        toned: { outputs: ['styles/*.toned.ts'] },
+      }),
       'styles/ui.toned.ts':
         "export default { css: '.ui {}', manifest: { systemId: 'ui' }, data: { tokens: { gap: [1, 2] } } }\n",
       'script.ts': [
@@ -49,13 +55,27 @@ test.skipIf(!hasBun)(
     })
     expect(second).toBe('toned:nope is not a Toned output; the outputs are: ui')
     // The next process reads the build from the cache, and an edit still shows.
-    await writeFile(join(root, 'styles/ui.toned.ts'), "export default { css: '.edited {}', data: { tokens: {} } }\n")
-    const next = spawnSync('bun', ['--preload', register, '-e', "console.log((await import('toned:ui/css')).default)"], {
-      cwd: root,
-      encoding: 'utf8',
-    })
+    await writeFile(
+      join(root, 'styles/ui.toned.ts'),
+      "export default { css: '.edited {}', data: { tokens: {} } }\n",
+    )
+    const next = spawnSync(
+      'bun',
+      [
+        '--preload',
+        register,
+        '-e',
+        "console.log((await import('toned:ui/css')).default)",
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+      },
+    )
     expect(next.stdout.trim()).toBe('.edited {}')
-    expect(readdirSync(join(root, 'node_modules/.cache/toned/bun')).length).toBe(1)
+    expect(
+      readdirSync(join(root, 'node_modules/.cache/toned/bun')).length,
+    ).toBe(1)
   },
   20_000,
 )

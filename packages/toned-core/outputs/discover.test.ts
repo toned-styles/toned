@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -8,10 +15,14 @@ import { declaredOutputs, discoverOutputs } from './discover.ts'
 
 const roots: string[] = []
 afterEach(async () => {
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true })
+  for (const root of roots.splice(0))
+    await rm(root, { recursive: true, force: true })
 })
 
-async function tree(files: Record<string, string>, links: Record<string, string> = {}) {
+async function tree(
+  files: Record<string, string>,
+  links: Record<string, string> = {},
+) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'toned-discover-')))
   roots.push(root)
   for (const [path, content] of Object.entries(files)) {
@@ -47,7 +58,10 @@ const workspace = () =>
       }),
       'kit/styles/kit.toned.ts': output,
       'kit/styles/kit-palette.toned.ts': output,
-      'tokens/package.json': pkg({ name: 'tokens', toned: { outputs: ['*.toned.ts'] } }),
+      'tokens/package.json': pkg({
+        name: 'tokens',
+        toned: { outputs: ['*.toned.ts'] },
+      }),
       'tokens/tokens.toned.ts': output,
       // A published package with no `toned` field is not followed.
       'app/node_modules/published/package.json': pkg({
@@ -88,11 +102,11 @@ test('without globs, outputs come from the packages that declare them, through t
   // Workspace links resolve to the package's real directory.
   expect(files['tokens']).toBe(join(root, 'tokens/tokens.toned.ts'))
   // A root below the package (a Vite root in src/) finds the package above it.
-  expect(Object.keys(discoverOutputs(join(root, 'app/src'))).toSorted()).toEqual(
-    Object.keys(files).toSorted(),
-  )
+  expect(
+    Object.keys(discoverOutputs(join(root, 'app/src'))).toSorted(),
+  ).toEqual(Object.keys(files).toSorted())
   // Breadth first: the app, its dependencies, then theirs.
-  expect(declaredOutputs(join(root, 'app')).map(d => d.dir)).toEqual([
+  expect(declaredOutputs(join(root, 'app')).map((d) => d.dir)).toEqual([
     join(root, 'app'),
     join(root, 'kit'),
     join(root, 'app/node_modules/published-kit'),
@@ -102,11 +116,15 @@ test('without globs, outputs come from the packages that declare them, through t
 
 test('explicit globs replace the declarations', async () => {
   const root = await workspace()
-  expect(Object.keys(discoverOutputs(join(root, 'app'), ['src/*.toned.ts']))).toEqual(['app'])
+  expect(
+    Object.keys(discoverOutputs(join(root, 'app'), ['src/*.toned.ts'])),
+  ).toEqual(['app'])
 })
 
 test('a malformed declaration names its package.json', async () => {
-  const root = await tree({ 'package.json': pkg({ name: 'bad', toned: { outputs: 'x.toned.ts' } }) })
+  const root = await tree({
+    'package.json': pkg({ name: 'bad', toned: { outputs: 'x.toned.ts' } }),
+  })
   expect(() => discoverOutputs(root)).toThrow(
     `${join(root, 'package.json')}: "toned.outputs" must be an array of globs relative to the package`,
   )
@@ -115,7 +133,11 @@ test('a malformed declaration names its package.json', async () => {
 test('two packages providing one output name is an error naming both files', async () => {
   const root = await tree(
     {
-      'package.json': pkg({ name: 'a', toned: { outputs: ['*.toned.ts'] }, dependencies: { b: '*' } }),
+      'package.json': pkg({
+        name: 'a',
+        toned: { outputs: ['*.toned.ts'] },
+        dependencies: { b: '*' },
+      }),
       'ui.toned.ts': output,
       'b/package.json': pkg({ name: 'b', toned: { outputs: ['*.toned.ts'] } }),
       'b/ui.toned.ts': output,

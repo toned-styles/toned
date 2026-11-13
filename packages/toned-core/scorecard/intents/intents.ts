@@ -273,7 +273,7 @@ export const intents: readonly Intent[] = [
       {
         spelling: "tonedOutputs({ outputs: ['…/*.toned.ts'] })",
         status: 'compatible',
-        note: "explicit globs in each consumer (also `tonedBunPlugin`, `withTonedOutputs`, `loadOutput`); replace the declarations; HQ writes them in about 15 places",
+        note: 'explicit globs in each consumer (also `tonedBunPlugin`, `withTonedOutputs`, `loadOutput`); replace the declarations; HQ writes them in about 15 places',
         source: review,
       },
     ],

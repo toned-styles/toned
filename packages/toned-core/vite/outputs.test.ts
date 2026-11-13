@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, realpath, rm, unlink, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  unlink,
+  writeFile,
+} from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,11 +17,14 @@ import { tonedOutputs } from './index.ts'
 
 const roots: string[] = []
 afterEach(async () => {
-  for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true })
+  for (const root of roots.splice(0))
+    await rm(root, { recursive: true, force: true })
 })
 
 async function project(files: Record<string, string>) {
-  const root = await realpath(await mkdtemp(join(tmpdir(), 'toned-vite-outputs-')))
+  const root = await realpath(
+    await mkdtemp(join(tmpdir(), 'toned-vite-outputs-')),
+  )
   roots.push(root)
   for (const [path, content] of Object.entries(files)) {
     await mkdir(join(root, path, '..'), { recursive: true })
@@ -23,7 +33,7 @@ async function project(files: Record<string, string>) {
   return root
 }
 
-const wait = (ms: number) => new Promise(done => setTimeout(done, ms))
+const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
 async function until(check: () => Promise<boolean> | boolean, tries = 60) {
   for (let i = 0; i < tries; i++) {
     if (await check()) return
@@ -36,7 +46,10 @@ async function until(check: () => Promise<boolean> | boolean, tries = 60) {
 const counted = (css: string) =>
   `const g = globalThis as { tonedBuilds?: number }\ng.tonedBuilds = (g.tonedBuilds ?? 0) + 1\nexport default { css: ${JSON.stringify(css)}, data: { ok: true } }\n`
 
-async function devServer(root: string, plugin = tonedOutputs({ outputs: ['*.toned.ts'] })) {
+async function devServer(
+  root: string,
+  plugin = tonedOutputs({ outputs: ['*.toned.ts'] }),
+) {
   const server = await createServer({
     root,
     configFile: false,
@@ -69,9 +82,15 @@ export default {
   })
   const g = globalThis as { tonedBuilds?: number }
   g.tonedBuilds = 0
-  const builder = await createBuilder({ root, configFile: join(root, 'vite.config.ts') })
+  const builder = await createBuilder({
+    root,
+    configFile: join(root, 'vite.config.ts'),
+  })
   await builder.buildApp()
-  expect(Object.keys(builder.environments).toSorted()).toEqual(['client', 'ssr'])
+  expect(Object.keys(builder.environments).toSorted()).toEqual([
+    'client',
+    'ssr',
+  ])
   expect(g.tonedBuilds).toBe(1)
 })
 
@@ -85,7 +104,13 @@ test('one plugin reused for a second build rebuilds only what changed', async ()
   g.tonedBuilds = 0
   const plugin = tonedOutputs({ outputs: ['*.toned.ts'] })
   const compile = () =>
-    build({ root, configFile: false, logLevel: 'silent', plugins: [plugin], build: { write: false } })
+    build({
+      root,
+      configFile: false,
+      logLevel: 'silent',
+      plugins: [plugin],
+      build: { write: false },
+    })
   await compile()
   await compile()
   expect(g.tonedBuilds).toBe(1)
@@ -97,7 +122,8 @@ test('one plugin reused for a second build rebuilds only what changed', async ()
 test('an unknown output name fails with the outputs there are', async () => {
   const root = await project({
     'index.html': '<script type="module" src="/entry.js"></script>',
-    'entry.js': "import manifest from 'toned:nope/manifest'\nconsole.log(manifest)\n",
+    'entry.js':
+      "import manifest from 'toned:nope/manifest'\nconsole.log(manifest)\n",
     'demo.toned.ts': "export default { css: '' }\n",
   })
   await expect(
@@ -113,7 +139,10 @@ test('an unknown output name fails with the outputs there are', async () => {
 
 test('without globs, the plugin serves the outputs the package declares', async () => {
   const root = await project({
-    'package.json': JSON.stringify({ name: 'app', toned: { outputs: ['styles/*.toned.ts'] } }),
+    'package.json': JSON.stringify({
+      name: 'app',
+      toned: { outputs: ['styles/*.toned.ts'] },
+    }),
     'styles/declared.toned.ts': "export default { css: '.declared {}' }\n",
   })
   const server = await devServer(root, tonedOutputs())
@@ -125,19 +154,28 @@ test('without globs, the plugin serves the outputs the package declares', async 
 })
 
 test('in dev, a new output file is served and a deleted one is gone, without a restart', async () => {
-  const root = await project({ 'one.toned.ts': "export default { css: '.one {}' }\n" })
+  const root = await project({
+    'one.toned.ts': "export default { css: '.one {}' }\n",
+  })
   const server = await devServer(root)
   try {
     expect(await served(server, 'toned:one/css')).toContain('.one {}')
-    await writeFile(join(root, 'two.toned.ts'), "export default { css: '.two {}' }\n")
-    await until(async () => (await served(server, 'toned:two/css')).includes('.two {}'))
+    await writeFile(
+      join(root, 'two.toned.ts'),
+      "export default { css: '.two {}' }\n",
+    )
+    await until(async () =>
+      (await served(server, 'toned:two/css')).includes('.two {}'),
+    )
     await unlink(join(root, 'one.toned.ts'))
     await until(async () => {
       const error = await server.transformRequest('toned:one/css').then(
         () => '',
         (e: Error) => e.message,
       )
-      return error.includes('toned:one is not a Toned output; the outputs are: two')
+      return error.includes(
+        'toned:one is not a Toned output; the outputs are: two',
+      )
     })
   } finally {
     await server.close()
@@ -155,12 +193,21 @@ test('in dev, editing a declared input rebuilds the output, and a failed rebuild
   try {
     expect(await served(server, 'toned:site/css')).toContain('.first {}')
     await writeFile(join(root, 'notes.txt'), 'second')
-    await until(async () => (await served(server, 'toned:site/css')).includes('.second {}'))
+    await until(async () =>
+      (await served(server, 'toned:site/css')).includes('.second {}'),
+    )
     await writeFile(join(root, 'notes.txt'), 'broken')
     await until(() =>
       send.mock.calls.some(([payload]) => {
-        const p = payload as { type?: string; err?: { message?: string; plugin?: string } }
-        return p.type === 'error' && !!p.err?.message?.includes('notes are broken') && p.err.plugin === 'toned:outputs'
+        const p = payload as {
+          type?: string
+          err?: { message?: string; plugin?: string }
+        }
+        return (
+          p.type === 'error' &&
+          !!p.err?.message?.includes('notes are broken') &&
+          p.err.plugin === 'toned:outputs'
+        )
       }),
     )
   } finally {
@@ -176,9 +223,16 @@ test('in dev, an output that is broken at start does not stop the server, and fi
   const server = await devServer(root)
   try {
     expect(await served(server, 'toned:good/css')).toContain('.good {}')
-    await expect(server.transformRequest('toned:bad/css')).rejects.toThrow('did you mean "css"?')
-    await writeFile(join(root, 'bad.toned.ts'), "export default { css: '.fixed {}' }\n")
-    await until(async () => (await served(server, 'toned:bad/css')).includes('.fixed {}'))
+    await expect(server.transformRequest('toned:bad/css')).rejects.toThrow(
+      'did you mean "css"?',
+    )
+    await writeFile(
+      join(root, 'bad.toned.ts'),
+      "export default { css: '.fixed {}' }\n",
+    )
+    await until(async () =>
+      (await served(server, 'toned:bad/css')).includes('.fixed {}'),
+    )
   } finally {
     await server.close()
   }

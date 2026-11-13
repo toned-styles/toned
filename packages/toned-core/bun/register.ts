@@ -19,6 +19,8 @@ const root = process.cwd()
 Bun.plugin(
   tonedBunPlugin({
     root,
-    cacheDir: process.env['TONED_OUTPUTS_CACHE'] || join(root, 'node_modules/.cache/toned/bun'),
+    cacheDir:
+      process.env['TONED_OUTPUTS_CACHE'] ||
+      join(root, 'node_modules/.cache/toned/bun'),
   }),
 )
