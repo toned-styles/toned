@@ -167,3 +167,19 @@ test('in dev, editing a declared input rebuilds the output, and a failed rebuild
     await server.close()
   }
 }, 15_000)
+
+test('in dev, an output that is broken at start does not stop the server, and fixing it serves it', async () => {
+  const root = await project({
+    'good.toned.ts': "export default { css: '.good {}' }\n",
+    'bad.toned.ts': "export default { CSS: '.bad {}' }\n",
+  })
+  const server = await devServer(root)
+  try {
+    expect(await served(server, 'toned:good/css')).toContain('.good {}')
+    await expect(server.transformRequest('toned:bad/css')).rejects.toThrow('did you mean "css"?')
+    await writeFile(join(root, 'bad.toned.ts'), "export default { css: '.fixed {}' }\n")
+    await until(async () => (await served(server, 'toned:bad/css')).includes('.fixed {}'))
+  } finally {
+    await server.close()
+  }
+}, 15_000)

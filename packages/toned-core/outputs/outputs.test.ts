@@ -329,3 +329,17 @@ test('an unknown data key names the output and the keys it has', () => {
     'toned:ui has no "tokens"; it has: css, manifest',
   )
 })
+
+test('an output that fails on its first build still knows the files it reached', async () => {
+  const root = await project({
+    'usage.ts': "throw new Error('typo')\n",
+    'site.toned.ts': "import { used } from './usage.ts'\nexport default { css: `.used-${used} {}` }\n",
+  })
+  const usage = join(root, 'usage.ts')
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  await expect(loader.load('site')).rejects.toThrow('typo')
+  expect(loader.watchedFiles().toSorted()).toEqual([join(root, 'site.toned.ts'), usage])
+  await writeFile(usage, "export const used = 'fixed'\n")
+  expect(loader.invalidate(usage)).toEqual(['site'])
+  expect((await loader.load('site')).css).toBe('.used-fixed {}')
+})

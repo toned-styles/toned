@@ -96,7 +96,9 @@ function addMatches(
   patterns: readonly string[],
 ): void {
   for (const pattern of patterns) {
-    for (const match of globSync(pattern, { cwd, exclude: path => path.includes('node_modules') })) {
+    // Sorted, so names (and the messages listing them) do not depend on the file system.
+    const matches = globSync(pattern, { cwd, exclude: path => path.includes('node_modules') }).sort()
+    for (const match of matches) {
       const file = resolve(cwd, match)
       const name = outputName(file)
       if (!name) continue

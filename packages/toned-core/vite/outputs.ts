@@ -6,7 +6,6 @@ import { cssCachePath, writeOutputCache } from '../outputs/cache.ts'
 import { declaredOutputs } from '../outputs/discover.ts'
 import {
   type TonedOutput,
-  outputFile,
   outputModuleSource,
   outputName,
   parseOutputSpecifier,
@@ -40,12 +39,32 @@ export function tonedOutputs(options: TonedOutputsPluginOptions = {}): Plugin {
   let loader: OutputsLoader | undefined
   let outputs: Record<string, TonedOutput> = {}
   let server: ViteDevServer | undefined
+  const getLoader = () =>
+    (loader ??= createOutputsLoader({ outputs: options.outputs, root, runner: options.runner }))
+  /**
+   * Build every output and write the cache. The outputs that built are written
+   * even when another failed; the first failure is then thrown.
+   */
   const collect = async () => {
-    loader ??= createOutputsLoader({ outputs: options.outputs, root, runner: options.runner })
-    outputs = await loader.loadAll()
-    // In dev, watch exactly the files the outputs read.
-    server?.watcher.add(loader.watchedFiles())
-    return writeOutputCache(cacheDir, outputs)
+    const current = getLoader()
+    const settled = await Promise.allSettled(
+      current.names.map(async name => [name, await current.load(name)] as const),
+    )
+    outputs = Object.fromEntries(
+      settled.flatMap(result => (result.status === 'fulfilled' ? [result.value] : [])),
+    )
+    // In dev, watch exactly the files the outputs read (or reached, when one failed).
+    server?.watcher.add(current.watchedFiles())
+    const changed = await writeOutputCache(cacheDir, outputs)
+    const failed = settled.find(result => result.status === 'rejected')
+    if (failed) throw failed.reason
+    return changed
+  }
+  const report = (error: unknown) => {
+    if (!server) return
+    server.config.logger.error(String(error))
+    const { message, stack } = error instanceof Error ? error : new Error(String(error))
+    server.ws.send({ type: 'error', err: { message, stack: stack ?? '', plugin: 'toned:outputs' } })
   }
 
   return {
@@ -71,19 +90,21 @@ export function tonedOutputs(options: TonedOutputsPluginOptions = {}): Plugin {
       // A later build by the same plugin sees edits; the next environment of
       // this build finds nothing changed and reuses what is loaded.
       await loader?.refresh()
-      await collect()
+      // A build fails on a broken output; a dev server reports it and keeps
+      // serving the others, and importing the broken one shows its error.
+      await (server ? collect().catch(report) : collect())
     },
     resolveId(id) {
       if (parseOutputSpecifier(id)?.key) return `\0${id}`
     },
-    load(id) {
+    async load(id) {
       if (!id.startsWith('\0toned:')) return
       const specifier = parseOutputSpecifier(id.slice(1))
       if (!specifier?.key) return
-      const output = outputs[specifier.name]
-      // Not an output: say which there are.
-      if (!output) outputFile(loader?.files ?? {}, specifier.name)
-      return outputModuleSource(output ?? {}, specifier.key, specifier.name)
+      // An output that failed to build reports that failure again; an unknown
+      // name says which outputs there are.
+      const output = outputs[specifier.name] ?? (await getLoader().load(specifier.name))
+      return outputModuleSource(output, specifier.key, specifier.name)
     },
     configureServer(devServer) {
       server = devServer
@@ -96,11 +117,7 @@ export function tonedOutputs(options: TonedOutputsPluginOptions = {}): Plugin {
             if (everything) invalidateAll(devServer)
             reload(devServer, changed)
           })
-          .catch((error: unknown) => {
-            devServer.config.logger.error(String(error))
-            const { message, stack } = error instanceof Error ? error : new Error(String(error))
-            devServer.ws.send({ type: 'error', err: { message, stack: stack ?? '', plugin: 'toned:outputs' } })
-          })
+          .catch(report)
       }
       const owned = (file: string) => !file.startsWith(cacheDir) && !!loader
       devServer.watcher.on('change', file => {

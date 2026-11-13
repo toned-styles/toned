@@ -180,9 +180,10 @@ export function createOutputsLoader(options: OutputsOptions) {
 
   const build = async (name: string, file: string): Promise<TonedOutput> => {
     active++
+    let environment: RunnableDevEnvironment | undefined
     try {
       session ??= open()
-      const environment = await session
+      environment = await session
       const module = await environment.runner.import(file)
       const output = toOutput(module, file)
       const read = graphOf(environment, file)
@@ -190,6 +191,16 @@ export function createOutputsLoader(options: OutputsOptions) {
       await Promise.all([...read.files.keys()].map(async path => read.files.set(path, await hashFile(path))))
       sources.set(name, read)
       return output
+    } catch (error) {
+      // Keep what a failed build reached as well as what it read last, so an
+      // edit to any of those files rebuilds it.
+      const reached = environment ? graphOf(environment, file) : { files: new Map([[file, '']]), outputs: new Set<string>() }
+      const previous = sources.get(name)
+      sources.set(name, {
+        files: new Map([...reached.files, ...(previous?.files ?? [])]),
+        outputs: new Set([...reached.outputs, ...(previous?.outputs ?? [])]),
+      })
+      throw error
     } finally {
       await release()
     }
@@ -198,6 +209,7 @@ export function createOutputsLoader(options: OutputsOptions) {
   const load = (name: string): Promise<TonedOutput> => {
     const existing = loaded.get(name)
     if (existing) return existing
+    if (!(name in files)) return Promise.reject(namedError(() => outputFile(files, name)))
     const promise = build(name, outputFile(files, name))
     loaded.set(name, promise)
     promise.catch(() => {
@@ -288,6 +300,16 @@ export function createOutputsLoader(options: OutputsOptions) {
       return !same
     },
   }
+}
+
+/** The error `fn` throws. */
+function namedError(fn: () => unknown): unknown {
+  try {
+    fn()
+  } catch (error) {
+    return error
+  }
+  return new Error('unreachable')
 }
 
 export type OutputsLoader = ReturnType<typeof createOutputsLoader>
