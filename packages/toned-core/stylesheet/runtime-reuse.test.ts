@@ -124,3 +124,73 @@ test('legacy mutable token objects and bridge maps are refreshed by new candidat
   expect(after.getCurrentStyle('Root').placeholderTextColor).toBe('blue')
   expect(after.getCurrentStyle('Root').selectionColor).toBeUndefined()
 })
+
+test('independent controllers of one immutable output context share resolved outputs', () => {
+  let resolutions = 0
+  const system = defineSystem({
+    ink: defineToken({
+      values: ['rest', 'active'],
+      resolve: (value, tokens) => {
+        resolutions++
+        return { color: value === 'rest' ? tokens['ink'] : 'blue' }
+      },
+    }),
+  })
+  const rules = {
+    Root: { ink: 'rest' },
+    '[active=true]': { Root: { ink: 'active' } },
+  }
+  const tokens = immutableSnapshot({ ink: 'red' })
+  const config = {
+    ...getConfig(),
+    platform: 'native' as const,
+    getTokens: () => tokens,
+    useClassName: false,
+    mediaMode: false as const,
+  }
+  const first = new Base({ ref: system, rules, config })
+  const initial = first.getCurrentStyle('Root')
+  const afterFirst = resolutions
+  // 200 sibling instances: none is another's predecessor.
+  for (let i = 0; i < 200; i++) {
+    const sibling = new Base({ ref: system, rules, config: { ...config } })
+    expect(sibling.getCurrentStyle('Root')).toBe(initial)
+  }
+  expect(resolutions).toBe(afterFirst)
+  const active = new Base({
+    ref: system,
+    rules,
+    config,
+    modsState: { active: true },
+  })
+  expect(active.getCurrentStyle('Root').style.color).toBe('blue')
+  expect(first.getCurrentStyle('Root')).toBe(initial)
+  // Another token snapshot, output mode or bridge map is another context.
+  const themed = new Base({
+    ref: system,
+    rules,
+    config: { ...config, getTokens: () => immutableSnapshot({ ink: 'green' }) },
+  })
+  expect(themed.getCurrentStyle('Root').style.color).toBe('green')
+  const bridged = new Base({
+    ref: system,
+    rules,
+    config: { ...config, bridgeProps: { color: 'tintColor' } },
+  })
+  expect(bridged.getCurrentStyle('Root').tintColor).toBe('red')
+  expect(bridged.getCurrentStyle('Root').style.color).toBeUndefined()
+  // Mutable tokens are never shared: a later instance sees the new value.
+  const mutable = { ink: 'red' }
+  const mutableConfig = { ...config, getTokens: () => mutable }
+  expect(
+    new Base({ ref: system, rules, config: mutableConfig }).getCurrentStyle(
+      'Root',
+    ).style.color,
+  ).toBe('red')
+  mutable.ink = 'purple'
+  expect(
+    new Base({ ref: system, rules, config: mutableConfig }).getCurrentStyle(
+      'Root',
+    ).style.color,
+  ).toBe('purple')
+})
