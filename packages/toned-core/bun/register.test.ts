@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { readdirSync } from 'node:fs'
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -47,6 +48,14 @@ test.skipIf(!hasBun)(
       tokens: { gap: [1, 2] },
     })
     expect(second).toBe('toned:nope is not a Toned output; the outputs are: ui')
+    // The next process reads the build from the cache, and an edit still shows.
+    await writeFile(join(root, 'styles/ui.toned.ts'), "export default { css: '.edited {}', data: { tokens: {} } }\n")
+    const next = spawnSync('bun', ['--preload', register, '-e', "console.log((await import('toned:ui/css')).default)"], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+    expect(next.stdout.trim()).toBe('.edited {}')
+    expect(readdirSync(join(root, 'node_modules/.cache/toned/bun')).length).toBe(1)
   },
   20_000,
 )

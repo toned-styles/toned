@@ -1,14 +1,7 @@
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
-import {
-  type InlineConfig,
-  type Plugin,
-  type RunnableDevEnvironment,
-  createRunnableDevEnvironment,
-  mergeConfig,
-  resolveConfig,
-} from 'vite'
+import type { InlineConfig, Plugin, RunnableDevEnvironment } from 'vite'
 
 import { discoverOutputs } from './discover.ts'
 import {
@@ -121,6 +114,8 @@ export function createOutputsLoader(options: OutputsOptions) {
   })
 
   const open = async (): Promise<RunnableDevEnvironment> => {
+    // Imported on first build, so a host served from a cache never loads Vite.
+    const { createRunnableDevEnvironment, mergeConfig, resolveConfig } = await import('vite')
     let environment: RunnableDevEnvironment | undefined
     const config = await resolveConfig(
       mergeConfig(mergeConfig({ configFile: false, logLevel: 'error', ...DEFAULT_RUNNER }, options.runner ?? {}), {
