@@ -187,11 +187,11 @@ function resolveInput(file: string, input: string | URL): string {
 }
 
 /** The ES module a `toned:<name>/<key>` specifier loads. `css` is the CSS as a string. */
-export function outputModuleSource(output: TonedOutput, key: string): string {
+export function outputModuleSource(output: TonedOutput, key: string, name?: string): string {
   if (key === 'css') return `export default ${JSON.stringify(output.css ?? '')}\n`
   if (!output.data || !(key in output.data))
     throw new Error(
-      `Toned output has no "${key}"; it has: ${['css', ...Object.keys(output.data ?? {})].join(', ')}`,
+      `${name === undefined ? 'Toned output' : OUTPUT_PREFIX + name} has no "${key}"; it has: ${['css', ...Object.keys(output.data ?? {})].join(', ')}`,
     )
   return `export default ${JSON.stringify(output.data[key])}\n`
 }
