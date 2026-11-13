@@ -133,6 +133,18 @@ its returned objects. Query builders return typed `QueryKey` strings; use those
 keys in declarations rather than assembling predicate objects. Explicit-generic
 callback and object variant declarations remain compatible.
 
+A key a stylesheet does not accept is a type error whose text names the fix:
+its value is checked against `TonedError<"…">` (a type exported from
+`@toned/core`), so the compiler prints, for example,
+`TonedError<"Unknown state ':opne'. Did you mean ':open'? Declared states: ':open'; built-in: …">`.
+Unknown tokens, CSS properties, states, media and condition-expression atoms
+(`'@md&!xx'`), parts in cross-part keys, raw selectors (`"[data-state='open']"`
+names the declared state to write), web-only CSS and CSS variables in portable
+`$style`, and conditions written inside `$style` each have a message. The
+runtime errors for the same facts name the key and the declared set too. A
+sheet-level `'@<name>'` block is not checked by type (root keys are open); it
+fails at construction with the declared media.
+
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
 order within a layer; a higher override layer still wins over the whole lower layer.
@@ -274,7 +286,8 @@ dev it watches every file an output read, and an edit rebuilds that output and
 the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
 for other Vite config the files need. CSS `@import` resolves through aliases
 rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
-outside the source tree, and an unknown name fails as that missing file. Bun
+outside the source tree. An unknown name, from CSS or code, fails the build with
+`toned:<name> is not a Toned output; the outputs are: …`. Bun
 imports an output file only when one of its specifiers is first loaded; give
 `cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
 test files) build each output once and read it after. Metro

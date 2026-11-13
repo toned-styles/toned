@@ -5,7 +5,7 @@ export default defineCase({
   id: 'unknown-token-key',
   description: 'A token key the system does not declare (`gapp`)',
   category: 'tokens',
-  baseline: { stage: 'compile', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /'gap'/,
   sheets: () => [ui.stylesheet({ Root: { gapp: 1 } })],
 })

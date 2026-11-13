@@ -458,6 +458,29 @@ function lowerCssOperations(
     : output
 }
 
+/** The warning for a dropped condition: which one, and what is declared. */
+function undeclaredConditionMessage(
+  fact: { kind: string; name?: string; step?: string },
+  declared: {
+    breakpoints?: { __breakpoints: Record<string, unknown> }
+    containers?: Record<string, Record<string, unknown>>
+  },
+): string {
+  const list = (names: string[]) =>
+    names.length ? names.map((name) => `'@${name}'`).join(', ') : 'none'
+  const media = list(Object.keys(declared.breakpoints?.__breakpoints ?? {}))
+  const containers = list(
+    Object.entries(declared.containers ?? {}).flatMap(([name, steps]) =>
+      Object.keys(steps).map((step) => `${name}/${step}`),
+    ),
+  )
+  const written =
+    fact.kind === 'container' && fact.step !== undefined
+      ? `${fact.name}/${fact.step}`
+      : fact.name
+  return `undeclared ${fact.kind} condition '@${written}' is dropped; declared media: ${media}; declared containers: ${containers}`
+}
+
 /** Entry shared by pure SSR and mounted CSS hosts. All selection and token
  * evaluation is the same plan pipeline used by native and Tailwind adapters. */
 export function resolveCssPlan(
@@ -499,7 +522,7 @@ export function resolveCssPlan(
           invalid = true
           warnOnce(
             `condition:${JSON.stringify(fact)}`,
-            'an undeclared breakpoint or container condition is dropped',
+            undeclaredConditionMessage(fact, system.system),
           )
           return FALSE
         }

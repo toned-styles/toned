@@ -64,8 +64,12 @@ export function outputModuleSource(output: TonedOutput, key: string): string {
 export function outputFile(files: Readonly<Record<string, string>>, name: string): string {
   const file = files[name]
   if (file) return file
-  const known = Object.keys(files)
-  throw new Error(
+  throw unknownOutputError(name, Object.keys(files))
+}
+
+/** The error for a `toned:<name>` that no output file declares, naming the outputs there are. */
+export function unknownOutputError(name: string, known: readonly string[]): Error {
+  return new Error(
     `${OUTPUT_PREFIX}${name} is not a Toned output; the outputs are: ${known.length ? known.join(', ') : '(none)'}`,
   )
 }

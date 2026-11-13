@@ -25,6 +25,7 @@ export type {
   EditorModeProbe,
   EditorOnly,
 } from './types/editor-mode.ts'
+export type { TonedError } from './types/errors.ts'
 export {
   type DerivationStep,
   derivationOf,
