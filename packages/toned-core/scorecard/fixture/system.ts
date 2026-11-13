@@ -4,8 +4,15 @@
  * scales, one named media threshold (`md`), one declared state (`open`), one
  * bridge (`placeholder`) and one application-owned CSS variable. It is
  * namespaced (`id`), so an unlisted `var()` is renamed, as in a real app.
+ * One animation (`fade-in`) and one bridge token (`placeholderColor`) cover
+ * motion and bridges.
  */
-import { defineSystem, defineToken } from '../../index.ts'
+import {
+  bridgeVarName,
+  defineAnimations,
+  defineSystem,
+  defineToken,
+} from '../../index.ts'
 
 const palette = {
   surface: 'var(--app-surface)',
@@ -34,12 +41,35 @@ export const textColor = defineToken({
   values: ['surface', 'accent', 'muted'] as const,
   resolve: (value: Paint) => ({ color: palette[value] }),
 })
+/** Writes the `placeholder` bridge's variable, as a real system's token would. */
+export const placeholderColor = defineToken({
+  values: ['accent', 'muted'] as const,
+  resolve: (value: Paint) => ({
+    [bridgeVarName('placeholder', 'color')]: palette[value],
+  }),
+})
+
+const motion = defineAnimations({
+  'fade-in': {
+    keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+    duration: 200,
+  },
+})
 
 export const ui = defineSystem({
   id: 'scorecard',
   externalCssVariables: ['--app-surface'],
-  tokens: { gap, padding, opacity, bgColor, textColor },
+  tokens: {
+    gap,
+    padding,
+    opacity,
+    bgColor,
+    textColor,
+    placeholderColor,
+    animation: motion.animation,
+  },
   conditions: {
+    animations: motion.animations,
     media: { md: 768 },
     states: { open: "[data-state='open']" },
     bridges: {
