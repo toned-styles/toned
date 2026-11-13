@@ -5,9 +5,17 @@ import { join } from 'node:path'
 import { build, createServer } from 'vite'
 import { afterEach, expect, test } from 'vitest'
 
+import { buildStyles } from '../build/index.ts'
 import { withTonedOutputs, withTonedOutputsSync } from '../metro/index.ts'
+import { defineSystem } from '../system/definers.ts'
 import { tonedOutputs } from '../vite/index.ts'
-import { outputModuleSource, outputName, parseOutputSpecifier, toOutput } from './index.ts'
+import {
+  defineOutput,
+  outputModuleSource,
+  outputName,
+  parseOutputSpecifier,
+  toOutput,
+} from './index.ts'
 import { createOutputsLoader } from './runner.ts'
 
 const roots: string[] = []
@@ -208,4 +216,52 @@ test('an edit after a failed rebuild, or during one, still rebuilds the output',
   expect(loader.invalidate(usage)).toEqual(['site'])
   await rebuilding
   expect((await loader.load('site')).css).toBe('.used-fixed {}')
+})
+
+test('an output file must export a known shape: no unknown keys, no promise, css or data, JSON data', () => {
+  const file = '/app/ui.toned.ts'
+  const shape = (value: unknown) => () => toOutput({ default: value }, file)
+  expect(shape({})).toThrow(
+    'Toned output /app/ui.toned.ts has no css or data: export { css } or { data } (or a buildStyles artifact)',
+  )
+  expect(shape({ CSS: '.a{}' })).toThrow(
+    'Toned output /app/ui.toned.ts: unknown key "CSS"; did you mean "css"? An output has css, manifest, data, inputs',
+  )
+  expect(shape({ css: '.a{}', mainfest: {} })).toThrow('did you mean "manifest"?')
+  expect(shape({ css: '.a{}', extra: 1 })).toThrow(
+    'Toned output /app/ui.toned.ts: unknown key "extra". An output has css, manifest, data, inputs',
+  )
+  expect(shape(Promise.resolve({ css: '' }))).toThrow(
+    'Toned output /app/ui.toned.ts default-exports a promise: await it (`export default await build()`)',
+  )
+  expect(shape({ css: Promise.resolve('') })).toThrow('css is a promise: await it')
+  expect(shape({ data: { usage: () => 1 } })).toThrow(
+    'Toned output /app/ui.toned.ts: data.usage is a function; data must be JSON (strings, finite numbers, booleans, null, arrays and plain objects)',
+  )
+  expect(shape({ data: { usage: [new Map()] } })).toThrow('data.usage[0] is a Map')
+  expect(shape({ data: { usage: Number.NaN } })).toThrow('data.usage is NaN')
+  expect(shape({ css: '', manifest: { at: new Date(0) } })).toThrow('manifest.at is a Date')
+  expect(shape({ data: [1] })).toThrow('data must be an object of named entries')
+  expect(shape({ css: '.a{}', inputs: ['./usage.md'] })()).toEqual({
+    css: '.a{}',
+    data: {},
+    inputs: ['/app/usage.md'],
+  })
+  // Only data keys a specifier can name: `toned:ui/<key>`.
+  expect(shape({ data: { 'a/b': 1 } })).toThrow('data key "a/b" cannot be imported')
+  expect(shape({ css: '', data: { css: 'x' } })).toThrow('data key "css" is reserved')
+})
+
+test('defineOutput types an output file and returns it unchanged', () => {
+  const value = { css: '.a{}', data: { tokens: { gap: [1, 2] } } }
+  expect(defineOutput(value)).toBe(value)
+  // A buildStyles artifact is an output as it is.
+  const artifact = buildStyles(defineSystem({ id: 'define-output', tokens: {} }), { sheets: [] })
+  expect(toOutput(defineOutput(artifact), 'x').data?.['manifest']).toEqual(artifact.manifest)
+  // @ts-expect-error a misspelled key is a type error
+  defineOutput({ CSS: '.a{}' })
+  // @ts-expect-error data must be JSON
+  defineOutput({ data: { fn: () => 1 } })
+  // @ts-expect-error a promise must be awaited first
+  defineOutput(Promise.resolve({ css: '' }))
 })

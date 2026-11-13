@@ -11,7 +11,7 @@ export default defineCase({
   id: 'empty-output-export',
   description: 'An output file whose default export is `{}`',
   category: 'outputs',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'build', namesFix: true },
   fix: /\bcss\b.*\bdata\b/,
   build: () => loadOutput('empty', { outputs: ['*.toned.ts'], root }),
 })

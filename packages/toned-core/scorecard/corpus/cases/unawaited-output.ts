@@ -11,7 +11,7 @@ export default defineCase({
   id: 'unawaited-output',
   description: 'An output file default-exporting an unawaited promise',
   category: 'outputs',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'build', namesFix: true },
   fix: /\bawait\b/,
   build: () => loadOutput('unawaited', { outputs: ['*.toned.ts'], root }),
 })

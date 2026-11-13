@@ -11,7 +11,7 @@ export default defineCase({
   id: 'misspelled-output-key',
   description: 'An output file exporting `{ CSS }` instead of `{ css }`',
   category: 'outputs',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'build', namesFix: true },
   fix: '"css"',
   build: () => loadOutput('misspelled', { outputs: ['*.toned.ts'], root }),
 })
