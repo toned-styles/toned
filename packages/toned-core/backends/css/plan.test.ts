@@ -276,6 +276,34 @@ describe('CSS shared-plan adapter', () => {
       ),
     ).toContain('--toned_sib-hover')
   })
+
+  it('a declared state offers only the relation channels it declares', () => {
+    const system = defineSystem(tokens, {
+      states: {
+        open: { selector: "[data-state='open']", relations: ['ancestor'] },
+        active: { selector: '[data-active]', relations: ['sibling'] },
+        checked: "[data-state='checked']",
+      },
+    })
+    const resolve = (key: string) => {
+      const sheet = system.stylesheet({
+        Source: { gap: 4 },
+        Target: { paint: 'red' },
+        [key]: { Target: { paint: 'blue' } },
+      } as any)
+      return JSON.stringify(
+        resolveCssPlan(compilePlan(system, sheet, 'web'), system, {})['Target'],
+      )
+    }
+    expect(resolve('Source:open')).toContain('--toned_src-open')
+    expect(resolve('Source~:active')).toContain('--toned_sib-active')
+    for (const [key, relation] of [
+      ['Source~:open', "relations: ['ancestor', 'sibling']"],
+      ['Source:active', "relations: ['sibling', 'ancestor']"],
+      ['Source:checked', "relations: ['ancestor']"],
+    ] as const)
+      expect(() => resolve(key)).toThrow(relation)
+  })
 })
 
 it('legacy direct exec raw style wins over finite token classes in either key order', () => {

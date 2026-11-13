@@ -165,6 +165,43 @@ The matcher keeps a fast unsigned single-word path and uses multiple words beyon
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
+### Declared states and their relations
+
+A system declares the states its markup sets, by selector:
+`states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
+its own state with `q.state('open')` (`':open'`). On the web the toggle is a
+non-inheriting registered custom property (`@property … { inherits: false }`),
+so a state on an ancestor never reaches a descendant; this needs a browser with
+`@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
+contains `:hover` is gated in `@media (hover: hover)`, as `:hover` is.
+
+Another part reads a state only through a relation the state declares:
+
+```ts
+states: {
+  open: { selector: "[data-state='open']", relations: ['ancestor'] },
+  'size-sm': { selector: "[data-size='sm']", relations: ['sibling'] },
+  checked: "[data-state='checked']", // its own part only
+}
+```
+
+- `ancestor`: `[q.part('Trigger').state('open')]` (`'Trigger:open'`) styles the
+  parts inside the nearest `Trigger` in the state.
+- `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
+  siblings.
+
+Each relation is CSS that every styled element pays for in style
+recalculation; the sibling one grows with the square of a list's length. A
+key reading a state through an undeclared relation is a type error and throws
+when the sheet is built, naming the declaration to add. `:hover` and
+`:focus-within` keep their built-in relations. The selector of a state that
+declares a relation must be an attribute or pseudo-class selector.
+
+Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
+channel. For each state your sheets read as `'Part:state'` or `'Part~:state'`,
+rewrite `name: selector` to `name: { selector, relations: [...] }`; the type
+errors list every such key.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant

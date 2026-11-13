@@ -5,6 +5,7 @@
  */
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
+import type { StateDeclaration } from '../system/states.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
 import type { PlatformStyle } from './style.ts'
@@ -243,7 +244,7 @@ export type TokenStyleDeclaration = {
     | Breakpoints<any>
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
-    | Record<string, string>
+    | Record<string, StateDeclaration>
     | Record<string, number | LogicalLength | MediaCondition>
     | Containers
     | readonly string[]
@@ -265,7 +266,7 @@ export type TokenStyleDeclaration = {
    * is what a radix component's "on"/"open" state must do. Alias → selector;
    * the selector is applied to the element (`._<selector>`).
    */
-  states?: Record<string, string>
+  states?: Record<string, StateDeclaration>
   /**
    * Tokens whose breakpoint overrides compile to RESPONSIVE ATOMIC CLASSES
    * instead of inline var-fallback chains. A chain rides the element's style

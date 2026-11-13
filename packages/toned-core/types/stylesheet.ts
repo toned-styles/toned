@@ -21,6 +21,7 @@ export type { SYMBOL_INIT, SYMBOL_REF }
 import type { GridArea, GridDefinition } from '../grid/index.ts'
 import type { QueryBuilder } from '../system/queries.ts'
 import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
+import type { StateDeclaration, StateRelation } from '../system/states.ts'
 import type { WebRules } from '../web/rules.ts'
 import type { EditorOnly } from './editor-mode.ts'
 export declare const DEFAULT_KIND: unique symbol
@@ -88,17 +89,32 @@ type ConditionExprKeys<R> =
 
 /** Declared state aliases (`states` config) → their `:alias` stylesheet keys. */
 type InferStatePseudos<R> = R extends { states?: infer States }
-  ? States extends Record<string, string>
+  ? States extends Record<string, StateDeclaration>
     ? `:${keyof States & string}`
     : never
   : never
 
-type InferStateChannels<S> =
-  InferStatePseudos<S> extends infer P extends string
-    ? P extends `:${infer Name}`
-      ? `:src-${Name}` | `:sib-${Name}`
-      : never
+/** The declared states that offer `Relation` (see system/states.ts). */
+type StatesWithRelation<R, Relation extends StateRelation> = R extends {
+  states?: infer States
+}
+  ? States extends Record<string, StateDeclaration>
+    ? {
+        [K in keyof States & string]: States[K] extends {
+          relations: readonly (infer Declared)[]
+        }
+          ? Relation extends Declared
+            ? K
+            : never
+          : never
+      }[keyof States & string]
     : never
+  : never
+
+/** The lowered channel keys, for the states that declare each relation. */
+type InferStateChannels<S> =
+  | `:src-${StatesWithRelation<S, 'ancestor'>}`
+  | `:sib-${StatesWithRelation<S, 'sibling'>}`
 
 /** String, number, or symbol (for object keys) */
 type StringOrNumber = string | number | symbol
@@ -404,8 +420,34 @@ type CrossSuffix<S extends TokenStyleDeclaration> =
   | ':focus:hover'
   | ':hover'
   | Pseudo
-  | InferStatePseudos<S>
-  | `~${Pseudo | InferStatePseudos<S>}`
+  | `:${StatesWithRelation<S, 'ancestor'>}`
+  | `~${Pseudo | `:${StatesWithRelation<S, 'sibling'>}`}`
+
+/**
+ * The message for a cross key whose declared state does not offer the
+ * relation it is read through: a missing property named after the fix.
+ */
+type RelationNotDeclared<
+  K,
+  Elements extends string,
+  S extends TokenStyleDeclaration,
+> = K extends `${infer _Part extends Elements}~:${infer State}`
+  ? `:${State}` extends InferStatePseudos<S>
+    ? {
+        [
+          M in `Toned: '${K & string}' needs state '${State}' to declare the sibling relation, e.g. states: { '${State}': { selector, relations: ['sibling'] } }`
+        ]: never
+      }
+    : never
+  : K extends `${infer _Part extends Elements}:${infer State}`
+    ? `:${State}` extends InferStatePseudos<S>
+      ? {
+          [
+            M in `Toned: '${K & string}' needs state '${State}' to declare the ancestor relation, e.g. states: { '${State}': { selector, relations: ['ancestor'] } }`
+          ]: never
+        }
+      : never
+    : never
 
 /**
  * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
@@ -851,7 +893,7 @@ type RootKeyValidation<
               false,
               true
             >
-          : never
+          : RelationNotDeclared<K, Elements, S>
         : unknown
 
 // =============================================================================

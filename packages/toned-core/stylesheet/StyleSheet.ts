@@ -12,6 +12,7 @@ import {
   normalizeDeclarations,
   validateDeclarations,
 } from '../system/normalize.ts'
+import type { StateDeclaration } from '../system/states.ts'
 import type {
   Config,
   ElementType,
@@ -494,17 +495,20 @@ export class Base {
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
-    // Declared-state aliases live on the system ref (`defineSystem` spreads the
-    // config, incl. `states`, into `.system`). They drive the CSS src-state
-    // cross-element channel; absent, only `:hover` cross keys compile to CSS.
-    const stateAliases = (
-      this.ref as { system?: { states?: Record<string, string> } }
+    // Declared states live on the system ref (`defineSystem` spreads the
+    // config, incl. `states`, into `.system`). Their declared relations drive
+    // the CSS cross-element channels; absent, only `:hover` cross keys compile
+    // to CSS.
+    const states = (
+      this.ref as {
+        system?: { states?: Record<string, StateDeclaration> }
+      }
     ).system?.states
     this.matcher = sharedMatcher(
       rules,
       mediaMode === 'css',
       pseudoMode === 'css',
-      stateAliases,
+      states,
       this.config.platform,
       !!this.ref.id,
     )

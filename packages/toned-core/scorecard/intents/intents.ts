@@ -63,7 +63,7 @@ export const intents: readonly Intent[] = [
     intent: 'Apply hover only on devices that can hover',
     canonical: {
       spelling: "':hover': { … }",
-      note: 'core already wraps `:hover` and the source channel in `@media (hover: hover)`',
+      note: 'core wraps `:hover`, the source channel and every declared state whose selector contains `:hover` in `@media (hover: hover)`',
       source: review,
     },
     aliases: [
@@ -76,14 +76,31 @@ export const intents: readonly Intent[] = [
       {
         spelling: "':row-hover': { … }",
         status: 'workaround',
-        note: "a declared state whose selector contains `:hover` (`states: { 'row-hover': '…:hover' }`); not gated by core",
+        note: "a declared state whose selector contains `:hover` (`states: { 'row-hover': '…:hover' }`); gated by core like `:hover`",
         source: review,
       },
       {
         spelling: "'@can-hover': { ':row-hover': { … } }",
-        status: 'workaround',
-        note: 'the wrapper is needed here, unlike above; an author cannot tell which case applies',
+        status: 'redundant',
+        note: 'core gates a declared state whose selector contains `:hover`, so the wrapper does nothing',
         source: review,
+      },
+    ],
+  },
+  {
+    id: 'ancestor-state',
+    intent: 'Style a part while an ancestor part is in a declared state',
+    canonical: {
+      spelling: "[q.part('Trigger').state('open')]: { Chevron: { … } }",
+      note: "the state declares the relation: `states: { open: { selector, relations: ['ancestor'] } }`; a state without it is a type error",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "'Trigger:open': { Chevron: { … } }",
+        status: 'compatible',
+        note: 'the literal key the builder returns',
+        source: 'readme',
       },
     ],
   },
