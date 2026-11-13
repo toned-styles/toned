@@ -24,6 +24,7 @@ go to the OS temporary directory, and results are printed as JSON on stdout.
 | `node benchmarks/provider.mjs [revision] [--pairs=N]`                         | `TonedProvider` and `createElements` in React, explicit `t`, a native host  |
 | `bun benchmarks/design-tools.ts [files] [coldSamples]`                        | Compiler indexing, incremental updates, queries and token completion        |
 | `node --experimental-strip-types benchmarks/design-tools-shared.ts [files]`   | Invalidation when many consumers share one design system                    |
+| `node benchmarks/state-recalc.mjs [revision] [--rows=…] [--states=…]`         | Chromium style recalculation per declared state, by list length             |
 
 The three `.mjs` runners accept an optional Git revision of this repository. The
 runner extracts that revision's `packages/toned-core` (and `toned-react` where
@@ -33,6 +34,10 @@ identical fixtures. Without a revision only the current sources are measured.
 A revision older than the APIs a worker uses will fail to run; that is expected.
 
 The design-tools details and results are in [design-tools.md](design-tools.md).
+
+`state-recalc.mjs` needs Playwright with Chromium. It resolves `playwright`
+from the working directory first, so run it from a checkout that has it (HQ's
+root does): `node vendor/toned/benchmarks/state-recalc.mjs <revision>`.
 
 ### Matcher
 
@@ -80,6 +85,34 @@ declared JavaScript native host adapter, and a WeakRef sample of 2,000 disposed
 controllers. `--pairs=N` (1–20) repeats the measurement; with a revision, each
 pair alternates which version runs first. The report includes a digest of the
 measured sources and fails if they change during the run.
+
+### Declared-state recalculation
+
+`state-recalc.mjs` generates the system CSS for 0, 51 and 211 declared states
+(`state-recalc-css.ts`, one `data-state` attribute, as a component library's
+states are) and lays out 100, 500 and 1,000 rows side by side in one flex
+container: each row is a source part with nine styled children, 10 R + 1
+elements, and every element reads one state through a custom-property chain.
+It reads Chromium's `RecalcStyleDuration` for the first style pass and for
+changing one middle row's `data-state`, median of seven rounds, and fails if
+the toggled row does not answer the state or its child or the next row does.
+The `relations` rows declare both relation channels on every state.
+
+Recorded on 2026-11-13, Chromium 148 headless on an Apple M4 (macOS, load
+average about 7), against `bd57f22` ([results/state-recalc.json](results/state-recalc.json)):
+
+| ms, first pass / one toggle | 51 states, 1,001 el. | 51 states, 5,001 el. | 211 states, 5,001 el. | 51 states, 10,001 el. |
+| --------------------------- | -------------------: | -------------------: | --------------------: | --------------------: |
+| Before (string states)      |          6.25 / 2.36 |        94.92 / 56.71 |       358.28 / 220.35 |       307.35 / 205.12 |
+| After, string states        |          0.79 / 0.03 |          4.83 / 0.04 |           5.59 / 0.06 |          12.43 / 0.05 |
+| After, both relations       |          4.64 / 2.18 |        78.52 / 52.01 |       313.40 / 215.43 |       293.79 / 203.18 |
+| No states                   |          0.74 / 0.00 |          4.65 / 0.00 |           4.65 / 0.00 |          12.08 / 0.00 |
+
+Per declared state and 1,000 elements, a string state now costs 0.0007 to
+0.0011 ms of first-pass recalculation and at most 0.0005 ms per toggle, flat
+with list length; before it cost 0.10, 0.35 and 0.58 ms at 1,001, 5,001 and
+10,001 elements. A state that declares the sibling relation still pays that
+quadratic cost, which is why the relation is opt-in.
 
 ## Current results
 
