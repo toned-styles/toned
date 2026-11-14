@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
@@ -12,6 +13,10 @@ import { type OutputsLoader, createOutputsLoader, hashFile } from '../outputs/ru
 
 /** The part of Bun's plugin API this uses, so the package needs no Bun types. */
 interface BunPluginBuilder {
+  module?(
+    specifier: string,
+    callback: () => Promise<{ contents: string; loader: 'js' }>,
+  ): void
   onResolve(
     options: { filter: RegExp; namespace?: string },
     callback: (args: { path: string }) => { path: string; namespace: string } | undefined,
@@ -101,11 +106,59 @@ export function tonedBunPlugin(options: TonedBunPluginOptions = {}) {
     promise.catch(() => loaded.delete(name))
     return promise
   }
+  /** The keys an output's cached entry has, or undefined when it is not cached. */
+  const cachedKeys = (name: string): string[] | undefined => {
+    if (options.cacheDir) {
+      try {
+        const entry = JSON.parse(
+          readFileSync(join(options.cacheDir, `${name}.${scope}.output.json`), 'utf8'),
+        ) as CacheEntry
+        return ['css', ...Object.keys(entry.output.data ?? {})]
+      } catch {
+        // Not cached yet.
+      }
+    }
+    return undefined
+  }
+  const source = async (name: string, key: string) => ({
+    contents: outputModuleSource(await load(name), key, name),
+    loader: 'js' as const,
+  })
   return {
     name: 'toned:outputs',
     setup(build: BunPluginBuilder) {
+      // Bun keeps every module a namespace `onLoad` hook serves, with the realm
+      // that loaded it, for the life of the process. Under `bun test --isolate`
+      // that is every test file's module graph (HQ's DOM suite grew to 15.5 GB
+      // and stalled). Registered modules are not kept that way, so every key
+      // this plugin can name is registered; the hooks below serve the rest.
+      const registered = new Set<string>()
+      const register = (specifier: string, name: string, key: string) => {
+        build.module?.(specifier, () => source(name, key))
+        registered.add(specifier)
+      }
+      let allCached = true
+      if (build.module)
+        for (const name of loader.names) {
+          const keys = cachedKeys(name)
+          if (!keys) allCached = false
+          // Not cached yet: the usual two keys here, the namespace hooks for the rest.
+          for (const key of keys ?? ['css', 'manifest']) {
+            register(`${OUTPUT_PREFIX}${name}/${key}`, name, key)
+            if (key === 'css') register(`${OUTPUT_PREFIX}${name}`, name, key)
+          }
+        }
+      // Merely registering hooks in a namespace makes Bun keep each isolated test
+      // file's realm. With every output cached every key is a registered module,
+      // so none are registered; an unknown name is then Bun's own missing-module
+      // error rather than the list of outputs.
+      if (build.module && allCached) return
+      // A registered module answers its own specifier: claimed for the namespace,
+      // it would be served by the hook below instead, and kept.
       build.onResolve({ filter: /^toned:/ }, ({ path }) =>
-        parseOutputSpecifier(path) ? { path, namespace: 'toned' } : undefined,
+        !registered.has(path) && parseOutputSpecifier(path)
+          ? { path, namespace: 'toned' }
+          : undefined,
       )
       // Bun reads `toned:` as this plugin's namespace, and a dynamic `import()`
       // reaches only a resolver registered in it. It may hand over the path
