@@ -417,3 +417,97 @@ const names = (diagnostics: Diagnostic[]) =>
     expect(message('condition.ts')).toContain("spreads ':hover'")
   })
 }
+
+{
+  const resultFixture = fixture(
+    {
+      'raw.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{cursor:'pointer','--toned-b-placeholder-color':'red','--toned-b-scrollbar-background-color':tone}}}})`,
+      'only.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{':hover':{$style:{'--toned-b-scrollbar-display':'none'}}}})`,
+      'fragment.ts': `export const hidden={'@platform web':{$style:{'--toned-b-scrollbar-display':'none'}}}`,
+      'existing.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{$bridge:{placeholder:{color:'red'}},'@platform web':{$bridge:{icon:{size:1}},$style:{'--toned-b-scrollbar-display':'none'}}}})`,
+      'list.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:[ring,{'--toned-b-scrollbar-display':'none'}]}}})`,
+      'read.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{borderColor:'var(--toned-b-placeholder-color)','--brand':'red'}}}})`,
+    },
+    { 'toned/prefer-bridge-key': 'error' },
+    true,
+  )
+
+  test('a raw --toned-b-* key in $style is an error, fixed to $bridge beside it', () => {
+    const result = resultFixture()
+    expect(result.files['raw.ts']).toContain(
+      `'@platform web':{$style: { cursor:'pointer' }, $bridge: { placeholder: { color: 'red' }, scrollbar: { backgroundColor: tone } }}`,
+    )
+    expect(result.files['only.ts']).toContain(
+      `':hover':{$bridge: { scrollbar: { display: 'none' } }}`,
+    )
+    expect(result.files['fragment.ts']).toContain(
+      `{'@platform web':{$bridge: { scrollbar: { display: 'none' } }}}`,
+    )
+    // An existing $bridge, or a list, is merged by hand.
+    expect(result.files['existing.ts']).toContain(
+      `$style:{'--toned-b-scrollbar-display':'none'}`,
+    )
+    expect(result.files['list.ts']).toContain(`'--toned-b-scrollbar-display'`)
+    expect(names(result.diagnostics)).toEqual(['existing.ts', 'list.ts'])
+    expect(result.diagnostics[0]!.message).toContain(
+      'write $bridge: { scrollbar: { display: … } }',
+    )
+  })
+}
+
+{
+  const resultFixture = fixture(
+    {
+      'builders.ts': `import {ui} from './ui';ui.stylesheet(q=>({Root:{[q.state('open')]:{opacity:0},[q.media('md')]:{opacity:1},[q.container('field','wide')]:{gap:1},[q.platform('web')]:{$style:{cursor:'pointer'}},[q.not(q.media('lg'))]:{gap:2}},[q.part('Trigger').state('open')]:{Chevron:{opacity:0}}}))`,
+      'algebra.ts': `import {ui} from './ui';const {q}=ui;ui.stylesheet({Root:{[q.all(q.media('md'),q.not(q.media('lg')))]:{gap:1},[q.any(q.media('md'),q.container('field','wide'))]:{gap:2},[q.all(q.media('md'),q.state('hover'))]:{opacity:0},[q.all(q.state('open'),q.state('hover'))]:{gap:4}}})`,
+      'variants.ts': `import {ui} from './ui';ui.stylesheet({Root:{}}).variants(($,q)=>({[$.size('s')]:{Root:{[q.state('hover')]:{opacity:0}}}}))`,
+      'aliases.ts': `import {ui} from './ui';ui.stylesheet({Root:{'@media md':{gap:1},'@container field wide':{gap:2},'@media (min-width: 10px)':{gap:3}}})`,
+      'kept.ts': `import {ui} from './ui';ui.stylesheet(q=>({Root:{[q.container('field',dp(400))]:{gap:1},[q.media(dp(600))]:{gap:2},[q.any(q.media('md'),q.state('hover'))]:{gap:3},[q.not(q.state('hover'))]:{gap:4},[q.all($.size('s'),q.media('md'))]:{gap:5},[q.all(q.media(name))]:{gap:6}},[q.part('Root').has('Item','open')]:{Item:{gap:1}}}))`,
+      'duplicate.ts': `import {ui} from './ui';ui.stylesheet(q=>({Root:{'@md':{gap:1},[q.media('md')]:{gap:2}}}))`,
+      'strings.ts': `import {ui} from './ui';ui.stylesheet({Root:{':open':{opacity:0},'@md&!lg':{gap:1},'@field/wide':{gap:2}}})`,
+      'other.ts': `const css={'@media md':{color:'red'}};q.state('open')`,
+      'motion.ts': `import {ui} from './ui';defineMotion(ui,{states:{[ui.q.all(ui.q.state('open'),ui.q.state('saving'))]:{duration:1}}})`,
+    },
+    {
+      'toned/canonical-condition-key': [
+        'error',
+        { modules: { './ui': { ui: 'system' } } },
+      ],
+    },
+    true,
+  )
+
+  test('a q builder with a string form is an error, fixed to the string', () => {
+    const result = resultFixture()
+    const builders = result.files['builders.ts']
+    expect(builders).toContain(`':open':{opacity:0}`)
+    expect(builders).toContain(`'@md':{opacity:1}`)
+    expect(builders).toContain(`'@field/wide':{gap:1}`)
+    expect(builders).toContain(`'@platform web':{$style:{cursor:'pointer'}}`)
+    expect(builders).toContain(`'@!lg':{gap:2}`)
+    expect(builders).toContain(`'Trigger:open':{Chevron:{opacity:0}}`)
+    const algebra = result.files['algebra.ts']
+    expect(algebra).toContain(`'@md&!lg':{gap:1}`)
+    expect(algebra).toContain(`'@md|field/wide':{gap:2}`)
+    expect(algebra).toContain(`'@md': { ':hover': {opacity:0} }`)
+    expect(algebra).toContain(`':open:hover':{gap:4}`)
+    expect(result.files['variants.ts']).toContain(`':hover':{opacity:0}`)
+    expect(result.files['aliases.ts']).toContain(
+      `'@md':{gap:1},'@field/wide':{gap:2},'@media (min-width: 10px)':{gap:3}`,
+    )
+  })
+
+  test('builders a string cannot express stay, and a fix never duplicates a key', () => {
+    const result = resultFixture()
+    expect(result.files['duplicate.ts']).toContain(`[q.media('md')]:{gap:2}`)
+    expect(result.files['motion.ts']).toContain(`[ui.q.all(`)
+    expect(result.files['kept.ts']).toContain(`[q.container('field',dp(400))]`)
+    expect(names(result.diagnostics)).toEqual(['duplicate.ts'])
+    expect(result.diagnostics[0]!.message).toContain(
+      "Write '@md' instead of this q builder",
+    )
+    expect(result.diagnostics[0]!.message).toContain(
+      "This part already has a '@md' block, so merge them by hand",
+    )
+  })
+}

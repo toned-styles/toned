@@ -95,15 +95,15 @@ export const intents: readonly Intent[] = [
     id: 'ancestor-state',
     intent: 'Style a part while an ancestor part is in a declared state',
     canonical: {
-      spelling: "[q.part('Trigger').state('open')]: { Chevron: { … } }",
+      spelling: "'Trigger:open': { Chevron: { … } }",
       note: "the state declares the relation: `states: { open: { selector, relations: ['ancestor'] } }`; a state without it is a type error",
       source: 'readme',
     },
     aliases: [
       {
-        spelling: "'Trigger:open': { Chevron: { … } }",
-        status: 'compatible',
-        note: 'the literal key the builder returns',
+        spelling: "[q.part('Trigger').state('open')]: { Chevron: { … } }",
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to the string key; `q.part(…).has(…)` relations stay builders',
         source: 'readme',
       },
     ],
@@ -136,15 +136,15 @@ export const intents: readonly Intent[] = [
     intent: "Colour an input's placeholder",
     canonical: {
       spelling: "placeholderColor: 'muted'",
-      note: "a token whose resolver writes `bridgeVarName('placeholder', 'color')`; needs the `placeholder` bridge declared in the system",
+      note: "a token whose resolver writes `bridgeVarName('placeholder', 'color')`; needs the `placeholder` bridge declared in the system. A raw value is the pseudo-element intent: `$bridge: { placeholder: { color: … } }`",
       source: 'readme',
     },
     aliases: [
       {
         spelling:
           "'@platform web': { $style: { '--toned-b-placeholder-color': … } }",
-        status: 'workaround',
-        note: 'any `--*` key type-checks, so a misspelling is silent',
+        status: 'error',
+        note: '`toned/prefer-bridge-key` fixes it to `$bridge`; a parameter no declared bridge reads is a type error',
         source: review,
       },
       {
@@ -179,6 +179,12 @@ export const intents: readonly Intent[] = [
       source: 'readme',
     },
     aliases: [
+      {
+        spelling: "[q.state('disabled')]: { … }",
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to the string key',
+        source: 'readme',
+      },
       {
         spelling: "$webRules: webRules({ '&[aria-disabled=true]': { … } })",
         status: 'workaround',
@@ -231,6 +237,12 @@ export const intents: readonly Intent[] = [
         note: 'deprecated; `toned/canonical-platform-key` fixes it, and both spellings in one part are a type error',
         source: 'probe',
       },
+      {
+        spelling: "[q.platform('web')]",
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to the string key',
+        source: 'readme',
+      },
     ],
   },
   {
@@ -269,16 +281,18 @@ export const intents: readonly Intent[] = [
   {
     id: 'media-condition',
     intent: 'Apply a declared media condition',
-    canonical: {
-      spelling: "[q.media('md')]: { … }",
-      note: "returns the literal key `'@md'`",
-      source: 'readme',
-    },
+    canonical: { spelling: "'@md': { … }", source: 'readme' },
     aliases: [
-      { spelling: "'@md': { … }", status: 'compatible', source: 'readme' },
+      {
+        spelling: "[q.media('md')]: { … }",
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to the string key',
+        source: 'readme',
+      },
       {
         spelling: "'@media md': { … }",
-        status: 'compatible',
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to `@md`',
         source: 'readme',
       },
     ],
@@ -287,18 +301,62 @@ export const intents: readonly Intent[] = [
     id: 'container-condition',
     intent: 'Apply a declared container step',
     canonical: {
-      spelling: "[q.container('field', 'wide')]: { … }",
+      spelling: "'@field/wide': { … }",
+      note: 'a computed step has no string form and stays a builder: `[q.container(name, dp(n))]`',
       source: 'readme',
     },
     aliases: [
       {
-        spelling: "'@field/wide': { … }",
-        status: 'compatible',
+        spelling: "[q.container('field', 'wide')]: { … }",
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to the string key',
         source: 'readme',
       },
       {
         spelling: "'@container field wide': { … }",
-        status: 'compatible',
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to `@field/wide`',
+        source: 'readme',
+      },
+    ],
+  },
+  {
+    id: 'compound-condition',
+    intent: 'Combine conditions',
+    canonical: {
+      spelling: "'@md&!lg': { … }",
+      note: "media and container atoms with `&`, `|` and `!`; with a state, nest: `'@md': { ':hover': { … } }`; states together: `':open:hover'`",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "[q.all(q.media('md'), q.not(q.media('lg')))]: { … }",
+        status: 'error',
+        note: '`toned/canonical-condition-key` fixes it to the string key or the nested form; `q.all`, `q.any` and `q.not` stay for what a string cannot express (a state inside `q.any` or `q.not`, a relation)',
+        source: 'readme',
+      },
+    ],
+  },
+  {
+    id: 'pseudo-element',
+    intent: 'Style a pseudo-element or descendant a declared bridge reaches',
+    canonical: {
+      spelling: "$bridge: { scrollbar: { display: 'none' } }",
+      note: "typed from the system's `bridges`: an undeclared bridge or property is a type error listing the declared ones; core writes `--toned-b-scrollbar-display`, never renamed by namespacing",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "'@platform web': { $style: { '--toned-b-scrollbar-display': 'none' } }",
+        status: 'error',
+        note: '`toned/prefer-bridge-key` fixes it to `$bridge`; a parameter no declared bridge reads is a type error',
+        source: review,
+      },
+      {
+        spelling: "$webRules: webRules({ '&::-webkit-scrollbar': { … } })",
+        status: 'workaround',
+        note: 'web only, and outside the token system',
         source: 'readme',
       },
     ],

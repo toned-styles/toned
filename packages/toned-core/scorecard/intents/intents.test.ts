@@ -21,7 +21,7 @@ describe('intent table', () => {
     const derive = intents.find((i) => i.id === 'derive-sheet')
     expect(derive && spellingsOf(derive)).toBe(1)
     const platform = intents.find((i) => i.id === 'platform-block')
-    expect(platform?.aliases.map((a) => a.status)).toEqual(['error'])
+    expect(platform?.aliases.map((a) => a.status)).toEqual(['error', 'error'])
     expect(platform && spellingsOf(platform)).toBe(1)
   })
 
@@ -35,9 +35,24 @@ describe('intent table', () => {
     expect(count('compose-fragments')).toBe(1)
     expect(count('hover-gating')).toBe(4)
     expect(count('ancestor-hover')).toBe(3)
-    expect(count('placeholder-colour')).toBe(3)
+    // The raw bridge variable is a lint error now (toned/prefer-bridge-key).
+    expect(count('placeholder-colour')).toBe(2)
     expect(count('component-option')).toBe(2)
     expect(intentMetrics().spellingsMax).toBe(4)
+  })
+
+  test('each condition intent has one spelling: the string key', () => {
+    for (const id of [
+      'media-condition',
+      'container-condition',
+      'compound-condition',
+      'ancestor-state',
+      'platform-block',
+    ]) {
+      const intent = intents.find((i) => i.id === id)
+      expect(intent?.canonical.spelling, id).not.toMatch(/^\[q\./)
+      expect(intent && spellingsOf(intent), id).toBe(1)
+    }
   })
 
   test('the platform alias note matches what the query builder returns', () => {

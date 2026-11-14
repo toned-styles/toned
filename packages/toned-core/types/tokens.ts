@@ -386,7 +386,50 @@ export type TokenStyle<
     /** One style object, or a list merged in order (`[a, cond && b, { … }]`):
      *  the last entry wins, falsy entries are skipped, `null` unsets. */
     $style?: StyleValue<StyleOf<S, ET, Host>>
+    /** A declared bridge's parameters by bridge and property name
+     *  (`$bridge: { placeholder: { color: 'red' } }`); core writes the
+     *  `--toned-b-<bridge>-<property>` custom property the bridge reads. */
+    $bridge?: BridgeStyle<S>
   }
+
+/** The bridges a system declares, by name (`{}` when it declares none). */
+export type DeclaredBridges<S> = S extends {
+  readonly bridges: infer B extends Record<
+    string,
+    { readonly properties: readonly string[] }
+  >
+}
+  ? B
+  : {}
+
+/** The properties bridge `N` declares. */
+export type BridgeProperties<B, N> = N extends keyof B
+  ? B[N] extends { readonly properties: readonly (infer P extends string)[] }
+    ? P
+    : never
+  : never
+
+/** A bridge parameter's value, as a style value is written. */
+type BridgeValue = string | number | null
+
+/** Any bridge and property: what an undeclared name is written against. */
+type AnyBridgeStyle = {
+  readonly [bridge: string]: { readonly [property: string]: BridgeValue }
+}
+
+/**
+ * `$bridge`'s shape: each declared bridge, with its declared properties, for
+ * completions. The open index beside them keeps an undeclared name from
+ * being an excess-property error: the stylesheet validation reports it
+ * instead, as a `TonedError` listing the declared bridges or properties.
+ */
+export type BridgeStyle<S> = string extends keyof S
+  ? AnyBridgeStyle
+  : {
+      readonly [N in keyof DeclaredBridges<S>]?: {
+        readonly [P in BridgeProperties<DeclaredBridges<S>, N>]?: BridgeValue
+      } & { readonly [property: string]: BridgeValue }
+    } & AnyBridgeStyle
 
 type DynamicTokenValue<C> = C extends { dynamic: 'number' }
   ? number

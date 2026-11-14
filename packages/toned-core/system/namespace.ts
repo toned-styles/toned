@@ -27,10 +27,19 @@ export function externalCssVariables(
     )
   return Object.freeze([...new Set(names)].sort())
 }
+/**
+ * A bridge parameter (`--toned-b-<bridge>-<prop>`) keeps its name in every
+ * system: core writes it (from `$bridge` or a bridge token) and the bridge's
+ * own rule reads it, and native hosts map the same name to a prop. Renaming
+ * it would make the name depend on which system wrote it.
+ */
+const BRIDGE_PARAMETER = /^--toned-b-/
 const parameters = (value: string, id: string, external: ReadonlySet<string>) =>
   outsideStrings(value, (part) =>
     part.replace(/--[a-zA-Z_][\w-]*/g, (name) =>
-      external.has(name) ? name : `--${id}-${name.slice(2)}`,
+      external.has(name) || BRIDGE_PARAMETER.test(name)
+        ? name
+        : `--${id}-${name.slice(2)}`,
     ),
   )
 const animations = (value: string, id: string) =>

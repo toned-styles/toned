@@ -28,13 +28,13 @@ export const system = defineSystem({
 })
 
 export const buttonStyles = system
-  .stylesheet((q) => ({
+  .stylesheet({
     Root: {
       $kind: 'pressable',
       tone: 'neutral',
-      [q.state('hover')]: { tone: 'accent' },
+      ':hover': { tone: 'accent' },
     },
-  }))
+  })
   .variants(($: Variants<{ size: 's' | 'm' }>) => ({
     [$.size('s')]: { Root: { padding: 1 } },
     [$.size('m')]: { Root: { padding: 2 } },

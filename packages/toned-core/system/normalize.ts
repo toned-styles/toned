@@ -1,4 +1,6 @@
+import type { BridgeConfig } from '../types/tokens.ts'
 import { fixedQueryWidth } from '../utils/conditions.ts'
+import { bridgeVarName } from '../utils/css.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import type { QueryPredicate } from './queries.ts'
 import { isQueryKey, queryExpression } from './query-key.ts'
@@ -33,9 +35,59 @@ function foldStyleList(list: readonly unknown[]): Record<string, unknown> {
   return out
 }
 
+const quotedList = (names: readonly string[]) =>
+  names.length ? names.map((name) => `'${name}'`).join(', ') : 'none'
+
+/**
+ * Lowers `$bridge: { <bridge>: { <property>: value } }` to the inline custom
+ * properties core owns (`--toned-b-<bridge>-<property>`), which the bridge's
+ * generated rule reads. With the system's declared `bridges`, an unknown
+ * bridge or property throws, naming the declared ones; without them (a
+ * fragment built outside any system) the names are only lowered.
+ */
+function bridgeStyle(
+  value: unknown,
+  bridges: Readonly<Record<string, BridgeConfig>> | undefined,
+): Record<string, unknown> {
+  if (!isRecord(value))
+    throw new Error(
+      "Toned: $bridge takes { <bridge>: { <property>: value } }, such as $bridge: { placeholder: { color: 'red' } }",
+    )
+  const out: Record<string, unknown> = {}
+  for (const [name, properties] of Object.entries(value)) {
+    const declared = bridges?.[name]
+    if (bridges && !declared)
+      throw new Error(
+        `Toned: unknown bridge '${name}' in $bridge. Declared bridges: ${quotedList(Object.keys(bridges))}`,
+      )
+    if (!isRecord(properties))
+      throw new Error(
+        `Toned: $bridge.${name} takes { <property>: value }, such as { color: 'red' }`,
+      )
+    for (const [property, parameter] of Object.entries(properties)) {
+      if (declared && !declared.properties.includes(property))
+        throw new Error(
+          `Toned: bridge '${name}' has no property '${property}' in $bridge. Its properties: ${quotedList(declared.properties)}`,
+        )
+      out[bridgeVarName(name, property)] = parameter
+    }
+  }
+  return out
+}
+
+export type NormalizeOptions = {
+  /** The system's declared bridges; `$bridge` names are checked against
+   *  them. Omitted only where no system is known. */
+  bridges?: Readonly<Record<string, BridgeConfig>>
+}
+
 /** Canonicalize author-facing aliases once, before matcher compilation. */
-export function normalizeDeclarations<T>(input: T): T {
+export function normalizeDeclarations<T>(
+  input: T,
+  options?: NormalizeOptions,
+): T {
   if (!isRecord(input)) return input
+  const bridges = options ? (options.bridges ?? {}) : undefined
   const out: Record<string, unknown> = {}
   if (
     '$kind' in input &&
@@ -53,7 +105,7 @@ export function normalizeDeclarations<T>(input: T): T {
     const canonical =
       key === '$kind'
         ? '$$type'
-        : key === '$style'
+        : key === '$style' || key === '$bridge'
           ? 'style'
           : key.startsWith('@media ')
             ? `@${key.slice(7)}`
@@ -71,11 +123,15 @@ export function normalizeDeclarations<T>(input: T): T {
         'Toned: part kind is static and cannot change inside a condition',
       )
     const normalized =
-      canonical === 'style'
-        ? immutableSnapshot(Array.isArray(value) ? foldStyleList(value) : value)
-        : canonical === '$grid' || canonical === '$area'
-          ? value
-          : normalizeDeclarations(value)
+      key === '$bridge'
+        ? immutableSnapshot(bridgeStyle(value, bridges))
+        : canonical === 'style'
+          ? immutableSnapshot(
+              Array.isArray(value) ? foldStyleList(value) : value,
+            )
+          : canonical === '$grid' || canonical === '$area'
+            ? value
+            : normalizeDeclarations(value, options)
     out[canonical] =
       canonical === 'style' && isRecord(out[canonical]) && isRecord(normalized)
         ? { ...out[canonical], ...normalized }

@@ -324,6 +324,7 @@ export function defineSystem<
     ) => {
       const declaration = normalizeDeclarations(
         typeof rules === 'function' ? rules(ref.q) : rules,
+        { bridges: (config as SystemOptions | undefined)?.bridges },
       )
       if (id) validateDeclarations(declaration, config ?? {})
       return createStylesheet(ref as TokenSystem<AnyDeclaration>, declaration)

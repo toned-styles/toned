@@ -7,9 +7,11 @@ export function createTonedPlugin(options = {}) {
     rules: {
       ...Object.fromEntries(
         [
+          'canonical-condition-key',
           'canonical-platform-key',
           'no-global-config',
           'no-shadowing-spread',
+          'prefer-bridge-key',
           'prefer-canonical-declarations',
           'prefer-semantic-tokens',
         ].map((name) => [name, all[name]]),
@@ -23,8 +25,10 @@ export function createTonedPlugin(options = {}) {
   plugin.configs.recommended = {
     plugins: { toned: plugin },
     rules: {
+      'toned/canonical-condition-key': 'error',
       'toned/canonical-platform-key': 'error',
       'toned/no-shadowing-spread': 'error',
+      'toned/prefer-bridge-key': 'error',
       'toned/prefer-canonical-declarations': 'warn',
       'toned/react/no-create-elements-in-render': 'error',
       'toned/react/no-partial-host-bag': 'error',

@@ -320,8 +320,9 @@ export function createStylesheet<
         `Toned: variant default ${axis} must be a defined scalar value`,
       )
   }
-  rules = normalizeDeclarations(rules)
-  variantRules = normalizeDeclarations(variantRules)
+  const declared = { bridges: ref.config?.bridges }
+  rules = normalizeDeclarations(rules, declared)
+  variantRules = normalizeDeclarations(variantRules, declared)
   // Merge base rules with variants - StyleMatcher handles the format directly
   const mergedRules = { ...mergeRules(rules, variantRules) }
   if (overrideLayers.length)
@@ -377,6 +378,7 @@ export function createStylesheet<
       typeof extensionRules === 'function'
         ? extensionRules(ref.q)
         : extensionRules,
+      declared,
     )
     const parts = elementNamesOf(rules)
     assertKnownParts(extension, parts)
@@ -393,7 +395,10 @@ export function createStylesheet<
           ref.id ? 'view' : undefined,
         )
       : undefined
-    const layer = mergeRules(extension, normalizeDeclarations(variants))
+    const layer = mergeRules(
+      extension,
+      normalizeDeclarations(variants, declared),
+    )
     const derived = createStylesheet<S, _Mods, T>(
       ref,
       rules,

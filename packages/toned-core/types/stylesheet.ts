@@ -61,6 +61,7 @@ import type {
   TokenStyle,
   TokenStyleDeclaration,
 } from './tokens.ts'
+import type { StyleBridgeCheck, ValidateBridge } from './bridges.ts'
 import type { StyleVariablesCheck } from './variables.ts'
 import type { ValidVariantKey } from './variant-keys.ts'
 
@@ -686,7 +687,9 @@ export type ValidateDeclaration<
     ? K extends QueryKey | `:${string}:${string}` | ConditionExprKey
       ? // In the shape (as a pattern), so a Light walk stays Light below it.
         ValidateSpecial<Input, Shape, S, Parts, Local, K, Light, Root>
-      : [
+      : K extends '$bridge'
+        ? ValidateBridge<Input[K], S>
+        : [
             K extends '$style' | `$named$_${string}`
               ? false
               : K extends `$${string}`
@@ -763,6 +766,7 @@ type ValidateStyle<
             Light
           > &
             StyleVariablesCheck<Value[I], S, Root> &
+            StyleBridgeCheck<Value[I], S> &
             StyleKeywordCheck<Value[I], StyleEntryOf<Allowed>>
         : unknown
     }
@@ -776,6 +780,7 @@ type ValidateStyle<
         Light
       > &
         StyleVariablesCheck<Value, S, Root> &
+        StyleBridgeCheck<Value, S> &
         StyleKeywordCheck<Value, StyleObjectOf<Allowed>>
     : Light extends true
       ? unknown

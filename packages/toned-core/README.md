@@ -32,17 +32,17 @@ export const ui = defineSystem({
 type ButtonVariants = { size: 's' | 'm'; variant: 'accent' | 'quiet' }
 
 export const button = ui
-  .stylesheet((q) => ({
+  .stylesheet({
     Root: {
       $kind: 'pressable',
       bgColor: 'primary',
-      [q.state('hover')]: { bgColor: 'primary-hover' },
+      ':hover': { bgColor: 'primary-hover' },
       '@platform web': { $style: { cursor: 'pointer' } },
     },
-  }))
-  .variants(($: Variants<ButtonVariants>, q) => ({
+  })
+  .variants(($: Variants<ButtonVariants>) => ({
     [$.size('s').variant('quiet')]: {
-      Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
+      Root: { opacity: 0.5, '@md': { opacity: 1 } },
     },
   }))
 ```
@@ -59,12 +59,13 @@ style subset for that part kind. Foreign platform blocks are filtered before
 capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
 shorthand because their web/native meanings differ; use semantic typography or
 explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
-in its platform block. Legacy `$$type`, `style`, `@md`, and `@field/wide` remain
-compatibility spellings. New code should use canonical metadata and explicit
+in its platform block. Legacy `$$type` and `style` remain compatibility
+spellings. New code should use canonical metadata and explicit
 platform scopes for platform-specific styles.
 
 A platform block has one spelling, `'@platform web'` (or `'@platform native'`),
-which is also what `q.platform('web')` returns. The `'@platform.web'` alias is
+which is also what `q.platform('web')` returns (`toned/canonical-condition-key`
+rewrites `[q.platform('web')]` to the string). The `'@platform.web'` alias is
 deprecated: it still resolves, the lint rule `toned/canonical-platform-key`
 rejects it and fixes the key, and writing both spellings in one part is a type
 error (and throws), because one block would replace the other.
@@ -142,6 +143,31 @@ when the declaration is normalized. Spreading two fragments into a part instead
 platform or condition block: `toned/no-shadowing-spread` reports that, naming
 the shadowed key.
 
+### Bridges: `$bridge`
+
+A bridge reaches what an element's own style cannot: a pseudo-element
+(`::placeholder`, `::-webkit-scrollbar`) or a descendant (` svg`). The system
+declares it once, and a part writes its parameters by bridge and property name:
+
+```ts
+conditions: {
+  bridges: { scrollbar: { selector: '::-webkit-scrollbar', properties: ['display'] } },
+}
+// in a sheet:
+List: { $bridge: { scrollbar: { display: 'none' } } }
+```
+
+`$bridge` goes wherever `$style` goes (a part, a condition, a platform block,
+beside `$style`). Core writes the inline custom property the bridge's generated
+rule reads, `--toned-b-scrollbar-display`; the name is core's own, so a
+namespaced system never renames it, and the rule and the value always agree. An
+undeclared bridge or property is a type error listing the declared ones, and
+throws when the sheet is created. Writing the variable by hand in `$style` is a
+type error when no declared bridge reads it, and `toned/prefer-bridge-key`
+rewrites it to `$bridge` otherwise. A token can still resolve to a bridge
+parameter (`resolve: (v) => ({ [bridgeVarName('placeholder', 'color')]: … })`)
+to give it a semantic scale.
+
 New descriptor systems use fixed logical pixels for both viewport and container
 thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
 negative and nonfinite thresholds are rejected. Legacy `defineSystem(tokens,
@@ -154,39 +180,61 @@ no vertical text layout. See [portable values and logical layout](core/README.md
 
 ## Conditions and precedence
 
-The finite builders `q.state`, `q.media`, `q.container(name, step)`,
-`q.part(name).state`, and `q.platform` return literal keys. Human aliases include
-`:hover`, `@media md`, `@container field wide`, and `@platform web`.
-Query builders are bound to their system: use the callback's `q` (which also
-knows declared part names) or that system's `ui.q`. Compound platform predicates
-filter execution but keep `$style` portable. Nest an explicit
-`[q.platform('web')]` or `[q.platform('native')]` block to widen its style types.
+A condition is a string key. Write it directly; the compiler checks every name
+in it against the system's declarations:
 
-Use the same computed-key form for compound queries, including inside a part:
+| Condition | Key |
+| --- | --- |
+| A state (built-in or declared) | `':hover'`, `':open'` |
+| Two states together | `':open:hover'` |
+| A declared media threshold | `'@md'` |
+| A fixed width | `'@>=768px'` |
+| A declared container step | `'@field/wide'` |
+| Media and container algebra | `'@md&!lg'`, `'@md\|field/wide'`, `'@!md'` |
+| A media condition and a state | nest them: `'@md': { ':hover': { … } }` |
+| Another part's state, at the sheet root | `'Trigger:open': { Chevron: { … } }` |
+| A platform block | `'@platform web'` |
 
 ```ts
-const emphasis = ui.stylesheet((q) => ({
+const emphasis = ui.stylesheet({
   Root: {
     opacity: 1,
-    [q.not(q.any(q.media('md'), q.state('hover')))]: { opacity: 0 },
+    '@md&!lg': { opacity: 0.5 },
+    '@md': { ':hover': { opacity: 0 } },
   },
-}))
+})
 ```
+
+The system-bound `q` builders (the stylesheet callback's `q`, the variants
+callback's second argument, or `ui.q`) remain for what a string cannot express:
+
+- a computed threshold, `q.media(dp(600))` and `q.container(name, dp(300))`;
+- a relation between registered parts,
+  `q.part('Root').has('Item', 'checked', { scope: 'descendant' })`;
+- a disjunction or negation involving a state or a relation,
+  `q.not(q.any(q.media('md'), q.state('hover')))`, and a variant selector as an
+  operand (`q.all($.size('s'), q.media('md'))`).
+
+A builder call that has a string form (`[q.state('open')]`, `[q.media('md')]`,
+`[q.all(q.media('md'), q.state('hover'))]`, `[q.part('Item').state('hover')]`,
+`[q.platform('web')]`) is a lint error, and `toned/canonical-condition-key`
+rewrites it to the string, or to the nested form for a media condition with a
+state. It does the same for the long aliases `'@media md'` (`'@md'`) and
+`'@container field wide'` (`'@field/wide'`). A rewrite that would repeat a key
+the object already has is reported without a fix: merge the two blocks.
 
 A system's `media` names fixed width thresholds, and may also name a raw web
 media condition: a parenthesised query, or one led by a media type
 (`all`, `print`, `screen`):
 `media: { md: 768, motionless: '(prefers-reduced-motion: reduce)', print: 'print' }`. It is a
-condition like any other (`'@motionless': { … }`, `q.media('motionless')`),
-toggled by the build. Native has no such query and refuses it unless the host
-declares one.
+condition like any other (`'@motionless': { … }`), toggled by the build. Native
+has no such query and refuses it unless the host declares it.
 
 The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
-compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
-methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
-`q.container(name, dp(number))`, supply the resolved logical width: 100 legacy
-units at the default 4px base become `dp(400)`. Named steps retain the owning
-system's declared threshold through `q.container(name, 'wide')`.
+compatibility in `@toned/core/compat`. `cq(name).min(number)` values use a
+system's spacing scale. When migrating to `q.container(name, dp(number))`,
+supply the resolved logical width: 100 legacy units at the default 4px base
+become `dp(400)`. A named step is the string `'@field/wide'`.
 
 Compound builders produce self-contained deterministic keys; they do not allocate
 registry IDs or normalize Boolean expressions into an exponentially growing DNF.
@@ -194,9 +242,9 @@ Pass operands inline or as a readonly tuple so TypeScript retains the expression
 and can validate every referenced part. Arbitrary runtime arrays lose that exact
 key information and are not accepted by checked declarations. Each expression is
 bounded to 512 nodes and 64 KiB and fails explicitly if it exceeds either limit.
-A bare `q.state(...)` binds to its enclosing part; sheet-level groups use
-`q.part('Root').state(...)`. The direct cross-part shorthand selects one source;
-use `q.all` or `q.any` for compound cross-part conditions.
+A bare `':hover'` (or `q.state(...)`) binds to its enclosing part; sheet-level
+groups name the part, `'Root:hover'`. The direct cross-part key selects one
+source; use `q.all` or `q.any` for compound cross-part conditions.
 An axis builder can be reused as a direct variant key and as an operand in
 `q.all`, `q.any` and `q.not`; reading an operand does not declare another rule.
 Compound query keys are primitive strings. Repeating the same complete key in
@@ -260,7 +308,7 @@ not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
 A system declares the states its markup sets, by selector:
 `states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
-its own state with `q.state('open')` (`':open'`). On the web the toggle is a
+its own state with `':open'`. On the web the toggle is a
 non-inheriting registered custom property (`@property … { inherits: false }`),
 so a state on an ancestor never reaches a descendant; this needs a browser with
 `@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
@@ -276,7 +324,7 @@ states: {
 }
 ```
 
-- `ancestor`: `[q.part('Trigger').state('open')]` (`'Trigger:open'`) styles the
+- `ancestor`: `'Trigger:open'` styles the
   parts inside the nearest `Trigger` in the state.
 - `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
   siblings.
@@ -372,7 +420,7 @@ part that can be rendered independently. The same composition rules apply inside
 media, container, cross-part, compound-query and platform groups. Put the condition
 around a part map when composing under that condition; `$compose` nested inside an
 individual part's condition block is rejected. Root query groups must name their
-source part (`q.part('Root').state('hover')`); local `q.state('hover')` belongs inside
+source part (`'Root:hover'`); a local `':hover'` belongs inside
 that part's declarations.
 
 ## Build CSS before rendering
@@ -388,7 +436,9 @@ const { css, manifest } = buildStyles(ui, {
 ```
 
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
-condition variables and keyframes with their ID. Theme variables consumed by such
+condition variables and keyframes with their ID. Bridge parameters
+(`--toned-b-*`) are the exception: core writes and reads them under one name in
+every system. Theme variables consumed by such
 a system must use the same namespace. Declared `themes` are namespaced by the
 build; for a separately generated palette, `namespaceCss` from
 `@toned/core/system` applies the same prefix. A system consuming an existing application palette can
