@@ -387,6 +387,13 @@ const names = (diagnostics: Diagnostic[]) =>
       'tokens.ts': `import {stylesheet} from '@toned/core';const base={gap:1};stylesheet({Root:{...base,gap:2}})`,
       'unknown.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{...dynamic,$style:{cursor:'pointer'}}})`,
       'outside.ts': `const a={$style:{opacity:1}};const b={$style:{zIndex:1}};export const c={...a,...b}`,
+      // A system's stylesheet re-exported by destructuring, as an app's
+      // design-system module writes it, and imported from that module.
+      'reexport.ts': `import {defineSystem} from '@toned/core';const system=defineSystem({});export const {stylesheet}=system;const a={$style:{opacity:1}};const b={$style:{zIndex:1}};stylesheet({Root:{...a,...b}})`,
+      'imported.ts': `import {stylesheet} from '../toned/system';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};stylesheet({Root:{...a,...b}})`,
+      'imported-system.ts': `import {carehome} from './system';export const {stylesheet:sheet}=carehome;const a={$style:{opacity:1}};const b={$style:{zIndex:1}};sheet({Root:{gap:1}}).extend({Root:{...a,...b}})`,
+      'member.ts': `import {carehome} from './system';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};carehome.stylesheet({Root:{...a,...b}})`,
+      'unrelated.ts': `import {css} from 'other';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};css({Root:{...a,...b}})`,
     },
     {
       'toned/no-shadowing-spread': [
@@ -401,8 +408,12 @@ const names = (diagnostics: Diagnostic[]) =>
     expect(names(result.diagnostics)).toEqual([
       'alias.ts',
       'condition.ts',
+      'imported-system.ts',
+      'imported.ts',
+      'member.ts',
       'nested.ts',
       'platform.ts',
+      'reexport.ts',
       'style.ts',
       'system.ts',
     ])

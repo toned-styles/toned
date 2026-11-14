@@ -64,6 +64,20 @@ describe('$style lists', () => {
     ).toEqual({ opacity: 0.5 })
   })
 
+  test('one entry may set some properties and unset others', () => {
+    const sheet = ui.stylesheet({
+      Root: {
+        $style: [
+          { opacity: 0.5, zIndex: 2 },
+          { opacity: 1, zIndex: null },
+        ],
+      },
+    })
+    expect(
+      createNativeRenderer(ui, { tokens: {} }).resolve(sheet).Root.style,
+    ).toEqual({ opacity: 1 })
+  })
+
   test('in extend, a null with nothing earlier in the list removes the inherited property', () => {
     const base = ui.stylesheet({
       Root: { $style: { opacity: 0.5, zIndex: 2 } },

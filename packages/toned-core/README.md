@@ -138,9 +138,9 @@ Root: {
 
 `$style` takes a list wherever it takes an object (parts, conditions and
 platform blocks, with the same part-kind typing). Entries merge in order and the
-last wins; falsy entries are skipped, so `cond && fragment` works; an entry of
-`null`s (`{ zIndex: null }`) unsets what an earlier entry set, and in `extend`
-removes the inherited value as a single `null` does. The list is folded once,
+last wins; falsy entries are skipped, so `cond && fragment` works; a `null`
+property in any entry (`{ opacity: 1, zIndex: null }`) unsets what an earlier
+entry set, and in `extend` removes the inherited value as a single `null` does. The list is folded once,
 when the declaration is normalized. Spreading two fragments into a part instead
 (`{ ...focusRing, ...pointer }`) silently keeps only the last `$style`,
 platform or condition block: `toned/no-shadowing-spread` reports that, naming
