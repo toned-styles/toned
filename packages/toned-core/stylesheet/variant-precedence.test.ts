@@ -80,6 +80,20 @@ describe('a variant beside the part’s conditions', () => {
     )
   })
 
+  test('a variant resetting a state value is the intended override, and does not warn', () => {
+    // A tone variant restyling a part replaces its ':open' look on purpose;
+    // only a width is where a conditional value is expected to survive.
+    ui.stylesheet({ Root: { opacity: 1, ':open': { opacity: 0.5 } } }).variants(
+      ($: Variants<Tone>) => ({ [$.tone('quiet')]: { Root: { opacity: 0 } } }),
+    )
+    ui.stylesheet({
+      Root: { opacity: 1, '@md': { ':open': { opacity: 0.5 } } },
+    }).variants(($: Variants<Tone>) => ({
+      [$.tone('quiet')]: { Root: { opacity: 0 } },
+    }))
+    expect(warnings().filter((text) => text.includes('Repeat'))).toEqual([])
+  })
+
   test('the variant that repeats the condition does not warn', () => {
     repeated()
     expect(warnings().filter((text) => text.includes('Repeat'))).toEqual([])

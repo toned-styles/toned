@@ -81,8 +81,8 @@ export interface ShadowDiagnostic {
   /**
    * `shadowed-field`: a later declaration whose conditions the earlier one's
    * imply replaces it everywhere. `variant-shadows-condition`: a variant sets
-   * a field unconditionally after the part set it under a condition, so the
-   * variant's value wins under that condition too.
+   * a field unconditionally after the part set it under a width (`'@md'`, a
+   * container step), so the variant's value wins at that width too.
    */
   readonly code: 'shadowed-field' | 'variant-shadows-condition'
   readonly field: string
@@ -403,7 +403,13 @@ function variantShadowDiagnostics(
     const conditioned: Entry[] = []
     for (const later of entries) {
       const variantOnly = later.facts.every((fact) => fact.kind === 'variant')
-      if (later.facts.length && !later.facts.some((f) => f.kind === 'variant'))
+      // Only a width (`'@md'`, a container step) is where an author expects
+      // the part's value to survive a variant; a variant replacing a state or
+      // context look (`':open'`, `'@within prose'`) is the usual reset.
+      if (
+        later.facts.length &&
+        later.facts.every((f) => f.kind === 'media' || f.kind === 'container')
+      )
         conditioned.push(later)
       if (!later.facts.length || !variantOnly) continue
       for (const earlier of conditioned) {
