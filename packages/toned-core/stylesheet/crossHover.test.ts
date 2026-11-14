@@ -21,9 +21,30 @@ describe('resolveCrossHoverCss', () => {
         target: {},
         'source~:data-active': { target: { color: 'blue' } },
       },
-      ['data-active'],
+      { 'data-active': { selector: '[data-active]', relations: ['sibling'] } },
     )
     expect(out.target[':sib-data-active_color']).toBe('blue')
+  })
+
+  test('a declared state read through an undeclared relation names the declaration to add', () => {
+    const rules = {
+      source: {},
+      target: {},
+      'source~:open': { target: { color: 'blue' } },
+    }
+    expect(() =>
+      resolveCrossHoverCss(rules, {
+        open: { selector: "[data-state='open']", relations: ['ancestor'] },
+      }),
+    ).toThrow(
+      `'source~:open' reads state "open" through its sibling channel, which the system does not declare. Declare it: states: { 'open': { selector: "[data-state='open']", relations: ['ancestor', 'sibling'] } }`,
+    )
+    expect(() =>
+      resolveCrossHoverCss(
+        { source: {}, target: {}, 'source:open': { target: { gap: 1 } } },
+        { open: "[data-state='open']" },
+      ),
+    ).toThrow(/relations: \['ancestor'\]/)
   })
 
   test('source:focus-within is css-channelable (descendants only)', () => {
@@ -60,7 +81,10 @@ describe('resolveCrossHoverCss', () => {
         chevron: { style: { rotate: '0deg' } },
         'trigger:open': { chevron: { style: { rotate: '180deg' } } },
       },
-      ['open', 'closed'],
+      {
+        open: { selector: "[data-state='open']", relations: ['ancestor'] },
+        closed: "[data-state='closed']",
+      },
     )
     // source gains the _s marker; target property becomes a src-open chain key
     expect(out.trigger.className).toBe('_s')
@@ -77,7 +101,7 @@ describe('resolveCrossHoverCss', () => {
       'trigger:open': { chevron: { style: { rotate: '180deg' } } },
     }
     // no aliases declared → 'open' is not channelable, key is left as-is
-    const out = resolveCrossHoverCss(input, [])
+    const out = resolveCrossHoverCss(input, {})
     expect(out['trigger:open']).toBeDefined()
     expect(out.chevron[':src-open_style']).toBeUndefined()
   })
@@ -88,7 +112,7 @@ describe('resolveCrossHoverCss', () => {
       target: {},
       'source:focus': { target: { color: 'red' } },
     }
-    const out = resolveCrossHoverCss(input, ['open'])
+    const out = resolveCrossHoverCss(input, { open: "[data-state='open']" })
     // :focus is a runtime pseudo, not a declared state — untouched
     expect(out['source:focus']).toBeDefined()
     expect(out.target[':src-focus_color']).toBeUndefined()
@@ -100,7 +124,7 @@ describe('resolveCrossHoverCss', () => {
       target: {},
       'source:open:hover': { target: { color: 'red' } },
     }
-    const out = resolveCrossHoverCss(input, ['open'])
+    const out = resolveCrossHoverCss(input, { open: "[data-state='open']" })
     expect(out['source:open:hover']).toBeDefined()
   })
 
@@ -112,7 +136,7 @@ describe('resolveCrossHoverCss', () => {
         'trigger:hover': { chevron: { color: 'red' } },
         'trigger:open': { chevron: { style: { rotate: '180deg' } } },
       },
-      ['open'],
+      { open: { selector: "[data-state='open']", relations: ['ancestor'] } },
     )
     // both channels rewrite; the source carries exactly ONE `_s` marker
     expect(out.trigger.className).toBe('_s')

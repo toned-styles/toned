@@ -73,7 +73,7 @@ test('native pseudo metadata keeps custom semantic states and treats direction s
         ':rtl': { style: { width: 20 } },
       },
     },
-    { stateAliases: ['selected'] },
+    { states: { selected: "[aria-selected='true']" } },
   )
   const plan = controllerPlan(matcher)
   expect(plan.semanticStates).toContain('selected')

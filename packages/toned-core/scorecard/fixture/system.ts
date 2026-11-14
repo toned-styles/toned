@@ -77,3 +77,6 @@ export const ui = defineSystem({
     },
   },
 })
+
+/** The way an app's design-system module re-exports it for its components. */
+export const { stylesheet } = ui
