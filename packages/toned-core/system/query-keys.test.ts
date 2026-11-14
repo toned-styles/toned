@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
-import { buildStyles } from '../build/index.ts'
+import { assertManifestConditions, buildStyles } from '../build/index.ts'
 import { compilePlan, foldOperations, resolvePlan } from '../core/plan.ts'
 import { dp } from '../core/values.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
@@ -24,6 +24,7 @@ const ui = defineSystem({
   conditions: {
     media: { wide: 800 },
     containers: { card: { wide: 300 } },
+    widths: { media: [701, 702], containers: { card: [303, 304] } },
     states: { open: '[data-open]' },
   },
 })
@@ -253,10 +254,16 @@ describe('computed query keys', () => {
         [q.all(q.media(dp(701)), q.container('card', dp(303)))]: { gap: 1 },
       },
     }))
-    expect(buildStyles(ui, { sheets: [sheet] }).manifest.conditions).toEqual([
+    const { manifest } = buildStyles(ui)
+    expect(manifest.conditions).toEqual([
       '>=701px',
+      '>=702px',
       'card/>=303px',
+      'card/>=304px',
     ])
+    expect(() =>
+      assertManifestConditions(manifest, getStylesheetPlan(sheet).rules),
+    ).not.toThrow()
     const query = ui.q.all(ui.q.media(dp(702)), ui.q.container('card', dp(304)))
     let rules: Record<string, unknown> = { [query]: {} }
     for (let i = 0; i < 10; i++) rules = { Root: rules }

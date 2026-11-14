@@ -11,11 +11,13 @@ import {
 import { getConfig } from '../system/config.ts'
 import { isWithinKey } from '../system/contexts.ts'
 import { assertDeclaredCssVariables } from '../system/css-variables.ts'
+import type { SystemOptions } from '../system/definition.ts'
 import {
   normalizeDeclarations,
   validateDeclarations,
 } from '../system/normalize.ts'
 import type { StateDeclaration } from '../system/states.ts'
+import { assertDeclaredWidths } from '../system/widths.ts'
 import type {
   Config,
   ElementType,
@@ -343,11 +345,15 @@ export function createStylesheet<
       ref.config?.externalCssVariables,
     )
 
-  // Register the ad-hoc condition atoms this sheet uses on the system ref, so
-  // a css generator that imports the stylesheet modules can emit exactly the
-  // toggles in use (see utils/conditions.ts).
-  if (ref.usedConditions) {
-    collectAdHocConditions(mergedRules, ref.usedConditions)
+  // The build reads only the system, so every ad-hoc width this sheet uses
+  // must be declared there (system/widths.ts); an undeclared one would get no
+  // CSS. The atoms are still registered on the ref for compatibility.
+  const atoms = new Set<string>()
+  collectAdHocConditions(mergedRules, atoms)
+  if (atoms.size) {
+    const declared = ref.system as SystemOptions | undefined
+    assertDeclaredWidths(atoms, declared?.widths, declared?.containers)
+    for (const atom of atoms) ref.usedConditions?.add(atom)
   }
 
   class LocalBase extends Base {}

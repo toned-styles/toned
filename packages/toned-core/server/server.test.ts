@@ -124,9 +124,14 @@ test('web renderer defaults preserve CSS variable tokens through snapshots and l
 })
 
 test('successful manifest validation is weakly cached per renderer and sheet; failures are retried', () => {
-  const system = defineSystem({ id: 'validation-cache', tokens: {} })
+  const system = defineSystem({
+    id: 'validation-cache',
+    tokens: {},
+    conditions: { widths: { media: [777] } },
+  })
   const sheet = system.stylesheet({ Root: { $style: { opacity: 1 } } })
-  const manifest = buildStyles(system, { sheets: [sheet] }).manifest
+  // A manifest from a build that predates the 777px width.
+  const manifest = { ...buildStyles(system).manifest, conditions: [] }
   const renderer = createWebRenderer(system, { manifest })
   const assertConditions = vi.spyOn(
     manifestValidation,
@@ -151,6 +156,7 @@ test('successful manifest validation is weakly cached per renderer and sheet; fa
     const other = defineSystem({
       id: 'validation-cache',
       tokens: {},
+      conditions: { widths: { media: [777] } },
     }).stylesheet({ Root: {} })
     for (let i = 0; i < 2; i++)
       expect(() => renderer.validate(other)).toThrow('different system')
@@ -160,12 +166,21 @@ test('successful manifest validation is weakly cached per renderer and sheet; fa
 })
 
 test('renderer owns an immutable manifest snapshot before any sheet validation', () => {
-  const system = defineSystem({ id: 'manifest-snapshot', tokens: {} })
+  const system = defineSystem({
+    id: 'manifest-snapshot',
+    tokens: {},
+    conditions: { widths: { media: [777, 999] } },
+  })
   const sheet = system.stylesheet((q) => ({
     Root: {},
     [q.media(dp(777))]: { Root: { $style: { opacity: 0 } } },
   }))
-  const built = buildStyles(system, { sheets: [sheet] }).manifest
+  // A manifest from a build that predates the 999px width.
+  const full = buildStyles(system).manifest
+  const built = {
+    ...full,
+    conditions: full.conditions.filter((atom) => atom !== '>=999px'),
+  }
   const manifest = {
     ...built,
     conditions: [...built.conditions],

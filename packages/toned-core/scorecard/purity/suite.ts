@@ -1,7 +1,10 @@
 /**
  * The build-purity suite over the fixture system: base sheets, the mutations
- * an author makes every day, and the build under test (`buildStyles` with the
- * sheets collected, as every documented consumer calls it today).
+ * an author makes every day, and the build under test: `buildStyles` with the
+ * sheets still passed, as consumers written before the build stopped reading
+ * them do. Every supported-API mutation must leave the outputs unchanged; the
+ * deprecated `$webRules` extension, which generates CSS from sheet content,
+ * is measured and reported apart.
  */
 import { buildStyles } from '../../build/index.ts'
 import { dp } from '../../core/values.ts'
@@ -72,9 +75,19 @@ export const mutations: readonly Mutation[] = [
   {
     id: 'add-local-media',
     description:
-      'add a sheet with a local media threshold (`q.media(dp(600))`)',
+      'add a sheet with a declared width at the use site (`q.media(dp(600))`)',
     apply: add('local', () =>
       ui.stylesheet((q) => ({ Root: { [q.media(dp(600))]: { gap: 2 } } })),
+    ),
+  },
+  {
+    id: 'add-container-width',
+    description:
+      "add a sheet with a declared container width (`q.container('card', dp(300))`)",
+    apply: add('tile', () =>
+      ui.stylesheet((q) => ({
+        Root: { [q.container('card', dp(300))]: { padding: 4 } },
+      })),
     ),
   },
   {
@@ -105,6 +118,7 @@ export const mutations: readonly Mutation[] = [
   {
     id: 'add-web-rules',
     description: 'add a sheet with a `$webRules` CSS extension',
+    deprecated: '$webRules',
     apply: add('marked', () =>
       ui.stylesheet({
         Root: {
@@ -118,7 +132,7 @@ export const mutations: readonly Mutation[] = [
   {
     id: 'add-derived-sheet',
     description:
-      'derive a sheet with `extend` that adds a local media threshold',
+      'derive a sheet with `extend` that adds a declared width (`dp(900)`)',
     apply: add('compact', () =>
       (button() as ReturnType<typeof button>).extend((q) => ({
         Root: { [q.media(dp(900))]: { gap: 4 } },
@@ -127,7 +141,8 @@ export const mutations: readonly Mutation[] = [
   },
 ]
 
-/** `buildStyles` as the documented consumers call it: sheets collected. */
+/** `buildStyles` with the sheets collected, the deprecated call shape: the
+ *  strictest test, since the build is given every sheet and must ignore it. */
 export const buildWithSheets = (sheets: SheetSet): BuildOutput => {
   const { css, manifest } = buildStyles(ui, {
     sheets: Object.values(sheets).map((make) => make() as StylesheetInstance),

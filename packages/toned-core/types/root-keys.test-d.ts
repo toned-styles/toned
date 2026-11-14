@@ -17,6 +17,7 @@ const ui = defineSystem(
   {
     breakpoints: { __breakpoints: { md: 768, lg: 1024 } },
     containers: { card: { sm: 80 } },
+    widths: { containers: { card: [400] } },
     states: {
       open: { selector: "[data-state='open']", relations: ['sibling'] },
       expanded: { selector: '[aria-expanded=true]', relations: ['ancestor'] },
@@ -34,7 +35,7 @@ const base = ui.stylesheet({
   '@media lg': { Root: { gap: 4 } },
   '@container card sm': { Item: { gap: 4 } },
   '@card/sm': { Item: { gap: 4 } },
-  '@md&card/>=100': { Root: { gap: 1 } },
+  '@md&card/>=400px': { Root: { gap: 1 } },
   '@platform web': { Item: { $style: { opacity: 0.5 } } },
   'Root:hover': { Item: { gap: 4 } },
   'Root~:open': { Item: { gap: 2 } },
@@ -71,7 +72,7 @@ ui.stylesheet({
 })
 ui.stylesheet({
   Root: { gap: 1 },
-  '@md&card/>=100': {
+  '@md&card/>=400px': {
     // @ts-expect-error — and a condition expression
     Root: { gapp: 2 },
   },

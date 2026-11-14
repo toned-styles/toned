@@ -131,9 +131,10 @@ export async function runScorecard(): Promise<Scorecard> {
       'intents.spellingsTotal': spellings.spellingsTotal,
       'intents.spellingsMean': spellings.spellingsMean,
       'intents.spellingsMax': spellings.spellingsMax,
-      'purity.mutations': purity.length,
-      'purity.pure': count(purity, (p) => p.pure),
-      'purity.impure': count(purity, (p) => !p.pure),
+      // Supported API only; deprecated-API mutations are counted below.
+      'purity.mutations': count(purity, (p) => !p.deprecated),
+      'purity.pure': count(purity, (p) => !p.deprecated && p.pure),
+      'purity.impure': count(purity, (p) => !p.deprecated && !p.pure),
       'conformance.cells': conformance.length,
       'conformance.works': count(conformance, (c) => c.outcome === 'works'),
       'conformance.rejected': count(
@@ -182,6 +183,11 @@ export async function runScorecard(): Promise<Scorecard> {
       'css.bytesPerContextValue': perContext.value,
       'css.bytesPerContextState': perContext.state,
       'css.rulesPerContextPair': perContext.rulesPerPair,
+      'purity.deprecated': count(purity, (p) => !!p.deprecated),
+      'purity.deprecatedImpure': count(
+        purity,
+        (p) => !!p.deprecated && !p.pure,
+      ),
     },
     details: {
       corpus: corpus.map(({ reports: _reports, ...result }) => result),
@@ -189,6 +195,7 @@ export async function runScorecard(): Promise<Scorecard> {
       purity: purity.map((p) => ({
         id: p.id,
         description: p.description,
+        ...(p.deprecated ? { deprecated: p.deprecated } : {}),
         pure: p.pure,
         changed: p.changes.map((change) => change.output),
       })),
@@ -208,6 +215,7 @@ export function renderMarkdown(card: Scorecard): string {
   >
   const purity = card.details['purity'] as {
     id: string
+    deprecated?: string
     pure: boolean
     changed: string[]
   }[]
@@ -248,10 +256,13 @@ export function renderMarkdown(card: Scorecard): string {
     '',
     '## Build purity',
     '',
-    '| Mutation | Pure | Outputs changed |',
-    '| --- | --- | --- |',
+    'The build reads only the system. A deprecated-API mutation is reported, but is not a purity failure of the supported API.',
+    '',
+    '| Mutation | API | Pure | Outputs changed |',
+    '| --- | --- | --- | --- |',
     ...purity.map(
-      (p) => `| ${p.id} | ${mark(p.pure)} | ${p.changed.join(', ') || '—'} |`,
+      (p) =>
+        `| ${p.id} | ${p.deprecated ? `deprecated (\`${p.deprecated}\`)` : 'supported'} | ${mark(p.pure)} | ${p.changed.join(', ') || '—'} |`,
     ),
     '',
     '## Target conformance',

@@ -511,3 +511,25 @@ const names = (diagnostics: Diagnostic[]) =>
     )
   })
 }
+
+{
+  const resultFixture = fixture(
+    {
+      'rules.ts': `import {stylesheet, webRules} from '@toned/core';stylesheet({Root:{'@platform web':{$webRules:webRules({'&::before':{content:'"*"'}})}}})`,
+      'fragment.ts': `import {webRules} from '@toned/core';export const marker={'$webRules':webRules({'&[aria-disabled=true]':{opacity:0.5}})}`,
+      'states.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{':disabled':{opacity:0.5}}})`,
+      'other.ts': `const config={webRules:1}`,
+    },
+    { 'toned/no-web-rules': 'warn' },
+  )
+
+  test('$webRules is deprecated: each block is reported, naming the replacements', () => {
+    const result = resultFixture()
+    expect(names(result.diagnostics)).toEqual(['fragment.ts', 'rules.ts'])
+    const message = result.diagnostics[0]!.message
+    expect(message).toContain('deprecated')
+    expect(message).toContain('declared state')
+    expect(message).toContain('bridge')
+    expect(message).toContain('relation')
+  })
+}

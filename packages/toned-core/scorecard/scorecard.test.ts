@@ -48,6 +48,8 @@ const METRICS = [
   'css.bytesPerContextValue',
   'css.bytesPerContextState',
   'css.rulesPerContextPair',
+  'purity.deprecated',
+  'purity.deprecatedImpure',
 ]
 
 describe('scorecard', async () => {

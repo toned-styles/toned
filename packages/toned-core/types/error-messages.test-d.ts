@@ -26,6 +26,7 @@ const ui = defineSystem({
   tokens: { gap, padding },
   conditions: {
     media: { md: 768, lg: 1024 },
+    widths: { media: [400] },
     states: { open: "[data-state='open']", busy: '[aria-busy=true]' },
   },
 })
@@ -133,18 +134,24 @@ export const rawSelectorUndeclared: Has<
 
 export const media: Has<
   Rules<{ Root: { '@mdd': { gap: 2 } } }>['Root']['@mdd'],
-  `Unknown condition '@mdd'. Did you mean '@md'? Declared media: ${Media}; or a width such as '@>=768px'`
+  `Unknown condition '@mdd'. Did you mean '@md'? Declared media: ${Media}; or a width declared in conditions.widths, such as q.media(dp(600))`
 > = true
 // @ts-expect-error — '@mdd' is not a declared media name
 ui.stylesheet({ Root: { gap: 1, '@mdd': { gap: 2 } } })
 
 export const atom: Has<
   Rules<{ Root: { '@md&!xx': { gap: 2 } } }>['Root']['@md&!xx'],
-  `Unknown condition 'xx' in '@md&!xx'. Declared media: ${Media}; or a width such as '@>=768px'`
+  `Unknown condition 'xx' in '@md&!xx'. Declared media: ${Media}; or a width declared in conditions.widths, such as q.media(dp(600))`
 > = true
 // @ts-expect-error — 'xx' is not a declared condition
 ui.stylesheet({ Root: { gap: 1, '@md&!xx': { gap: 2 } } })
-// Declared atoms and fixed widths combine freely.
+export const undeclaredWidth: Has<
+  Rules<{ Root: { '@md&!>=500px': { gap: 2 } } }>['Root']['@md&!>=500px'],
+  `'@md&!>=500px' uses the width 500px, which the system does not declare, and the build emits CSS only for declared conditions: add 500 to conditions.widths.media, or name it in conditions.media`
+> = true
+// @ts-expect-error — 500px is not a declared width
+ui.stylesheet({ Root: { gap: 1, '@>=500px': { gap: 2 } } })
+// Declared atoms and declared widths combine freely.
 ui.stylesheet({
   Root: { gap: 1, '@md&!lg': { gap: 2 }, '@>=400px|lg': { gap: 4 } },
 })

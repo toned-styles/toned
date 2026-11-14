@@ -2,6 +2,7 @@ import type { LogicalLength } from '../core/values.ts'
 import type { Relation } from '../stylesheet/relations.ts'
 import type { BuiltVariantKey } from '../stylesheet/variantSelector.ts'
 import type { Platform } from '../types/config.ts'
+import type { QuoteList, TonedError } from '../types/errors.ts'
 import type { Pseudo } from '../types/stylesheet.ts'
 import {
   booleanQuery,
@@ -12,6 +13,7 @@ import {
   type QueryKey,
   type RelationQuery,
 } from './query-key.ts'
+import type { ContainerWidthOf, MediaWidthOf, WidthAtomOf } from './widths.ts'
 
 type FixedLength<N extends number = number> = LogicalLength & {
   unit: 'dp'
@@ -27,6 +29,27 @@ type Media<C> = C extends { media: infer M }
     ? keyof B & string
     : never
 type Containers<C> = C extends { containers: infer B } ? B : never
+/** A width the system does not declare, as the error naming the fix. */
+type MediaArgument<C, A> =
+  A extends FixedLength<infer N>
+    ? number extends N
+      ? unknown
+      : [N] extends [MediaWidthOf<C>]
+        ? unknown
+        : TonedError<`${N}px is not a width the system declares, and the build emits CSS only for declared conditions: add ${N} to conditions.widths.media, or name it in conditions.media and write q.media('<name>')`>
+    : A extends Media<C>
+      ? unknown
+      : TonedError<`Unknown media '${A & string}'. Declared media: ${[Media<C>] extends [never] ? 'none' : QuoteList<Media<C>>}`>
+type ContainerArgument<C, Name extends string, A> =
+  A extends FixedLength<infer N>
+    ? number extends N
+      ? unknown
+      : [N] extends [ContainerWidthOf<C, Name>]
+        ? unknown
+        : TonedError<`${N}px is not a width the system declares for the container '${Name}', and the build emits CSS only for declared conditions: add ${N} to conditions.widths.containers.${Name}, or name a step in conditions.containers.${Name}`>
+    : A extends keyof Containers<C>[Name & keyof Containers<C>]
+      ? unknown
+      : TonedError<`Unknown step '${A & string}' of the container '${Name}'. Declared steps: ${[keyof Containers<C>[Name & keyof Containers<C>] & string] extends [never] ? 'none' : QuoteList<keyof Containers<C>[Name & keyof Containers<C>] & string>}`>
 export type QueryPredicate = Readonly<
   | { op: 'atom'; key: string }
   | { op: 'relation'; relation: Relation }
@@ -42,8 +65,7 @@ export type QueryAtom<C, Parts extends string = string> =
   | `:${State<C>}`
   | `@${Media<C>}`
   | ContainerAtoms<C>
-  | `@>=${number}px`
-  | `@${keyof Containers<C> & string}/>=${number}px`
+  | `@${WidthAtomOf<C>}`
   | `@platform ${Platform}`
   | `@platform.${Platform}`
   | `${Parts}:${State<C>}`
@@ -54,19 +76,28 @@ type QueryOperand<C, Parts extends string> =
   | QueryKey
 export type QueryBuilder<C, Parts extends string = string> = {
   state<N extends State<C>>(name: N): `:${N}`
-  media<N extends Media<C>>(name: N): `@${N}`
-  media<const N extends number>(minimum: FixedLength<N>): `@>=${N}px`
+  /**
+   * A declared media name (`'md'`), or a width threshold the system declares
+   * in `conditions.widths.media` (`dp(600)`). One signature, so an undeclared
+   * width reports the error naming its fix and still returns its key.
+   */
+  media<const A extends Media<C> | (string & {}) | FixedLength>(
+    value: A & MediaArgument<C, A>,
+  ): A extends FixedLength<infer N> ? `@>=${N}px` : `@${A & string}`
+  /**
+   * A declared container step (`'wide'`), or a width threshold the system
+   * declares in `conditions.widths.containers.<name>` (`dp(300)`).
+   */
   container<
     N extends keyof Containers<C> & string,
-    Step extends keyof Containers<C>[N] & string,
+    const A extends
+      | (keyof Containers<C>[N] & string)
+      | (string & {})
+      | FixedLength,
   >(
     name: N,
-    step: Step,
-  ): `@${N}/${Step}`
-  container<N extends keyof Containers<C> & string, const Width extends number>(
-    name: N,
-    minimum: FixedLength<Width>,
-  ): `@${N}/>=${Width}px`
+    step: A & ContainerArgument<C, N, A>,
+  ): A extends FixedLength<infer W> ? `@${N}/>=${W}px` : `@${N}/${A & string}`
   part<N extends Parts>(
     name: N,
   ): {

@@ -496,14 +496,22 @@ that part's declarations.
 ## Build CSS before rendering
 
 ```ts
-// Build script; include lazy stylesheet declarations explicitly.
+// Build script. The build reads only the system declaration.
 import { buildStyles } from '@toned/core/build'
-const { css, manifest } = buildStyles(ui, {
-  sheets: [button, emphasis],
-  layer: 'components',
-})
+const { css, manifest } = buildStyles(ui, { layer: 'components' })
 // Write css to an application asset and manifest to a generated module.
 ```
+
+The build never reads a stylesheet: every condition a sheet may use is declared
+by the system (named `media` and `containers` steps, `states`, and the unnamed
+width thresholds listed in `widths`), so adding, editing or deleting a sheet
+changes neither the CSS nor the manifest. A sheet that uses a width the system
+does not declare is a type error, and an error when the sheet is created where
+types cannot see the width; both name where to declare it. The `sheets` and
+`conditions` options are deprecated. `conditions` changes nothing (an atom it
+lists must be declared, or the build throws). `sheets` is read only for the
+deprecated `$webRules` extension; without one it changes nothing and warns in
+development.
 
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
 condition variables and keyframes with their ID. Bridge parameters
@@ -537,7 +545,7 @@ A variable set by a different sheet, or by the application outside toned, belong
 in `externalCssVariables`. Text in quotes or `url()` is not a reference.
 Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
-The build manifest records ad-hoc conditions and the exact static system schema,
+The build manifest records the declared width atoms and the exact static system schema,
 including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema
 or an undeclared condition with a regeneration instruction; it never injects a rule.
 Token names are canonicalized in that schema, so a bundler changing module-export
@@ -547,13 +555,14 @@ not reorder emitted CSS or weaken its byte-level artifact fingerprint.
 `@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
 explicit optional development tool. The `@toned/core/dom` entry remains for compatibility.
 The Vite plugin serves `virtual:toned.css`; import it explicitly, supply watched
-`inputs`, and pass the complete system ref with a `sheets` collector, e.g.
-`toned({ system: ui, sheets: () => [button], inputs: ['./button.ts'] })`.
+`inputs`, and pass the complete system ref, e.g.
+`toned({ system: ui, inputs: ['./system.ts'] })`. Its `sheets` and `conditions`
+collectors are deprecated, as in `buildStyles`.
 It delegates to the same build path and exposes the paired manifest through
 `virtual:toned.manifest` (a default export). Both modules share one collection per
 build or watched invalidation. Passing a raw `system.system` token dictionary
-remains compatible, but requires an explicit namespace `id` and condition
-collector; it cannot collect sheets or check their runtime namespace.
+remains compatible, but requires an explicit namespace `id`; it cannot collect
+sheets or check their runtime namespace.
 The plugin does not insert a style node into HTML; the application imports the
 CSS module.
 
@@ -570,7 +579,7 @@ a type error:
 // src/toned/ui.toned.ts
 import { buildStyles } from '@toned/core/build'
 import { defineOutput } from '@toned/core/outputs'
-export default defineOutput(buildStyles(ui, { sheets: [button], layer: 'components' }))
+export default defineOutput(buildStyles(ui, { layer: 'components' }))
 
 // src/toned/ui-palette.toned.ts
 const notes = new URL('./palette.md', import.meta.url)
@@ -601,12 +610,12 @@ and `peerDependencies`. A published package that ships outputs declares a `toned
 field (even `{}` to pass a dependency's outputs on). Explicit `outputs` globs,
 relative to the consumer's root, replace the declarations.
 
-| Consumer             | Entry                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| Vite                 | `tonedOutputs()` from `@toned/core/vite`                                                   |
+| Consumer             | Entry                                                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| Vite                 | `tonedOutputs()` from `@toned/core/vite`                                                           |
 | Bun (tests, scripts) | `bun --preload @toned/core/bun/register`, or `Bun.plugin(tonedBunPlugin())` from `@toned/core/bun` |
-| Metro                | `withTonedOutputs(config)` or `withTonedOutputsSync(config)` from `@toned/core/metro`      |
-| Anything else        | `loadOutput(name, { root })` from `@toned/core/outputs/runner`                             |
+| Metro                | `withTonedOutputs(config)` or `withTonedOutputsSync(config)` from `@toned/core/metro`              |
+| Anything else        | `loadOutput(name, { root })` from `@toned/core/outputs/runner`                                     |
 
 All four use one loader (Vite 6 or later): each output is evaluated by Vite's
 module runner in its own module graph, never in the process that imports it, so
@@ -813,6 +822,7 @@ const responsive = ui.stylesheet({
   Root: {
     '@platform web': {
       $grid: compact,
+      // 600 is declared in the system: conditions.widths.media
       [ui.q.media(dp(600))]: { $grid: message },
     },
   },
@@ -916,7 +926,21 @@ the final subscriber leaves. Native relations require `parentOf` and
 `subscribeTopology`; semantic states beyond hover, active and focus additionally
 require `readState`. Unsupported host capabilities throw named errors.
 
-Use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
+**`$webRules` is deprecated.** It is the one construct whose CSS comes from sheet
+content, so it cannot keep the guarantee that the build reads only the system.
+Existing blocks keep working while their sheets are passed to
+`buildStyles({ sheets })`; the lint rule `toned/no-web-rules` (recommended, a
+warning) and a development warning name the replacements. Migrate each block by
+what it says:
+
+| A `$webRules` block for                                   | Write instead                                                                                                                  |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| a DOM or ARIA fact (`&[aria-disabled=true]`, `&:checked`) | a declared state: `conditions.states: { disabled: '[aria-disabled=true]' }`, then `':disabled': { … }`                         |
+| a pseudo-element (`&::placeholder`)                       | a declared bridge (`conditions.bridges`) and a token whose resolver writes `bridgeVarName(…)`; `$bridge` where it is available |
+| a part in relation to another (`& > input:checked`)       | a registered-part relation: `[q.part('Root').has('Input', 'checked')]: { … }`                                                  |
+| a browser media feature (`(prefers-reduced-motion)`)      | a named media condition: `conditions.media: { still: '(prefers-reduced-motion: reduce)' }`                                     |
+
+Until migrated, use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
 `'@platform web'` block for CSS selectors or pseudo-elements. Styles use checked
 CSS property types. Each entry has one `&`-anchored selector; comma lists and
 at-rules are rejected as selector keys. Exact DOM child syntax such as
@@ -970,13 +994,13 @@ the axes the sheet already has, and those win over everything.
 const compact = button.extend({ Root: { padding: null } }, ($) => ({
   [$.size('s')]: { Root: { padding: 4 } },
 }))
-const artifact = buildStyles(ui, { sheets: [button, compact] })
+const artifact = buildStyles(ui)
 const web = createWebRenderer(ui, { manifest: artifact.manifest })
 const props = web.resolve(compact, { variants: { size: 's' } })
 ```
 
-Collect derived sheets before building when they introduce conditions or other
-CSS structure. Pure/native renderers resolve these layers directly; React hooks
+A derived sheet adds no CSS: any width it uses is declared by the system, like
+every other sheet's. Pure/native renderers resolve these layers directly; React hooks
 and element families consume the derived sheet, and React's `StyleOverrides`
 takes the same derived sheet. `null` removes an inherited leaf at that exact
 path before matching; it does not erase a separate variant declaration.
@@ -1013,9 +1037,9 @@ Switching is CSS only: changing the attribute rerenders nothing, and classes and
 inline styles stay as they were.
 
 ```ts
-const artifact = buildStyles(ui, { sheets }) // themes included
-buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
-buildStyles(ui, { sheets, themes: false }) // deliver them yourself
+const artifact = buildStyles(ui) // themes included
+buildStyles(ui, { themes: { default: 'night' } }) // another default
+buildStyles(ui, { themes: false }) // deliver them yourself
 ```
 
 A class sets each side of a box separately, so a field read by a four-sided
@@ -1031,7 +1055,8 @@ This is static schema checking, not validation of untrusted JSON. Applications
 validate external theme data before passing it to a renderer. Existing untyped
 `defineToken` remains compatible; adopting the typed factory is incremental.
 
-Fixed query thresholds can also be colocated at the use site:
+A fixed width threshold without a name is written at the use site, and declared
+in the system's `widths`:
 
 ```ts
 import { defineSystem, defineToken, dp } from '@toned/core'
@@ -1044,7 +1069,10 @@ const layout = defineSystem({
       resolve: (value) => ({ opacity: value }),
     }),
   },
-  conditions: { containers: { card: {} } },
+  conditions: {
+    containers: { card: {} },
+    widths: { media: [600], containers: { card: [300] } },
+  },
 })
 layout.stylesheet((q) => ({
   Root: {
@@ -1054,14 +1082,22 @@ layout.stylesheet((q) => ({
 }))
 ```
 
-The container name must be declared in the system; its threshold may be local.
+The build emits CSS for exactly the declared widths, so `q.media(dp(700))` here
+is a type error ("700px is not a width the system declares … add 700 to
+conditions.widths.media"), and so is the literal key `'@>=700px'`. A width the
+compiler cannot see (`dp(config.width)`) is refused when the sheet is created,
+with the same instruction. Widths are fixed logical pixels; a container's list
+needs the container declared in `containers`. The legacy numeric container key
+(`'@card/>=100'`, a spacing-scale multiple) and string lengths are refused: write
+`q.container('card', dp(<px>))` and declare the width.
 These keys retain exact literal types (`@>=600px`, `@card/>=300px`) and compose
 with `q.all`, `q.any`, and `q.not`. Mix variants into these expressions through
 checked selectors such as `$.size('s')`; unchecked raw `'[size=s]'` operands are
 rejected by the query helper types. Both host evaluators and generated query
 preludes use the same fixed pixel number. Percentage, font-relative, and
-custom-property thresholds are rejected. Include sheets containing these
-queries in the normal build inventory, including lazy or overridden sheets.
+custom-property thresholds are rejected. The declared widths are part of the
+manifest's system definition, so a renderer refuses a manifest built before a
+width was added.
 Typed-theme systems also check renderer construction and per-resolution
 `tokens` against their declared schema.
 

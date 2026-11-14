@@ -7,8 +7,8 @@
  * - lint: any diagnostic from toned's lint plugin (its recommended rules), from
  *   one oxlint run over the case files, with the fixture system's `ui` known
  *   as a system;
- * - build: `buildStyles` throws or warns for the case's sheets, or the case's
- *   own `build` step (an output build) does;
+ * - build: `buildStyles` throws or warns for the case's system (it reads no
+ *   sheet), or the case's own `build` step (an output build) does;
  * - runtime: importing the case, constructing its sheets, resolving them
  *   through the web renderer or running its `exercise` throws or warns;
  * - silent: none of the above.
@@ -80,7 +80,8 @@ async function runtimeReports(
   add(
     'build',
     await capture(
-      () => (manifest = buildStyles(system, { sheets: typed }).manifest),
+      // The build reads only the system, as an application's build does.
+      () => (manifest = buildStyles(system).manifest),
     ),
   )
   if (meta.build) add('build', await capture(() => meta?.build?.()))
