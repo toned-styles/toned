@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 
 import { build, createServer } from 'vite'
 import { afterEach, expect, test } from 'vitest'
@@ -92,6 +92,9 @@ test('in dev, editing a file an output read rebuilds it and the outputs importin
   const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
   expect((await loader.load('site')).css).toBe('.used-first {}')
   expect(loader.watchedFiles()).toContain(join(root, 'usage.ts'))
+  // Only files on disk: an imported output's module id is virtual, and a watcher
+  // given it fails (fsevents refuses a path with a null byte).
+  expect(loader.watchedFiles().filter(file => !isAbsolute(file) || file.includes('\0'))).toEqual([])
   expect(loader.invalidate(join(root, 'usage.ts')).toSorted()).toEqual(['inventory', 'site'])
 
   const server = await createServer({
