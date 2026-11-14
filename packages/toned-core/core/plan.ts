@@ -276,7 +276,7 @@ export function compileRules(
         if (extension && !marker) requiredExtensions.add(entry.key)
         const order = nextOrder++
         const cross =
-          path.length === 1 && typeof path[0] === 'string'
+          path.length >= 1 && typeof path[0] === 'string'
             ? /^([^:@[\]]+):([^:]+)$/.exec(path[0])
             : null
         const state = cross?.[2]
@@ -566,7 +566,10 @@ function variantShadowDiagnostics(
               other.fields.includes(field) &&
               wanted.every((fact) => implies(other.facts, fact)),
           )
-          if (!restated && !sameWrite(earlier.operation, later.operation, field))
+          if (
+            !restated &&
+            !sameWrite(earlier.operation, later.operation, field)
+          )
             diagnostics.push({
               code: 'variant-shadows-condition',
               field,
@@ -592,7 +595,11 @@ function sameWrite(
   if (isStyle(earlier.token) && isStyle(later.token)) {
     const a = (earlier.value ?? {}) as Record<string, unknown>
     const b = (later.value ?? {}) as Record<string, unknown>
-    return Object.hasOwn(a, field) && Object.hasOwn(b, field) && a[field] === b[field]
+    return (
+      Object.hasOwn(a, field) &&
+      Object.hasOwn(b, field) &&
+      a[field] === b[field]
+    )
   }
   return earlier.token === later.token && earlier.value === later.value
 }

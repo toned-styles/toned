@@ -323,6 +323,31 @@ describe('CSS shared-plan adapter', () => {
     ).toThrow("relations: ['ancestor']")
   })
 
+  it("a part's own state nested under a cross-part target keeps both conditions", () => {
+    const system = defineSystem(tokens, {
+      states: { loaded: '[data-loaded]' },
+    })
+    const sheet = system.stylesheet({
+      Card: { gap: 0 },
+      Thumb: { gap: 4 },
+      'Card:hover': { Thumb: { ':loaded': { gap: 8 } } },
+    } as any)
+    const style = resolveCssPlan(compilePlan(system, sheet, 'web'), system, {})[
+      'Thumb'
+    ]!.style
+    const at = (hover: boolean, loaded: boolean) =>
+      cssTestValue(style, 'gap', {
+        '--toned_src-hover': hover,
+        '--toned_loaded': loaded,
+      })
+    expect([
+      at(false, false),
+      at(true, false),
+      at(false, true),
+      at(true, true),
+    ]).toEqual(['4px', '4px', '4px', '8px'])
+  })
+
   it('a declared state offers only the relation channels it declares', () => {
     const system = defineSystem(tokens, {
       states: {
