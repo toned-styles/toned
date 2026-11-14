@@ -5,9 +5,17 @@ import { join } from 'node:path'
 import { build, createServer } from 'vite'
 import { afterEach, expect, test } from 'vitest'
 
+import { buildStyles } from '../build/index.ts'
 import { withTonedOutputs, withTonedOutputsSync } from '../metro/index.ts'
+import { defineSystem } from '../system/definers.ts'
 import { tonedOutputs } from '../vite/index.ts'
-import { outputModuleSource, outputName, parseOutputSpecifier, toOutput } from './index.ts'
+import {
+  defineOutput,
+  outputModuleSource,
+  outputName,
+  parseOutputSpecifier,
+  toOutput,
+} from './index.ts'
 import { createOutputsLoader } from './runner.ts'
 
 const roots: string[] = []
@@ -218,5 +226,131 @@ test('an edit after a failed rebuild, or during one, still rebuilds the output',
   const rebuilding = loader.load('site')
   expect(loader.invalidate(usage)).toEqual(['site'])
   await rebuilding
+  expect((await loader.load('site')).css).toBe('.used-fixed {}')
+})
+
+test('an output file must export a known shape: no unknown keys, no promise, css or data, JSON data', () => {
+  const file = '/app/ui.toned.ts'
+  const shape = (value: unknown) => () => toOutput({ default: value }, file)
+  expect(shape({})).toThrow(
+    'Toned output /app/ui.toned.ts has no css or data: export { css } or { data } (or a buildStyles artifact)',
+  )
+  expect(shape({ CSS: '.a{}' })).toThrow(
+    'Toned output /app/ui.toned.ts: unknown key "CSS"; did you mean "css"? An output has css, manifest, data, inputs',
+  )
+  expect(shape({ css: '.a{}', mainfest: {} })).toThrow('did you mean "manifest"?')
+  expect(shape({ css: '.a{}', extra: 1 })).toThrow(
+    'Toned output /app/ui.toned.ts: unknown key "extra". An output has css, manifest, data, inputs',
+  )
+  expect(shape(Promise.resolve({ css: '' }))).toThrow(
+    'Toned output /app/ui.toned.ts default-exports a promise: await it (`export default await build()`)',
+  )
+  expect(shape({ css: Promise.resolve('') })).toThrow('css is a promise: await it')
+  expect(shape({ data: { usage: () => 1 } })).toThrow(
+    'Toned output /app/ui.toned.ts: data.usage is a function; data must be JSON (strings, finite numbers, booleans, null, arrays and plain objects)',
+  )
+  expect(shape({ data: { usage: [new Map()] } })).toThrow('data.usage[0] is a Map')
+  expect(shape({ data: { usage: Number.NaN } })).toThrow('data.usage is NaN')
+  expect(shape({ css: '', manifest: { at: new Date(0) } })).toThrow('manifest.at is a Date')
+  expect(shape({ data: [1] })).toThrow('data must be an object of named entries')
+  expect(shape({ css: '.a{}', inputs: ['./usage.md'] })()).toEqual({
+    css: '.a{}',
+    data: {},
+    inputs: ['/app/usage.md'],
+  })
+  // Only data keys a specifier can name: `toned:ui/<key>`.
+  expect(shape({ data: { 'a/b': 1 } })).toThrow('data key "a/b" cannot be imported')
+  expect(shape({ css: '', data: { css: 'x' } })).toThrow('data key "css" is reserved')
+})
+
+test('defineOutput types an output file and returns it unchanged', () => {
+  const value = { css: '.a{}', data: { tokens: { gap: [1, 2] } } }
+  expect(defineOutput(value)).toBe(value)
+  // A buildStyles artifact is an output as it is.
+  const artifact = buildStyles(defineSystem({ id: 'define-output', tokens: {} }), { sheets: [] })
+  expect(toOutput(defineOutput(artifact), 'x').data?.['manifest']).toEqual(artifact.manifest)
+  // @ts-expect-error a misspelled key is a type error
+  defineOutput({ CSS: '.a{}' })
+  // @ts-expect-error data must be JSON
+  defineOutput({ data: { fn: () => 1 } })
+  // @ts-expect-error a promise must be awaited first
+  defineOutput(Promise.resolve({ css: '' }))
+})
+
+test('loads that overlap share one module runner, so a module two outputs import runs once', async () => {
+  const root = await project({
+    'shared.ts':
+      "const g = globalThis as { tonedSharedRuns?: number }\ng.tonedSharedRuns = (g.tonedSharedRuns ?? 0) + 1\nexport const runs = g.tonedSharedRuns\n",
+    'one.toned.ts': "import { runs } from './shared.ts'\nexport default { data: { runs } }\n",
+    'two.toned.ts': "import { runs } from './shared.ts'\nexport default { data: { runs } }\n",
+  })
+  const g = globalThis as { tonedSharedRuns?: number }
+  g.tonedSharedRuns = 0
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  const all = await loader.loadAll()
+  expect(g.tonedSharedRuns).toBe(1)
+  expect(all['one']?.data?.['runs']).toBe(1)
+  // Once those loads settle the runner closes: the next load is a fresh graph.
+  loader.invalidate(join(root, 'shared.ts'))
+  await loader.load('one')
+  expect(g.tonedSharedRuns).toBe(2)
+})
+
+test('outputs that import each other, even through a helper module, are an error rather than a hang', async () => {
+  const root = await project({
+    'helper.ts': "import b from 'toned:b/value'\nexport const fromB = b\n",
+    'a.toned.ts': "import { fromB } from './helper.ts'\nexport default { data: { value: fromB } }\n",
+    'b.toned.ts': "import a from 'toned:a/value'\nexport default { data: { value: a } }\n",
+  })
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  await expect(loader.load('a')).rejects.toThrow(/Toned outputs import each other: (a -> b -> a|b -> a -> b)/)
+}, 10_000)
+
+test('files an output reads outside its imports are declared as inputs, watched and checked', async () => {
+  const root = await project({
+    'notes.md': 'first',
+    'site.toned.ts':
+      "import { readFileSync } from 'node:fs'\nconst notes = new URL('./notes.md', import.meta.url)\nexport default { css: `/* ${readFileSync(notes, 'utf8')} */`, inputs: [notes] }\n",
+  })
+  const notes = join(root, 'notes.md')
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  expect((await loader.load('site')).css).toBe('/* first */')
+  expect(loader.watchedFiles()).toContain(notes)
+  expect([...loader.sourceFiles('site').keys()]).toEqual([join(root, 'site.toned.ts'), notes])
+  // A second build without a watcher (another `vite build`) checks content.
+  expect(await loader.refresh()).toEqual([])
+  await writeFile(notes, 'second')
+  expect(await loader.refresh()).toEqual(['site'])
+  expect((await loader.load('site')).css).toBe('/* second */')
+})
+
+test('an added or deleted output file is found again', async () => {
+  const root = await project({ 'one.toned.ts': "export default { css: '.one {}' }\n" })
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  await loader.loadAll()
+  expect(loader.rediscover()).toBe(false)
+  await writeFile(join(root, 'two.toned.ts'), "export default { css: '.two {}' }\n")
+  expect(loader.rediscover()).toBe(true)
+  expect(loader.names.toSorted()).toEqual(['one', 'two'])
+  expect((await loader.load('two')).css).toBe('.two {}')
+})
+
+test('an unknown data key names the output and the keys it has', () => {
+  expect(() => outputModuleSource({ css: '', data: { manifest: {} } }, 'tokens', 'ui')).toThrow(
+    'toned:ui has no "tokens"; it has: css, manifest',
+  )
+})
+
+test('an output that fails on its first build still knows the files it reached', async () => {
+  const root = await project({
+    'usage.ts': "throw new Error('typo')\n",
+    'site.toned.ts': "import { used } from './usage.ts'\nexport default { css: `.used-${used} {}` }\n",
+  })
+  const usage = join(root, 'usage.ts')
+  const loader = createOutputsLoader({ outputs: ['*.toned.ts'], root })
+  await expect(loader.load('site')).rejects.toThrow('typo')
+  expect(loader.watchedFiles().toSorted()).toEqual([join(root, 'site.toned.ts'), usage])
+  await writeFile(usage, "export const used = 'fixed'\n")
+  expect(loader.invalidate(usage)).toEqual(['site'])
   expect((await loader.load('site')).css).toBe('.used-fixed {}')
 })

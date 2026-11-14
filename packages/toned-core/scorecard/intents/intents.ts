@@ -368,6 +368,57 @@ export const intents: readonly Intent[] = [
       },
     ],
   },
+  {
+    id: 'declare-outputs',
+    intent: "Make a package's named outputs available to its consumers",
+    canonical: {
+      spelling: '"toned": { "outputs": ["src/toned/*.toned.ts"] }',
+      note: "in the package's package.json; Vite, Bun, Metro and scripts find it through the dependency graph",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "tonedOutputs({ outputs: ['…/*.toned.ts'] })",
+        status: 'compatible',
+        note: 'explicit globs in each consumer (also `tonedBunPlugin`, `withTonedOutputs`, `loadOutput`); replace the declarations; HQ writes them in about 15 places',
+        source: review,
+      },
+    ],
+  },
+  {
+    id: 'outputs-in-a-script',
+    intent: 'Import `toned:` outputs from a Bun script or test',
+    canonical: {
+      spelling: 'bun --preload @toned/core/bun/register',
+      note: 'or `preload` in bunfig.toml',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'Bun.plugin(tonedBunPlugin({ outputs, root }))',
+        status: 'compatible',
+        note: 'a hand-written preload',
+        source: 'readme',
+      },
+    ],
+  },
+  {
+    id: 'output-file',
+    intent: "Write an output file's default export",
+    canonical: {
+      spelling: 'export default defineOutput({ css, data })',
+      note: 'a misspelled key, data that is not JSON or an unawaited promise is a type error; a `buildStyles` artifact may be passed as it is',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'export default { css, data }',
+        status: 'compatible',
+        note: 'not typed; the shape is checked when the output builds',
+        source: 'readme',
+      },
+    ],
+  },
 ]
 
 /** Spellings an author can write today without being told otherwise: the
