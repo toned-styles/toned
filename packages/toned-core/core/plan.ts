@@ -78,7 +78,13 @@ export interface CompiledPlan {
   readonly diagnostics: readonly ShadowDiagnostic[]
 }
 export interface ShadowDiagnostic {
-  readonly code: 'shadowed-field'
+  /**
+   * `shadowed-field`: a later declaration whose conditions the earlier one's
+   * imply replaces it everywhere. `variant-shadows-condition`: a variant sets
+   * a field unconditionally after the part set it under a condition, so the
+   * variant's value wins under that condition too.
+   */
+  readonly code: 'shadowed-field' | 'variant-shadows-condition'
   readonly field: string
   readonly earlier: DeclarationOrigin
   readonly later: DeclarationOrigin
@@ -278,9 +284,10 @@ export function compileRules(
     operations: immutableOperations,
     extensions: immutableExtensions,
     diagnostics: Object.freeze(
-      shadowDiagnostics(system, immutableOperations, platform).map(
-        (diagnostic) => Object.freeze(diagnostic),
-      ),
+      [
+        ...shadowDiagnostics(system, immutableOperations, platform),
+        ...variantShadowDiagnostics(system, immutableOperations, platform),
+      ].map((diagnostic) => Object.freeze(diagnostic)),
     ),
   })
   operationsByPart(plan)
@@ -355,6 +362,74 @@ function footprint(
       canonicalFields: !!system.id,
     }),
   )
+}
+
+/**
+ * A variant that sets a field with no condition of its own, after the part
+ * set the same field under a media, container or state condition in the same
+ * layer: later declarations win, so wherever the variant applies the part's
+ * conditional value never does. That is the rule, but a Tailwind-style merge
+ * keeps the base's `md:` value, so the pair is reported with the fix: repeat
+ * the condition inside the variant.
+ */
+function variantShadowDiagnostics(
+  system: TokenSystem<AnyDeclaration>,
+  operations: readonly DeclarationOperation[],
+  platform: 'web' | 'native',
+): ShadowDiagnostic[] {
+  const diagnostics: ShadowDiagnostic[] = []
+  // Facts (platform blocks are not conditions) and fields once per operation,
+  // grouped by part: a part never shadows another part.
+  type Entry = {
+    operation: DeclarationOperation
+    facts: readonly Fact[]
+    fields: readonly string[]
+  }
+  const byPart = new Map<string, Entry[]>()
+  for (const operation of operations) {
+    const facts = conjunction(operation.predicate)
+    if (!facts) continue
+    const written = footprint(system, operation, platform)
+    const entries = byPart.get(operation.origin.part) ?? []
+    entries.push({
+      operation,
+      facts: facts.filter((fact) => fact.kind !== 'platform'),
+      // A token that declares no `properties` footprint is compared by name.
+      fields: written.length ? written : [operation.token],
+    })
+    byPart.set(operation.origin.part, entries)
+  }
+  for (const entries of byPart.values()) {
+    const conditioned: Entry[] = []
+    for (const later of entries) {
+      const variantOnly = later.facts.every((fact) => fact.kind === 'variant')
+      if (later.facts.length && !later.facts.some((f) => f.kind === 'variant'))
+        conditioned.push(later)
+      if (!later.facts.length || !variantOnly) continue
+      for (const earlier of conditioned) {
+        if (earlier.operation.origin.layer !== later.operation.origin.layer)
+          continue
+        const wanted = [...later.facts, ...earlier.facts]
+        for (const field of earlier.fields) {
+          if (!later.fields.includes(field)) continue
+          // The variant restates the field under the part's condition.
+          const restated = entries.some(
+            (other) =>
+              other.fields.includes(field) &&
+              wanted.every((fact) => implies(other.facts, fact)),
+          )
+          if (!restated)
+            diagnostics.push({
+              code: 'variant-shadows-condition',
+              field,
+              earlier: earlier.operation.origin,
+              later: later.operation.origin,
+            })
+        }
+      }
+    }
+  }
+  return diagnostics
 }
 
 function shadowDiagnostics(
