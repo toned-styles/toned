@@ -276,7 +276,15 @@ sheet-level `'@<name>'` block is not checked by type (root keys are open); it
 fails at construction with the declared media.
 
 In descriptor systems, later matching declarations within a precedence layer win
-each resolved field. Legacy systems retain their historical pseudo/breakpoint
+each resolved field. A variant block comes after its part, so a field the
+variant sets with no condition wins over the part's own conditional value for
+that field (`'@md'`, `':hover'`) wherever the variant applies: with
+`Root: { paddingTop: 2, '@md': { paddingTop: 4 } }` and a variant setting
+`paddingTop: 1`, the variant's `1` holds at `md` too. To keep a different value
+under the condition, repeat it in the variant,
+`[$.size('s')]: { Root: { paddingTop: 1, '@md': { paddingTop: 4 } } }`.
+Building a sheet that does not warns once in development, naming the block to
+add. Legacy systems retain their historical pseudo/breakpoint
 order within a layer; a higher override layer still wins over the whole lower layer.
 A compound variant has no implicit specificity bonus. Use `.variants(($: Variants<Mods>, q) => ({ … }))` to infer the schema and
 check the complete returned declaration, including excess keys in nested rules.
