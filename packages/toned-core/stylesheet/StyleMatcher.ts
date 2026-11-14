@@ -1,3 +1,4 @@
+import type { StateDeclaration } from '../system/states.ts'
 import { parseConditionKey, serializeExpr } from '../utils/conditions.ts'
 import {
   addBit,
@@ -92,7 +93,8 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
       cssMediaMode?: boolean
       cssPseudoMode?: boolean
       cacheMax?: number
-      stateAliases?: readonly string[]
+      /** The system's declared states, for the CSS relation channels. */
+      states?: Readonly<Record<string, StateDeclaration>>
       platform?: 'web' | 'native'
       /** Explicit descriptors resolve nested declarations in source order. */
       sourceOrder?: boolean
@@ -112,7 +114,7 @@ export class StyleMatcher<Schema extends RuleObject = RuleObject> {
       normalizeRules(rules, {
         cssMediaMode: this.cssMediaMode,
         cssPseudoMode: this.cssPseudoMode,
-        stateAliases: options?.stateAliases,
+        states: options?.states,
         sourceOrder: options?.sourceOrder,
         platform: options?.platform,
       })

@@ -2,6 +2,7 @@ import { attachGridElement, validateGridElement } from '../grid/host.ts'
 import type { GridArea, GridDefinition } from '../grid/index.ts'
 import { initMedia } from '../stylesheet/media.ts'
 import { subscribeWebRelations } from '../stylesheet/relations-web.ts'
+import { type StateDeclaration, stateSelector } from '../system/states.ts'
 import type { TokenSystem } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
 import { fixedQueryWidth, parseConditionKey } from '../utils/conditions.ts'
@@ -14,23 +15,29 @@ const media = new WeakMap<object, Map<string, ReturnType<typeof initMedia>>>()
 export function createDomIntegration(
   system: TokenSystem<AnyDeclaration>,
 ): HostIntegration {
-  const stateAttributes = Object.values(system.system.states ?? {}).flatMap(
-    (selector) =>
-      [...String(selector).matchAll(/\[\s*([\w:-]+)/g)].map(
-        (match) => match[1]!,
-      ),
+  const states = (system.system.states ?? {}) as Record<
+    string,
+    StateDeclaration
+  >
+  const selectors = Object.values(states).map(stateSelector)
+  const stateAttributes = selectors.flatMap((selector) =>
+    [...String(selector).matchAll(/\[\s*([\w:-]+)/g)].map((match) => match[1]!),
   )
   // Simple compound aliases depend only on a host and its ancestry/descendants.
   // Arbitrary relational CSS selectors deliberately retain document-wide updates.
-  const localAliases = Object.values(system.system.states ?? {}).every(
-    (selector) => /^(?:[.#][\w-]+|\[[^\]]+\])+$/.test(String(selector)),
+  const localAliases = selectors.every((selector) =>
+    /^(?:[.#][\w-]+|\[[^\]]+\])+$/.test(String(selector)),
   )
   return {
     connected: (target) => (target as Node).isConnected !== false,
     validateRelations: () => {},
     parentOf: (target) => (target as Element).parentElement ?? undefined,
     readState: (target, state) =>
-      (target as Element).matches(system.system.states?.[state] ?? `:${state}`),
+      (target as Element).matches(
+        Object.hasOwn(states, state)
+          ? stateSelector(states[state]!)
+          : `:${state}`,
+      ),
     subscribeRelations(targets, notify, currentTargets) {
       const initialTargets = [...targets]
       const documents = new Set<Document>()

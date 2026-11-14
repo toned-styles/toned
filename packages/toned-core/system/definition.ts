@@ -7,6 +7,7 @@ import type {
 } from '../types/index.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
+import type { StateDeclaration } from './states.ts'
 import type { SystemTheme } from './theme-types.ts'
 
 export type { MediaCondition } from '../utils/media-query.ts'
@@ -27,7 +28,7 @@ export type SystemOptions = {
   breakpoints?: Breakpoints<any>
   animations?: Record<string, AnimationInput>
   bridges?: Record<string, BridgeConfig>
-  states?: Record<string, string>
+  states?: Record<string, StateDeclaration>
   /** See `TokenStyleDeclaration.responsiveTokens`. */
   responsiveTokens?: readonly string[]
   /** See `TokenStyleDeclaration.containers`. */

@@ -7,6 +7,7 @@
  * `@ts-expect-error` fails the build if its error disappears.
  */
 import { defineSystem, defineToken } from '../system/index.ts'
+import type { StylesheetValidation } from './stylesheet.ts'
 
 const gap = defineToken({
   values: [1, 2, 4] as const,
@@ -17,7 +18,11 @@ const ui = defineSystem(
   {
     breakpoints: { __breakpoints: { md: 768, lg: 1024 } },
     containers: { card: { sm: 80 } },
-    states: { open: "[data-state='open']" },
+    states: {
+      open: { selector: "[data-state='open']", relations: ['sibling'] },
+      expanded: { selector: '[aria-expanded=true]', relations: ['ancestor'] },
+      checked: "[data-state='checked']",
+    },
   },
 )
 
@@ -34,6 +39,8 @@ const base = ui.stylesheet({
   '@platform web': { Item: { $style: { opacity: 0.5 } } },
   'Root:hover': { Item: { gap: 4 } },
   'Root~:open': { Item: { gap: 2 } },
+  'Root:expanded': { Item: { gap: 2 } },
+  Item2: { ':checked': { gap: 1 }, ':sib-open': { gap: 2 } },
   // Undeclared condition names stay open at the root (see
   // type-constraints.test-d.ts); resolution warns and drops them.
   '@nope/>=100': { Root: { gap: 1 } },
@@ -105,6 +112,48 @@ ui.stylesheet({
   // @ts-expect-error — nor as a sibling-channel source
   'Nope~:open': { Root: { gap: 2 } },
 })
+// --- a state answers only through the relations it declares -----------------
+
+ui.stylesheet({
+  Root: { gap: 1 },
+  Item: { gap: 1 },
+  // @ts-expect-error — `checked` declares no relation
+  'Root:checked': { Item: { gap: 2 } },
+})
+ui.stylesheet({
+  Root: { gap: 1 },
+  Item: { gap: 1 },
+  // @ts-expect-error — `open` declares only the sibling relation
+  'Root:open': { Item: { gap: 2 } },
+})
+ui.stylesheet({
+  Root: { gap: 1 },
+  Item: { gap: 1 },
+  // @ts-expect-error — `expanded` declares only the ancestor relation
+  'Root~:expanded': { Item: { gap: 2 } },
+})
+ui.stylesheet({
+  // @ts-expect-error — nor through its lowered channel key
+  Root: { gap: 1, ':src-checked': { gap: 2 } },
+})
+ui.stylesheet({
+  // @ts-expect-error — nor through the sibling channel key
+  Label: { gap: 1, ':sib-checked': { gap: 2 } },
+})
+// The channel key's error names the relation to declare.
+type ChannelError<K extends string> = StylesheetValidation<
+  (typeof ui)['system'],
+  { Root: { [_ in K]: { gap: 2 } } }
+>['Root'] extends { [_ in K]: infer Message }
+  ? keyof Message
+  : never
+export const sibChannelNamesFix: ChannelError<':sib-checked'> extends `Toned: ':sib-checked' needs state 'checked' to declare the sibling relation, e.g. states: { 'checked': { selector, relations: ['sibling'] } }`
+  ? true
+  : false = true
+export const srcChannelNamesFix: ChannelError<':src-open'> extends `Toned: ':src-open' needs state 'open' to declare the ancestor relation, ${string}relations: ['ancestor']${string}`
+  ? true
+  : false = true
+
 ui.stylesheet({
   Root: { gap: 1 },
   // @ts-expect-error — `:nope` is not a declared state

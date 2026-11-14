@@ -6,12 +6,16 @@
  * The families riding the mechanism:
  * - `'source:hover'` — the group-hover channel. Hover-gated in the system css.
  * - `'source:focus-within'` — a container's focus revealing a descendant.
- * - `'source:<alias>'` for a DECLARED state (`open`, `checked`, …) — a parent's
- *   data-state styling a descendant (a trigger's `:open` rotating its chevron).
- *   Always live, like the self-state toggles.
- * - `'source~:hover'` / `'source~:<alias>'` — the SIBLING channel: the toggle
- *   reaches the source's following siblings (`._s… ~ ._`), the peer-recolor
- *   combinator (a button's hover recoloring the action beside it).
+ * - `'source:<alias>'` for a DECLARED state that offers the `ancestor`
+ *   relation — a parent's data-state styling a descendant (a trigger's `:open`
+ *   rotating its chevron). Always live, like the self-state toggles.
+ * - `'source~:hover'` / `'source~:<alias>'` (a state that offers the
+ *   `sibling` relation) — the SIBLING channel: the toggle reaches the source's
+ *   following siblings (`._s… ~ ._`), the peer-recolor combinator (a button's
+ *   hover recoloring the action beside it).
+ *
+ * A declared state read through a relation it does not declare throws, naming
+ * the declaration to add (system/states.ts): the system emits no CSS for it.
  *
  * In both cases:
  * - The SOURCE element gains the `_s` marker class (via the `className` entry
@@ -31,6 +35,12 @@
  * @module stylesheet/crossHover
  */
 
+import {
+  type StateDeclaration,
+  stateRelations,
+  undeclaredRelationMessage,
+} from '../system/states.ts'
+
 // oxlint-disable-next-line typescript/no-explicit-any -- rules are dynamically shaped
 type AnyValue = any
 
@@ -38,13 +48,13 @@ const HOVER = ':hover'
 
 /**
  * @param rules the stylesheet rules
- * @param stateAliases declared-state alias names (`['open', 'checked', …]`), so
- *   `'source:open'` is recognised as a CSS-channelable state and `'source:focus'`
- *   (a runtime interaction pseudo) is left alone.
+ * @param states the system's declared states, so `'source:open'` is
+ *   recognised as a CSS-channelable state (when `open` offers the `ancestor`
+ *   relation) and `'source:focus'` (a runtime interaction pseudo) is left alone.
  */
 export function resolveCrossHoverCss(
   rules: AnyValue,
-  stateAliases: readonly string[] = [],
+  states: Readonly<Record<string, StateDeclaration>> = {},
   knownParts?: ReadonlySet<string>,
 ): AnyValue {
   let out: AnyValue | undefined
@@ -72,18 +82,25 @@ export function resolveCrossHoverCss(
     const bareSource = sibling ? sourceName.slice(0, -1) : sourceName
     const prefix = sibling ? 'sib' : 'src'
 
+    if (!(bareSource in rules) && !knownParts?.has(bareSource)) continue
     let channel: string | undefined
     if (suffix === HOVER) channel = `${prefix}-hover`
     else if (suffix === ':focus-within' && !sibling)
       channel = 'src-focus-within'
     else if (
       suffix.indexOf(':', 1) === -1 &&
-      stateAliases.includes(suffix.slice(1))
-    )
-      channel = `${prefix}-${suffix.slice(1)}`
+      Object.hasOwn(states, suffix.slice(1))
+    ) {
+      const alias = suffix.slice(1)
+      const relation = sibling ? 'sibling' : 'ancestor'
+      if (!stateRelations(states[alias]).includes(relation))
+        throw new Error(
+          undeclaredRelationMessage(key, alias, relation, states[alias]!),
+        )
+      channel = `${prefix}-${alias}`
+    }
     if (!channel) continue
 
-    if (!(bareSource in rules) && !knownParts?.has(bareSource)) continue
     const elementMap = rules[key]
     if (!elementMap || typeof elementMap !== 'object') continue
 

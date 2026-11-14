@@ -6,6 +6,12 @@ import {
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../stylesheet/rule-protocol.ts'
+import {
+  type StateDeclaration,
+  type StateRelation,
+  stateRelations,
+  undeclaredRelationMessage,
+} from '../system/states.ts'
 import type {
   TokenStyleDeclaration,
   TokenSystem,
@@ -135,6 +141,33 @@ export function compilePlan(
   return compileRules(system, declaration.rules, platform)
 }
 
+/**
+ * A part's own channel key (`':sib-disabled'`, `':src-open'`, the lowered
+ * spelling of `'Control~:disabled'` / `'Control:open'`) reads a declared state
+ * through a relation; the system emits that channel's CSS only when the state
+ * declares the relation, so an undeclared one throws, naming it. Keys the
+ * cross-element rewrite lowered were checked there already.
+ */
+function checkChannelKey(
+  key: string,
+  states: Readonly<Record<string, StateDeclaration>>,
+): void {
+  // Conditions are keyed `<part>:<state>`; a channel key is `<part>:sib-<state>`.
+  const channel = /^[^:]*:((sib|src)-(.+))$/.exec(key)
+  if (!channel) return
+  const [, written, prefix, state] = channel as unknown as [
+    string,
+    string,
+    string,
+    string,
+  ]
+  if (!Object.hasOwn(states, state) || Object.hasOwn(states, written)) return
+  const relation: StateRelation = prefix === 'sib' ? 'sibling' : 'ancestor'
+  if (!stateRelations(states[state]).includes(relation))
+    throw new Error(
+      undeclaredRelationMessage(`:${written}`, state, relation, states[state]!),
+    )
+}
 /** Shared declaration compiler. Its result contains only immutable declaration
  * data and semantic facts; CSS selectors/classes and host state are adapters. */
 export function compileRules(
@@ -183,15 +216,33 @@ export function compileRules(
             : null
         const state = cross?.[2]
         const source = cross?.[1]?.replace(/~$/, '')
-        const scope = cross?.[1]?.endsWith('~') ? 'sibling' : 'ancestor'
-        const legacyChannel =
+        const scope: StateRelation = cross?.[1]?.endsWith('~')
+          ? 'sibling'
+          : 'ancestor'
+        const states = (system.system.states ?? {}) as Record<
+          string,
+          StateDeclaration
+        >
+        const rootKey =
           source &&
           source !== part &&
           state &&
+          Object.hasOwn(layers[entry.layer] ?? {}, path[0]!)
+        // A declared state answers through a relation only when the system
+        // declares that relation: it emits no channel CSS otherwise.
+        if (
+          rootKey &&
+          Object.hasOwn(states, state) &&
+          !stateRelations(states[state]).includes(scope)
+        )
+          throw new Error(
+            undeclaredRelationMessage(path[0]!, state, scope, states[state]!),
+          )
+        const legacyChannel =
+          rootKey &&
           (state === 'hover' ||
             (state === 'focus-within' && scope === 'ancestor') ||
-            state in (system.system.states ?? {})) &&
-          Object.hasOwn(layers[entry.layer] ?? {}, path[0]!)
+            Object.hasOwn(states, state))
             ? { source, state, scope: scope as 'ancestor' | 'sibling' }
             : undefined
         const operation: DeclarationOperation = {
@@ -222,7 +273,13 @@ export function compileRules(
     }
   }
   append(normalized.list['']?.rule ?? {}, TRUE, [])
+  const declaredStates = (system.system.states ?? {}) as Record<
+    string,
+    StateDeclaration
+  >
   for (const entry of normalized.ordered) {
+    for (const key of entry.conditions.keys())
+      checkChannelKey(key, declaredStates)
     const operands = [...entry.conditions].map(([key, values]) =>
       conditionPredicate(key, values),
     )

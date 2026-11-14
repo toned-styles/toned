@@ -165,6 +165,79 @@ The matcher keeps a fast unsigned single-word path and uses multiple words beyon
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
+### Declared states and their relations
+
+A system declares the states its markup sets, by selector:
+`states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
+its own state with `q.state('open')` (`':open'`). On the web the toggle is a
+non-inheriting registered custom property (`@property … { inherits: false }`),
+so a state on an ancestor never reaches a descendant; this needs a browser with
+`@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
+contains `:hover` is gated in `@media (hover: hover)`, as `:hover` is.
+
+Another part reads a state only through a relation the state declares:
+
+```ts
+states: {
+  open: { selector: "[data-state='open']", relations: ['ancestor'] },
+  'size-sm': { selector: "[data-size='sm']", relations: ['sibling'] },
+  checked: "[data-state='checked']", // its own part only
+}
+```
+
+- `ancestor`: `[q.part('Trigger').state('open')]` (`'Trigger:open'`) styles the
+  parts inside the nearest `Trigger` in the state.
+- `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
+  siblings.
+
+Each relation is CSS that every styled element pays for in style
+recalculation; the sibling one grows with the square of a list's length. A
+key reading a state through an undeclared relation is a type error and throws
+when the sheet is built, naming the declaration to add. `:hover` and
+`:focus-within` keep their built-in relations. The selector of a state that
+declares a relation must be an attribute or pseudo-class selector.
+
+Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
+channel. Which states need a relation depends on your sheets, so do not work
+from a list: run the type check, and each error names a key that reads a state
+through a relation and the declaration to add. They come from `'Part:state'`
+and `'Part~:state'` keys and from the lowered channel keys a part can write
+itself, `':src-<state>'` (ancestor) and `':sib-<state>'` (sibling). A label
+that fades after a disabled control (`Label: { ':sib-disabled': { … } }`)
+reports:
+
+```text
+Toned: ':sib-disabled' needs state 'disabled' to declare the sibling relation, e.g. states: { 'disabled': { selector, relations: ['sibling'] } }
+```
+
+so `disabled: ':disabled'` becomes
+`disabled: { selector: ':disabled', relations: ['sibling'] }`. A key in a sheet
+the types cannot see whole (`extend`, an untyped caller) throws the same
+message when the sheet is built.
+
+### Shorthands and CSS-wide keywords under conditions
+
+On the web a part's conditions compile into one inline style, where each
+conditional field reads `var(--rule, <value at rest>)`. Two consequences:
+
+- A shorthand and one of its longhands in different blocks of one part
+  (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
+  write the longhands, or set the whole shorthand in each condition. Sheets the
+  types cannot see whole (`extend`, variants, untyped callers) are handled at
+  resolve time: the shorthand is split into its longhands (`transition`,
+  `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
+  `margin`, `inset`, `gap`, `flex`, `flexFlow`, the `place*` pairs, and a
+  single-colour `background`), so each longhand has one chain. A value that
+  cannot be split without the browser (a `var()`, an `animation`, a layered
+  `background`) throws, naming both fields and the fix; when every field
+  involved is unconditional it is left as written. Chromium's computed styles
+  for the split forms are checked by `node benchmarks/cascade-browser.mjs`.
+- A CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`, `revert-layer`)
+  under a condition is a type error and throws at resolve time: a keyword that
+  reaches a property through a custom property computes as `unset`. At rest it
+  is the chain's fallback, where it works. Set the value the state should take,
+  or write a selector rule with `$webRules`.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant
