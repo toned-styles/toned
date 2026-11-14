@@ -2,7 +2,17 @@ import {
   resolveAlphaChannels,
   resolveConfiguredToken,
 } from '../core/resolve.ts'
+import { SHORTHANDS } from '../core/shorthands.ts'
 import { namespaceCss } from '../system/namespace.ts'
+import { responsivePairs } from '../system/responsive.ts'
+import {
+  isElementSelector,
+  needsHover,
+  type StateDeclaration,
+  stateRelations,
+  stateSelector,
+  validateStates,
+} from '../system/states.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
 import {
@@ -24,6 +34,61 @@ import { bridgeVarName, camelToKebab } from '../utils/css.ts'
  * @module dom/generate
  */
 import { isMediaCondition } from '../utils/media-query.ts'
+
+/** Four-sided shorthands: the longhands a rule may replace with the shorthand
+ *  when it sets all four to one value. */
+const FOUR_SIDES = (
+  [
+    'margin',
+    'padding',
+    'inset',
+    'borderWidth',
+    'borderStyle',
+    'borderColor',
+    'borderRadius',
+  ] as const
+).map((shorthand) => [shorthand, SHORTHANDS[shorthand]] as const)
+
+/**
+ * One rule setting all four longhands of a side shorthand to one value is
+ * exactly the shorthand: both set the same four properties, in the same rule,
+ * at the same specificity and order. A token resolving `margin` to four
+ * physical longhands therefore costs one declaration instead of four. Values
+ * are compared after serialization, so `0` and `'0px'` stay distinct.
+ */
+function collapseSides(
+  fields: Record<string, unknown>,
+): Record<string, unknown> {
+  let out: Record<string, unknown> | undefined
+  for (const [shorthand, longhands] of FOUR_SIDES) {
+    if (shorthand in fields) continue
+    const first = fields[longhands[0]]
+    if (first === undefined) continue
+    const value = serializeCssValue(longhands[0], first)
+    if (
+      !longhands.every(
+        (longhand) =>
+          longhand in fields &&
+          serializeCssValue(longhand, fields[longhand]) === value,
+      )
+    )
+      continue
+    out ??= { ...fields }
+    for (const longhand of longhands) delete out[longhand]
+    out[shorthand] = first
+  }
+  return out ?? fields
+}
+
+// The runtime-tracked states plus the css-only enhancements (:focus-visible
+// has no JS event and no native analogue — the browser decides it).
+const PSEUDO_STATES = [
+  'hover',
+  'focus',
+  'focus-visible',
+  'focus-within',
+  'active',
+] as const
 
 const tokens = new Proxy(Object.create(null), {
   get(_target, prop: string) {
@@ -51,18 +116,7 @@ const tokens = new Proxy(Object.create(null), {
  * outside the scope; inside it, the scoped rules out-specify it.
  */
 export function generate<const S extends TokenStyleDeclaration>(
-  {
-    breakpoints,
-    animations,
-    bridges,
-    states,
-    responsiveTokens,
-    containers,
-    base,
-    layoutContext: layout,
-    externalCssVariables,
-    ...system
-  }: S,
+  declaration: S,
   opts?: {
     scope?: string
     /** Stable system identity; namespaces classes, parameters and animations. */
@@ -75,57 +129,87 @@ export function generate<const S extends TokenStyleDeclaration>(
     conditions?: readonly string[]
   },
 ) {
+  const {
+    breakpoints,
+    animations,
+    bridges,
+    states,
+    responsiveTokens: _responsiveTokens,
+    containers,
+    base,
+    layoutContext: layout,
+    externalCssVariables,
+    ...system
+  } = declaration
+  const responsive = responsivePairs(declaration)
   assertConditionSlugs({ breakpoints, containers }, opts?.conditions)
   const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
 
   // Declared state toggles — the attribute analogue of the pseudo toggles
   // below. Each state's selector, applied to the element (`._<selector>`),
-  // empties `--toned_<alias>`; the nested reset keeps it self-scoped (a state
-  // on an ancestor does not leak onto descendants' chains). Not hover-gated —
-  // these are data-states, always live.
-  if (states) {
+  // empties `--toned_<alias>` and sets its `-not` complement to `initial`.
+  //
+  // The toggle is self-scoped by REGISTRATION (`inherits: false`): a state on
+  // an ancestor never reaches a descendant's chain. It used to be self-scoped
+  // by a reset rule on the subtree (`._<sel> ._`), whose rightmost `._` is
+  // every styled element: each one checked its ancestors once per declared
+  // state, on every style recalculation.
+  //
+  // Data states are always live; a state whose selector needs `:hover` is
+  // gated like `:hover` itself (see PSEUDO_STATES below).
+  //
+  // Relation channels are emitted only for the relations a state declares
+  // (system/states.ts): each one is CSS every styled element pays for.
+  const declaredStates = (states ?? {}) as Record<string, StateDeclaration>
+  validateStates(declaredStates)
+  const stateInits: string[] = []
+  // Complement channels make q.not(state) equivalent on CSS and native: every
+  // bound element rests at "not in the state" (valid-empty `-not`), so a
+  // parent's state never answers for a child. ONE resting rule carries every
+  // complement, and it precedes every toggle, so a toggle whose selector adds
+  // no specificity (`:where(…)`) still wins on order.
+  styles += `${scope}._ {${[...PSEUDO_STATES, ...Object.keys(declaredStates)]
+    .map((name) => `--toned_${name}-not: ;`)
+    .join('')}}`
+  {
     let stateToggles = ''
-    for (const [alias, selector] of Object.entries(
-      states as Record<string, string>,
-    )) {
+    for (const [alias, declaration] of Object.entries(declaredStates)) {
+      const selector = stateSelector(declaration)
+      const relations = stateRelations(declaration)
+      const gate = needsHover(selector)
+        ? (rules: string) => `@media (hover: hover) {${rules}}`
+        : (rules: string) => rules
       const name = `--toned_${alias}`
-      stateToggles += `html {${name}: initial;}`
-      const sel =
-        selector.startsWith(':') || selector.startsWith('[')
-          ? `._${selector}`
-          : `._ ${selector}`
-      stateToggles += `${scope}${sel} {${name}: ;} ${scope}${sel} ._ {${name}: initial;} ${scope}${sel} ${sel} {${name}: ;}`
+      const element = isElementSelector(selector)
+      const sel = element ? `._${selector}` : `._ ${selector}`
+      let rules = `@property ${name} {syntax:'*';inherits:false;}`
+      rules += element
+        ? `${scope}${sel} {${name}: ;${name}-not: initial;}`
+        : `${scope}${sel} {${name}: ;} ${scope}._${selector} {${name}-not: initial;}`
 
       // Cross-element source channel: a `_s` source IN this state sets
       // `--toned_src-<alias>` for its DOM descendants, so a target styled via a
-      // base-level `'source:<alias>'` key answers its NEAREST such source (a
-      // nested `_s` resets it). The state analogue of the `._s:hover` channel
-      // emitted in the breakpoints block — not gated, data-states are always
-      // live. Attribute/pseudo selectors attach to `._s` directly; a descendant
-      // form (`._ sel`) has no single source element to mark, so it is skipped.
-      if (selector.startsWith(':') || selector.startsWith('[')) {
+      // base-level `'Source:<alias>'` key answers its NEAREST such source (a
+      // nested `_s` resets it). The state analogue of the `._s:hover` channel.
+      if (relations.includes('ancestor')) {
         const srcName = `--toned_src-${alias}`
         const ssel = `._s${selector}`
-        stateToggles += `html {${srcName}: initial;}`
-        stateToggles += `${scope}${ssel} {${srcName}: ;} ${scope}${ssel} ._s {${srcName}: initial;} ${scope}${ssel} ${ssel} {${srcName}: ;}`
-
-        // SIBLING source channel: the same state on a `_s` source toggles
-        // `--toned_sib-<alias>` on its FOLLOWING SIBLINGS (the `~` combinator
-        // of peer-recolor css), self-scoped: only the sibling
-        // element itself answers.
-        //
-        // Self-scoped by REGISTRATION (`inherits: false`), not by a reset rule
-        // on the sibling's subtree. That rule was `._s… ~ ._ ._`, and its
-        // rightmost `._` is every styled element: each one, for each styled
-        // ancestor, scans that ancestor's previous siblings for a source, once
-        // per state. Under a long flat list (a document's blocks, a table's
-        // rows) that is quadratic — a 7,000-cell page spent over a second in
-        // style recalculation on every hover change.
-        const sibName = `--toned_sib-${alias}`
-        stateToggles += `@property ${sibName} {syntax:'*';inherits:false;}`
-        stateToggles += `${scope}${ssel} ~ ._ {${sibName}: ;}`
+        stateInits.push(`${srcName}: initial;`)
+        rules += `${scope}${ssel} {${srcName}: ;} ${scope}${ssel} ._s {${srcName}: initial;} ${scope}${ssel} ${ssel} {${srcName}: ;}`
       }
+
+      // SIBLING source channel: the same state on a `_s` source toggles
+      // `--toned_sib-<alias>` on its FOLLOWING SIBLINGS (the `~` combinator
+      // of peer-recolor css), self-scoped by registration. Each element
+      // checks every earlier sibling for it, so a long flat list pays for it
+      // quadratically: only states that declare it get it.
+      if (relations.includes('sibling')) {
+        const sibName = `--toned_sib-${alias}`
+        rules += `@property ${sibName} {syntax:'*';inherits:false;}`
+        rules += `${scope}._s${selector} ~ ._ {${sibName}: ;}`
+      }
+      stateToggles += gate(rules)
     }
     styles += stateToggles
   }
@@ -211,16 +295,6 @@ export function generate<const S extends TokenStyleDeclaration>(
     // Interaction state toggles exist independently of viewport breakpoints.
     const bpValues = breakpoints?.__breakpoints ?? {}
 
-    // The runtime-tracked states plus the css-only enhancements (:focus-visible
-    // has no JS event and no native analogue — the browser decides it).
-    const PSEUDO_STATES = [
-      'hover',
-      'focus',
-      'focus-visible',
-      'focus-within',
-      'active',
-    ]
-
     let rootRule = ''
     let rules = ''
 
@@ -288,24 +362,15 @@ export function generate<const S extends TokenStyleDeclaration>(
       rootRule += `${variable}: initial;${variable}-not: ;`
       rules += `@media (min-width: ${atom.min}) { html { ${variable}: ; ${variable}-not: initial; } }`
     }
+    rootRule += stateInits.join('')
     styles += `html {${rootRule}}`
     styles += rules
   }
 
-  // Complement channels make q.not(state) equivalent on CSS and native.
-  // Reset at every bound element so a parent's state never answers for a child.
-  const complementStates: Record<string, string> = {
-    hover: ':hover',
-    focus: ':focus',
-    'focus-visible': ':focus-visible',
-    'focus-within': ':focus-within',
-    active: ':active',
-    ...states,
-  }
-  for (const [name, selector] of Object.entries(complementStates)) {
-    const variable = `--toned_${name}-not`
-    styles += `${scope}._ {${variable}: ;}`
-    const rule = `${scope}._${selector} {${variable}: initial;}`
+  // The pseudo-state complements' `initial` (their resting value is set with
+  // the declared states' above; a declared state's rides its toggle).
+  for (const name of PSEUDO_STATES) {
+    const rule = `${scope}._:${name} {--toned_${name}-not: initial;}`
     styles += name === 'hover' ? `@media (hover: hover) {${rule}}` : rule
   }
 
@@ -495,13 +560,14 @@ export function generate<const S extends TokenStyleDeclaration>(
   }
 
   // Responsive atomic classes for the opted tokens (see `responsiveTokens` on
-  // the declaration type): every enumerated value again, under each width
-  // breakpoint's media condition. Emitted AFTER the resting atomics so an
+  // the declaration type): every enumerated value again, under each condition
+  // the token declares (every condition for the legacy list; see
+  // system/responsive.ts). Emitted AFTER the resting atomics so an
   // active breakpoint class beats the resting value by order at equal
   // specificity — and, unlike a chain, still loses to a caller's utilities.
   // Ascending width order so a larger breakpoint's block wins the same way;
   // raw media CONDITIONS ('(pointer: coarse)') sort last, as in the chains.
-  if (responsiveTokens && breakpoints) {
+  if (responsive.size && breakpoints) {
     const px = (v: number | string): number =>
       typeof v === 'number'
         ? v
@@ -517,7 +583,8 @@ export function generate<const S extends TokenStyleDeclaration>(
         ? bpValue
         : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
       let block = ''
-      for (const key of responsiveTokens) {
+      for (const [key, conditions] of responsive) {
+        if (conditions && !conditions.has(bpKey)) continue
         // oxlint-disable-next-line typescript/no-explicit-any -- same structural narrowing as the token loop
         const token = system[key] as any
         if (!token || !('values' in token) || !('resolve' in token)) continue
@@ -530,9 +597,10 @@ export function generate<const S extends TokenStyleDeclaration>(
             canonicalFields: !!opts?.id,
           })
           if (!result) return
+          const fields = collapseSides(result)
           let cssRule = ''
-          for (const cssProp in result) {
-            cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, result[cssProp])};`
+          for (const cssProp in fields) {
+            cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, fields[cssProp])};`
           }
           if (!cssRule) return
           const ruleKey = `@${bpKey}:${key}_${value}`

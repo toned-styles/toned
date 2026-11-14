@@ -9,7 +9,10 @@ const ui = defineSystem({
       resolve: (opacity) => ({ opacity }),
     }),
   },
-  conditions: { media: { wide: 800 }, states: { open: '[data-open]' } },
+  conditions: {
+    media: { wide: 800 },
+    states: { open: { selector: '[data-open]', relations: ['sibling'] } },
+  },
 })
 const sheet = ui
   .stylesheet({

@@ -256,6 +256,95 @@ The matcher keeps a fast unsigned single-word path and uses multiple words beyon
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
+### Declared states and their relations
+
+A system declares the states its markup sets, by selector:
+`states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
+its own state with `q.state('open')` (`':open'`). On the web the toggle is a
+non-inheriting registered custom property (`@property … { inherits: false }`),
+so a state on an ancestor never reaches a descendant; this needs a browser with
+`@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
+contains `:hover` is gated in `@media (hover: hover)`, as `:hover` is.
+
+Another part reads a state only through a relation the state declares:
+
+```ts
+states: {
+  open: { selector: "[data-state='open']", relations: ['ancestor'] },
+  'size-sm': { selector: "[data-size='sm']", relations: ['sibling'] },
+  checked: "[data-state='checked']", // its own part only
+}
+```
+
+- `ancestor`: `[q.part('Trigger').state('open')]` (`'Trigger:open'`) styles the
+  parts inside the nearest `Trigger` in the state.
+- `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
+  siblings.
+
+Each relation is CSS that every styled element pays for in style
+recalculation; the sibling one grows with the square of a list's length. A
+key reading a state through an undeclared relation is a type error and throws
+when the sheet is built, naming the declaration to add. `:hover` and
+`:focus-within` keep their built-in relations. The selector of a state that
+declares a relation must be an attribute or pseudo-class selector.
+
+Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
+channel. For each state your sheets read as `'Part:state'` or `'Part~:state'`,
+rewrite `name: selector` to `name: { selector, relations: [...] }`; the type
+errors list every such key.
+
+### Shorthands and CSS-wide keywords under conditions
+
+On the web a part's conditions compile into one inline style, where each
+conditional field reads `var(--rule, <value at rest>)`. Two consequences:
+
+- A shorthand and one of its longhands in different blocks of one part
+  (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
+  write the longhands, or set the whole shorthand in each condition. Sheets the
+  types cannot see whole (`extend`, variants, untyped callers) are handled at
+  resolve time: the shorthand is split into its longhands (`transition`,
+  `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
+  `margin`, `inset`, `gap`, `flex`, `flexFlow`, the `place*` pairs, and a
+  single-colour `background`), so each longhand has one chain. A value that
+  cannot be split without the browser (a `var()`, an `animation`, a layered
+  `background`) throws, naming both fields and the fix; when every field
+  involved is unconditional it is left as written. Chromium's computed styles
+  for the split forms are checked by `node benchmarks/cascade-browser.mjs`.
+- A CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`, `revert-layer`)
+  under a condition is a type error and throws at resolve time: a keyword that
+  reaches a property through a custom property computes as `unset`. At rest it
+  is the chain's fallback, where it works. Set the value the state should take,
+  or write a selector rule with `$webRules`.
+
+### Responsive atoms: declared pairs
+
+A legacy-form system can compile a token's values under a named condition to
+classes (`@md:maxW_32`) instead of an inline chain, so a caller's own utility
+class still overrides the responsive default. Declare which conditions each
+token responds to:
+
+```ts
+defineSystem(tokens, {
+  breakpoints,
+  responsiveTokens: { maxW: ['sm', 'md'], textStep: ['md'] },
+})
+```
+
+Only the declared token and condition pairs emit atoms. Setting `maxW` directly
+under `'@lg'` is a type error naming the declared conditions, and throws at
+resolve where types cannot see the sheet (`extend`, variants). A condition nested
+under another (`':hover': { '@lg': … }`) keeps its chain. A name that is not a
+token or a declared condition is refused when the system is defined. The pairs
+come from the declaration only: the build never reads a stylesheet to find them.
+
+The list form, `responsiveTokens: ['maxW']`, is kept for compatibility and emits
+the token under every declared condition, including non-width ones such as
+`(pointer: coarse)`. To migrate, replace the list with the record, listing for
+each token the conditions its sheets use; the type errors name any you miss.
+In a responsive atom, four equal sides of `margin`, `padding`, `inset`,
+`borderWidth`, `borderStyle`, `borderColor` or `borderRadius` are written as
+the one shorthand.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant

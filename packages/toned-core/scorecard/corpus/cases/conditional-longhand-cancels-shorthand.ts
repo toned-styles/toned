@@ -6,8 +6,8 @@ export default defineCase({
   description:
     'A conditional longhand (`transitionProperty`) under an unconditional shorthand (`transition`); in Chromium transition-property becomes `all`',
   category: 'cascade',
-  baseline: { stage: 'silent', namesFix: false },
-  fix: /shorthand|longhand/i,
+  baseline: { stage: 'compile', namesFix: true },
+  fix: /Write the longhands/,
   sheets: () => [
     ui.stylesheet((q) => ({
       Root: {

@@ -1,5 +1,10 @@
 import { fingerprint, systemDefinition } from '../build/manifest.ts'
 import type { Predicate, ResolvedOperation } from '../core/plan.ts'
+import {
+  needsHover,
+  type StateDeclaration,
+  stateSelector,
+} from '../system/states.ts'
 import type { TokenSystem } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
 import { isMediaCondition } from '../utils/media-query.ts'
@@ -95,16 +100,19 @@ export function compileTailwindPlan(
         throw new Error(
           `Toned Tailwind build: cross-part state ${fact.part}:${fact.name} needs a declared host relation; ancestry cannot be inferred from named parts`,
         )
+      const declared = system.system.states as
+        | Record<string, StateDeclaration>
+        | undefined
       const state =
-        (system.system.states as Record<string, string> | undefined)?.[
-          fact.name
-        ] ?? `:${fact.name}`
+        declared && Object.hasOwn(declared, fact.name)
+          ? stateSelector(declared[fact.name]!)
+          : `:${fact.name}`
       if (!state.startsWith(':') && !state.startsWith('['))
         throw new Error(
           `Toned Tailwind build: state ${fact.name} is a descendant selector; declare an explicit host relation`,
         )
       const rule = `${selector}${state}{${on}}`
-      css += fact.name === 'hover' ? `@media (hover:hover){${rule}}` : rule
+      css += needsHover(state) ? `@media (hover:hover){${rule}}` : rule
     } else if (fact.kind === 'media') {
       const value =
         fact.min ??

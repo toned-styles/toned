@@ -197,8 +197,11 @@ export const ui = defineSystem({
     media: { md: 768, lg: 1024 },
     // Named containers and their width steps.
     containers: { card: { wide: 448 } },
-    // Extra states: a name and the selector that marks it.
-    states: { open: '[data-state="open"]' },
+    // Extra states: a name and the selector that marks it, plus the
+    // relations other parts may read it through ('ancestor', 'sibling').
+    states: {
+      open: { selector: '[data-state="open"]', relations: ['ancestor'] },
+    },
   },
 })
 
@@ -347,6 +350,16 @@ export const { stylesheet } = ui`}</CodeBlock>
             'Root is hovered; styles the parts that follow it as siblings',
           ],
           [
+            k("'Root:open'"),
+            k("q.part('Root').state('open')"),
+            "Root is in a declared state with relations: ['ancestor']",
+          ],
+          [
+            k("'Root~:open'"),
+            k(''),
+            "Root is in a declared state with relations: ['sibling']",
+          ],
+          [
             k(''),
             k("q.part('Root').has('Item', 'open')"),
             'an Item part inside Root is in the state',
@@ -354,8 +367,10 @@ export const { stylesheet } = ui`}</CodeBlock>
         ]}
       />
       <p>
-        The key names one part and one state. To depend on several, combine
-        builder calls with <code {...s.code}>q.all</code> or{' '}
+        A declared state is read from another part only through a relation it
+        declares; each relation adds CSS that every styled element pays for. The
+        key names one part and one state. To depend on several, combine builder
+        calls with <code {...s.code}>q.all</code> or{' '}
         <code {...s.code}>q.any</code>. Parts that depend on one another must be
         rendered inside the same{' '}
         <Link to="/api/use-styles">element family</Link> or{' '}

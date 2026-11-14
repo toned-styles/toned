@@ -6,6 +6,12 @@ import {
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../stylesheet/rule-protocol.ts'
+import {
+  type StateDeclaration,
+  type StateRelation,
+  stateRelations,
+  undeclaredRelationMessage,
+} from '../system/states.ts'
 import type {
   TokenStyleDeclaration,
   TokenSystem,
@@ -194,15 +200,33 @@ export function compileRules(
             : null
         const state = cross?.[2]
         const source = cross?.[1]?.replace(/~$/, '')
-        const scope = cross?.[1]?.endsWith('~') ? 'sibling' : 'ancestor'
-        const legacyChannel =
+        const scope: StateRelation = cross?.[1]?.endsWith('~')
+          ? 'sibling'
+          : 'ancestor'
+        const states = (system.system.states ?? {}) as Record<
+          string,
+          StateDeclaration
+        >
+        const rootKey =
           source &&
           source !== part &&
           state &&
+          Object.hasOwn(layers[entry.layer] ?? {}, path[0]!)
+        // A declared state answers through a relation only when the system
+        // declares that relation: it emits no channel CSS otherwise.
+        if (
+          rootKey &&
+          Object.hasOwn(states, state) &&
+          !stateRelations(states[state]).includes(scope)
+        )
+          throw new Error(
+            undeclaredRelationMessage(path[0]!, state, scope, states[state]!),
+          )
+        const legacyChannel =
+          rootKey &&
           (state === 'hover' ||
             (state === 'focus-within' && scope === 'ancestor') ||
-            state in (system.system.states ?? {})) &&
-          Object.hasOwn(layers[entry.layer] ?? {}, path[0]!)
+            Object.hasOwn(states, state))
             ? { source, state, scope: scope as 'ancestor' | 'sibling' }
             : undefined
         const operation: DeclarationOperation = {

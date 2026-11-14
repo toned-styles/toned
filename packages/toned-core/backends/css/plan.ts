@@ -8,7 +8,12 @@ import {
 } from '../../core/plan.ts'
 import { evaluatePredicate, FALSE } from '../../core/predicates.ts'
 import { resolveAlphaChannels } from '../../core/resolve.ts'
+import { separateShorthands } from '../../core/shorthands.ts'
 import { namespaceOutput } from '../../system/namespace.ts'
+import {
+  responsivePairs,
+  undeclaredPairMessage,
+} from '../../system/responsive.ts'
 import type { TokenSystem, Tokens } from '../../types/index.ts'
 import type { AnyDeclaration } from '../../types/system.ts'
 import {
@@ -19,7 +24,7 @@ import {
   withAlphaExpr,
 } from '../../utils/alpha.ts'
 import { atomSlug, lengthToPx } from '../../utils/conditions.ts'
-import { serializeCssValue } from '../../utils/css-value.ts'
+import { isCssWideKeyword, serializeCssValue } from '../../utils/css-value.ts'
 import { PSEUDO_CASCADE_ORDER } from '../../utils/pseudo.ts'
 import { warnOnce } from '../../utils/warn.ts'
 import { compileWebRules, isWebRules } from '../../web/rules.ts'
@@ -340,9 +345,14 @@ function lowerCssOperations(
   useClassName = true,
   namespace = true,
 ): ResolvedProps {
-  const operations = system.id
-    ? input
-    : legacyOrder(input, system, useClassName)
+  // A shorthand and a longhand of it in one part are two inline
+  // declarations; split the shorthand so a condition cannot revert the other
+  // (core/shorthands.ts).
+  const operations = separateShorthands(
+    system.id ? input : legacyOrder(input, system, useClassName),
+    part,
+    (operation) => unconditional(operation.predicate),
+  )
   const config = system.system
   const parameters: Record<string, unknown> = {}
   const classes = new Set<string>(['_'])
@@ -365,20 +375,34 @@ function lowerCssOperations(
     if (unconditional(operation.predicate))
       lastStatic.set(operation.origin.token, operation.origin.id)
   const responsive = new Set<string>()
-  if (!system.id && useClassName) {
-    for (const token of config.responsiveTokens ?? []) {
+  if (!system.id) {
+    for (const [token, declared] of responsivePairs(config)) {
       const conditional = operations.filter(
         (operation) =>
           operation.origin.token === token &&
           !unconditional(operation.predicate),
       )
+      const named = (operation: ResolvedOperation) =>
+        operation.predicate.op === 'atom' &&
+        operation.predicate.fact.kind === 'media' &&
+        operation.predicate.fact.min === undefined
+          ? operation.predicate.fact.name
+          : undefined
+      // A declared pair is the only condition a token's atoms exist for; one
+      // written directly under another is refused in every mode, so a sheet
+      // that resolves in a test also resolves in the browser.
+      if (declared)
+        for (const operation of conditional) {
+          const name = named(operation)
+          if (name !== undefined && !declared.has(name))
+            throw new Error(undeclaredPairMessage(part, token, name, declared))
+        }
       if (
+        useClassName &&
         conditional.length &&
         conditional.every(
           (operation) =>
-            operation.predicate.op === 'atom' &&
-            operation.predicate.fact.kind === 'media' &&
-            operation.predicate.fact.min === undefined &&
+            named(operation) !== undefined &&
             config[token]?.values?.includes(operation.tokenValue),
         )
       )
@@ -457,6 +481,10 @@ function lowerCssOperations(
       // These finite responsive values are already owned by generated CSS.
       continue
     } else {
+      if (isCssWideKeyword(operation.value))
+        throw new Error(
+          `Toned: part '${part}' sets ${operation.field}: '${String(operation.value)}' under a condition. A condition compiles to a custom-property chain, and a CSS-wide keyword reaching a property through a custom property computes as 'unset'. Set the value it should take (a token, 'transparent', 'currentcolor'), or write a selector rule: $webRules: webRules({ '&:hover': { ${operation.field}: '${String(operation.value)}' } }).`,
+        )
       const prefix = String(operation.origin.order)
       const parameter = `--toned-rule-${prefix}-${operation.field.replace(/[^a-zA-Z0-9-]/g, '-')}`
       parameters[parameter] =

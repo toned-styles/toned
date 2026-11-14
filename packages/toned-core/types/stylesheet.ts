@@ -21,7 +21,9 @@ export type { SYMBOL_INIT, SYMBOL_REF }
 import type { GridArea, GridDefinition } from '../grid/index.ts'
 import type { QueryBuilder } from '../system/queries.ts'
 import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
+import type { StateDeclaration, StateRelation } from '../system/states.ts'
 import type { WebRules } from '../web/rules.ts'
+import type { PartCascadeCheck } from './cascade.ts'
 import type { EditorOnly } from './editor-mode.ts'
 export declare const DEFAULT_KIND: unique symbol
 /** Type-only key carrying the target a cross-part shorthand key is checked
@@ -107,17 +109,32 @@ type ConditionExprKeys<R> =
 
 /** Declared state aliases (`states` config) → their `:alias` stylesheet keys. */
 type InferStatePseudos<R> = R extends { states?: infer States }
-  ? States extends Record<string, string>
+  ? States extends Record<string, StateDeclaration>
     ? `:${keyof States & string}`
     : never
   : never
 
-type InferStateChannels<S> =
-  InferStatePseudos<S> extends infer P extends string
-    ? P extends `:${infer Name}`
-      ? `:src-${Name}` | `:sib-${Name}`
-      : never
+/** The declared states that offer `Relation` (see system/states.ts). */
+type StatesWithRelation<R, Relation extends StateRelation> = R extends {
+  states?: infer States
+}
+  ? States extends Record<string, StateDeclaration>
+    ? {
+        [K in keyof States & string]: States[K] extends {
+          relations: readonly (infer Declared)[]
+        }
+          ? Relation extends Declared
+            ? K
+            : never
+          : never
+      }[keyof States & string]
     : never
+  : never
+
+/** The lowered channel keys, for the states that declare each relation. */
+type InferStateChannels<S> =
+  | `:src-${StatesWithRelation<S, 'ancestor'>}`
+  | `:sib-${StatesWithRelation<S, 'sibling'>}`
 
 /** String, number, or symbol (for object keys) */
 type StringOrNumber = string | number | symbol
@@ -453,8 +470,127 @@ type CrossSuffix<S extends TokenStyleDeclaration> =
   | ':focus:hover'
   | ':hover'
   | Pseudo
-  | InferStatePseudos<S>
-  | `~${Pseudo | InferStatePseudos<S>}`
+  | `:${StatesWithRelation<S, 'ancestor'>}`
+  | `~${Pseudo | `:${StatesWithRelation<S, 'sibling'>}`}`
+
+/**
+ * The message for a cross key whose declared state does not offer the
+ * relation it is read through: a missing property named after the fix.
+ */
+type RelationNotDeclared<
+  K,
+  Elements extends string,
+  S extends TokenStyleDeclaration,
+> = K extends `${infer _Part extends Elements}~:${infer State}`
+  ? `:${State}` extends InferStatePseudos<S>
+    ? {
+        [
+          M in `Toned: '${K & string}' needs state '${State}' to declare the sibling relation, e.g. states: { '${State}': { selector, relations: ['sibling'] } }`
+        ]: never
+      }
+    : never
+  : K extends `${infer _Part extends Elements}:${infer State}`
+    ? `:${State}` extends InferStatePseudos<S>
+      ? {
+          [
+            M in `Toned: '${K & string}' needs state '${State}' to declare the ancestor relation, e.g. states: { '${State}': { selector, relations: ['ancestor'] } }`
+          ]: never
+        }
+      : never
+    : never
+
+/**
+ * Declared responsive pairs (system/responsive.ts): the record form of
+ * `responsiveTokens`. The legacy list (every condition) and no declaration
+ * are `never`, which makes the checks below free.
+ */
+type ResponsivePairsOf<S> = S extends { responsiveTokens?: infer R }
+  ? R extends readonly unknown[]
+    ? never
+    : R extends Readonly<Record<string, readonly string[]>>
+      ? R
+      : never
+  : never
+
+type QuotedNames<T, Acc extends string = ''> = T extends readonly [
+  infer Head extends string,
+  ...infer Rest,
+]
+  ? QuotedNames<Rest, Acc extends '' ? `'${Head}'` : `${Acc}, '${Head}'`>
+  : Acc extends ''
+    ? 'no condition'
+    : Acc
+
+/** The keys a condition block sets directly, its `$style` included. */
+type BlockKeys<Block> =
+  | (keyof Block & string)
+  | (Block extends { $style?: infer Style } ? keyof Style & string : never)
+
+/** One message per pair-declared token set under condition `B` it does not
+ *  declare. */
+type UndeclaredPairs<Keys extends string, B extends string, R> = {
+  [T in Keys & keyof R & string]: R[T] extends readonly (infer Declared)[]
+    ? B extends Declared
+      ? never
+      : `Toned: ${T} has no responsive atom under '@${B}': responsiveTokens declares ${T} for ${QuotedNames<R[T]>} only. Add '${B}' to responsiveTokens.${T}, or move the value out of '@${B}'`
+    : never
+}[Keys & keyof R & string]
+
+/** The named condition a written key opens directly (`'@md'`, `'@media md'`). */
+type NamedCondition<
+  K,
+  Names extends string,
+> = K extends `@media ${infer B extends Names}`
+  ? B
+  : K extends `@${infer B extends Names}`
+    ? B
+    : never
+
+type PartPairMessages<P, R, Names extends string> = {
+  [K in keyof P & string]: K extends
+    | '@platform web'
+    | '@platform.web'
+    | '@platform native'
+    | '@platform.native'
+    ? PartPairMessages<P[K], R, Names>
+    : [NamedCondition<K, Names>] extends [never]
+      ? never
+      : UndeclaredPairs<BlockKeys<P[K]>, NamedCondition<K, Names>, R>
+}[keyof P & string]
+
+type PairCheck<M> = [M] extends [never]
+  ? unknown
+  : { [Message in M & string]: never }
+
+/**
+ * A part setting a pair-declared responsive token directly under a named
+ * condition the token does not declare: a required property naming the fix.
+ * Nested conditions (`':hover': { '@lg': … }`) compile to a chain and pass.
+ */
+type PartPairCheck<S, P> = [ResponsivePairsOf<S>] extends [never]
+  ? unknown
+  : PairCheck<
+      PartPairMessages<
+        P,
+        ResponsivePairsOf<S>,
+        keyof InferBreakpoints<S> & string
+      >
+    >
+
+/** The same check for a root condition block (`'@lg': { Root: { … } }`). */
+type RootPairCheck<S, K, Block> = [ResponsivePairsOf<S>] extends [never]
+  ? unknown
+  : [NamedCondition<K, keyof InferBreakpoints<S> & string>] extends [never]
+    ? unknown
+    : PairCheck<
+        {
+          [Part in keyof Block & string]: UndeclaredPairs<
+            BlockKeys<Block[Part]>,
+            NamedCondition<K, keyof InferBreakpoints<S> & string>,
+            ResponsivePairsOf<S>
+          >
+        }[keyof Block & string]
+      >
 
 /**
  * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
@@ -1019,7 +1155,9 @@ export type StylesheetValidation<
             true,
             true,
             T
-          >
+          > &
+            PartCascadeCheck<T[K]> &
+            PartPairCheck<S, T[K]>
       : RootKeyValidation<S, T, K, Elements, Kinds>
 } & StaticConditionCheck<T, S> &
   PlatformAliasCheck<T>
@@ -1060,7 +1198,8 @@ type RootKeyValidation<
               false,
               true,
               T
-            >
+            > &
+              RootPairCheck<S, K, T[K]>
           : ConditionExprError<K, S>
         : unknown
       : K extends `${string}:${string}` | `${string}~${string}`
@@ -1074,12 +1213,14 @@ type RootKeyValidation<
               true,
               T
             >
-          : RejectedKey<
-              K,
-              ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>,
-              S,
-              Elements
-            >
+          : [RelationNotDeclared<K, Elements, S>] extends [never]
+            ? RejectedKey<
+                K,
+                ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>,
+                S,
+                Elements
+              >
+            : RelationNotDeclared<K, Elements, S>
         : unknown
 
 // =============================================================================

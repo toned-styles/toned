@@ -5,6 +5,7 @@
  */
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
+import type { StateDeclaration } from '../system/states.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
 import type { StyleOf, StyleValue } from './targets.ts'
@@ -140,6 +141,12 @@ export type TokenTypeConfig = {
   inherit?: boolean
 }
 
+/** `responsiveTokens`: token → the conditions it emits atoms for (canonical),
+ *  or the legacy list of tokens that emit atoms under every condition. */
+export type ResponsiveTokens =
+  | readonly string[]
+  | Readonly<Record<string, readonly string[]>>
+
 /**
  * Breakpoints configuration wrapper.
  * Use `__breakpoints` to define responsive breakpoints.
@@ -243,10 +250,10 @@ export type TokenStyleDeclaration = {
     | Breakpoints<any>
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
-    | Record<string, string>
+    | Record<string, StateDeclaration>
     | Record<string, number | LogicalLength | MediaCondition>
     | Containers
-    | readonly string[]
+    | ResponsiveTokens
     | number
     | undefined
   // oxlint-disable-next-line typescript/no-explicit-any -- an open key set; a precise Record breaks breakpoint-key indexing on generic sheets (TS2536 under TS 6)
@@ -265,7 +272,7 @@ export type TokenStyleDeclaration = {
    * is what a radix component's "on"/"open" state must do. Alias → selector;
    * the selector is applied to the element (`._<selector>`).
    */
-  states?: Record<string, string>
+  states?: Record<string, StateDeclaration>
   /**
    * Tokens whose breakpoint overrides compile to RESPONSIVE ATOMIC CLASSES
    * instead of inline var-fallback chains. A chain rides the element's style
@@ -277,8 +284,14 @@ export type TokenStyleDeclaration = {
    * layer as (and after) the resting atomics — so it beats the resting value
    * by order at equal specificity and still loses to the caller's utilities.
    * Non-enumerated values (boxed-primitive escapes) keep the chain.
+   *
+   * Canonical form: a record naming the conditions each token responds to,
+   * `{ maxW: ['md', 'lg'] }`. Only those pairs emit atoms, and a sheet setting
+   * the token directly under another named condition is a type error (and a
+   * resolve error where types cannot see it). The legacy list, `['maxW']`,
+   * emits the token under every declared condition. See system/responsive.ts.
    */
-  responsiveTokens?: readonly string[]
+  responsiveTokens?: ResponsiveTokens
   /** Named size containers and their steps — see `Containers`. */
   containers?: Containers
   /**

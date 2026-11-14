@@ -155,6 +155,25 @@ describe('defineSystem', () => {
       expect(result.style).toEqual({})
     })
 
+    test('a responsive pair naming an undeclared condition is refused when the system is defined', () => {
+      const maxW = defineToken({
+        values: ['gutter', '32'] as const,
+        resolve: (value: string) => ({ maxWidth: value }),
+      })
+      expect(() =>
+        defineSystem(
+          { maxW },
+          {
+            breakpoints: { __breakpoints: { sm: 640 } },
+            // @ts-expect-error — 'md' is not a declared condition
+            responsiveTokens: { maxW: ['md'] },
+          },
+        ),
+      ).toThrow(
+        "Toned: responsiveTokens.maxW names 'md', which is not a declared condition. Declared: 'sm'",
+      )
+    })
+
     test('an un-opted token keeps the breakpoint chain', () => {
       const maxW = defineToken({
         values: ['gutter', '32'] as const,
