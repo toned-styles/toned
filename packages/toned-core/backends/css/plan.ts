@@ -173,6 +173,39 @@ function atoms(
     : (children.flat() as Extract<Predicate, { op: 'atom' }>['fact'][])
 }
 
+type LegacyLadder = {
+  readonly states: ReadonlyMap<string, number>
+  readonly containers: ReadonlyMap<string, number>
+}
+const legacyLadders = new WeakMap<object, LegacyLadder>()
+
+/** The fixed state and container positions of a frozen system configuration,
+ * derived once. A mutable configuration is read afresh on every call. */
+function legacyLadder(config: TokenSystem<AnyDeclaration>['system']) {
+  const cached = legacyLadders.get(config)
+  if (cached) return cached
+  const states = Object.keys(config.states ?? {})
+  const order = [
+    ...states.map((name) => `:sib-${name}`),
+    ...states.map((name) => `:src-${name}`),
+    ...PSEUDO_CASCADE_ORDER,
+    ...states.map((name) => `:${name}`),
+  ]
+  const index = (names: readonly string[]) => {
+    const positions = new Map<string, number>()
+    names.forEach((name, position) => {
+      if (!positions.has(name)) positions.set(name, position)
+    })
+    return positions
+  }
+  const ladder: LegacyLadder = {
+    states: index(order),
+    containers: index(Object.keys(config.containers ?? {})),
+  }
+  if (Object.isFrozen(config)) legacyLadders.set(config, ladder)
+  return ladder
+}
+
 /** Unnamespaced (legacy) systems deliberately retain a fixed media/state
  * ladder inside each layer. New descriptors use source order on every backend.
  * Base raw styles outrank token classes, matching inline-declaration precedence.
@@ -183,13 +216,7 @@ function legacyOrder(
   rawStyleLast = false,
 ): ResolvedOperation[] {
   const config = system.system
-  const states = Object.keys(config.states ?? {})
-  const stateOrder = [
-    ...states.map((name) => `:sib-${name}`),
-    ...states.map((name) => `:src-${name}`),
-    ...PSEUDO_CASCADE_ORDER,
-    ...states.map((name) => `:${name}`),
-  ]
+  const ladder = legacyLadder(config)
   const rank = (operation: ResolvedOperation): number[] => {
     if (unconditional(operation.predicate))
       return [0, rawStyleLast && operation.origin.token === 'style' ? 1 : 0]
@@ -202,7 +229,9 @@ function legacyOrder(
         3,
         operation.origin.token === 'style' ? 1 : 0,
         names.length > 1 ? 1 : 0,
-        names.length > 1 ? names.length : stateOrder.indexOf(`:${names[0]}`),
+        names.length > 1
+          ? names.length
+          : (ladder.states.get(`:${names[0]}`) ?? -1),
       ]
     }
     const fact = facts?.length === 1 ? facts[0] : undefined
@@ -218,7 +247,7 @@ function legacyOrder(
       return [
         1,
         1,
-        Object.keys(config.containers ?? {}).indexOf(fact.name),
+        ladder.containers.get(fact.name) ?? -1,
         lengthToPx(
           fact.step
             ? (config.containers?.[fact.name]?.[fact.step] ?? 0)
@@ -231,17 +260,26 @@ function legacyOrder(
   const output: ResolvedOperation[] = []
   let segment: ResolvedOperation[] = []
   const flush = () => {
-    output.push(
-      ...segment.sort((left, right) => {
-        const a = rank(left),
-          b = rank(right)
-        for (let i = 0; i < Math.max(a.length, b.length); i++) {
-          const difference = (a[i] ?? 0) - (b[i] ?? 0)
-          if (difference) return difference
-        }
-        return left.origin.order - right.origin.order
-      }),
-    )
+    if (segment.length < 2) {
+      output.push(...segment)
+      segment = []
+      return
+    }
+    // Rank each operation once rather than twice per comparison.
+    const ranked = segment.map((operation) => ({
+      operation,
+      rank: rank(operation),
+    }))
+    ranked.sort((left, right) => {
+      const a = left.rank,
+        b = right.rank
+      for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const difference = (a[i] ?? 0) - (b[i] ?? 0)
+        if (difference) return difference
+      }
+      return left.operation.origin.order - right.operation.origin.order
+    })
+    for (const entry of ranked) output.push(entry.operation)
     segment = []
   }
   for (const operation of operations) {

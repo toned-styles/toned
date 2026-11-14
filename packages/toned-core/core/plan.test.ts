@@ -307,3 +307,48 @@ it('rejects unknown platforms in authored and compiled predicates', () => {
       compileRules(ui, { Root: { '@platform.ios': { gap: 4 } } }, platform),
     ).toThrow('unknown platform ios')
 })
+
+describe('resolved plan immutability', () => {
+  const shaped = defineSystem({
+    id: 'resolved-immutability',
+    tokens: {
+      lift: defineToken({
+        values: [1, 2],
+        properties: ['transform'],
+        resolve: (value: number) => ({ transform: [{ scale: value }] }),
+      }),
+      gap: defineToken({
+        values: [0, 4],
+        properties: ['gap'],
+        resolve: (value: number) => ({ gap: value }),
+      }),
+    },
+  })
+  it('returns a deeply frozen snapshot without copying compiled plan data', () => {
+    const plan = compileRules(shaped, { Root: { lift: 2, gap: 4 } }, 'native')
+    const selected = resolvePlan(plan, shaped, {}, {}, { part: 'Root' })
+    const operations = selected['Root']!
+    expect(operations.map((entry) => entry.field)).toEqual(['transform', 'gap'])
+    expect(Object.isFrozen(selected)).toBe(true)
+    expect(Object.isFrozen(operations)).toBe(true)
+    for (const entry of operations) {
+      expect(Object.isFrozen(entry)).toBe(true)
+      expect(Object.isFrozen(entry.origin)).toBe(true)
+      expect(Object.isFrozen(entry.origin.path)).toBe(true)
+    }
+    const transform = operations[0]!.value as { scale: number }[]
+    expect(Object.isFrozen(transform)).toBe(true)
+    expect(Object.isFrozen(transform[0])).toBe(true)
+    expect(() => {
+      ;(transform as { scale: number }[]).push({ scale: 3 })
+    }).toThrow()
+    // Compiled origins and predicates are frozen once at compile time and
+    // carried by identity, not deep-copied on every resolve.
+    expect(operations[0]!.origin).toBe(plan.operations[0]!.origin)
+    expect(operations[1]!.origin).toBe(plan.operations[1]!.origin)
+    expect(operations[0]!.predicate).toBe(plan.operations[0]!.predicate)
+    expect(
+      resolvePlan(plan, shaped, {}, {}, { part: 'Root' })['Root']![0]!.origin,
+    ).toBe(operations[0]!.origin)
+  })
+})

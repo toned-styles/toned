@@ -18,13 +18,22 @@ Families are allocated lazily. Pure resolution, server rendering and disposing
 an unused candidate need none; a successor candidate reuses its predecessor's
 family instead of constructing and discarding an empty set of host registries.
 Candidate token caches and diagnostic sets also allocate only when used.
-Successor candidates can share immutable token outputs with their predecessor
-when the declaration, certified token snapshot, backend, modes and bridge mapping
-agree. The cache has at most one weak declaration index per known part (plus the
-part-independent entry), never a history of mutable candidate state. Legacy
-mutable token objects are resolved afresh by successor candidates. Opaque theme
-values prevent certification; CSS-variable references are a locally constructed,
+Every controller of one output context shares immutable token outputs, whether
+or not one is the other's predecessor: the context is the rules, system,
+certified token snapshot, frozen backend, output modes and bridge mapping. Each
+of those levels is weak, the matched declaration is a weak key, and each
+declaration holds at most one entry per known part (plus the part-independent
+entry), never a history of mutable candidate state; the mode level is capped.
+Legacy mutable token objects or an unfrozen backend keep a private cache per
+controller, so successor candidates resolve them afresh. Opaque theme values
+prevent certification; CSS-variable references are a locally constructed,
 certified immutable proxy.
+
+A prepared candidate that would commit exactly what its mounted predecessor
+holds (same family, inputs, immutable tokens, configuration, facts and matched
+declarations) is redundant: `retained()` returns the predecessor, and a binding
+renders with it so that no commit or host write-back runs. The check only
+reads, and mutable tokens never qualify.
 
 Commit remains the only place to publish the family owner or start host/media
 subscriptions. Ref attachment and detachment preserve generation checks and

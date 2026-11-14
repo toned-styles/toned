@@ -48,3 +48,20 @@ export function immutableSnapshot<T>(value: T): T {
   if (immutable) snapshots.add(result)
   return result as T
 }
+
+/** Freeze a container the caller has just built, in place: members are
+ * snapshotted (a no-op for certified values) but the container is not copied.
+ * Never pass a caller-owned object; use immutableSnapshot for those. */
+export function freezeOwned<T extends object>(value: T): T {
+  const record = value as Record<string, unknown>
+  let immutable = true
+  for (const key of Object.keys(record)) {
+    const member = record[key]
+    const result = immutableSnapshot(member)
+    if (result !== member) record[key] = result
+    if (!isImmutableValue(result)) immutable = false
+  }
+  Object.freeze(value)
+  if (immutable) snapshots.add(value)
+  return value
+}

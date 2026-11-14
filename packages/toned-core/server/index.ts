@@ -30,7 +30,9 @@ import type {
 import {
   certifyImmutableReference,
   immutableSnapshot,
+  isImmutableSnapshot,
 } from '../utils/immutable.ts'
+import { BoundedMemo, plainKey } from '../utils/plain-key.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_DEFAULTS } from '../utils/symbols.ts'
 
@@ -199,6 +201,25 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     ),
     ...input.facts,
   })
+  // Resolved sheets are frozen and depend only on the sheet, the facts and the
+  // token snapshot; memoise per sheet and snapshot, bounded per pair.
+  const resolutions = new WeakMap<
+    object,
+    WeakMap<object, BoundedMemo<SheetOutput<object>>>
+  >()
+  const resolutionMemo = (sheet: object, tokens: object) => {
+    let snapshots = resolutions.get(sheet)
+    if (!snapshots) {
+      snapshots = new WeakMap()
+      resolutions.set(sheet, snapshots)
+    }
+    let memo = snapshots.get(tokens)
+    if (!memo) {
+      memo = new BoundedMemo(MAX_RESOLUTIONS_PER_SHEET)
+      snapshots.set(tokens, memo)
+    }
+    return memo
+  }
   const renderer = Object.freeze({
     backend,
     system,
@@ -262,6 +283,13 @@ export function createRenderer<S extends TokenStyleDeclaration>(
       const input = (args[0] ?? {}) as RuntimeInput
       const facts = inputs(sheet, input)
       const activeTokens = input.tokens ?? tokens
+      const key = isImmutableSnapshot(activeTokens)
+        ? plainKey(facts)
+        : undefined
+      const memo =
+        key === undefined ? undefined : resolutionMemo(sheet, activeTokens)
+      const known = memo?.get(key!)
+      if (known) return known as SheetOutput<T>
       const result: Record<string, ResolvedProps> = {}
       if (backend.id !== 'css-vars') {
         const plan = compilePlan(system, sheet, backend.platform)
@@ -283,11 +311,15 @@ export function createRenderer<S extends TokenStyleDeclaration>(
           ),
         )
       }
-      return immutableSnapshot(result) as SheetOutput<T>
+      const output = immutableSnapshot(result) as SheetOutput<T>
+      // Opaque outputs are not snapshots and stay unshared.
+      if (memo && isImmutableSnapshot(output)) memo.set(key!, output)
+      return output
     },
   })
   return renderer
 }
+const MAX_RESOLUTIONS_PER_SHEET = 64
 
 export function createWebRenderer<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,
