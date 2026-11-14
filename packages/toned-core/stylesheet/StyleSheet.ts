@@ -8,6 +8,7 @@ import {
   type HostIntegration,
 } from '../hosts/index.ts'
 import { getConfig } from '../system/config.ts'
+import { assertDeclaredCssVariables } from '../system/css-variables.ts'
 import {
   normalizeDeclarations,
   validateDeclarations,
@@ -35,7 +36,7 @@ import {
   SYMBOL_REF,
   SYMBOL_VARIANTS,
 } from '../utils/symbols.ts'
-import { warnOnce } from '../utils/warn.ts'
+import { isDev, warnOnce } from '../utils/warn.ts'
 import {
   prepareHostRelease,
   recordHostCommit,
@@ -253,6 +254,12 @@ export function createStylesheet<
       enumerable: true,
     })
   if (ref.id) validateDeclarations(mergedRules, ref.config ?? {})
+  if (ref.id && isDev())
+    assertDeclaredCssVariables(
+      mergedRules,
+      ref.id,
+      ref.config?.externalCssVariables,
+    )
 
   // Register the ad-hoc condition atoms this sheet uses on the system ref, so
   // a css generator that imports the stylesheet modules can emit exactly the

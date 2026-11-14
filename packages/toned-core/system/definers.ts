@@ -11,6 +11,7 @@ import {
   type Target,
   TARGETS_LIST,
 } from '../types/targets.ts'
+import type { NamespacedVariables } from '../types/variables.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import {
   fixedConditions,
@@ -205,9 +206,13 @@ export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
   const T extends readonly Target[] = never,
+  const E extends readonly string[] = readonly [],
 >(
-  definition: SystemDefinition<S, C, T>,
-): TokenSystem<S & C & DefaultSystemKind & SystemTargets<T>, C>
+  definition: SystemDefinition<S, C, T, E>,
+): TokenSystem<
+  S & C & DefaultSystemKind & SystemTargets<T> & NamespacedVariables<E[number]>,
+  C
+>
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},

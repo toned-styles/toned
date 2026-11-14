@@ -6,7 +6,12 @@ export function validateSystemId(id: string): string {
     )
   return id
 }
-const outsideStrings = (value: string, transform: (text: string) => string) =>
+/** Applies `transform` to the parts of `value` outside quoted strings, comments
+ * and `url()`, which namespacing leaves as they are. */
+export const outsideStrings = (
+  value: string,
+  transform: (text: string) => string,
+) =>
   value
     .split(
       /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\*[\s\S]*?\*\/|url\([^)]*\))/g,

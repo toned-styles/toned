@@ -21,6 +21,11 @@ export type {
   Targeted,
   TargetsOf,
 } from './targets.ts'
+export type {
+  NamespacedVariables,
+  StyleVariablesCheck,
+  VariableNames,
+} from './variables.ts'
 // Stylesheet types.
 // StylesheetInstance and the brand declarations (_internalBrand, _symRef,
 // _symInit) are exported so a host package can EXPORT a stylesheet: without

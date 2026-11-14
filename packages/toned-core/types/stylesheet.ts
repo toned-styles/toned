@@ -58,6 +58,7 @@ import type {
   TokenStyle,
   TokenStyleDeclaration,
 } from './tokens.ts'
+import type { StyleVariablesCheck } from './variables.ts'
 import type { ValidVariantKey } from './variant-keys.ts'
 
 /** Extract breakpoint keys from a system configuration */
@@ -537,11 +538,17 @@ export type ValidateDeclaration<
    * off: their leaves are the only contextual type those keys get (see ValidLeaf).
    */
   Light extends boolean = false,
+  /*
+   * The whole sheet, for the variables it sets (see types/variables.ts);
+   * `unknown` where there is no sheet to look in (a fragment, variant rules),
+   * which turns the variable check off.
+   */
+  Root = unknown,
 > = {
   [K in keyof Input]: K extends ShapeKeys<Shape>
     ? K extends QueryKey | `:${string}:${string}` | ConditionExprKey
       ? // In the shape (as a pattern), so a Light walk stays Light below it.
-        ValidateSpecial<Input, Shape, S, Parts, Local, K, Light>
+        ValidateSpecial<Input, Shape, S, Parts, Local, K, Light, Root>
       : [
             K extends '$style' | `$named$_${string}`
               ? false
@@ -558,7 +565,7 @@ export type ValidateDeclaration<
           ? unknown
           : ValidLeaf<Input[K], Shape[K]>
         : K extends '$style'
-          ? ValidateStyle<Input[K], Shape[K], S, Parts, Local, Light>
+          ? ValidateStyle<Input[K], Shape[K], S, Parts, Local, Light, Root>
           : Light extends true
             ? Input[K] extends object
               ? Input[K] extends readonly unknown[]
@@ -570,7 +577,8 @@ export type ValidateDeclaration<
                       S,
                       Parts,
                       K extends Parts ? true : Local,
-                      Light
+                      Light,
+                      Root
                     >
                   : unknown
               : unknown
@@ -584,11 +592,12 @@ export type ValidateDeclaration<
                       S,
                       Parts,
                       K extends Parts ? true : Local,
-                      Light
+                      Light,
+                      Root
                     >
                   : ValidLeaf<Input[K], Shape[K]>
                 : ValidLeaf<Input[K], Shape[K]>
-    : ValidateSpecial<Input, Shape, S, Parts, Local, K>
+    : ValidateSpecial<Input, Shape, S, Parts, Local, K, false, Root>
 } & StaticConditionCheck<Input, S> &
   PlatformAliasCheck<Input>
 
@@ -604,6 +613,7 @@ type ValidateStyle<
   Parts extends string,
   Local extends boolean,
   Light extends boolean,
+  Root = unknown,
 > = Value extends readonly unknown[]
   ? {
       [I in keyof Value]: Value[I] extends object
@@ -614,11 +624,20 @@ type ValidateStyle<
             Parts,
             Local,
             Light
-          >
+          > &
+            StyleVariablesCheck<Value[I], S, Root>
         : unknown
     }
   : Value extends object
-    ? ValidateDeclaration<Value, StyleObjectOf<Allowed>, S, Parts, Local, Light>
+    ? ValidateDeclaration<
+        Value,
+        StyleObjectOf<Allowed>,
+        S,
+        Parts,
+        Local,
+        Light
+      > &
+        StyleVariablesCheck<Value, S, Root>
     : Light extends true
       ? unknown
       : ValidLeaf<Value, Allowed>
@@ -639,6 +658,7 @@ type ValidateSpecial<
    * their leaves are always checked here.
    */
   Light extends boolean = false,
+  Root = unknown,
 > = K extends QueryKey
   ? ValidQueryKey<K, S, Parts, Local> extends true
     ? K extends ShapeKeys<Shape>
@@ -648,7 +668,8 @@ type ValidateSpecial<
           S,
           Parts,
           K extends Parts ? true : Local,
-          Light
+          Light,
+          Root
         >
       : RejectedKey<K, Shape, S, Parts>
     : QueryKeyError<S, Parts, Local>
@@ -661,7 +682,8 @@ type ValidateSpecial<
             S,
             Parts,
             Local,
-            Light
+            Light,
+            Root
           >
         : RejectedKey<K, Shape, S, Parts>
       : ConditionExprError<K, S>
@@ -674,7 +696,9 @@ type ValidateSpecial<
           NonNullable<Shape[typeof CROSS_ELEMENT & ShapeKeys<Shape>]>,
           S,
           Parts,
-          Local
+          Local,
+          false,
+          Root
         >
       : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
         // per written key would make each sheet cost parts × pseudos again.
@@ -686,7 +710,9 @@ type ValidateSpecial<
                 NonNullable<Shape[K]>,
                 S,
                 Parts,
-                K extends Parts ? true : Local
+                K extends Parts ? true : Local,
+                false,
+                Root
               >
             : typeof CROSS_PART extends ShapeKeys<Shape>
               ? ValidateDeclaration<
@@ -694,7 +720,9 @@ type ValidateSpecial<
                   NonNullable<Shape[typeof CROSS_PART]>,
                   S,
                   never,
-                  Local
+                  Local,
+                  false,
+                  Root
                 >
               : RejectedKey<K, Shape, S, Parts>
           : RejectedKey<K, Shape, S, Parts>
@@ -710,7 +738,8 @@ type ValidateSpecial<
                   S,
                   Parts,
                   K extends Parts ? true : Local,
-                  Light
+                  Light,
+                  Root
                 >
               : RejectedKey<K, Shape, S, Parts>
             : RejectedKey<K, Shape, S, Parts>
@@ -985,7 +1014,8 @@ export type StylesheetValidation<
             S,
             Elements,
             true,
-            true
+            true,
+            T
           >
       : RootKeyValidation<S, T, K, Elements, Kinds>
 } & StaticConditionCheck<T, S> &
@@ -1025,7 +1055,8 @@ type RootKeyValidation<
               S,
               Elements,
               false,
-              true
+              true,
+              T
             >
           : ConditionExprError<K, S>
         : unknown
@@ -1037,7 +1068,8 @@ type RootKeyValidation<
               S,
               Elements,
               false,
-              true
+              true,
+              T
             >
           : RejectedKey<
               K,
@@ -1449,6 +1481,48 @@ export interface StylesheetWithVariants<
   variants<M extends ModType>(
     variants: VariantsInput<S, Elements, M>,
   ): Stylesheet<S, Kinds, M> & StylesheetWithVariants<S, Elements, M, Kinds>
+
+  /*
+   * The checked signature again, LAST, and written out rather than through an
+   * alias (an alias for its callback cost ~215k instantiations across this
+   * package's tests). When no overload matches, the compiler reports only the
+   * last one's error, and this copy's explains the mistake (an unknown variant
+   * key names `[$.<axis>(value)]`, an unknown part names the declared ones)
+   * where the legacy object form's said "index signature is missing". Moving
+   * the checked signature itself below the legacy ones would let them type
+   * the callback first, which widens its literals (`gap: 2` to `number`). A
+   * valid call still resolves to the first signature, so this copy is only
+   * reached on an error.
+   */
+  variants<
+    M extends ModType,
+    const Rules extends Record<string, unknown>,
+    const D extends Partial<M> = {},
+  >(
+    callback: (
+      $: VariantSelector<M>,
+      q: QueryBuilder<S, Elements>,
+    ) => EditorOnly<
+      | Rules
+      | Record<
+          string,
+          VariantEditorDef<
+            S,
+            Elements,
+            ExtractNamedStyles<NoInfer<Rules>>,
+            Kinds
+          >
+        >,
+      Rules
+    > &
+      CheckedVariantRules<S, Elements, NoInfer<Rules>, Kinds, M>,
+    options?: {
+      defaults: D & {
+        [K in keyof D]: K extends keyof M ? Exclude<M[K], undefined> : never
+      }
+    },
+  ): Stylesheet<S, Kinds, M, D> &
+    StylesheetWithVariants<S, Elements, M, Kinds, D>
 
   /**
    * Derive a new stylesheet whose rules sit above this one's, variants

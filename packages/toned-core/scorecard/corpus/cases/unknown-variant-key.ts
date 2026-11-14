@@ -9,9 +9,7 @@ export default defineCase({
   description:
     'A variant rule keyed by a bare word, not `$.axis(value)` (`wat`)',
   category: 'composition',
-  // Rejected, but TypeScript reports the last `.variants` overload (the
-  // legacy object form), not the checked overload's message.
-  baseline: { stage: 'compile', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /\$\.<axis>\(value\)/,
   sheets: () => [
     ui
