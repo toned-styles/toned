@@ -67,7 +67,7 @@ export const intents: readonly Intent[] = [
     intent: 'Apply hover only on devices that can hover',
     canonical: {
       spelling: "':hover': { … }",
-      note: 'core already wraps `:hover` and the source channel in `@media (hover: hover)`',
+      note: 'core wraps `:hover`, the source channel and every declared state whose selector contains `:hover` in `@media (hover: hover)`',
       source: review,
     },
     aliases: [
@@ -80,14 +80,31 @@ export const intents: readonly Intent[] = [
       {
         spelling: "':row-hover': { … }",
         status: 'workaround',
-        note: "a declared state whose selector contains `:hover` (`states: { 'row-hover': '…:hover' }`); not gated by core",
+        note: "a declared state whose selector contains `:hover` (`states: { 'row-hover': '…:hover' }`); gated by core like `:hover`",
         source: review,
       },
       {
         spelling: "'@can-hover': { ':row-hover': { … } }",
-        status: 'workaround',
-        note: 'the wrapper is needed here, unlike above; an author cannot tell which case applies',
+        status: 'redundant',
+        note: 'core gates a declared state whose selector contains `:hover`, so the wrapper does nothing',
         source: review,
+      },
+    ],
+  },
+  {
+    id: 'ancestor-state',
+    intent: 'Style a part while an ancestor part is in a declared state',
+    canonical: {
+      spelling: "[q.part('Trigger').state('open')]: { Chevron: { … } }",
+      note: "the state declares the relation: `states: { open: { selector, relations: ['ancestor'] } }`; a state without it is a type error",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "'Trigger:open': { Chevron: { … } }",
+        status: 'compatible',
+        note: 'the literal key the builder returns',
+        source: 'readme',
       },
     ],
   },
@@ -282,6 +299,57 @@ export const intents: readonly Intent[] = [
       {
         spelling: "'@container field wide': { … }",
         status: 'compatible',
+        source: 'readme',
+      },
+    ],
+  },
+  {
+    id: 'declare-outputs',
+    intent: "Make a package's named outputs available to its consumers",
+    canonical: {
+      spelling: '"toned": { "outputs": ["src/toned/*.toned.ts"] }',
+      note: "in the package's package.json; Vite, Bun, Metro and scripts find it through the dependency graph",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "tonedOutputs({ outputs: ['…/*.toned.ts'] })",
+        status: 'compatible',
+        note: 'explicit globs in each consumer (also `tonedBunPlugin`, `withTonedOutputs`, `loadOutput`); replace the declarations; HQ writes them in about 15 places',
+        source: review,
+      },
+    ],
+  },
+  {
+    id: 'outputs-in-a-script',
+    intent: 'Import `toned:` outputs from a Bun script or test',
+    canonical: {
+      spelling: 'bun --preload @toned/core/bun/register',
+      note: 'or `preload` in bunfig.toml',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'Bun.plugin(tonedBunPlugin({ outputs, root }))',
+        status: 'compatible',
+        note: 'a hand-written preload',
+        source: 'readme',
+      },
+    ],
+  },
+  {
+    id: 'output-file',
+    intent: "Write an output file's default export",
+    canonical: {
+      spelling: 'export default defineOutput({ css, data })',
+      note: 'a misspelled key, data that is not JSON or an unawaited promise is a type error; a `buildStyles` artifact may be passed as it is',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'export default { css, data }',
+        status: 'compatible',
+        note: 'not typed; the shape is checked when the output builds',
         source: 'readme',
       },
     ],

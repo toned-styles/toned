@@ -38,6 +38,7 @@ import { getConfig, resolveModes } from './config.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
 import { createQueries } from './queries.ts'
+import { type StateDeclaration, validateStates } from './states.ts'
 import { createTokenComposer } from './token-composer.ts'
 
 export type { TokenSystem }
@@ -238,6 +239,10 @@ export function defineSystem<
     : immutableSnapshot(legacyConfig)
   const id = descriptor ? validateSystemId(descriptor.id) : undefined
   const targets = descriptor?.targets && validateTargets(descriptor.targets)
+  validateStates(
+    (config as { states?: Record<string, StateDeclaration> } | undefined)
+      ?.states,
+  )
   for (const key of Object.keys(system)) {
     if (
       /^[$@:]/.test(key) ||

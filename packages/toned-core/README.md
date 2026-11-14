@@ -232,6 +232,88 @@ The matcher keeps a fast unsigned single-word path and uses multiple words beyon
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
+### Declared states and their relations
+
+A system declares the states its markup sets, by selector:
+`states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
+its own state with `q.state('open')` (`':open'`). On the web the toggle is a
+non-inheriting registered custom property (`@property … { inherits: false }`),
+so a state on an ancestor never reaches a descendant; this needs a browser with
+`@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
+contains `:hover` is gated in `@media (hover: hover)`, as `:hover` is.
+
+Another part reads a state only through a relation the state declares:
+
+```ts
+states: {
+  open: { selector: "[data-state='open']", relations: ['ancestor'] },
+  'size-sm': { selector: "[data-size='sm']", relations: ['sibling'] },
+  checked: "[data-state='checked']", // its own part only
+}
+```
+
+- `ancestor`: `[q.part('Trigger').state('open')]` (`'Trigger:open'`) styles the
+  parts inside the nearest `Trigger` in the state.
+- `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
+  siblings.
+
+When the parts that react live in another sheet, they write the channel key
+themselves (`Chip: { ':sib-checked': { … } }`), and the source's sheet marks
+its part with an empty key, `'Input~:checked': {}` (or `'Root:open': {}` for
+the ancestor relation). The empty key styles nothing in its own sheet; it makes
+the part a source, and it still needs the relation declared.
+
+Each relation is CSS that every styled element pays for in style
+recalculation; the sibling one grows with the square of a list's length. A
+key reading a state through an undeclared relation is a type error and throws
+when the sheet is built, naming the declaration to add. `:hover` and
+`:focus-within` keep their built-in relations. The selector of a state that
+declares a relation must be an attribute or pseudo-class selector.
+
+Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
+channel. Which states need a relation depends on your sheets, so do not work
+from a list: run the type check, and each error names a key that reads a state
+through a relation and the declaration to add. They come from `'Part:state'`
+and `'Part~:state'` keys and from the lowered channel keys a part can write
+itself, `':src-<state>'` (ancestor) and `':sib-<state>'` (sibling). A label
+that fades after a disabled control (`Label: { ':sib-disabled': { … } }`)
+reports:
+
+```text
+Toned: ':sib-disabled' needs state 'disabled' to declare the sibling relation, e.g. states: { 'disabled': { selector, relations: ['sibling'] } }
+```
+
+so `disabled: ':disabled'` becomes
+`disabled: { selector: ':disabled', relations: ['sibling'] }`. A key in a sheet
+the types cannot see whole (`extend`, an untyped caller) throws the same
+message when the sheet is built.
+
+### Shorthands and CSS-wide keywords under conditions
+
+On the web a part's conditions compile into one inline style, where each
+conditional field reads `var(--rule, <value at rest>)`. Two consequences:
+
+- A shorthand and one of its longhands in different blocks of one part
+  (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
+  write the longhands, or set the whole shorthand in each condition. A longhand
+  a token writes counts too: the `animation` token writes `animationName`, so
+  a raw `animation: 'none'` under a condition beside it is a type error, and
+  the fix is `$style: { animationName: 'none' }`. Sheets the
+  types cannot see whole (`extend`, variants, untyped callers) are handled at
+  resolve time: the shorthand is split into its longhands (`transition`,
+  `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
+  `margin`, `inset`, `gap`, `flex`, `flexFlow`, the `place*` pairs, and a
+  single-colour `background`), so each longhand has one chain. A value that
+  cannot be split without the browser (a `var()`, an `animation`, a layered
+  `background`) throws, naming both fields and the fix; when every field
+  involved is unconditional it is left as written. Chromium's computed styles
+  for the split forms are checked by `node benchmarks/cascade-browser.mjs`.
+- A CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`, `revert-layer`)
+  under a condition is a type error and throws at resolve time: a keyword that
+  reaches a property through a custom property computes as `unset`. At rest it
+  is the chain's fallback, where it works. Set the value the state should take,
+  or write a selector rule with `$webRules`.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant
@@ -311,43 +393,82 @@ CSS module.
 When a host has several systems, extra generated stylesheets, or consumers that
 do not run Vite (tests, Metro), write **output files** instead of generated
 files. Each `<name>.toned.ts` default-exports a build artifact, or `{ css, data }`,
-finishing its work while it is imported (top-level `await`):
+finishing its work while it is imported (top-level `await`). `defineOutput` types
+the export, so a misspelled key, data that is not JSON or an unawaited promise is
+a type error:
 
 ```ts
 // src/toned/ui.toned.ts
 import { buildStyles } from '@toned/core/build'
-export default buildStyles(ui, { sheets: [button], layer: 'components' })
+import { defineOutput } from '@toned/core/outputs'
+export default defineOutput(buildStyles(ui, { sheets: [button], layer: 'components' }))
 
 // src/toned/ui-palette.toned.ts
-export default { css: paletteCss() }
+const notes = new URL('./palette.md', import.meta.url)
+export default defineOutput({
+  css: paletteCss(readFileSync(notes, 'utf8')),
+  data: { swatches },
+  inputs: [notes], // read outside the imports: rebuild when it changes
+})
 ```
 
 The file name is the output name. A stylesheet imports the CSS at any depth,
 keeping its own cascade order: `@import 'toned:ui' layer(components);`. Code
 imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS as
 a string. An output file may import another output, which is how a usage
-inventory can feed the system it narrows.
+inventory can feed the system it narrows; outputs that import each other are an
+error naming the cycle.
+
+The package that owns the outputs declares them once, in its package.json:
+
+```json
+{ "name": "@acme/ui", "toned": { "outputs": ["src/toned/*.toned.ts"] } }
+```
+
+Every consumer then finds them from its own root through the dependency graph:
+the root package's dependencies of every kind, then, for each workspace package
+or dependency that has a `toned` field, its `dependencies`, `optionalDependencies`
+and `peerDependencies`. A published package that ships outputs declares a `toned`
+field (even `{}` to pass a dependency's outputs on). Explicit `outputs` globs,
+relative to the consumer's root, replace the declarations.
 
 | Consumer             | Entry                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------ |
-| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
-| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
-| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
-| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
+| Vite                 | `tonedOutputs()` from `@toned/core/vite`                                                   |
+| Bun (tests, scripts) | `bun --preload @toned/core/bun/register`, or `Bun.plugin(tonedBunPlugin())` from `@toned/core/bun` |
+| Metro                | `withTonedOutputs(config)` or `withTonedOutputsSync(config)` from `@toned/core/metro`      |
+| Anything else        | `loadOutput(name, { root })` from `@toned/core/outputs/runner`                             |
 
-`outputs` are globs relative to the root. The Vite plugin builds the outputs with
-Vite's module runner (Vite 6 or later) when the build or dev server starts. In
-dev it watches every file an output read, and an edit rebuilds that output and
-the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
-for other Vite config the files need. CSS `@import` resolves through aliases
-rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
-outside the source tree. An unknown name, from CSS or code, fails the build with
-`toned:<name> is not a Toned output; the outputs are: …`. Bun
-imports an output file only when one of its specifiers is first loaded; give
-`cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
-test files) build each output once and read it after. Metro
-reads the same cache layout from `node_modules/.cache/toned`; restart it after
-changing declarations. Add `@toned/core/vite/client` to `types` (or a
+All four use one loader (Vite 6 or later): each output is evaluated by Vite's
+module runner in its own module graph, never in the process that imports it, so
+an output never depends on what its host already loaded. Loads that overlap
+share one runner, so a module two outputs import runs once. The same shape
+checks, error messages (`toned:nope is not a Toned output; the outputs are: …`,
+`toned:ui has no "tokens"; it has: css, manifest`) and data keys apply to every
+consumer; `outputs/contract.test.ts` runs one suite against all four. JSX
+compiles with the automatic runtime; pass `runner` for other Vite config the
+files need.
+
+The Vite plugin builds the outputs when the build or dev server starts, once for
+every environment of a build (it is `sharedDuringBuild`). In dev it watches every
+file an output read and its `inputs`; an edit rebuilds that output and the
+outputs importing it, a new or deleted output file is picked up without a
+restart, and a failed build shows in the error overlay while the other outputs
+keep serving. CSS `@import` resolves through aliases rather than plugin hooks,
+so the CSS is written to `<vite cacheDir>/toned/<name>.css`, outside the source
+tree, and an unknown name fails as that missing file.
+
+Bun builds an output only when one of its specifiers is first loaded, and serves
+every data key, including by dynamic `import()`. With `cacheDir`, the processes
+of a run (such as `--isolate`d test files) share builds: an entry is keyed by the
+root and globs and records a hash of every file the output read, so it is
+rebuilt when one changes and never served to another project. The register
+preload keeps that cache in `node_modules/.cache/toned/bun` (or
+`TONED_OUTPUTS_CACHE`). The first build in a process costs the module runner
+(about 250 ms for 75 component modules); a cached one costs hashing its files.
+
+Metro reads the same cache layout from `node_modules/.cache/toned`; restart it
+after changing declarations. Add `@toned/core/vite/client` to `types` (or a
 triple-slash reference) for the `toned:` module declarations.
 
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
@@ -574,7 +695,8 @@ agent and prints a markdown table, then JSON; `--json` prints only the JSON
   oxlint run of `@toned/eslint-plugin`'s recommended rules over the case
   files, and the runtime. A case whose mistake only a lint rule sees records
   `baseline: { stage: 'lint', … }`; lint ranks after compile because it only
-  runs where an application enables it.
+  runs where an application enables it. A case's own `build` step (building a
+  named output, say) counts as build.
 - **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
   its canonical spelling and every alias in use; spellings per intent.
 - **Build purity**: which outputs change when a fixture sheet is added,

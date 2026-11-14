@@ -28,7 +28,9 @@ describe('generate', () => {
     test('the system css carries sibling-hover, focus-within and sibling-state toggles', () => {
       const result = generate({
         breakpoints: { __breakpoints: { sm: 480 } },
-        states: { 'data-active': '[data-active]' },
+        states: {
+          'data-active': { selector: '[data-active]', relations: ['sibling'] },
+        },
       })
       expect(result).toContain('._s:hover ~ ._ {--toned_sib-hover: ;}')
       expect(result).toContain('._s:focus-within {--toned_src-focus-within: ;}')
@@ -42,7 +44,9 @@ describe('generate', () => {
     test('a sibling toggle is kept off descendants by registration, not by a rule', () => {
       const result = generate({
         breakpoints: { __breakpoints: { sm: 480 } },
-        states: { 'data-active': '[data-active]' },
+        states: {
+          'data-active': { selector: '[data-active]', relations: ['sibling'] },
+        },
       })
       // `._s… ~ ._ ._` asks every styled element, for every styled ancestor,
       // to scan that ancestor's previous siblings: quadratic in a long list.
@@ -352,16 +356,31 @@ describe('generate', () => {
     })
   })
 
-  describe('declared-state cross-element channel', () => {
-    test('emits a --toned_src-<alias> channel per attribute/pseudo state', () => {
+  describe('declared states', () => {
+    const rulesOf = (css: string, alias: string) =>
+      css.split('}').filter((rule) => rule.includes(`--toned_${alias}`))
+
+    test('a string state is self-scoped by registration and offers no relation channel', () => {
       const result = generate({ states: { open: "[data-state='open']" } })
+      expect(result).toContain(
+        "@property --toned_open {syntax:'*';inherits:false;}",
+      )
+      expect(result).toContain(
+        "._[data-state='open'] {--toned_open: ;--toned_open-not: initial;}",
+      )
+      // No nested-reset rules: their rightmost `._` is every styled element.
+      expect(result).not.toContain("._[data-state='open'] ._")
+      expect(result).not.toContain('--toned_src-open')
+      expect(result).not.toContain('--toned_sib-open')
+      expect(result).not.toContain("._s[data-state='open']")
+    })
 
-      // self-state toggle (existing behaviour) still emits
-      expect(result).toContain('--toned_open: initial;')
-      expect(result).toContain("._[data-state='open'] {--toned_open: ;}")
-
-      // cross-element source channel: gated by the source's state, propagates to
-      // descendants, reset by a nested source (nearest-wins), NOT hover-gated
+    test('the ancestor relation emits the nearest-source channel', () => {
+      const result = generate({
+        states: {
+          open: { selector: "[data-state='open']", relations: ['ancestor'] },
+        },
+      })
       expect(result).toContain('--toned_src-open: initial;')
       expect(result).toContain("._s[data-state='open'] {--toned_src-open: ;}")
       expect(result).toContain(
@@ -370,11 +389,90 @@ describe('generate', () => {
       expect(result).toContain(
         "._s[data-state='open'] ._s[data-state='open'] {--toned_src-open: ;}",
       )
+      expect(result).not.toContain('--toned_sib-open')
+    })
+
+    test('the sibling relation emits only the following-sibling channel', () => {
+      const result = generate({
+        states: {
+          'data-active': { selector: '[data-active]', relations: ['sibling'] },
+        },
+      })
+      expect(result).toContain(
+        "@property --toned_sib-data-active {syntax:'*';inherits:false;}",
+      )
+      expect(result).toContain(
+        '._s[data-active] ~ ._ {--toned_sib-data-active: ;}',
+      )
+      expect(result).not.toContain('--toned_src-data-active')
     })
 
     test('a :pseudo state selector attaches its source channel to ._s', () => {
-      const result = generate({ states: { disabled: ':disabled' } })
+      const result = generate({
+        states: {
+          disabled: { selector: ':disabled', relations: ['ancestor'] },
+        },
+      })
       expect(result).toContain('._s:disabled {--toned_src-disabled: ;}')
+    })
+
+    test('a state that needs hover is gated on devices that can hover', () => {
+      const result = generate({
+        states: {
+          'row-hover': {
+            selector: ':is([data-row]:hover)',
+            relations: ['ancestor', 'sibling'],
+          },
+        },
+      })
+      for (const rule of [
+        '._:is([data-row]:hover) {--toned_row-hover: ;--toned_row-hover-not: initial;}',
+        '._s:is([data-row]:hover) {--toned_src-row-hover: ;}',
+        '._s:is([data-row]:hover) ~ ._ {--toned_sib-row-hover: ;}',
+      ]) {
+        const at = result.indexOf(rule)
+        expect(at).toBeGreaterThan(-1)
+        expect(
+          result.lastIndexOf('@media (hover: hover) {', at),
+        ).toBeGreaterThan(result.lastIndexOf('}}', at))
+      }
+      // The resting complement is not a hover fact: it stays ungated.
+      expect(result).toMatch(/\._ \{[^}]*--toned_row-hover-not: ;/)
+    })
+
+    test('a state that does not need hover stays ungated', () => {
+      const result = generate({ states: { open: "[data-state='open']" } })
+      expect(result).toContain(
+        "@property --toned_open {syntax:'*';inherits:false;}._[data-state='open'] {",
+      )
+      expect(result).not.toContain(
+        '@media (hover: hover) {@property --toned_open ',
+      )
+    })
+
+    test('each further string state costs at most two rules', () => {
+      const one = generate({ states: { a: '[data-a]' } })
+      const two = generate({ states: { a: '[data-a]', b: '[data-b]' } })
+      const count = (css: string) =>
+        css.split('}').filter((r) => r.includes('{')).length
+      expect(count(two) - count(one)).toBeLessThanOrEqual(2)
+      expect(rulesOf(two, 'b').length).toBeLessThanOrEqual(3)
+    })
+
+    test('an unknown relation and a relation on a descendant selector are rejected', () => {
+      expect(() =>
+        generate({
+          states: {
+            // @ts-expect-error -- not a relation
+            open: { selector: '[data-open]', relations: ['parent'] },
+          },
+        }),
+      ).toThrow(/relation "parent".*ancestor.*sibling/)
+      expect(() =>
+        generate({
+          states: { dark: { selector: '.dark', relations: ['ancestor'] } },
+        }),
+      ).toThrow(/dark.*attribute or pseudo-class selector/)
     })
   })
 
@@ -526,10 +624,15 @@ describe('generate', () => {
 
       expect(result).toContain('.my-ds .bgColor_primary{')
       expect(result).toContain('.my-ds .bgColor\\$50{')
-      expect(result).toContain(".my-ds ._[data-state='open'] {--toned_open: ;}")
+      expect(result).toContain(
+        ".my-ds ._[data-state='open'] {--toned_open: ;--toned_open-not: initial;}",
+      )
       // Custom-property inits and @property registrations stay global —
       // idempotent between systems, and a scoped @property is not a thing.
-      expect(result).toContain('html {--toned_open: initial;}')
+      expect(result).toContain(
+        "@property --toned_open {syntax:'*';inherits:false;}",
+      )
+      expect(result).toContain('html {--toned_hover: initial;')
       expect(result).toContain('@property --toned-alpha-background-color')
       expect(result).not.toContain('.my-ds html')
     })
