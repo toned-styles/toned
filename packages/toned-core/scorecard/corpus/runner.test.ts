@@ -23,6 +23,12 @@ describe('corpus runner', async () => {
   test('an error thrown while building CSS is a build catch', () => {
     expect(byId['fixture-build']).toMatchObject({ stage: 'build' })
   })
+  test('a throw from the case\'s own build step (an output build) is a build catch', () => {
+    expect(byId['fixture-build-probe']).toMatchObject({
+      stage: 'build',
+      namesFix: true,
+    })
+  })
   test('a throw or a console warning at runtime is a runtime catch', () => {
     expect(byId['fixture-runtime-throw']).toMatchObject({ stage: 'runtime' })
     expect(byId['fixture-runtime-warn']).toMatchObject({

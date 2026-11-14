@@ -244,42 +244,82 @@ CSS module.
 When a host has several systems, extra generated stylesheets, or consumers that
 do not run Vite (tests, Metro), write **output files** instead of generated
 files. Each `<name>.toned.ts` default-exports a build artifact, or `{ css, data }`,
-finishing its work while it is imported (top-level `await`):
+finishing its work while it is imported (top-level `await`). `defineOutput` types
+the export, so a misspelled key, data that is not JSON or an unawaited promise is
+a type error:
 
 ```ts
 // src/toned/ui.toned.ts
 import { buildStyles } from '@toned/core/build'
-export default buildStyles(ui, { sheets: [button], layer: 'components' })
+import { defineOutput } from '@toned/core/outputs'
+export default defineOutput(buildStyles(ui, { sheets: [button], layer: 'components' }))
 
 // src/toned/ui-palette.toned.ts
-export default { css: paletteCss() }
+const notes = new URL('./palette.md', import.meta.url)
+export default defineOutput({
+  css: paletteCss(readFileSync(notes, 'utf8')),
+  data: { swatches },
+  inputs: [notes], // read outside the imports: rebuild when it changes
+})
 ```
 
 The file name is the output name. A stylesheet imports the CSS at any depth,
 keeping its own cascade order: `@import 'toned:ui' layer(components);`. Code
 imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS as
 a string. An output file may import another output, which is how a usage
-inventory can feed the system it narrows.
+inventory can feed the system it narrows; outputs that import each other are an
+error naming the cycle.
+
+The package that owns the outputs declares them once, in its package.json:
+
+```json
+{ "name": "@acme/ui", "toned": { "outputs": ["src/toned/*.toned.ts"] } }
+```
+
+Every consumer then finds them from its own root through the dependency graph:
+the root package's dependencies of every kind, then, for each workspace package
+or dependency that has a `toned` field, its `dependencies`, `optionalDependencies`
+and `peerDependencies`. A published package that ships outputs declares a `toned`
+field (even `{}` to pass a dependency's outputs on). Explicit `outputs` globs,
+relative to the consumer's root, replace the declarations.
 
 | Consumer             | Entry                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------ |
-| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
-| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
-| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
-| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
+| Vite                 | `tonedOutputs()` from `@toned/core/vite`                                                   |
+| Bun (tests, scripts) | `bun --preload @toned/core/bun/register`, or `Bun.plugin(tonedBunPlugin())` from `@toned/core/bun` |
+| Metro                | `withTonedOutputs(config)` or `withTonedOutputsSync(config)` from `@toned/core/metro`      |
+| Anything else        | `loadOutput(name, { root })` from `@toned/core/outputs/runner`                             |
 
-`outputs` are globs relative to the root. The Vite plugin builds the outputs with
-Vite's module runner (Vite 6 or later) when the build or dev server starts. In
-dev it watches every file an output read, and an edit rebuilds that output and
-the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
-for other Vite config the files need. CSS `@import` resolves through aliases
-rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
-outside the source tree, and an unknown name fails as that missing file. Bun
-imports an output file only when one of its specifiers is first loaded; give
-`cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
-test files) build each output once and read it after. Metro
-reads the same cache layout from `node_modules/.cache/toned`; restart it after
-changing declarations. Add `@toned/core/vite/client` to `types` (or a
+All four use one loader (Vite 6 or later): each output is evaluated by Vite's
+module runner in its own module graph, never in the process that imports it, so
+an output never depends on what its host already loaded. Loads that overlap
+share one runner, so a module two outputs import runs once. The same shape
+checks, error messages (`toned:nope is not a Toned output; the outputs are: …`,
+`toned:ui has no "tokens"; it has: css, manifest`) and data keys apply to every
+consumer; `outputs/contract.test.ts` runs one suite against all four. JSX
+compiles with the automatic runtime; pass `runner` for other Vite config the
+files need.
+
+The Vite plugin builds the outputs when the build or dev server starts, once for
+every environment of a build (it is `sharedDuringBuild`). In dev it watches every
+file an output read and its `inputs`; an edit rebuilds that output and the
+outputs importing it, a new or deleted output file is picked up without a
+restart, and a failed build shows in the error overlay while the other outputs
+keep serving. CSS `@import` resolves through aliases rather than plugin hooks,
+so the CSS is written to `<vite cacheDir>/toned/<name>.css`, outside the source
+tree, and an unknown name fails as that missing file.
+
+Bun builds an output only when one of its specifiers is first loaded, and serves
+every data key, including by dynamic `import()`. With `cacheDir`, the processes
+of a run (such as `--isolate`d test files) share builds: an entry is keyed by the
+root and globs and records a hash of every file the output read, so it is
+rebuilt when one changes and never served to another project. The register
+preload keeps that cache in `node_modules/.cache/toned/bun` (or
+`TONED_OUTPUTS_CACHE`). The first build in a process costs the module runner
+(about 250 ms for 75 component modules); a cached one costs hashing its files.
+
+Metro reads the same cache layout from `node_modules/.cache/toned`; restart it
+after changing declarations. Add `@toned/core/vite/client` to `types` (or a
 triple-slash reference) for the `toned:` module declarations.
 
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
@@ -503,6 +543,7 @@ agent and prints a markdown table, then JSON; `--json` prints only the JSON
 - **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
   stage each mistake is caught at (compile, build, runtime or silent) and
   whether the report names the fix, computed with the same `tsc` and runtime.
+  A case's own `build` step (building a named output, say) counts as build.
 - **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
   its canonical spelling and every alias in use; spellings per intent.
 - **Build purity**: which outputs change when a fixture sheet is added,
