@@ -58,6 +58,7 @@ export type {
   ElementType,
   InlineStyle,
   ResolveContext,
+  ResponsiveTokens,
   TokenAlphaConfig,
   TokenConfig,
   TokenKeys,

@@ -2,7 +2,9 @@ import {
   resolveAlphaChannels,
   resolveConfiguredToken,
 } from '../core/resolve.ts'
+import { SHORTHANDS } from '../core/shorthands.ts'
 import { namespaceCss } from '../system/namespace.ts'
+import { responsivePairs } from '../system/responsive.ts'
 import {
   isElementSelector,
   needsHover,
@@ -32,6 +34,51 @@ import { bridgeVarName, camelToKebab } from '../utils/css.ts'
  * @module dom/generate
  */
 import { isMediaCondition } from '../utils/media-query.ts'
+
+/** Four-sided shorthands: the longhands a rule may replace with the shorthand
+ *  when it sets all four to one value. */
+const FOUR_SIDES = (
+  [
+    'margin',
+    'padding',
+    'inset',
+    'borderWidth',
+    'borderStyle',
+    'borderColor',
+    'borderRadius',
+  ] as const
+).map((shorthand) => [shorthand, SHORTHANDS[shorthand]] as const)
+
+/**
+ * One rule setting all four longhands of a side shorthand to one value is
+ * exactly the shorthand: both set the same four properties, in the same rule,
+ * at the same specificity and order. A token resolving `margin` to four
+ * physical longhands therefore costs one declaration instead of four. Values
+ * are compared after serialization, so `0` and `'0px'` stay distinct.
+ */
+function collapseSides(
+  fields: Record<string, unknown>,
+): Record<string, unknown> {
+  let out: Record<string, unknown> | undefined
+  for (const [shorthand, longhands] of FOUR_SIDES) {
+    if (shorthand in fields) continue
+    const first = fields[longhands[0]]
+    if (first === undefined) continue
+    const value = serializeCssValue(longhands[0], first)
+    if (
+      !longhands.every(
+        (longhand) =>
+          longhand in fields &&
+          serializeCssValue(longhand, fields[longhand]) === value,
+      )
+    )
+      continue
+    out ??= { ...fields }
+    for (const longhand of longhands) delete out[longhand]
+    out[shorthand] = first
+  }
+  return out ?? fields
+}
 
 // The runtime-tracked states plus the css-only enhancements (:focus-visible
 // has no JS event and no native analogue — the browser decides it).
@@ -69,18 +116,7 @@ const tokens = new Proxy(Object.create(null), {
  * outside the scope; inside it, the scoped rules out-specify it.
  */
 export function generate<const S extends TokenStyleDeclaration>(
-  {
-    breakpoints,
-    animations,
-    bridges,
-    states,
-    responsiveTokens,
-    containers,
-    base,
-    layoutContext: layout,
-    externalCssVariables,
-    ...system
-  }: S,
+  declaration: S,
   opts?: {
     scope?: string
     /** Stable system identity; namespaces classes, parameters and animations. */
@@ -93,6 +129,19 @@ export function generate<const S extends TokenStyleDeclaration>(
     conditions?: readonly string[]
   },
 ) {
+  const {
+    breakpoints,
+    animations,
+    bridges,
+    states,
+    responsiveTokens: _responsiveTokens,
+    containers,
+    base,
+    layoutContext: layout,
+    externalCssVariables,
+    ...system
+  } = declaration
+  const responsive = responsivePairs(declaration)
   assertConditionSlugs({ breakpoints, containers }, opts?.conditions)
   const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
@@ -511,13 +560,14 @@ export function generate<const S extends TokenStyleDeclaration>(
   }
 
   // Responsive atomic classes for the opted tokens (see `responsiveTokens` on
-  // the declaration type): every enumerated value again, under each width
-  // breakpoint's media condition. Emitted AFTER the resting atomics so an
+  // the declaration type): every enumerated value again, under each condition
+  // the token declares (every condition for the legacy list; see
+  // system/responsive.ts). Emitted AFTER the resting atomics so an
   // active breakpoint class beats the resting value by order at equal
   // specificity — and, unlike a chain, still loses to a caller's utilities.
   // Ascending width order so a larger breakpoint's block wins the same way;
   // raw media CONDITIONS ('(pointer: coarse)') sort last, as in the chains.
-  if (responsiveTokens && breakpoints) {
+  if (responsive.size && breakpoints) {
     const px = (v: number | string): number =>
       typeof v === 'number'
         ? v
@@ -533,7 +583,8 @@ export function generate<const S extends TokenStyleDeclaration>(
         ? bpValue
         : `(min-width: ${typeof bpValue === 'number' ? `${bpValue}px` : bpValue})`
       let block = ''
-      for (const key of responsiveTokens) {
+      for (const [key, conditions] of responsive) {
+        if (conditions && !conditions.has(bpKey)) continue
         // oxlint-disable-next-line typescript/no-explicit-any -- same structural narrowing as the token loop
         const token = system[key] as any
         if (!token || !('values' in token) || !('resolve' in token)) continue
@@ -546,9 +597,10 @@ export function generate<const S extends TokenStyleDeclaration>(
             canonicalFields: !!opts?.id,
           })
           if (!result) return
+          const fields = collapseSides(result)
           let cssRule = ''
-          for (const cssProp in result) {
-            cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, result[cssProp])};`
+          for (const cssProp in fields) {
+            cssRule += `${camelToKebab(cssProp)}:${serializeCssValue(cssProp, fields[cssProp])};`
           }
           if (!cssRule) return
           const ruleKey = `@${bpKey}:${key}_${value}`

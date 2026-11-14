@@ -18,6 +18,7 @@ import { buildStyles } from '../build/index.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { runConformanceSuite } from './conformance/suite.ts'
 import { runCorpus } from './corpus/runner.ts'
+import { responsive, unresponsive } from './fixture/responsive.ts'
 import { ui } from './fixture/system.ts'
 import { intentMetrics, intents, renderIntentTable } from './intents/intents.ts'
 import { coreRoot } from './probe.ts'
@@ -49,6 +50,19 @@ function cssPerDeclaredState() {
   }
 }
 
+/**
+ * The responsive atoms of the responsive fixture, measured by difference: the
+ * fixture's CSS minus the same system without `responsiveTokens`.
+ */
+function responsiveAtomCost() {
+  const withAtoms = buildStyles(responsive, { sheets: [] }).css
+  const without = buildStyles(unresponsive, { sheets: [] }).css
+  return {
+    bytes: withAtoms.length - without.length,
+    gzipBytes: gzipSync(withAtoms).length - gzipSync(without).length,
+  }
+}
+
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length
 
 export async function runScorecard(): Promise<Scorecard> {
@@ -57,6 +71,7 @@ export async function runScorecard(): Promise<Scorecard> {
   const conformance = await runConformanceSuite()
   const css = buildStyles(ui, { sheets: [] }).css
   const perState = cssPerDeclaredState()
+  const responsiveAtoms = responsiveAtomCost()
   const count = <T>(items: readonly T[], test: (item: T) => boolean) =>
     items.filter(test).length
   const { version } = JSON.parse(
@@ -101,6 +116,8 @@ export async function runScorecard(): Promise<Scorecard> {
       'css.fixtureGzipBytes': gzipSync(css).length,
       'css.bytesPerDeclaredState': perState.bytes,
       'css.rulesPerDeclaredState': perState.rules,
+      'css.responsiveAtomBytes': responsiveAtoms.bytes,
+      'css.responsiveAtomGzipBytes': responsiveAtoms.gzipBytes,
       'docs.coreReadmeWords': words(
         readFileSync(join(coreRoot, 'README.md'), 'utf8'),
       ),
