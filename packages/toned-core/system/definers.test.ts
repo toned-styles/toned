@@ -1,6 +1,7 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 
 import { cssTestValue } from '../backends/css/test-values.test.helpers.ts'
+import { resetWarnings } from '../utils/warn.ts'
 import { getConfig, setConfig } from './config.ts'
 import { defineSystem, defineToken, defineUnit } from './definers.ts'
 
@@ -996,5 +997,21 @@ describe('condition algebra chains (css mode)', () => {
     const style = result.style as Record<string, unknown>
     expect(style['display']).toBe('none')
     expect(Object.keys(style).some((k) => k.includes('nope'))).toBe(false)
+  })
+
+  test('the dropped condition is named beside the declared ones', () => {
+    resetWarnings()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      makeSystem().exec({ tokens: {}, useClassName: false }, {
+        display: 'none',
+        '@nope/sm_display': 'flex',
+      } as any)
+      expect(warn.mock.calls.map((call) => String(call[0]))).toContain(
+        "[toned] undeclared container condition '@nope/sm' is dropped; declared media: '@md'; declared containers: '@card/sm'",
+      )
+    } finally {
+      warn.mockRestore()
+    }
   })
 })

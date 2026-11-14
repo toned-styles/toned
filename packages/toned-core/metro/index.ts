@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import type { InlineConfig } from 'vite'
 
-import { cssCachePath, moduleCachePath, writeOutputCache } from '../outputs/cache.ts'
-import { outputFile, parseOutputSpecifier } from '../outputs/index.ts'
+import { cssCachePath, moduleCachePath, outputKeys, writeOutputCache } from '../outputs/cache.ts'
+import { outputFile, outputModuleSource, parseOutputSpecifier } from '../outputs/index.ts'
 import { createOutputsLoader } from '../outputs/runner.ts'
 
 type Resolution = { type: 'sourceFile'; filePath: string } | { type: string; [key: string]: unknown }
@@ -23,8 +23,11 @@ interface MetroLikeConfig {
 }
 
 export interface TonedMetroOptions {
-  /** Globs, relative to `root`, matching `<name>.toned.ts` output files. */
-  outputs: readonly string[]
+  /**
+   * Globs, relative to `root`, matching `<name>.toned.ts` output files. Without
+   * them, the outputs the packages reachable from `root` declare in package.json.
+   */
+  outputs?: readonly string[]
   /** What `outputs` and `cacheDir` are relative to. Defaults to the config's project root. */
   root?: string
   /** Where outputs are written for Metro to read. Defaults to `node_modules/.cache/toned`. */
@@ -42,12 +45,13 @@ type WithResolver<C> = C & { resolver: { resolveRequest: ResolveRequest } }
  */
 export async function withTonedOutputs<C extends MetroLikeConfig>(
   config: C,
-  options: TonedMetroOptions,
+  options: TonedMetroOptions = {},
 ): Promise<WithResolver<C>> {
   const { root, cacheDir } = locations(config, options)
   const loader = createOutputsLoader({ outputs: options.outputs, root, runner: options.runner })
-  await writeOutputCache(cacheDir, await loader.loadAll())
-  return withResolver(config, cacheDir, loader.names)
+  const outputs = await loader.loadAll()
+  await writeOutputCache(cacheDir, outputs)
+  return withResolver(config, cacheDir, outputKeys(outputs))
 }
 
 /**
@@ -56,16 +60,16 @@ export async function withTonedOutputs<C extends MetroLikeConfig>(
  */
 export function withTonedOutputsSync<C extends MetroLikeConfig>(
   config: C,
-  options: TonedMetroOptions,
+  options: TonedMetroOptions = {},
 ): WithResolver<C> {
   const { root, cacheDir } = locations(config, options)
   const collector = fileURLToPath(new URL('./collect.ts', import.meta.url))
-  const names = execFileSync(
+  const keys = execFileSync(
     process.execPath,
     [collector, JSON.stringify({ root, outputs: options.outputs, cacheDir, runner: options.runner })],
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] },
   )
-  return withResolver(config, cacheDir, JSON.parse(names) as string[])
+  return withResolver(config, cacheDir, JSON.parse(keys) as Record<string, string[]>)
 }
 
 function locations(config: MetroLikeConfig, options: TonedMetroOptions) {
@@ -76,14 +80,21 @@ function locations(config: MetroLikeConfig, options: TonedMetroOptions) {
 function withResolver<C extends MetroLikeConfig>(
   config: C,
   cacheDir: string,
-  names: readonly string[],
+  keys: Readonly<Record<string, readonly string[]>>,
 ): WithResolver<C> {
-  const known = Object.fromEntries(names.map(name => [name, name]))
+  const known = Object.fromEntries(Object.keys(keys).map(name => [name, name]))
   const next = config.resolver?.resolveRequest
   const resolveRequest: ResolveRequest = (context, moduleName, platform) => {
     const specifier = parseOutputSpecifier(moduleName)
     if (!specifier) return (next ?? context.resolveRequest)(context, moduleName, platform)
     outputFile(known, specifier.name)
+    if (specifier.key && !keys[specifier.name]?.includes(specifier.key))
+      // The same message every consumer gives for a key the output does not have.
+      outputModuleSource(
+        { data: Object.fromEntries((keys[specifier.name] ?? []).filter(k => k !== 'css').map(k => [k, null])) },
+        specifier.key,
+        specifier.name,
+      )
     return {
       type: 'sourceFile',
       filePath: specifier.key
