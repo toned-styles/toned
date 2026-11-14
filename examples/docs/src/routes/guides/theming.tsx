@@ -151,19 +151,16 @@ export const { stylesheet } = ui`}</CodeBlock>
         <code {...s.code}>generateThemes</code> returns the theme CSS alone.
       </p>
       <CodeBlock title="build.ts">{`import { buildStyles, generateThemes } from '@toned/core/build'
-import { panelStyles } from './styles.ts'
 import { ui } from './system.ts'
 
-const sheets = [panelStyles]
-
 // Classes and themes; 'day' is the default because it is declared first.
-export const artifact = buildStyles(ui, { sheets })
+export const artifact = buildStyles(ui)
 
 // 'night' on :root instead.
-export const nightFirst = buildStyles(ui, { sheets, themes: { default: 'night' } })
+export const nightFirst = buildStyles(ui, { themes: { default: 'night' } })
 
 // Classes only, and the themes as a separate stylesheet.
-export const classesOnly = buildStyles(ui, { sheets, themes: false })
+export const classesOnly = buildStyles(ui, { themes: false })
 export const themeCss = generateThemes(ui)`}</CodeBlock>
 
       <h2 {...s.h2} id="limits">

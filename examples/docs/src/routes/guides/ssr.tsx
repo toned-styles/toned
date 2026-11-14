@@ -52,15 +52,10 @@ function GuideSsr() {
       <CodeBlock title="vite.config.ts">{`import toned from '@toned/core/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { buttonStyles } from './styles.ts'
 import { ui } from './system.ts'
 
 export default defineConfig({
-  plugins: [toned({
-    system: ui,
-    sheets: [buttonStyles],
-    inputs: ['system.ts', 'styles.ts'],
-  }), react()],
+  plugins: [toned({ system: ui, inputs: ['system.ts'] }), react()],
 })`}</CodeBlock>
       <p>
         Import <code {...s.code}>virtual:toned.css</code> in the application and
@@ -75,10 +70,9 @@ export default defineConfig({
       <CodeBlock title="build-styles.ts">{`// Run during the application build.
 import { mkdir, writeFile } from 'node:fs/promises'
 import { buildStyles } from '@toned/core/build'
-import { buttonStyles } from './styles.ts'
 import { ui } from './system.ts'
 
-const artifact = buildStyles(ui, { sheets: [buttonStyles] })
+const artifact = buildStyles(ui)
 await mkdir('public/assets', { recursive: true })
 await writeFile('public/assets/toned.css', artifact.css)
 await writeFile('public/assets/toned.manifest.json', JSON.stringify(artifact.manifest))`}</CodeBlock>

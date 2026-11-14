@@ -75,7 +75,7 @@ import { createWebRenderer } from '@toned/core/server'
 import { styles } from './styles.ts'
 import { ui } from './system.ts'
 
-const artifact = buildStyles(ui, { sheets: [styles] })
+const artifact = buildStyles(ui)
 const renderer = createWebRenderer(ui, { manifest: artifact.manifest })
 const props = renderer.resolve(styles)`}</CodeBlock>
       <p>
