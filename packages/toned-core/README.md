@@ -99,6 +99,30 @@ type errors too. Creating a renderer for a target the system did not declare
 throws, naming the declared targets. Without `targets` nothing changes: every
 renderer is allowed and the remaining checks happen at render time.
 
+### Keyword values are checked
+
+csstype types most CSS properties as their keywords plus any string, so in web
+CSS `cursor: 'pointr'` would compile and do nothing. For the properties whose
+values are a closed keyword set (`cursor`, `display`, `overflow`, the box
+alignment properties, `fontStyle`, `fontWeight`, `textAlign`, `textTransform`,
+`textDecorationLine`, `borderStyle`, `whiteSpace`, `touchAction` and a few more:
+the `KeywordGrammars` table in `types/keywords.ts`), a literal string value must
+be one of its keywords, compared without case. A property that takes several
+keywords takes a space-separated list of them (`display: 'inline flex'`,
+`alignItems: 'safe center'`). A CSS-wide keyword (`inherit`, `unset`, …) is
+always accepted, and so is any value with a function or quoted text in it
+(`var(--x)`, `env(…)`, `url(hand.svg), pointer`). Anything else is a type error
+naming the property, the wrong word, the closest keyword and the keywords:
+
+```text
+'pointr' is not a 'cursor' keyword. Did you mean 'pointer'? Keywords: 'alias', …
+```
+
+A value typed `string` (computed at runtime) is not checked. Properties csstype
+types as a closed union (`position`, `visibility`, `pointerEvents`, `boxSizing`,
+`objectFit`, …) were checked already, and portable and native styles are closed
+unions too. `listStyleType` is not checked: a custom counter style is any name.
+
 ### Compose fragments with a `$style` list
 
 ```ts

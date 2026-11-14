@@ -124,6 +124,11 @@ export type {
   VariableNames,
 } from './types/variables.ts'
 export type {
+  KeywordGrammars,
+  Keywords,
+  StyleKeywordCheck,
+} from './types/keywords.ts'
+export type {
   NativeInlineStyle,
   PlatformStyle,
   PortableInlineStyle,
