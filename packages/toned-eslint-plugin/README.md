@@ -104,7 +104,13 @@ suppress a specific diagnostic with a reason when the raw value is intentional.
 Imports from public Toned entries, namespace imports, immutable local aliases,
 and destructuring are resolved through ESLint's lexical scope graph. Shadowed
 bindings and unrelated APIs with the same spelling are ignored. Relative
-reexports are not loaded or guessed. Supply explicit contracts per rule:
+reexports are not loaded or guessed, with one exception: `toned/no-shadowing-spread`
+also checks a call spelled as a system's stylesheet, `stylesheet` imported by
+that name, `const { stylesheet } = system` or `system.stylesheet(…)` on any
+binding, and `.extend`/`.variants` on its result. That is how a design-system
+module re-exports it (`export const { stylesheet } = system`), and a spread
+that replaces another is wrong in any declaration object. Supply explicit
+contracts per rule for everything else:
 
 ```json
 {

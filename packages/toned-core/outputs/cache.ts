@@ -10,6 +10,17 @@ export const cssCachePath = (cacheDir: string, name: string) =>
 export const moduleCachePath = (cacheDir: string, name: string, key: string) =>
   join(cacheDir, `${name}.${key}.js`)
 
+/** Each output's module keys: `css` and its data keys. */
+export const outputKeys = (
+  outputs: Readonly<Record<string, TonedOutput>>,
+): Record<string, string[]> =>
+  Object.fromEntries(
+    Object.entries(outputs).map(([name, output]) => [
+      name,
+      ['css', ...Object.keys(output.data ?? {})],
+    ]),
+  )
+
 async function writeIfChanged(path: string, content: string): Promise<boolean> {
   if ((await readFile(path, 'utf8').catch(() => undefined)) === content)
     return false
@@ -32,7 +43,7 @@ export async function writeOutputCache(
     const files: [string, string][] = [
       [cssCachePath(cacheDir, name), output.css ?? ''],
     ]
-    for (const key of ['css', ...Object.keys(output.data ?? {})])
+    for (const key of outputKeys({ [name]: output })[name] ?? [])
       files.push([
         moduleCachePath(cacheDir, name, key),
         outputModuleSource(output, key),

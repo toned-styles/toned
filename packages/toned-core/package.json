@@ -36,6 +36,7 @@
     "./outputs": "./outputs/index.ts",
     "./outputs/runner": "./outputs/runner.ts",
     "./bun": "./bun/index.ts",
+    "./bun/register": "./bun/register.ts",
     "./metro": "./metro/index.ts",
     "./registry": "./registry.ts",
     "./types/stylesheet": "./types/stylesheet.ts",

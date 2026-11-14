@@ -97,7 +97,12 @@ describe('normalized rule occurrences', () => {
         Label: { color: 'base' },
         [RULE_LAYERS]: [{ 'Group~:visible': { Label: { color: 'visible' } } }],
       },
-      { cssPseudoMode: true, stateAliases: ['visible'] },
+      {
+        cssPseudoMode: true,
+        states: {
+          visible: { selector: ':not([hidden])', relations: ['sibling'] },
+        },
+      },
     )
     expect([...matcher.elementSet]).toEqual(['Group', 'Label'])
     expect(matcher.match({}).Group.className).toBe('_s')

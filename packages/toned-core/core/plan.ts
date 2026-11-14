@@ -6,13 +6,23 @@ import {
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../stylesheet/rule-protocol.ts'
+import {
+  type StateDeclaration,
+  type StateRelation,
+  stateRelations,
+  undeclaredRelationMessage,
+} from '../system/states.ts'
 import type {
   TokenStyleDeclaration,
   TokenSystem,
   Tokens,
 } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
-import { immutableSnapshot } from '../utils/immutable.ts'
+import {
+  certifyImmutableReference,
+  freezeOwned,
+  immutableSnapshot,
+} from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import {
   conditionPredicate,
@@ -30,6 +40,13 @@ import { logicalFields } from './values.ts'
 
 export type { Fact, Facts, Predicate } from './predicates.ts'
 export { evaluatePredicate, factKey } from './predicates.ts'
+
+// The shared constants are frozen leaves; certify them so a resolve carries
+// them by identity rather than snapshotting a copy for every operation.
+for (const constant of [TRUE, FALSE] as const) {
+  certifyImmutableReference((constant as { operands: object }).operands)
+  certifyImmutableReference(constant)
+}
 
 export interface DeclarationOrigin {
   readonly id: string
@@ -76,6 +93,13 @@ export interface CompiledPlan {
   readonly extensions: readonly DeclarationOperation[]
   readonly operations: readonly DeclarationOperation[]
   readonly diagnostics: readonly ShadowDiagnostic[]
+  /**
+   * Parts named as the source of a root channel key (`'Input~:checked'`,
+   * `'Root:hover'`), whether or not the key styles anything in this sheet:
+   * an empty key (`'Input~:checked': {}`) marks a source for targets in
+   * another sheet, which read `':sib-checked'` themselves.
+   */
+  readonly channelSources: readonly string[]
 }
 export interface ShadowDiagnostic {
   readonly code: 'shadowed-field'
@@ -135,6 +159,69 @@ export function compilePlan(
   return compileRules(system, declaration.rules, platform)
 }
 
+/**
+ * A part's own channel key (`':sib-disabled'`, `':src-open'`, the lowered
+ * spelling of `'Control~:disabled'` / `'Control:open'`) reads a declared state
+ * through a relation; the system emits that channel's CSS only when the state
+ * declares the relation, so an undeclared one throws, naming it. Keys the
+ * cross-element rewrite lowered were checked there already.
+ */
+function checkChannelKey(
+  key: string,
+  states: Readonly<Record<string, StateDeclaration>>,
+): void {
+  // Conditions are keyed `<part>:<state>`; a channel key is `<part>:sib-<state>`.
+  const channel = /^[^:]*:((sib|src)-(.+))$/.exec(key)
+  if (!channel) return
+  const [, written, prefix, state] = channel as unknown as [
+    string,
+    string,
+    string,
+    string,
+  ]
+  if (!Object.hasOwn(states, state) || Object.hasOwn(states, written)) return
+  const relation: StateRelation = prefix === 'sib' ? 'sibling' : 'ancestor'
+  if (!stateRelations(states[state]).includes(relation))
+    throw new Error(
+      undeclaredRelationMessage(`:${written}`, state, relation, states[state]!),
+    )
+}
+/**
+ * The sources of a sheet's root channel keys (`'<part>:<state>'`,
+ * `'<part>~:<state>'`) that ride a CSS channel: `:hover`, an ancestor
+ * `:focus-within`, or a declared state offering the relation. A declared state
+ * read through a relation it does not declare throws, even when the key is
+ * empty, as it does when the key styles a target.
+ */
+function rootChannelSources(
+  layers: readonly object[],
+  parts: ReadonlySet<string>,
+  states: Readonly<Record<string, StateDeclaration>>,
+): string[] {
+  const sources = new Set<string>()
+  for (const layer of layers)
+    for (const key of Object.keys(layer ?? {})) {
+      const cross = /^([^:@[\]$]+):([^:]+)$/.exec(key)
+      if (!cross) continue
+      const [, written, state] = cross as unknown as [string, string, string]
+      const sibling = written.endsWith('~')
+      const source = sibling ? written.slice(0, -1) : written
+      if (!parts.has(source)) continue
+      const relation: StateRelation = sibling ? 'sibling' : 'ancestor'
+      if (Object.hasOwn(states, state)) {
+        if (!stateRelations(states[state]).includes(relation))
+          throw new Error(
+            undeclaredRelationMessage(key, state, relation, states[state]!),
+          )
+      } else if (
+        state !== 'hover' &&
+        !(state === 'focus-within' && relation === 'ancestor')
+      )
+        continue
+      sources.add(source)
+    }
+  return [...sources].sort()
+}
 /** Shared declaration compiler. Its result contains only immutable declaration
  * data and semantic facts; CSS selectors/classes and host state are adapters. */
 export function compileRules(
@@ -183,15 +270,33 @@ export function compileRules(
             : null
         const state = cross?.[2]
         const source = cross?.[1]?.replace(/~$/, '')
-        const scope = cross?.[1]?.endsWith('~') ? 'sibling' : 'ancestor'
-        const legacyChannel =
+        const scope: StateRelation = cross?.[1]?.endsWith('~')
+          ? 'sibling'
+          : 'ancestor'
+        const states = (system.system.states ?? {}) as Record<
+          string,
+          StateDeclaration
+        >
+        const rootKey =
           source &&
           source !== part &&
           state &&
+          Object.hasOwn(layers[entry.layer] ?? {}, path[0]!)
+        // A declared state answers through a relation only when the system
+        // declares that relation: it emits no channel CSS otherwise.
+        if (
+          rootKey &&
+          Object.hasOwn(states, state) &&
+          !stateRelations(states[state]).includes(scope)
+        )
+          throw new Error(
+            undeclaredRelationMessage(path[0]!, state, scope, states[state]!),
+          )
+        const legacyChannel =
+          rootKey &&
           (state === 'hover' ||
             (state === 'focus-within' && scope === 'ancestor') ||
-            state in (system.system.states ?? {})) &&
-          Object.hasOwn(layers[entry.layer] ?? {}, path[0]!)
+            Object.hasOwn(states, state))
             ? { source, state, scope: scope as 'ancestor' | 'sibling' }
             : undefined
         const operation: DeclarationOperation = {
@@ -222,7 +327,13 @@ export function compileRules(
     }
   }
   append(normalized.list['']?.rule ?? {}, TRUE, [])
+  const declaredStates = (system.system.states ?? {}) as Record<
+    string,
+    StateDeclaration
+  >
   for (const entry of normalized.ordered) {
+    for (const key of entry.conditions.keys())
+      checkChannelKey(key, declaredStates)
     const operands = [...entry.conditions].map(([key, values]) =>
       conditionPredicate(key, values),
     )
@@ -234,6 +345,11 @@ export function compileRules(
       !!entry.predicate,
     )
   }
+  const channelSources = rootChannelSources(
+    layers,
+    normalized.elementSet,
+    declaredStates,
+  )
   if (platform === 'web') validateGridDeclarations(prepared, extensions)
   if (system.id)
     for (const part of normalized.elementSet) kinds[part] ??= 'view'
@@ -241,13 +357,16 @@ export function compileRules(
   // deferred beyond a later unconditional occurrence by the spelling adapter.
   operations.sort((left, right) => left.origin.layer - right.origin.layer)
   extensions.sort((left, right) => left.origin.layer - right.origin.layer)
-  const id = `${system.id ?? 'legacy'}-${digest(JSON.stringify({ operations, kinds, extensions }))}`
+  const id = `${system.id ?? 'legacy'}-${digest(JSON.stringify({ operations, kinds, extensions, channelSources }))}`
   for (const entry of [...operations, ...extensions])
     (entry.origin as { id: string }).id = `${id}/${entry.origin.order}`
   // These containers were just created by this compiler. Freeze them directly
   // rather than deep-cloning the complete plan and every shared TRUE predicate.
   // Author-provided token values still cross an immutable snapshot boundary.
+  // Origins are certified snapshots too, so every later resolve carries them
+  // by identity instead of copying them.
   const predicates = new Map<Predicate, Predicate>()
+  const origins = new Map<DeclarationOrigin, DeclarationOrigin>()
   const freezeOperation = (
     operation: DeclarationOperation,
   ): DeclarationOperation => {
@@ -256,15 +375,20 @@ export function compileRules(
       predicate = immutableSnapshot(operation.predicate)
       predicates.set(operation.predicate, predicate)
     }
-    Object.freeze(operation.origin.path)
-    if (operation.origin.legacyChannel)
-      Object.freeze(operation.origin.legacyChannel)
-    if (operation.origin.source) Object.freeze(operation.origin.source)
-    Object.freeze(operation.origin)
-    return Object.freeze({
+    let origin = origins.get(operation.origin)
+    if (!origin) {
+      const { legacyChannel, source } = operation.origin
+      if (legacyChannel) freezeOwned(legacyChannel)
+      if (source) freezeOwned(source)
+      freezeOwned(operation.origin.path)
+      origin = freezeOwned(operation.origin)
+      origins.set(operation.origin, origin)
+    }
+    return freezeOwned({
       ...operation,
       value: immutableSnapshot(operation.value),
       predicate,
+      origin,
     })
   }
   const immutableOperations = Object.freeze(operations.map(freezeOperation))
@@ -275,6 +399,7 @@ export function compileRules(
     parts: Object.freeze([...normalized.elementSet]),
     kinds: Object.freeze(kinds),
     requiredExtensions: Object.freeze([...requiredExtensions]),
+    channelSources: Object.freeze(channelSources),
     operations: immutableOperations,
     extensions: immutableExtensions,
     diagnostics: Object.freeze(
@@ -462,16 +587,21 @@ export function resolvePlan(
       plan.platform,
     )
     for (const [field, value] of Object.entries(fields)) {
-      parts[operation.origin.part]!.push({
-        field,
-        value,
-        tokenValue: operation.value,
-        predicate,
-        origin: operation.origin,
-      })
+      parts[operation.origin.part]!.push(
+        freezeOwned({
+          field,
+          value,
+          tokenValue: operation.value,
+          predicate,
+          origin: operation.origin,
+        }),
+      )
     }
   }
-  return immutableSnapshot(parts)
+  // Plan data is already certified; only resolver output and reduced
+  // predicates are snapshotted, and these fresh containers frozen in place.
+  for (const part in parts) freezeOwned(parts[part]!)
+  return freezeOwned(parts)
 }
 
 export function foldOperations(operations: readonly ResolvedOperation[]) {
