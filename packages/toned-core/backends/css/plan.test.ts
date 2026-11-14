@@ -277,6 +277,32 @@ describe('CSS shared-plan adapter', () => {
     ).toContain('--toned_sib-hover')
   })
 
+  it('an empty channel key marks its part a source for targets in another sheet', () => {
+    const system = defineSystem(tokens, {
+      states: {
+        checked: { selector: ':checked', relations: ['sibling'] },
+        open: "[data-state='open']",
+      },
+    })
+    const className = (rules: object, part: string) =>
+      resolveCssPlan(
+        compilePlan(system, system.stylesheet(rules as any), 'web'),
+        system,
+        {},
+      )[part]!.className
+    // The radio's sheet: its chip, in another sheet, reads ':sib-checked'.
+    expect(
+      className({ Input: { gap: 0 }, 'Input~:checked': {} }, 'Input'),
+    ).toContain('_s')
+    expect(className({ Root: { gap: 0 }, 'Root:hover': {} }, 'Root')).toContain(
+      '_s',
+    )
+    // An empty key still reads the state through a relation it must declare.
+    expect(() =>
+      className({ Input: { gap: 0 }, 'Input:open': {} }, 'Input'),
+    ).toThrow("relations: ['ancestor']")
+  })
+
   it('a declared state offers only the relation channels it declares', () => {
     const system = defineSystem(tokens, {
       states: {

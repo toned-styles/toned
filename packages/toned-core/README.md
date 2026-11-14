@@ -190,6 +190,12 @@ states: {
 - `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
   siblings.
 
+When the parts that react live in another sheet, they write the channel key
+themselves (`Chip: { ':sib-checked': { … } }`), and the source's sheet marks
+its part with an empty key, `'Input~:checked': {}` (or `'Root:open': {}` for
+the ancestor relation). The empty key styles nothing in its own sheet; it makes
+the part a source, and it still needs the relation declared.
+
 Each relation is CSS that every styled element pays for in style
 recalculation; the sibling one grows with the square of a list's length. A
 key reading a state through an undeclared relation is a type error and throws
