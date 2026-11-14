@@ -65,6 +65,24 @@ export const features = {
     description: 'a bridge token (placeholder colour)',
     sheet: () => ui.stylesheet({ Root: { placeholderColor: 'muted' } }),
   },
+  'context-provider': {
+    description:
+      "a context marker on a provider part (`$context: 'prose=faq'`)",
+    sheet: () => ui.stylesheet({ Root: { $context: 'prose=faq', gap: 1 } }),
+  },
+  'context-value': {
+    description:
+      "a part keyed on an ancestor's context value (`'@within prose=faq'`)",
+    sheet: () =>
+      ui.stylesheet({ Root: { gap: 1, '@within prose=faq': { gap: 2 } } }),
+  },
+  'context-state': {
+    description: "a part keyed on an ancestor's state (`'@within card:hover'`)",
+    sheet: () =>
+      ui.stylesheet({
+        Root: { opacity: 1, '@within card:hover': { opacity: 0.5 } },
+      }),
+  },
   grid: {
     description: 'a typed web grid in a web block',
     // Typed `object`: grid brands are unexported symbols, so an exported

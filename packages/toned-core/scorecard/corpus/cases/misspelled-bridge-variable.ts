@@ -5,7 +5,7 @@ export default defineCase({
   id: 'misspelled-bridge-variable',
   description: 'A misspelled bridge variable (`--toned-b-placeholdr-color`)',
   category: 'bridges',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /placeholder/,
   sheets: () => [
     ui.stylesheet({

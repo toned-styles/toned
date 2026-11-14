@@ -182,8 +182,9 @@ for (const count of [42, 250]) {
   }
 }
 
-// Explicit t: spreading both public getters must resolve once, without changing
-// legacy live-context semantics (covered by the separate regression suite).
+// Explicit t: spreading both public getters must resolve once, and an equal
+// plain composition is memoised, so warm rounds do not resolve at all. Legacy
+// live-context semantics are covered by the separate regression suite.
 const compose = []
 let compositionCalls = 0
 for (let round = 0; round < 5; round++) {
@@ -196,7 +197,8 @@ for (let round = 0; round < 5; round++) {
   compose.push(((performance.now() - start) * 1000) / 2000)
   compositionCalls = resolves - prior
 }
-if (version === 'current') assert.equal(compositionCalls, 2000)
+if (version === 'current') assert.equal(compositionCalls, 0)
+else assert.ok(compositionCalls <= 2000, 'getters must not resolve twice')
 output['token_spread'] = {
   us: median(compose),
   resolver_calls_per_2000: compositionCalls,

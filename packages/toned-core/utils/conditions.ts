@@ -63,7 +63,8 @@ export function fixedQueryWidth(key: string): number | undefined {
  * before compilation and must never reach the chain machinery).
  */
 export function parseConditionKey(key: string): ConditionExpr | null {
-  if (key.startsWith('platform.')) return null
+  // Platform blocks and context conditions ('@within card') are not media.
+  if (key.startsWith('platform.') || key.startsWith('within ')) return null
   const clauses: ConditionExpr = []
   for (const clauseSrc of key.split('|')) {
     const clause: ConditionClause = []
@@ -101,6 +102,17 @@ export function parseConditionKey(key: string): ConditionExpr | null {
     clauses.push(clause)
   }
   return clauses
+}
+
+/** One atom's canonical spelling: a fixed px width is written as its number
+ * (`>=768.0px` → `>=768px`, `card/>=1e3px` → `card/>=1000px`); any other atom
+ * is returned as written. */
+export function canonicalAtomKey(key: string): string {
+  const atom = parseConditionKey(key)?.[0]?.[0]
+  if (!atom || atom.step !== null || typeof atom.min !== 'string') return key
+  const width = fixedQueryWidth(`>=${atom.min}`)
+  if (width === undefined) return key
+  return serializeAtom({ ...atom, min: `${width}px` })
 }
 
 /** One clause, one positive atom — a simple, non-algebraic key. */

@@ -30,7 +30,7 @@ const { stylesheet, q } = defineSystem(
     }),
   },
   // sm: 80 units × the default base (4px) = 320px.
-  { containers: { card: { sm: 80 } } },
+  { containers: { card: { sm: 80 } }, widths: { containers: { card: [400] } } },
 )
 
 const cardStyles = stylesheet({ Root: { container: 'card' } })

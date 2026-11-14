@@ -5,6 +5,7 @@ import {
   resolvePlan,
   type ShadowDiagnostic,
 } from '../core/plan.ts'
+import { evaluatePredicate, TRUE } from '../core/predicates.ts'
 import { resolveTokenStyle } from '../core/resolve.ts'
 import { gridRegistrations } from '../grid/validation.ts'
 import {
@@ -13,10 +14,15 @@ import {
   type HostIntegration,
 } from '../hosts/index.ts'
 import { getConfig } from '../system/config.ts'
+import { isWithinKey } from '../system/contexts.ts'
+import { assertDeclaredCssVariables } from '../system/css-variables.ts'
+import type { SystemOptions } from '../system/definition.ts'
 import {
   normalizeDeclarations,
   validateDeclarations,
 } from '../system/normalize.ts'
+import type { StateDeclaration } from '../system/states.ts'
+import { assertDeclaredWidths } from '../system/widths.ts'
 import type {
   Config,
   ElementType,
@@ -40,7 +46,7 @@ import {
   SYMBOL_REF,
   SYMBOL_VARIANTS,
 } from '../utils/symbols.ts'
-import { warnOnce } from '../utils/warn.ts'
+import { isDev, warnOnce } from '../utils/warn.ts'
 import {
   prepareHostRelease,
   recordHostCommit,
@@ -83,6 +89,81 @@ function sameBridgeProps(
     keys.length === Object.keys(second).length &&
     keys.every((key) => first[key] === second[key])
   )
+}
+
+/** Own string and symbol keys hold identical values, except those skipped. */
+function sameRecord(first: object, second: object, skip?: string): boolean {
+  const keys = Reflect.ownKeys(first)
+  if (keys.length !== Reflect.ownKeys(second).length) return false
+  return keys.every(
+    (key) =>
+      key === skip ||
+      (Object.hasOwn(second, key) &&
+        Reflect.get(first, key) === Reflect.get(second, key)),
+  )
+}
+
+type OutputScope = WeakMap<object, Map<string | undefined, AnyValue>>
+type ModeScopes = Map<string, OutputScope>
+
+/** Resolved outputs shared by every controller of one immutable output context:
+ * rules, system, token snapshot, frozen backend and output modes. Each level is
+ * weak on an immutable identity, the matched declaration is a weak key, and the
+ * per-declaration map holds one entry per plan part, so the plan bounds it.
+ * Output modes are finite configuration; the mode map is capped as a backstop. */
+const SHARED_OUTPUTS = new WeakMap<
+  object,
+  WeakMap<object, WeakMap<object, WeakMap<object, ModeScopes>>>
+>()
+const NO_BACKEND = {}
+const MAX_MODE_SCOPES = 32
+
+function weakLevel<K extends object, V>(
+  map: WeakMap<K, V>,
+  key: K,
+  create: () => V,
+): V {
+  let value = map.get(key)
+  if (value === undefined) {
+    value = create()
+    map.set(key, value)
+  }
+  return value
+}
+
+/** The shared scope for this context, or undefined when an input is mutable. */
+function sharedOutputScope(
+  rules: object,
+  ref: object,
+  tokens: Tokens,
+  config: Config,
+): OutputScope | undefined {
+  const backend = config.backend
+  if (!isImmutableSnapshot(tokens) || (backend && !Object.isFrozen(backend)))
+    return undefined
+  const systems = weakLevel(SHARED_OUTPUTS, rules, () => new WeakMap())
+  const snapshots = weakLevel(systems, ref, () => new WeakMap())
+  const backends = weakLevel(snapshots, tokens, () => new WeakMap())
+  const modes = weakLevel(
+    backends,
+    backend ?? NO_BACKEND,
+    (): ModeScopes => new Map(),
+  )
+  const bridge = config.bridgeProps
+  const key = JSON.stringify([
+    config.platform,
+    config.useClassName,
+    config.mediaMode,
+    config.pseudoMode,
+    bridge ? Object.entries(bridge) : null,
+  ])
+  let scope = modes.get(key)
+  if (!scope) {
+    if (modes.size >= MAX_MODE_SCOPES) modes.clear()
+    scope = new WeakMap()
+    modes.set(key, scope)
+  }
+  return scope
 }
 
 const EMPTY_CONTAINER_NAMES: readonly string[] = Object.freeze([])
@@ -248,8 +329,12 @@ export function createStylesheet<
         `Toned: variant default ${axis} must be a defined scalar value`,
       )
   }
-  rules = normalizeDeclarations(rules)
-  variantRules = normalizeDeclarations(variantRules)
+  const declared = {
+    bridges: ref.config?.bridges,
+    contexts: ref.config?.contexts,
+  }
+  rules = normalizeDeclarations(rules, declared)
+  variantRules = normalizeDeclarations(variantRules, declared)
   // Merge base rules with variants - StyleMatcher handles the format directly
   const mergedRules = { ...mergeRules(rules, variantRules) }
   if (overrideLayers.length)
@@ -258,12 +343,22 @@ export function createStylesheet<
       enumerable: true,
     })
   if (ref.id) validateDeclarations(mergedRules, ref.config ?? {})
+  if (ref.id && isDev())
+    assertDeclaredCssVariables(
+      mergedRules,
+      ref.id,
+      ref.config?.externalCssVariables,
+    )
 
-  // Register the ad-hoc condition atoms this sheet uses on the system ref, so
-  // a css generator that imports the stylesheet modules can emit exactly the
-  // toggles in use (see utils/conditions.ts).
-  if (ref.usedConditions) {
-    collectAdHocConditions(mergedRules, ref.usedConditions)
+  // The build reads only the system, so every ad-hoc width this sheet uses
+  // must be declared there (system/widths.ts); an undeclared one would get no
+  // CSS. The atoms are still registered on the ref for compatibility.
+  const atoms = new Set<string>()
+  collectAdHocConditions(mergedRules, atoms)
+  if (atoms.size) {
+    const declared = ref.system as SystemOptions | undefined
+    assertDeclaredWidths(atoms, declared?.widths, declared?.containers)
+    for (const atom of atoms) ref.usedConditions?.add(atom)
   }
 
   class LocalBase extends Base {}
@@ -299,6 +394,7 @@ export function createStylesheet<
       typeof extensionRules === 'function'
         ? extensionRules(ref.q)
         : extensionRules,
+      declared,
     )
     const parts = elementNamesOf(rules)
     assertKnownParts(extension, parts)
@@ -315,7 +411,10 @@ export function createStylesheet<
           ref.id ? 'view' : undefined,
         )
       : undefined
-    const layer = mergeRules(extension, normalizeDeclarations(variants))
+    const layer = mergeRules(
+      extension,
+      normalizeDeclarations(variants, declared),
+    )
     const derived = createStylesheet<S, _Mods, T>(
       ref,
       rules,
@@ -537,17 +636,20 @@ export class Base {
     const mediaMode =
       this.config.mediaMode ?? (this.config.useMedia ? 'runtime' : false)
     const pseudoMode = this.config.pseudoMode ?? 'runtime'
-    // Declared-state aliases live on the system ref (`defineSystem` spreads the
-    // config, incl. `states`, into `.system`). They drive the CSS src-state
-    // cross-element channel; absent, only `:hover` cross keys compile to CSS.
-    const stateAliases = (
-      this.ref as { system?: { states?: Record<string, string> } }
+    // Declared states live on the system ref (`defineSystem` spreads the
+    // config, incl. `states`, into `.system`). Their declared relations drive
+    // the CSS cross-element channels; absent, only `:hover` cross keys compile
+    // to CSS.
+    const states = (
+      this.ref as {
+        system?: { states?: Record<string, StateDeclaration> }
+      }
     ).system?.states
     this.matcher = sharedMatcher(
       rules,
       mediaMode === 'css',
       pseudoMode === 'css',
-      stateAliases,
+      states,
       this.config.platform,
       !!this.ref.id,
     )
@@ -717,22 +819,6 @@ export class Base {
   prepare(previous?: Base) {
     this.predecessor = previous
     if (previous) {
-      // These entries are frozen outputs keyed by immutable matcher declarations;
-      // sharing the weak cache does not publish candidate facts or host ownership.
-      if (
-        this.rules === previous.rules &&
-        this.ref === previous.ref &&
-        this.tokens === previous.tokens &&
-        isImmutableSnapshot(this.tokens) &&
-        this.config.backend === previous.config.backend &&
-        (!this.config.backend || Object.isFrozen(this.config.backend)) &&
-        this.config.platform === previous.config.platform &&
-        this.config.useClassName === previous.config.useClassName &&
-        this.config.mediaMode === previous.config.mediaMode &&
-        this.config.pseudoMode === previous.config.pseudoMode &&
-        sameBridgeProps(this.config.bridgeProps, previous.config.bridgeProps)
-      )
-        this.tokenOutputs = previous.tokenOutputs
       this._family = previous.family
       for (const key in previous._activeEls)
         this._activeEls[key] = new Set(previous._activeEls[key])
@@ -742,6 +828,44 @@ export class Base {
       }
       this.matchStyles()
     }
+  }
+
+  /**
+   * True when committing this prepared candidate would commit exactly what
+   * `previous` already holds: the same family, immutable inputs, output
+   * configuration, facts and matched declarations, with `previous` still the
+   * mounted current controller. A binding may then keep `previous` and skip
+   * the commit and its host write-back. Read-only for both controllers.
+   */
+  equivalentTo(previous: Base): boolean {
+    const backend = this.config.backend
+    if (
+      this.predecessor !== previous ||
+      previous.mounts === 0 ||
+      previous._family?.current !== previous ||
+      this._family !== previous._family ||
+      this.rules !== previous.rules ||
+      this.ref !== previous.ref ||
+      this.matcher !== previous.matcher ||
+      this.tokens !== previous.tokens ||
+      // Mutable tokens or backends can change output under one identity.
+      !isImmutableSnapshot(this.tokens) ||
+      (backend !== undefined && !Object.isFrozen(backend)) ||
+      !sameRecord(this.config, previous.config, 'bridgeProps') ||
+      !sameBridgeProps(this.config.bridgeProps, previous.config.bridgeProps) ||
+      !sameRecord(this.modsState, previous.modsState)
+    )
+      return false
+    for (const part of this.matcher.elementSet)
+      if (this.modsStyle[part] !== previous.modsStyle[part]) return false
+    return true
+  }
+
+  /** The controller a render should use: the prepared predecessor when this
+   * candidate is equivalent to it, otherwise this candidate. */
+  retained(): Base {
+    const previous = this.predecessor
+    return previous && this.equivalentTo(previous) ? previous : this
   }
 
   /** Runs in React's layout phase, after declarative host mutations. */
@@ -1060,6 +1184,50 @@ export class Base {
     return out
   }
 
+  /**
+   * The context markers `part` provides under the current variants, in
+   * order, the last per context winning (`['card', 'prose=faq']`). A native
+   * host provides them to its subtree; web writes them as marker classes.
+   */
+  contextMarkers(part: string): readonly string[] {
+    const plan = compileRules(this.ref, this.rules, 'native')
+    let markers: Map<string, string> | undefined
+    for (const extension of plan.extensions) {
+      if (extension.token !== '$$context' || extension.origin.part !== part)
+        continue
+      if (
+        evaluatePredicate(extension.predicate, this.modsState, 'native') !==
+        TRUE
+      )
+        continue
+      markers ??= new Map()
+      for (const marker of [extension.value].flat() as string[])
+        markers.set(marker.split('=')[0]!, marker)
+    }
+    return markers ? [...markers.values()] : EMPTY_CONTAINER_NAMES
+  }
+
+  /**
+   * Sets this sheet's `'@within …'` facts from those an ancestor provides
+   * (`{ '@within prose=faq': true }`), rematching when one changed. Returns
+   * whether the sheet reads any.
+   */
+  applyWithin(facts: Readonly<Record<string, boolean>>): boolean {
+    let reads = false
+    let changed = false
+    for (const key of this.controllerPlan.keys) {
+      if (!isWithinKey(key)) continue
+      reads = true
+      const value = facts[key] === true
+      if (this.modsState[key] !== value) {
+        this.modsState[key] = value
+        changed = true
+      }
+    }
+    if (changed) this.matchStyles()
+    return reads
+  }
+
   containerDependencies(part?: string): readonly string[] {
     return part === undefined
       ? this.controllerPlan.containerNames
@@ -1084,10 +1252,9 @@ export class Base {
     return this.applyTokens(this.matcher.match(facts)[key], key, facts)
   }
 
-  private tokenOutputs?: Map<
-    string | undefined,
-    WeakMap<object, { tokens: Tokens; output: AnyValue }>
-  >
+  /** Shared across controllers when every output input is immutable; otherwise
+   * private to this controller, whose token snapshot cannot change. */
+  private tokenOutputs?: OutputScope
 
   applyTokens(
     value: ElementStyle,
@@ -1099,19 +1266,21 @@ export class Base {
     // part index bounded to this plan; declaration keys below remain weak.
     if (part !== undefined && !this.matcher.elementSet.has(part))
       return immutableSnapshot(this.resolveTokens(declaration, part, facts))
-    this.tokenOutputs ??= new Map()
-    const outputs = this.tokenOutputs
-    let cache = outputs.get(part)
-    if (!cache) {
-      cache = new WeakMap()
-      outputs.set(part, cache)
+    // Entries are frozen outputs keyed by immutable matcher declarations;
+    // sharing them does not publish candidate facts or host ownership.
+    this.tokenOutputs ??=
+      sharedOutputScope(this.rules, this.ref, this.tokens, this.config) ??
+      new WeakMap()
+    let outputs = this.tokenOutputs.get(declaration)
+    if (!outputs) {
+      outputs = new Map()
+      this.tokenOutputs.set(declaration, outputs)
     }
-    const previous = cache.get(declaration)
-    if (previous?.tokens === this.tokens) return previous.output
+    if (outputs.has(part)) return outputs.get(part)
     const output = immutableSnapshot(
       this.resolveTokens(declaration, part, facts),
     )
-    cache.set(declaration, { tokens: this.tokens, output })
+    outputs.set(part, output)
     return output
   }
 

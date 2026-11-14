@@ -28,13 +28,13 @@ export const system = defineSystem({
 })
 
 export const buttonStyles = system
-  .stylesheet((q) => ({
+  .stylesheet({
     Root: {
       $kind: 'pressable',
       tone: 'neutral',
-      [q.state('hover')]: { tone: 'accent' },
+      ':hover': { tone: 'accent' },
     },
-  }))
+  })
   .variants(($: Variants<{ size: 's' | 'm' }>) => ({
     [$.size('s')]: { Root: { padding: 1 } },
     [$.size('m')]: { Root: { padding: 2 } },
@@ -411,6 +411,18 @@ versions, native topology or list recycling, UI-thread animation, general native
 container queries or per-frame paint. Grid is a web-only capability; native grid
 is unavailable.
 
+### Context markers on native
+
+A part that declares `$context` (see the core README's "Context markers") and
+renders as a toned element (`createElements`, `<s.Root>`) provides its
+markers to the React tree below it through `WithinContext`; `useStyles`
+reads them, so a descendant's `'@within prose'` and `'@within prose=faq'`
+keys apply under the nearest provider of each context. A provider spread as
+props (`{...s.Root}`) cannot wrap its children and provides nothing. Context
+states (`'@within card:hover'`) have no native carrier: the native renderer
+throws for one outside `'@platform web'`. Web never reads `WithinContext`;
+the marker classes and the system's context CSS do the same with no JS.
+
 ## React versions
 
 The package supports React 18 and 19 (`react >= 18`). The same commit, context,
@@ -457,6 +469,27 @@ Entry starts only on committed host attachment. Keep the host mounted until exit
 finishes; unmounting cancels it. Frames patch the existing web/native host without
 React renders. The [motion contract](../toned-core/motion/README.md) lists supported
 properties, reduced-motion sources and the native JS-thread capability boundary.
+
+`MotionClockProvider` gives every `useMotion` below it one clock. Tests and replays
+pass `createTestClock()` and step time with `clock.advance(ms)` instead of sleeping:
+
+```tsx
+const clock = createTestClock()
+render(
+  <MotionClockProvider clock={clock}>
+    <Panel />
+  </MotionClockProvider>,
+)
+act(() => {
+  clock.advance(90)
+})
+```
+
+State-keyed motion comes from `defineMotion(ui, { states })` (see the motion
+contract). The host's declared states pick the transition. When the states live
+in a store instead, such as a Weft run's open waits, pass that store as
+`useMotion(panel, { states })`, where `states` is `{ current(), subscribe() }`.
+Keep the clock and the store stable: a new identity replaces the controller.
 
 ## Adaptive layouts
 

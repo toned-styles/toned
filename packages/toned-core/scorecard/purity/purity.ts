@@ -17,12 +17,18 @@ export type OutputChange =
 export type Mutation = {
   id: string
   description: string
+  /**
+   * The deprecated API the mutation exercises, when it is one. Its result is
+   * reported, but it is not a purity failure of the supported API.
+   */
+  deprecated?: string
   apply: (sheets: SheetSet) => SheetSet
 }
 
 export type PurityResult = {
   id: string
   description: string
+  deprecated?: string
   pure: boolean
   changes: OutputChange[]
 }
@@ -91,8 +97,14 @@ export function measurePurity(
   mutations: readonly Mutation[],
 ): PurityResult[] {
   const before = build(sheets)
-  return mutations.map(({ id, description, apply }) => {
+  return mutations.map(({ id, description, deprecated, apply }) => {
     const changes = diffBuild(before, build(apply(sheets)))
-    return { id, description, pure: changes.length === 0, changes }
+    return {
+      id,
+      description,
+      ...(deprecated ? { deprecated } : {}),
+      pure: changes.length === 0,
+      changes,
+    }
   })
 }

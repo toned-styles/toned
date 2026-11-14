@@ -1,16 +1,104 @@
+import type { BridgeConfig } from '../types/tokens.ts'
 import { fixedQueryWidth } from '../utils/conditions.ts'
+import { bridgeVarName } from '../utils/css.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
+import {
+  type Contexts,
+  contextMarkers,
+  isWithinKey,
+  parseWithinKey,
+  withinError,
+} from './contexts.ts'
 import type { QueryPredicate } from './queries.ts'
 import { isQueryKey, queryExpression } from './query-key.ts'
+import type { StateDeclaration } from './states.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
   typeof value === 'object' &&
   Object.getPrototypeOf(value) === Object.prototype
 
+/**
+ * Folds a `$style` list into one style object: entries merge in order and the
+ * last wins, and falsy entries (`cond && fragment`) are skipped. A `null`
+ * value unsets what an earlier entry set; with nothing earlier in the list to
+ * unset it is kept, so in `extend` it still removes the inherited property,
+ * as the single form's `null` does.
+ */
+function foldStyleList(list: readonly unknown[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  list.forEach((entry, index) => {
+    if (entry === false || entry === null || entry === undefined) return
+    if (!isRecord(entry))
+      throw new Error(
+        `Toned: $style list entry ${index} is ${typeof entry === 'object' ? 'not a plain object' : `a ${typeof entry}`}; each entry is a style object, or false/null/undefined to skip it`,
+      )
+    for (const [property, value] of Object.entries(entry)) {
+      if (value === null && property in out && out[property] !== null)
+        delete out[property]
+      else out[property] = value
+    }
+  })
+  return out
+}
+
+const quotedList = (names: readonly string[]) =>
+  names.length ? names.map((name) => `'${name}'`).join(', ') : 'none'
+
+/**
+ * Lowers `$bridge: { <bridge>: { <property>: value } }` to the inline custom
+ * properties core owns (`--toned-b-<bridge>-<property>`), which the bridge's
+ * generated rule reads. With the system's declared `bridges`, an unknown
+ * bridge or property throws, naming the declared ones; without them (a
+ * fragment built outside any system) the names are only lowered.
+ */
+function bridgeStyle(
+  value: unknown,
+  bridges: Readonly<Record<string, BridgeConfig>> | undefined,
+): Record<string, unknown> {
+  if (!isRecord(value))
+    throw new Error(
+      "Toned: $bridge takes { <bridge>: { <property>: value } }, such as $bridge: { placeholder: { color: 'red' } }",
+    )
+  const out: Record<string, unknown> = {}
+  for (const [name, properties] of Object.entries(value)) {
+    const declared = bridges?.[name]
+    if (bridges && !declared)
+      throw new Error(
+        `Toned: unknown bridge '${name}' in $bridge. Declared bridges: ${quotedList(Object.keys(bridges))}`,
+      )
+    if (!isRecord(properties))
+      throw new Error(
+        `Toned: $bridge.${name} takes { <property>: value }, such as { color: 'red' }`,
+      )
+    for (const [property, parameter] of Object.entries(properties)) {
+      if (declared && !declared.properties.includes(property))
+        throw new Error(
+          `Toned: bridge '${name}' has no property '${property}' in $bridge. Its properties: ${quotedList(declared.properties)}`,
+        )
+      out[bridgeVarName(name, property)] = parameter
+    }
+  }
+  return out
+}
+
+export type NormalizeOptions = {
+  /** The system's declared bridges; `$bridge` names are checked against
+   *  them. Omitted only where no system is known. */
+  bridges?: Readonly<Record<string, BridgeConfig>>
+  /** The system's declared contexts; `$context` markers are checked
+   *  against them. Omitted only where no system is known. */
+  contexts?: Contexts
+}
+
 /** Canonicalize author-facing aliases once, before matcher compilation. */
-export function normalizeDeclarations<T>(input: T): T {
+export function normalizeDeclarations<T>(
+  input: T,
+  options?: NormalizeOptions,
+): T {
   if (!isRecord(input)) return input
+  const bridges = options ? (options.bridges ?? {}) : undefined
+  const contexts = options ? (options.contexts ?? {}) : undefined
   const out: Record<string, unknown> = {}
   if (
     '$kind' in input &&
@@ -18,19 +106,27 @@ export function normalizeDeclarations<T>(input: T): T {
     input['$kind'] !== input['$$type']
   )
     throw new Error('Toned: $kind and $$type must agree')
+  for (const key of Object.keys(input)) {
+    if (key.startsWith('@platform.') && `@platform ${key.slice(10)}` in input)
+      throw new Error(
+        `Toned: '@platform ${key.slice(10)}' and its alias '${key}' are both written here, and one would replace the other; merge them into one '@platform ${key.slice(10)}' block`,
+      )
+  }
   for (const [key, value] of Object.entries(input)) {
     const canonical =
       key === '$kind'
         ? '$$type'
-        : key === '$style'
+        : key === '$style' || key === '$bridge'
           ? 'style'
-          : key.startsWith('@media ')
-            ? `@${key.slice(7)}`
-            : key.startsWith('@container ')
-              ? `@${key.slice(11).trim().replace(/\s+/g, '/')}`
-              : key.startsWith('@platform ')
-                ? `@platform.${key.slice(10)}`
-                : key
+          : key === '$context'
+            ? '$$context'
+            : key.startsWith('@media ')
+              ? `@${key.slice(7)}`
+              : key.startsWith('@container ')
+                ? `@${key.slice(11).trim().replace(/\s+/g, '/')}`
+                : key.startsWith('@platform ')
+                  ? `@platform.${key.slice(10)}`
+                  : key
     if (
       (key.startsWith(':') || key.startsWith('@')) &&
       isRecord(value) &&
@@ -39,12 +135,29 @@ export function normalizeDeclarations<T>(input: T): T {
       throw new Error(
         'Toned: part kind is static and cannot change inside a condition',
       )
+    if (
+      (key.startsWith(':') || key.startsWith('@')) &&
+      !key.startsWith('@platform') &&
+      isRecord(value) &&
+      ('$context' in value || '$$context' in value)
+    )
+      throw new Error(
+        `Toned: $context is static and cannot change inside '${key}'; set it on the part, or in a variant block`,
+      )
     const normalized =
-      canonical === 'style'
-        ? immutableSnapshot(value)
-        : canonical === '$grid' || canonical === '$area'
-          ? value
-          : normalizeDeclarations(value)
+      key === '$context'
+        ? contexts
+          ? immutableSnapshot(contextMarkers(value, contexts))
+          : value
+        : key === '$bridge'
+          ? immutableSnapshot(bridgeStyle(value, bridges))
+          : canonical === 'style'
+            ? immutableSnapshot(
+                Array.isArray(value) ? foldStyleList(value) : value,
+              )
+            : canonical === '$grid' || canonical === '$area'
+              ? value
+              : normalizeDeclarations(value, options)
     out[canonical] =
       canonical === 'style' && isRecord(out[canonical]) && isRecord(normalized)
         ? { ...out[canonical], ...normalized }
@@ -66,17 +179,25 @@ export function validateDeclarations(
   system: {
     breakpoints?: { __breakpoints: Record<string, number | string> }
     containers?: Record<string, Record<string, unknown>>
-    states?: Record<string, string>
+    states?: Record<string, StateDeclaration>
+    contexts?: Contexts
   },
 ): void {
-  const knownStates = new Set([
+  const builtInStates = [
     'hover',
     'active',
     'focus',
     'focus-visible',
     'focus-within',
-    ...Object.keys(system.states ?? {}),
-  ])
+  ]
+  const declaredStates = Object.keys(system.states ?? {})
+  const knownStates = new Set([...builtInStates, ...declaredStates])
+  const quoted = (names: readonly string[], prefix: string) =>
+    names.length ? names.map((name) => `'${prefix}${name}'`).join(', ') : 'none'
+  const undeclaredState = (state: string, key: string) =>
+    new Error(
+      `Toned: undeclared state ':${state}' in '${key}'; declared states: ${quoted(declaredStates, ':')}; built-in: ${quoted(builtInStates, ':')}`,
+    )
   const walk = (node: unknown): void => {
     if (Array.isArray(node)) {
       node.forEach(walk)
@@ -93,6 +214,14 @@ export function validateDeclarations(
       } else if (key.startsWith('@platform.')) {
         if (!['web', 'native'].includes(key.slice(10)))
           throw new Error(`Toned: unknown platform ${key}`)
+      } else if (isWithinKey(key)) {
+        const error = withinError(
+          parseWithinKey(key),
+          key,
+          `'${key}'`,
+          system.contexts,
+        )
+        if (error) throw new Error(error)
       } else if (key.startsWith('@')) {
         // Legacy boolean condition spelling may be retained at the sheet root.
         const atoms = key
@@ -106,28 +235,34 @@ export function validateDeclarations(
               fixedQueryWidth(container!) === undefined &&
               !(container! in (system.breakpoints?.__breakpoints ?? {}))
             )
-              throw new Error(`Toned: undeclared media condition ${key}`)
+              throw new Error(
+                `Toned: undeclared media condition '${atom}' in '${key}'; declared media: ${quoted(Object.keys(system.breakpoints?.__breakpoints ?? {}), '@')}, or a width declared in conditions.widths (q.media(dp(600)))`,
+              )
           } else if (
             !system.containers?.[container!] ||
             (fixedQueryWidth(step) === undefined &&
               !(step in system.containers[container!]!))
           ) {
+            const declared = Object.entries(system.containers ?? {}).flatMap(
+              ([name, steps]) => Object.keys(steps).map((s) => `${name}/${s}`),
+            )
             throw new Error(
-              `Toned: undeclared container condition ${key}; portable conditions must be named fixed thresholds or explicit dp lengths`,
+              `Toned: undeclared container condition '${atom}' in '${key}'; declared containers: ${quoted(declared, '@')}; portable conditions must be named fixed thresholds or explicit dp lengths`,
             )
           }
         }
       } else if (key.includes(':') && !key.startsWith('[')) {
         for (const state of key.slice(key.indexOf(':') + 1).split(':')) {
           if (!knownStates.has(state.replace(/^(src|sib)-/, '')))
-            throw new Error(`Toned: undeclared state ${state}`)
+            throw undeclaredState(state, key)
         }
       }
       if (
         key !== 'style' &&
         key !== '$grid' &&
         key !== '$area' &&
-        key !== '$webRules'
+        key !== '$webRules' &&
+        key !== '$$context'
       )
         walk(value)
     }
@@ -141,7 +276,7 @@ export function validateDeclarations(
       if (!sourcePart || !part || !['child', 'descendant'].includes(scope))
         throw new Error('Toned: malformed relation query')
       if (!knownStates.has(state))
-        throw new Error(`Toned: undeclared state ${state}`)
+        throw undeclaredState(state, `${sourcePart}:${state}`)
     } else if (query.op === 'not') validateQuery(query.operand)
     else for (const operand of query.operands) validateQuery(operand)
   }

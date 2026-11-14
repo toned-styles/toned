@@ -85,21 +85,24 @@ test('manifest rejects a changed external variable contract', () => {
   )
 })
 test('manifest collection sees deep conditions and internal layer/AST symbols', () => {
-  const system = defineSystem({}, { containers: { card: {} } })
-  const condition = { '@card/>=400': { Root: { style: { opacity: 0 } } } }
+  const system = defineSystem(
+    {},
+    {
+      containers: { card: {} },
+      widths: { containers: { card: [400, 500, 600] } },
+    },
+  )
+  const condition = { '@card/>=400px': { Root: { style: { opacity: 0 } } } }
   const deep: Record<string | symbol, unknown> = {
     a: { b: { c: { d: { e: { f: condition } } } } },
   }
   deep[Symbol.for('@toned/layers')] = [
-    { '@card/>=500': { Root: { style: { opacity: 0 } } } },
+    { '@card/>=500px': { Root: { style: { opacity: 0 } } } },
   ]
   deep[Symbol.for('@toned/when')] = [
-    { predicate: { op: 'atom', key: '@card/>=600' }, rules: {} },
+    { predicate: { op: 'atom', key: '@card/>=600px' }, rules: {} },
   ]
-  const manifest = buildStyles(system, {
-    sheets: [],
-    conditions: ['card/>=400', 'card/>=500', 'card/>=600'],
-  }).manifest
+  const manifest = buildStyles(system).manifest
   expect(() => assertManifestConditions(manifest, deep)).not.toThrow()
   expect(() =>
     assertManifestConditions({ ...manifest, conditions: [] }, deep),

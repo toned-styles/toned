@@ -96,6 +96,7 @@ const cqSystem = defineSystem(
   {
     breakpoints: { __breakpoints: { md: 768 } },
     containers: { card: { sm: 80 } },
+    widths: { containers: { card: [400] } },
   },
 )
 
@@ -108,7 +109,7 @@ cqSystem.stylesheet({
   },
   // condition EXPRESSIONS are root-level blocks — ad-hoc widths on declared
   // names, negation, algebra, and the system's typed builders as computed keys
-  '@md&card/>=100': { root: { bgColor: 'accent' } },
+  '@md&card/>=400px': { root: { bgColor: 'accent' } },
   [cqSystem.q.container('card', dp(400))]: { root: { bgColor: 'accent' } },
   [cqSystem.q.not(cqSystem.q.container('card', dp(400)))]: {
     root: { bgColor: 'accent' },
@@ -123,7 +124,7 @@ cqSystem.stylesheet({
 cqSystem.stylesheet({
   root: {
     // Expressions collocate here; recursive validation still catches typos.
-    '@card/>=100': { bgColor: 'accent' },
+    '@card/>=400px': { bgColor: 'accent' },
   },
 })
 

@@ -8,7 +8,13 @@ import {
 } from '../../core/plan.ts'
 import { evaluatePredicate, FALSE } from '../../core/predicates.ts'
 import { resolveAlphaChannels } from '../../core/resolve.ts'
+import { separateShorthands } from '../../core/shorthands.ts'
+import { markerClasses, withinVariable } from '../../system/contexts.ts'
 import { namespaceOutput } from '../../system/namespace.ts'
+import {
+  responsivePairs,
+  undeclaredPairMessage,
+} from '../../system/responsive.ts'
 import type { TokenSystem, Tokens } from '../../types/index.ts'
 import type { AnyDeclaration } from '../../types/system.ts'
 import {
@@ -19,13 +25,14 @@ import {
   withAlphaExpr,
 } from '../../utils/alpha.ts'
 import { atomSlug, lengthToPx } from '../../utils/conditions.ts'
-import { serializeCssValue } from '../../utils/css-value.ts'
+import { isCssWideKeyword, serializeCssValue } from '../../utils/css-value.ts'
 import { PSEUDO_CASCADE_ORDER } from '../../utils/pseudo.ts'
 import { warnOnce } from '../../utils/warn.ts'
 import { compileWebRules, isWebRules } from '../../web/rules.ts'
 import type { ResolvedProps } from '../index.ts'
 
 const EXTENSIONS = [
+  '$$context',
   '$grid',
   '$area',
   '$webRules',
@@ -42,7 +49,7 @@ const extensionIndexes = new WeakMap<
 function extensionIndex(plan: CompiledPlan) {
   let index = extensionIndexes.get(plan)
   if (!index) {
-    const sources = new Set<string>()
+    const sources = new Set<string>(plan.channelSources)
     const extensions = new Map<string, DeclarationOperation[]>()
     for (const operation of [...plan.operations, ...plan.extensions]) {
       if (operation.origin.legacyChannel)
@@ -120,6 +127,14 @@ export function compileCssPredicateGuard(
           )
         return `var(--toned_${fact.name}${negate ? '-not' : ''})`
       }
+      if (fact.kind === 'context') {
+        // A context toggle has no complement: no spelling negates it.
+        if (negate)
+          throw new Error(
+            `Toned CSS: '@within ${fact.name}' cannot be negated; style the default outside the context and override it inside`,
+          )
+        return `var(${withinVariable(fact)})`
+      }
       if (fact.kind === 'media' || fact.kind === 'container') {
         const slug = atomSlug(
           fact.kind === 'media'
@@ -173,6 +188,39 @@ function atoms(
     : (children.flat() as Extract<Predicate, { op: 'atom' }>['fact'][])
 }
 
+type LegacyLadder = {
+  readonly states: ReadonlyMap<string, number>
+  readonly containers: ReadonlyMap<string, number>
+}
+const legacyLadders = new WeakMap<object, LegacyLadder>()
+
+/** The fixed state and container positions of a frozen system configuration,
+ * derived once. A mutable configuration is read afresh on every call. */
+function legacyLadder(config: TokenSystem<AnyDeclaration>['system']) {
+  const cached = legacyLadders.get(config)
+  if (cached) return cached
+  const states = Object.keys(config.states ?? {})
+  const order = [
+    ...states.map((name) => `:sib-${name}`),
+    ...states.map((name) => `:src-${name}`),
+    ...PSEUDO_CASCADE_ORDER,
+    ...states.map((name) => `:${name}`),
+  ]
+  const index = (names: readonly string[]) => {
+    const positions = new Map<string, number>()
+    names.forEach((name, position) => {
+      if (!positions.has(name)) positions.set(name, position)
+    })
+    return positions
+  }
+  const ladder: LegacyLadder = {
+    states: index(order),
+    containers: index(Object.keys(config.containers ?? {})),
+  }
+  if (Object.isFrozen(config)) legacyLadders.set(config, ladder)
+  return ladder
+}
+
 /** Unnamespaced (legacy) systems deliberately retain a fixed media/state
  * ladder inside each layer. New descriptors use source order on every backend.
  * Base raw styles outrank token classes, matching inline-declaration precedence.
@@ -183,13 +231,7 @@ function legacyOrder(
   rawStyleLast = false,
 ): ResolvedOperation[] {
   const config = system.system
-  const states = Object.keys(config.states ?? {})
-  const stateOrder = [
-    ...states.map((name) => `:sib-${name}`),
-    ...states.map((name) => `:src-${name}`),
-    ...PSEUDO_CASCADE_ORDER,
-    ...states.map((name) => `:${name}`),
-  ]
+  const ladder = legacyLadder(config)
   const rank = (operation: ResolvedOperation): number[] => {
     if (unconditional(operation.predicate))
       return [0, rawStyleLast && operation.origin.token === 'style' ? 1 : 0]
@@ -202,7 +244,9 @@ function legacyOrder(
         3,
         operation.origin.token === 'style' ? 1 : 0,
         names.length > 1 ? 1 : 0,
-        names.length > 1 ? names.length : stateOrder.indexOf(`:${names[0]}`),
+        names.length > 1
+          ? names.length
+          : (ladder.states.get(`:${names[0]}`) ?? -1),
       ]
     }
     const fact = facts?.length === 1 ? facts[0] : undefined
@@ -218,7 +262,7 @@ function legacyOrder(
       return [
         1,
         1,
-        Object.keys(config.containers ?? {}).indexOf(fact.name),
+        ladder.containers.get(fact.name) ?? -1,
         lengthToPx(
           fact.step
             ? (config.containers?.[fact.name]?.[fact.step] ?? 0)
@@ -231,17 +275,26 @@ function legacyOrder(
   const output: ResolvedOperation[] = []
   let segment: ResolvedOperation[] = []
   const flush = () => {
-    output.push(
-      ...segment.sort((left, right) => {
-        const a = rank(left),
-          b = rank(right)
-        for (let i = 0; i < Math.max(a.length, b.length); i++) {
-          const difference = (a[i] ?? 0) - (b[i] ?? 0)
-          if (difference) return difference
-        }
-        return left.origin.order - right.origin.order
-      }),
-    )
+    if (segment.length < 2) {
+      output.push(...segment)
+      segment = []
+      return
+    }
+    // Rank each operation once rather than twice per comparison.
+    const ranked = segment.map((operation) => ({
+      operation,
+      rank: rank(operation),
+    }))
+    ranked.sort((left, right) => {
+      const a = left.rank,
+        b = right.rank
+      for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const difference = (a[i] ?? 0) - (b[i] ?? 0)
+        if (difference) return difference
+      }
+      return left.operation.origin.order - right.operation.origin.order
+    })
+    for (const entry of ranked) output.push(entry.operation)
     segment = []
   }
   for (const operation of operations) {
@@ -302,9 +355,14 @@ function lowerCssOperations(
   useClassName = true,
   namespace = true,
 ): ResolvedProps {
-  const operations = system.id
-    ? input
-    : legacyOrder(input, system, useClassName)
+  // A shorthand and a longhand of it in one part are two inline
+  // declarations; split the shorthand so a condition cannot revert the other
+  // (core/shorthands.ts).
+  const operations = separateShorthands(
+    system.id ? input : legacyOrder(input, system, useClassName),
+    part,
+    (operation) => unconditional(operation.predicate),
+  )
   const config = system.system
   const parameters: Record<string, unknown> = {}
   const classes = new Set<string>(['_'])
@@ -327,20 +385,34 @@ function lowerCssOperations(
     if (unconditional(operation.predicate))
       lastStatic.set(operation.origin.token, operation.origin.id)
   const responsive = new Set<string>()
-  if (!system.id && useClassName) {
-    for (const token of config.responsiveTokens ?? []) {
+  if (!system.id) {
+    for (const [token, declared] of responsivePairs(config)) {
       const conditional = operations.filter(
         (operation) =>
           operation.origin.token === token &&
           !unconditional(operation.predicate),
       )
+      const named = (operation: ResolvedOperation) =>
+        operation.predicate.op === 'atom' &&
+        operation.predicate.fact.kind === 'media' &&
+        operation.predicate.fact.min === undefined
+          ? operation.predicate.fact.name
+          : undefined
+      // A declared pair is the only condition a token's atoms exist for; one
+      // written directly under another is refused in every mode, so a sheet
+      // that resolves in a test also resolves in the browser.
+      if (declared)
+        for (const operation of conditional) {
+          const name = named(operation)
+          if (name !== undefined && !declared.has(name))
+            throw new Error(undeclaredPairMessage(part, token, name, declared))
+        }
       if (
+        useClassName &&
         conditional.length &&
         conditional.every(
           (operation) =>
-            operation.predicate.op === 'atom' &&
-            operation.predicate.fact.kind === 'media' &&
-            operation.predicate.fact.min === undefined &&
+            named(operation) !== undefined &&
             config[token]?.values?.includes(operation.tokenValue),
         )
       )
@@ -419,6 +491,10 @@ function lowerCssOperations(
       // These finite responsive values are already owned by generated CSS.
       continue
     } else {
+      if (isCssWideKeyword(operation.value))
+        throw new Error(
+          `Toned: part '${part}' sets ${operation.field}: '${String(operation.value)}' under a condition. A condition compiles to a custom-property chain, and a CSS-wide keyword reaching a property through a custom property computes as 'unset'. Set the value it should take (a token, 'transparent', 'currentcolor'), or write a selector rule: $webRules: webRules({ '&:hover': { ${operation.field}: '${String(operation.value)}' } }).`,
+        )
       const prefix = String(operation.origin.order)
       const parameter = `--toned-rule-${prefix}-${operation.field.replace(/[^a-zA-Z0-9-]/g, '-')}`
       parameters[parameter] =
@@ -456,6 +532,29 @@ function lowerCssOperations(
         externalCssVariables: system.system.externalCssVariables,
       })
     : output
+}
+
+/** The warning for a dropped condition: which one, and what is declared. */
+function undeclaredConditionMessage(
+  fact: { kind: string; name?: string; step?: string },
+  declared: {
+    breakpoints?: { __breakpoints: Record<string, unknown> }
+    containers?: Record<string, Record<string, unknown>>
+  },
+): string {
+  const list = (names: string[]) =>
+    names.length ? names.map((name) => `'@${name}'`).join(', ') : 'none'
+  const media = list(Object.keys(declared.breakpoints?.__breakpoints ?? {}))
+  const containers = list(
+    Object.entries(declared.containers ?? {}).flatMap(([name, steps]) =>
+      Object.keys(steps).map((step) => `${name}/${step}`),
+    ),
+  )
+  const written =
+    fact.kind === 'container' && fact.step !== undefined
+      ? `${fact.name}/${fact.step}`
+      : fact.name
+  return `undeclared ${fact.kind} condition '@${written}' is dropped; declared media: ${media}; declared containers: ${containers}`
 }
 
 /** Entry shared by pure SSR and mounted CSS hosts. All selection and token
@@ -499,7 +598,7 @@ export function resolveCssPlan(
           invalid = true
           warnOnce(
             `condition:${JSON.stringify(fact)}`,
-            'an undeclared breakpoint or container condition is dropped',
+            undeclaredConditionMessage(fact, system.system),
           )
           return FALSE
         }
@@ -549,6 +648,9 @@ export function resolveCssPlan(
     options.part === undefined
       ? plan.extensions
       : (index.extensions.get(options.part) ?? [])
+  // Context markers per part and context name: the last applicable one wins,
+  // so a variant block replaces the base marker of the same context.
+  const markers = new Map<string, Map<string, string>>()
   for (const extension of extensions) {
     const part = output[extension.origin.part]
     if (!part) continue
@@ -565,6 +667,13 @@ export function resolveCssPlan(
       throw new Error(
         `Toned CSS: ${extension.token} cannot be conditional on a browser fact`,
       )
+    if (extension.token === '$$context') {
+      const byName = markers.get(extension.origin.part) ?? new Map()
+      for (const marker of [extension.value].flat() as string[])
+        byName.set(marker.split('=')[0]!, marker)
+      markers.set(extension.origin.part, byName)
+      continue
+    }
     if (extension.token === '$pseudoRules') {
       const effect = extension.value as { token: string; value: unknown }
       const vocabulary: readonly unknown[] =
@@ -602,6 +711,22 @@ export function resolveCssPlan(
         className:
           `${part.className ?? ''} ${compileWebRules(extension.value, system.id ?? 'legacy').className}`.trim(),
       }
+    }
+  }
+  const namespace =
+    system.id && options.namespace !== false ? `${system.id}--` : ''
+  for (const [name, byName] of markers) {
+    const part = output[name]!
+    const classes = [...byName.values()].flatMap((marker) =>
+      markerClasses(marker).map((marker) => `${namespace}${marker}`),
+    )
+    output[name] = {
+      ...part,
+      className: [
+        ...new Set([...(part.className ?? '').split(' '), ...classes]),
+      ]
+        .filter(Boolean)
+        .join(' '),
     }
   }
   return output

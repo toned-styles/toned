@@ -1,5 +1,8 @@
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { collectAdHocConditions } from '../utils/conditions.ts'
+import {
+  canonicalAtomKey,
+  collectAdHocConditions,
+} from '../utils/conditions.ts'
 import { collectWebRules } from '../web/collect.ts'
 
 export type BuildManifest = Readonly<{
@@ -9,7 +12,8 @@ export type BuildManifest = Readonly<{
   namespace: string | null
   /** Exact static schema, including named thresholds and token vocabulary. */
   definition: string
-  /** Ad-hoc condition atoms. Named conditions belong to definition. */
+  /** The declared width atoms (`conditions.widths`), sorted. Named
+   *  conditions belong to definition. */
   conditions: readonly string[]
   fingerprint: string
   extensions?: readonly string[]
@@ -32,16 +36,16 @@ export function assertManifestConditions(
   for (const name of collectWebRules(rules, manifest.systemId).keys()) {
     if (!manifest.extensions?.includes(name))
       throw new Error(
-        `Toned manifest ${manifest.systemId}: webRules absent from build inventory; add the stylesheet to buildStyles({ sheets })`,
+        `Toned manifest ${manifest.systemId}: webRules absent from build inventory; add the stylesheet to buildStyles({ sheets }) (the one input sheets still feed; $webRules is deprecated)`,
       )
   }
   const needed = new Set<string>()
   collectManifestConditions(rules, needed)
-  const emitted = new Set(manifest.conditions)
+  const emitted = new Set(manifest.conditions.map(canonicalAtomKey))
   for (const atom of needed) {
-    if (!emitted.has(atom))
+    if (!emitted.has(canonicalAtomKey(atom)))
       throw new Error(
-        `Toned manifest ${manifest.systemId}: undeclared condition ${atom}; add the stylesheet to buildStyles({ sheets }) and regenerate CSS`,
+        `Toned manifest ${manifest.systemId}: undeclared condition ${atom}; declare its width in the system's conditions.widths and regenerate CSS`,
       )
   }
 }
@@ -104,6 +108,7 @@ export function systemDefinition(system: TokenStyleDeclaration): string {
     animations: system.animations,
     bridges: system.bridges,
     responsiveTokens: system.responsiveTokens,
+    widths: system.widths,
     externalCssVariables: system.externalCssVariables,
     tokens: tokenShapes,
   })

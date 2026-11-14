@@ -104,6 +104,7 @@ export function createTailwindBackend(options: {
   )
   const backend: OutputBackend = Object.freeze({
     id: options.id,
+    target: 'tailwind',
     platform: 'web',
     // Initial profile accepts runtime facts. CSS condition chains must be
     // rejected, never accidentally emitted as arbitrary utility parameters.

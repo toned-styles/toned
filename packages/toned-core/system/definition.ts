@@ -4,10 +4,15 @@ import type {
   AnimationInput,
   Breakpoints,
   BridgeConfig,
+  ResponsiveTokens,
 } from '../types/index.ts'
+import type { Target } from '../types/targets.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
+import type { Contexts } from './contexts.ts'
+import type { StateDeclaration } from './states.ts'
 import type { SystemTheme } from './theme-types.ts'
+import type { DeclaredWidths } from './widths.ts'
 
 export type { MediaCondition } from '../utils/media-query.ts'
 
@@ -27,9 +32,14 @@ export type SystemOptions = {
   breakpoints?: Breakpoints<any>
   animations?: Record<string, AnimationInput>
   bridges?: Record<string, BridgeConfig>
-  states?: Record<string, string>
+  states?: Record<string, StateDeclaration>
+  /**
+   * Context markers (system/contexts.ts): each context's values and the
+   * provider states descendants may read, `{ card: { states: ['hover'] } }`.
+   */
+  contexts?: Contexts
   /** See `TokenStyleDeclaration.responsiveTokens`. */
-  responsiveTokens?: readonly string[]
+  responsiveTokens?: ResponsiveTokens
   /** See `TokenStyleDeclaration.containers`. */
   containers?: Record<
     string,
@@ -37,6 +47,14 @@ export type SystemOptions = {
   >
   /** See `TokenStyleDeclaration.base` — px per numeric unit (default 4). */
   base?: number
+  /**
+   * Unnamed width thresholds the sheets may write at the use site, in fixed
+   * logical pixels: `widths: { media: [600], containers: { card: [300] } }`
+   * admits `q.media(dp(600))` and `q.container('card', dp(300))`. The build
+   * reads only the system, so a width gets CSS only when it is listed here
+   * (or named in `media` / `containers`). See system/widths.ts.
+   */
+  widths?: DeclaredWidths
   externalCssVariables?: readonly string[]
 }
 /** Portable named query thresholds are fixed logical lengths. Legacy systems
@@ -122,10 +140,27 @@ export function fixedConditions<C extends SystemOptions>(
     ...(containers ? { containers } : {}),
   }) as C
 }
-export type SystemDefinition<S, C> = {
+export type SystemDefinition<
+  S,
+  C,
+  T extends readonly Target[] = readonly Target[],
+  E extends readonly string[] = readonly string[],
+> = {
   id: string
-  /** Explicit references to application-owned CSS variables; all others remain namespaced. */
-  externalCssVariables?: readonly string[]
+  /**
+   * The renderers this system is rendered by. A part's `$style` is typed as
+   * what every declared target supports (`['web']`: plain CSS), and a
+   * renderer for an undeclared target throws. Omitted: the portable style,
+   * the same as `['web', 'native']`, and every renderer is allowed.
+   */
+  targets?: T
+  /**
+   * Explicit references to application-owned CSS variables; all others remain
+   * namespaced. A `var()` in `$style` must name one of these or a variable
+   * the system owns (one a sheet sets, or core's `--toned-*`): any other name
+   * is a type error, where the value is a literal, and throws in development.
+   */
+  externalCssVariables?: E
   layout?: LayoutContext
   tokens: S
   conditions?: C & FixedConditions<C>

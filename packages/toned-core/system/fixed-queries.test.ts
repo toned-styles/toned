@@ -14,7 +14,11 @@ it('explicit fixed query lengths preserve exact keys, build inventory, and backe
   const ui = defineSystem({
     id: 'fixed-queries',
     tokens: {},
-    conditions: { containers: { card: {} }, base: 99 },
+    conditions: {
+      containers: { card: {} },
+      base: 99,
+      widths: { media: [600], containers: { card: [300] } },
+    },
   })
   const sheet = ui.stylesheet((q) => ({
     Root: {
@@ -23,7 +27,7 @@ it('explicit fixed query lengths preserve exact keys, build inventory, and backe
       [q.container('card', dp(300))]: { $style: { opacity: 0.5 } },
     },
   }))
-  const artifact = buildStyles(ui, { sheets: [sheet] })
+  const artifact = buildStyles(ui)
   expect(artifact.manifest.conditions).toEqual(['>=600px', 'card/>=300px'])
   expect(artifact.css).toContain('(min-width: 600px)')
   expect(artifact.css).toContain('@container card (min-width: 300px)')
@@ -110,15 +114,23 @@ it('Boolean AST collection retains fixed thresholds and rejects runtime-relative
   const ui = defineSystem({
     id: 'fixed-query-boolean',
     tokens: {},
-    conditions: { containers: { card: {} } },
+    conditions: {
+      containers: { card: {} },
+      widths: { media: [600], containers: { card: [300] } },
+    },
   })
   const sheet = ui.stylesheet({ Root: {} }).extend({
     [ui.q.all(ui.q.media(dp(600)), ui.q.container('card', dp(300)))]: {
       Root: { $style: { opacity: 0 } },
     },
   })
-  const artifact = buildStyles(ui, { sheets: [sheet] })
+  const artifact = buildStyles(ui)
   expect(artifact.manifest.conditions).toEqual(['>=600px', 'card/>=300px'])
+  expect(
+    createWebRenderer(ui, { tokens: {}, manifest: artifact.manifest }).resolve(
+      sheet,
+    ),
+  ).toBeDefined()
   expect(() => (ui.q.media as (x: unknown) => unknown)(percent(20))).toThrow(
     /dp lengths/,
   )
@@ -145,12 +157,15 @@ it('build rejects named container steps colliding with local threshold toggle na
   const ui = defineSystem({
     id: 'fixed-query-collision',
     tokens: {},
-    conditions: { containers: { card: { gte300px: 500 } } },
+    conditions: {
+      containers: { card: { gte300px: 500 } },
+      widths: { containers: { card: [300] } },
+    },
   })
   const sheet = ui.stylesheet((q) => ({
     Root: { [q.container('card', dp(300))]: { $style: { opacity: 0 } } },
   }))
-  expect(() => buildStyles(ui, { sheets: [sheet] })).toThrow(
+  expect(() => buildStyles(ui)).toThrow(
     /condition toggle collision between card\/gte300px and card\/>=300px/,
   )
   const compile = vi.fn(async () => ({ build: () => '' }))
@@ -167,49 +182,56 @@ it('build rejects named container steps colliding with local threshold toggle na
   const distinct = defineSystem({
     id: 'fixed-media-distinct',
     tokens: {},
-    conditions: { media: { gte600px: 800 } },
+    conditions: { media: { gte600px: 800 }, widths: { media: [600] } },
   })
   const other = distinct.stylesheet((q) => ({
     Root: { [q.media(dp(600))]: { $style: { opacity: 0 } } },
   }))
-  expect(() => buildStyles(distinct, { sheets: [other] })).not.toThrow()
+  expect(() => buildStyles(distinct)).not.toThrow()
+  expect(other).toBeDefined()
 })
 
-it.each(['768.0px', '768PX', '1e3px', '.5px'])(
-  'fixed viewport %s shares one build/runtime CSS identity',
-  (spelling) => {
-    const ui = defineSystem({ id: 'fixed-spelling', tokens: {} })
-    const sheet = ui.stylesheet({
-      Root: {
-        $style: { opacity: 1 },
-        [`@>=${spelling}`]: { $style: { opacity: 0.5 } },
-      },
-    } as never)
-    const artifact = buildStyles(ui, { sheets: [sheet] })
-    const props = createWebRenderer(ui, {
+it.each([
+  ['768.0px', '768px'],
+  ['768PX', '768px'],
+  ['1e3px', '1000px'],
+  ['.5px', '0.5px'],
+])(
+  'a fixed viewport width spelled %s throws, naming its one spelling',
+  (spelling, canonical) => {
+    const ui = defineSystem({
+      id: 'fixed-spelling',
       tokens: {},
-      manifest: artifact.manifest,
-    }).resolve(sheet) as Record<string, { style: object }>
-    const variables = JSON.stringify(props['Root']!.style).match(
-      /--fixed-spelling-fixed-media-gte[a-zA-Z0-9]+/g,
-    )!
-    expect(variables.length).toBeGreaterThan(0)
-    for (const variable of variables)
-      expect(artifact.css).toContain(`${variable}:`)
-    const native = createNativeRenderer(ui, { tokens: {} }).resolve(sheet, {
-      facts: { [`@>=${spelling}`]: true },
-    }) as Record<string, { style: Record<string, unknown> }>
-    expect(native['Root']!.style['opacity']).toBe(0.5)
+      conditions: { widths: { media: [768, 1000, 0.5] } },
+    })
+    const write = (width: string) =>
+      ui.stylesheet({
+        Root: {
+          $style: { opacity: 1 },
+          [`@>=${width}`]: { $style: { opacity: 0.5 } },
+        },
+      } as never)
+    expect(() => write(spelling)).toThrow(
+      `Toned: '@>=${spelling}' spells the width ${canonical} another way: write '@>=${canonical}', as q.media(dp(${canonical.slice(0, -2)})) does`,
+    )
+    expect(() => write(canonical)).not.toThrow()
   },
 )
 
-it('equivalent fixed viewport spellings can share a generated toggle', () => {
-  const ui = defineSystem({ id: 'fixed-equivalent', tokens: {} })
-  const sheet = ui.stylesheet({
-    Root: {
-      '@>=768px': { $style: { opacity: 0.5 } },
-      '@>=768.0PX': { $style: { opacity: 1 } },
+it('a container width has one spelling too', () => {
+  const ui = defineSystem({
+    id: 'fixed-container-spelling',
+    tokens: {},
+    conditions: {
+      containers: { card: {} },
+      widths: { containers: { card: [1000] } },
     },
-  } as never)
-  expect(() => buildStyles(ui, { sheets: [sheet] })).not.toThrow()
+  })
+  expect(() =>
+    ui.stylesheet({
+      Root: { '@card/>=1e3px': { $style: { opacity: 1 } } },
+    } as never),
+  ).toThrow(
+    "Toned: '@card/>=1e3px' spells the width 1000px another way: write '@card/>=1000px', as q.container('card', dp(1000)) does",
+  )
 })

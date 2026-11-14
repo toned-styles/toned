@@ -1,7 +1,6 @@
 import { buildStyles } from '@toned/core/build'
 import type { Plugin } from 'vite'
 
-import { noticeStyles } from './styles.ts'
 import { ui } from './system.ts'
 
 const CSS_ID = 'virtual:toned-home-story.css'
@@ -15,7 +14,7 @@ const MANIFEST_ID = 'virtual:toned-home-story.manifest'
 export function homeStory(): Plugin {
   let artifact: ReturnType<typeof buildStyles> | undefined
   const build = () => {
-    artifact ??= buildStyles(ui, { sheets: [noticeStyles] })
+    artifact ??= buildStyles(ui)
     return artifact
   }
   return {

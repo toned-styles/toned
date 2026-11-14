@@ -152,7 +152,7 @@ export const cardStyles = stylesheet(q => ({
     [q.state('open')]: { fill: 'accent-strong' },
     [q.media('md')]: { padding: 4 },
     [q.container('card', 'wide')]: { padding: 6 },
-    // A width with no declared name.
+    // A width with no name, listed in the system's conditions.widths.
     [q.media(dp(600))]: { padding: 4 },
     // Wide viewport, and not hovered.
     [q.all(q.media('lg'), q.not(q.state('hover')))]: { fill: 'surface' },
@@ -197,8 +197,14 @@ export const ui = defineSystem({
     media: { md: 768, lg: 1024 },
     // Named containers and their width steps.
     containers: { card: { wide: 448 } },
-    // Extra states: a name and the selector that marks it.
-    states: { open: '[data-state="open"]' },
+    // Widths a sheet may write without a name: q.media(dp(600)). The build
+    // reads only the system, so a width gets CSS only when it is listed here.
+    widths: { media: [600], containers: { card: [300] } },
+    // Extra states: a name and the selector that marks it, plus the
+    // relations other parts may read it through ('ancestor', 'sibling').
+    states: {
+      open: { selector: '[data-state="open"]', relations: ['ancestor'] },
+    },
   },
 })
 
@@ -292,7 +298,9 @@ export const { stylesheet } = ui`}</CodeBlock>
         <code {...s.code}>container: 'card'</code> on it. The fixed-width forms
         take <code {...s.code}>dp()</code> from{' '}
         <code {...s.code}>@toned/core</code>; write them through the builder so
-        the number is checked.{' '}
+        the number is checked against the widths the system declares in{' '}
+        <code {...s.code}>conditions.widths</code>. An undeclared width is a
+        type error naming where to declare it.{' '}
         <Link to="/api/media-queries">Media queries</Link> covers breakpoints in
         more detail.
       </p>
@@ -347,6 +355,16 @@ export const { stylesheet } = ui`}</CodeBlock>
             'Root is hovered; styles the parts that follow it as siblings',
           ],
           [
+            k("'Root:open'"),
+            k("q.part('Root').state('open')"),
+            "Root is in a declared state with relations: ['ancestor']",
+          ],
+          [
+            k("'Root~:open'"),
+            k(''),
+            "Root is in a declared state with relations: ['sibling']",
+          ],
+          [
             k(''),
             k("q.part('Root').has('Item', 'open')"),
             'an Item part inside Root is in the state',
@@ -354,8 +372,10 @@ export const { stylesheet } = ui`}</CodeBlock>
         ]}
       />
       <p>
-        The key names one part and one state. To depend on several, combine
-        builder calls with <code {...s.code}>q.all</code> or{' '}
+        A declared state is read from another part only through a relation it
+        declares; each relation adds CSS that every styled element pays for. The
+        key names one part and one state. To depend on several, combine builder
+        calls with <code {...s.code}>q.all</code> or{' '}
         <code {...s.code}>q.any</code>. Parts that depend on one another must be
         rendered inside the same{' '}
         <Link to="/api/use-styles">element family</Link> or{' '}

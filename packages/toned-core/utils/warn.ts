@@ -12,7 +12,9 @@ const warned = new Set<string>()
 
 declare const process: { env?: Record<string, string | undefined> } | undefined
 
-const isDev = (): boolean => {
+/** Not a production build: `NODE_ENV` is set and is not `'production'`. Read
+ * per call, so a test can stub it. */
+export const isDev = (): boolean => {
   try {
     return (
       typeof process !== 'undefined' &&

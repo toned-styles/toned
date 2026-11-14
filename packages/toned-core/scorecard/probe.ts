@@ -1,12 +1,14 @@
 /**
- * The two probes every scorecard gate shares: what the TypeScript compiler
- * reports for a set of files, and what a piece of code throws or warns.
+ * The probes the scorecard gates share: what the TypeScript compiler reports
+ * for a set of files, what toned's lint rules report for them, and what a
+ * piece of code throws or warns.
  */
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const coreRoot = fileURLToPath(new URL('../', import.meta.url))
@@ -66,6 +68,81 @@ export function compileDiagnostics(
     }
   }
   return byFile
+}
+
+/** toned's lint plugin, beside toned-core in the workspace. */
+const lintPlugin = join(coreRoot, '../toned-eslint-plugin/index.js')
+
+/** The oxlint the plugin's own tests run. */
+function oxlintBinary(): string {
+  const entry = createRequire(lintPlugin).resolve('oxlint')
+  return join(dirname(entry), '..', 'bin', 'oxlint')
+}
+
+/**
+ * Every toned lint diagnostic per file, from one oxlint run with the
+ * plugin's recommended rules and only those (oxlint's own categories off).
+ * `systems` maps an import specifier to the export names that are toned
+ * systems, so `ui.stylesheet(…)` from a local module is recognised.
+ */
+export async function lintDiagnostics(
+  files: readonly string[],
+  systems: Readonly<Record<string, readonly string[]>> = {},
+): Promise<Map<string, string[]>> {
+  const { default: plugin } = (await import(lintPlugin)) as {
+    default: { configs: { recommended: { rules: Record<string, unknown> } } }
+  }
+  const modules = Object.fromEntries(
+    Object.entries(systems).map(([specifier, names]) => [
+      specifier,
+      Object.fromEntries(names.map((name) => [name, 'system'])),
+    ]),
+  )
+  const rules = Object.fromEntries(
+    Object.entries(plugin.configs.recommended.rules).map(([rule, level]) => [
+      rule,
+      [level, { modules }],
+    ]),
+  )
+  const directory = mkdtempSync(join(tmpdir(), 'toned-scorecard-lint-'))
+  const config = join(directory, 'oxlintrc.json')
+  writeFileSync(
+    config,
+    JSON.stringify({
+      jsPlugins: [lintPlugin],
+      categories: { correctness: 'off' },
+      rules,
+    }),
+  )
+  let stdout: string
+  try {
+    const run = spawnSync(
+      oxlintBinary(),
+      ['-c', config, '--format=json', ...files],
+      { cwd: coreRoot, encoding: 'utf8', maxBuffer: 8_000_000 },
+    )
+    if (run.error) throw run.error
+    stdout = run.stdout
+    if (run.status !== 0 && run.status !== 1)
+      throw new Error(`oxlint failed (${run.status}): ${run.stderr || stdout}`)
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+  const result = JSON.parse(stdout) as {
+    diagnostics: { code: string; message: string; filename: string }[]
+  }
+  const byFile = new Map<string, string[]>(files.map((file) => [file, []]))
+  for (const diagnostic of result.diagnostics)
+    byFile
+      .get(resolve(coreRoot, diagnostic.filename))
+      ?.push(`${diagnostic.code}: ${diagnostic.message}`)
+  return byFile
+}
+
+/** The import specifier a file in `dir` uses for `target`. */
+export const specifierFrom = (dir: string, target: string): string => {
+  const path = relative(dir, target)
+  return path.startsWith('.') ? path : `./${path}`
 }
 
 export const messageOf = (error: unknown): string =>

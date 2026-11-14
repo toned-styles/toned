@@ -16,8 +16,11 @@ import { gzipSync } from 'node:zlib'
 
 import { buildStyles } from '../build/index.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
+import { runDeclaredSuite } from './conformance/declared.ts'
+import { runMotionSuite } from './conformance/motion.ts'
 import { runConformanceSuite } from './conformance/suite.ts'
 import { runCorpus } from './corpus/runner.ts'
+import { responsive, unresponsive } from './fixture/responsive.ts'
 import { ui } from './fixture/system.ts'
 import { intentMetrics, intents, renderIntentTable } from './intents/intents.ts'
 import { coreRoot } from './probe.ts'
@@ -49,14 +52,58 @@ function cssPerDeclaredState() {
   }
 }
 
+/**
+ * CSS a system pays for context markers, measured by difference: one more
+ * context, one more value on it, and one more (hover) state on it.
+ */
+function cssPerContext() {
+  const gap = defineToken({ values: [1], resolve: (value) => ({ gap: value }) })
+  const css = (contexts?: Record<string, object>) =>
+    buildStyles(
+      defineSystem({
+        id: 'cost',
+        tokens: { gap },
+        conditions: contexts ? { contexts } : {},
+      }),
+      { sheets: [] },
+    ).css
+  const none = css()
+  const one = css({ a: {} })
+  const value = css({ a: { values: ['x'] } })
+  const state = css({ a: { states: ['hover'] } })
+  return {
+    context: one.length - none.length,
+    value: value.length - one.length,
+    state: state.length - one.length,
+    rulesPerPair: cssRules(value).length - cssRules(one).length,
+  }
+}
+
+/**
+ * The responsive atoms of the responsive fixture, measured by difference: the
+ * fixture's CSS minus the same system without `responsiveTokens`.
+ */
+function responsiveAtomCost() {
+  const withAtoms = buildStyles(responsive, { sheets: [] }).css
+  const without = buildStyles(unresponsive, { sheets: [] }).css
+  return {
+    bytes: withAtoms.length - without.length,
+    gzipBytes: gzipSync(withAtoms).length - gzipSync(without).length,
+  }
+}
+
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length
 
 export async function runScorecard(): Promise<Scorecard> {
   const corpus = await runCorpus(join(coreRoot, 'scorecard/corpus/cases'))
   const purity = runPuritySuite()
   const conformance = await runConformanceSuite()
+  const declared = await runDeclaredSuite()
+  const motion = await runMotionSuite()
   const css = buildStyles(ui, { sheets: [] }).css
   const perState = cssPerDeclaredState()
+  const perContext = cssPerContext()
+  const responsiveAtoms = responsiveAtomCost()
   const count = <T>(items: readonly T[], test: (item: T) => boolean) =>
     items.filter(test).length
   const { version } = JSON.parse(
@@ -84,9 +131,10 @@ export async function runScorecard(): Promise<Scorecard> {
       'intents.spellingsTotal': spellings.spellingsTotal,
       'intents.spellingsMean': spellings.spellingsMean,
       'intents.spellingsMax': spellings.spellingsMax,
-      'purity.mutations': purity.length,
-      'purity.pure': count(purity, (p) => p.pure),
-      'purity.impure': count(purity, (p) => !p.pure),
+      // Supported API only; deprecated-API mutations are counted below.
+      'purity.mutations': count(purity, (p) => !p.deprecated),
+      'purity.pure': count(purity, (p) => !p.deprecated && p.pure),
+      'purity.impure': count(purity, (p) => !p.deprecated && !p.pure),
       'conformance.cells': conformance.length,
       'conformance.works': count(conformance, (c) => c.outcome === 'works'),
       'conformance.rejected': count(
@@ -101,8 +149,44 @@ export async function runScorecard(): Promise<Scorecard> {
       'css.fixtureGzipBytes': gzipSync(css).length,
       'css.bytesPerDeclaredState': perState.bytes,
       'css.rulesPerDeclaredState': perState.rules,
+      'css.responsiveAtomBytes': responsiveAtoms.bytes,
+      'css.responsiveAtomGzipBytes': responsiveAtoms.gzipBytes,
       'docs.coreReadmeWords': words(
         readFileSync(join(coreRoot, 'README.md'), 'utf8'),
+      ),
+      // Added after the first release of the scorecard: appended, never renamed.
+      'corpus.lint': count(corpus, (c) => c.stage === 'lint'),
+      'conformance.declared.cells': declared.length,
+      'conformance.declared.works': count(
+        declared,
+        (c) => c.outcome === 'works',
+      ),
+      'conformance.declared.rejected': count(
+        declared,
+        (c) => c.outcome === 'rejected',
+      ),
+      'conformance.declared.typeErrors': count(
+        declared,
+        (c) => c.outcome === 'type-error',
+      ),
+      'conformance.motion.cells': motion.length,
+      'conformance.motion.works': count(motion, (c) => c.outcome === 'works'),
+      'conformance.motion.rejected': count(
+        motion,
+        (c) => c.outcome === 'rejected',
+      ),
+      'conformance.motion.typeErrors': count(
+        motion,
+        (c) => c.outcome === 'type-error',
+      ),
+      'css.bytesPerContext': perContext.context,
+      'css.bytesPerContextValue': perContext.value,
+      'css.bytesPerContextState': perContext.state,
+      'css.rulesPerContextPair': perContext.rulesPerPair,
+      'purity.deprecated': count(purity, (p) => !!p.deprecated),
+      'purity.deprecatedImpure': count(
+        purity,
+        (p) => !!p.deprecated && !p.pure,
       ),
     },
     details: {
@@ -111,10 +195,13 @@ export async function runScorecard(): Promise<Scorecard> {
       purity: purity.map((p) => ({
         id: p.id,
         description: p.description,
+        ...(p.deprecated ? { deprecated: p.deprecated } : {}),
         pure: p.pure,
         changed: p.changes.map((change) => change.output),
       })),
       conformance,
+      declaredConformance: declared,
+      motionConformance: motion,
     },
   }
 }
@@ -128,14 +215,27 @@ export function renderMarkdown(card: Scorecard): string {
   >
   const purity = card.details['purity'] as {
     id: string
+    deprecated?: string
     pure: boolean
     changed: string[]
   }[]
-  const targets = [...new Set(conformance.map((c) => c.target))]
-  const features = [...new Set(conformance.map((c) => c.feature))]
-  const cellOf = (feature: string, target: string) =>
-    conformance.find((c) => c.feature === feature && c.target === target)
-      ?.outcome ?? ''
+  const declared = (card.details['declaredConformance'] ??
+    []) as typeof conformance
+  const motion = (card.details['motionConformance'] ?? []) as typeof conformance
+  const matrix = (cells: typeof conformance) => {
+    const targets = [...new Set(cells.map((c) => c.target))]
+    const features = [...new Set(cells.map((c) => c.feature))]
+    const cellOf = (feature: string, target: string) =>
+      cells.find((c) => c.feature === feature && c.target === target)
+        ?.outcome ?? ''
+    return [
+      `| Feature | ${targets.join(' | ')} |`,
+      `| --- | ${targets.map(() => '---').join(' | ')} |`,
+      ...features.map(
+        (f) => `| ${f} | ${targets.map((t) => cellOf(f, t)).join(' | ')} |`,
+      ),
+    ]
+  }
   return [
     `# Toned scorecard (${card.version})`,
     '',
@@ -156,19 +256,30 @@ export function renderMarkdown(card: Scorecard): string {
     '',
     '## Build purity',
     '',
-    '| Mutation | Pure | Outputs changed |',
-    '| --- | --- | --- |',
+    'The build reads only the system. A deprecated-API mutation is reported, but is not a purity failure of the supported API.',
+    '',
+    '| Mutation | API | Pure | Outputs changed |',
+    '| --- | --- | --- | --- |',
     ...purity.map(
-      (p) => `| ${p.id} | ${mark(p.pure)} | ${p.changed.join(', ') || '—'} |`,
+      (p) =>
+        `| ${p.id} | ${p.deprecated ? `deprecated (\`${p.deprecated}\`)` : 'supported'} | ${mark(p.pure)} | ${p.changed.join(', ') || '—'} |`,
     ),
     '',
     '## Target conformance',
     '',
-    `| Feature | ${targets.join(' | ')} |`,
-    `| --- | ${targets.map(() => '---').join(' | ')} |`,
-    ...features.map(
-      (f) => `| ${f} | ${targets.map((t) => cellOf(f, t)).join(' | ')} |`,
-    ),
+    ...matrix(conformance),
+    '',
+    '## Declared-target conformance',
+    '',
+    'Each feature in a system that declares only that target (`targets: [t]`).',
+    '',
+    ...matrix(declared),
+    '',
+    '## Motion conformance',
+    '',
+    'Motion declared with `defineMotion` for a system that declares only that target, stepped with a test clock.',
+    '',
+    ...matrix(motion),
     '',
   ].join('\n')
 }

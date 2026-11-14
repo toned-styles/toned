@@ -12,6 +12,7 @@ import type {
   TFun,
   ValidateDeclaration,
 } from './stylesheet.ts'
+import type { Target } from './targets.ts'
 import type {
   AnyTokenConfig,
   TokenStyle,
@@ -42,6 +43,8 @@ export type TokenSystem<
   SystemConfig extends SystemOptions = SystemOptions,
 > = {
   readonly id?: string
+  /** The declared render targets (`defineSystem({ targets })`), if any. */
+  readonly targets?: readonly Target[]
   readonly tokens: Readonly<
     Pick<
       S,

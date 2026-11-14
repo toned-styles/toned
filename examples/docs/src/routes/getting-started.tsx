@@ -111,28 +111,26 @@ export const ui = defineSystem({
 
 export const { stylesheet } = ui`}</CodeBlock>
       <h2 {...s.h2} id="build-every-sheet">
-        Build every sheet
+        Build the system
       </h2>
       <p>
-        The Vite plugin emits static CSS and a matching manifest. Include
-        lazy-route sheets in the inventory too; rendering does not discover
-        missing CSS.
+        The Vite plugin emits static CSS and a matching manifest. The build
+        reads only the system: every condition a sheet may use is declared
+        there, so adding or editing a sheet never changes the CSS.
       </p>
       <CodeBlock title="vite.config.ts">{`import toned from '@toned/core/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { buttonStyles } from './styles.ts'
 import { ui } from './system.ts'
 
 export default defineConfig({
   plugins: [
-    toned({ system: ui, sheets: [buttonStyles], inputs: ['system.ts', 'styles.ts'] }),
+    toned({ system: ui, inputs: ['system.ts'] }),
     react(),
   ],
 })`}</CodeBlock>
       <p>
-        Without Vite, call{' '}
-        <code {...s.code}>buildStyles(ui, {'{ sheets }'})</code> from{' '}
+        Without Vite, call <code {...s.code}>buildStyles(ui)</code> from{' '}
         <code {...s.code}>@toned/core/build</code> in your build script and
         serve its CSS and manifest together.
       </p>

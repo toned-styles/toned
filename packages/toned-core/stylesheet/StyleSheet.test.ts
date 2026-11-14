@@ -1294,15 +1294,28 @@ describe('runtime condition algebra (Base)', () => {
     expect(base.getCurrentStyle('Root').style.bgColor).toBe('base')
   })
 
-  test('createStylesheet registers ad-hoc atoms on the system ref', () => {
-    const sheet = createStylesheet(cqTokenSystem, {
-      Root: { bgColor: 'base', '@!card/>=612': { bgColor: 'red' } },
+  test('createStylesheet registers declared ad-hoc atoms on the system ref', () => {
+    const declared = {
+      ...(cqTokenSystem as unknown as Record<string, unknown>),
+      system: {
+        ...cqTokenSystem.system,
+        widths: { containers: { card: [612] } },
+      },
+      usedConditions: new Set<string>(),
+    } as unknown as TokenSystem<typeof testTokens>
+    const sheet = createStylesheet(declared, {
+      Root: { bgColor: 'base', '@!card/>=612px': { bgColor: 'red' } },
     })
     expect(sheet).toBeDefined()
     expect([
-      ...(cqTokenSystem as unknown as { usedConditions: Set<string> })
+      ...(declared as unknown as { usedConditions: Set<string> })
         .usedConditions,
-    ]).toContain('card/>=612')
+    ]).toContain('card/>=612px')
+    expect(() =>
+      createStylesheet(cqTokenSystem, {
+        Root: { bgColor: 'base', '@!card/>=612': { bgColor: 'red' } },
+      }),
+    ).toThrow(/'@card\/>=612' is not a fixed width/)
   })
 })
 

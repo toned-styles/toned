@@ -1,5 +1,10 @@
 import { parseVariantSelector } from '../stylesheet/matcher/normalizeRules.ts'
 import { relationFactKey } from '../stylesheet/relations.ts'
+import {
+  isWithinKey,
+  parseWithinKey,
+  withinFactKey,
+} from '../system/contexts.ts'
 import type { QueryPredicate } from '../system/queries.ts'
 import {
   isQueryKey,
@@ -20,6 +25,8 @@ export type Fact =
       unit?: 'scale' | 'px'
     }
   | { kind: 'platform'; name: 'web' | 'native' }
+  /** Inside the nearest provider of a context (`'@within prose=faq'`). */
+  | { kind: 'context'; name: string; value?: string; state?: string }
   | {
       kind: 'relation'
       relation: {
@@ -56,6 +63,14 @@ export function conditionPredicate(
     if (name !== 'web' && name !== 'native')
       throw new Error(`Toned: unknown platform ${name}`)
     return atom({ kind: 'platform', name })
+  }
+  if (isWithinKey(key)) {
+    const condition = parseWithinKey(key)
+    if (!condition)
+      throw new Error(
+        `Toned: invalid context condition ${key}; write '@within <context>', '@within <context>=<value>' or '@within <context>:<state>'`,
+      )
+    return atom({ kind: 'context', ...condition })
   }
   if (key.startsWith('@')) {
     const expression = parseConditionKey(key.slice(1))
@@ -129,6 +144,8 @@ export function factKey(fact: Fact): string {
       return `@${fact.name}/${fact.step ?? `>=${fact.min}`}`
     case 'platform':
       return '@platform'
+    case 'context':
+      return withinFactKey(fact)
     case 'relation':
       return relationFactKey(fact.relation)
   }

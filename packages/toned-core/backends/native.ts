@@ -10,6 +10,7 @@ const nativeFields = new Set(
 
 export const nativeBackend: OutputBackend = Object.freeze({
   id: 'native',
+  target: 'native',
   platform: 'native',
   browserConditions: false,
   resolve(input: ResolvedProps) {

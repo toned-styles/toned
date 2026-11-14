@@ -9,7 +9,7 @@ import { assertBuildArtifact, buildStyles } from '../build/index.ts'
 import { defineSystem } from '../system/definers.ts'
 import toned from './index.ts'
 
-test('explicit virtual import emits CSS and recollects changed declarations', async () => {
+test('explicit virtual import emits the CSS the system declares, and refuses an undeclared collected condition', async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'toned-vite-')))
   try {
     await writeFile(
@@ -17,19 +17,15 @@ test('explicit virtual import emits CSS and recollects changed declarations', as
       '<script type="module" src="/entry.js"></script>',
     )
     await writeFile(join(root, 'entry.js'), 'import "virtual:toned.css"')
-    let minimum = 400
     const system = defineSystem({
       id: 'vite',
       tokens: {},
-      conditions: { containers: { card: {} } },
+      conditions: {
+        containers: { card: {} },
+        widths: { containers: { card: [400] } },
+      },
     })
-    const plugin = toned({
-      system,
-      inputs: ['entry.js'],
-      // Legacy ad-hoc numeric atoms use the spacing scale; explicit px is fixed.
-      conditions: () => [`card/>=${minimum}px`],
-    })
-    const compile = async () => {
+    const compile = async (plugin: ReturnType<typeof toned>) => {
       const result = await build({
         root,
         configFile: false,
@@ -51,18 +47,29 @@ test('explicit virtual import emits CSS and recollects changed declarations', as
       expect(String(html.source)).not.toContain('<style')
       return String(css.source)
     }
-    expect(await compile()).toContain('400px')
-    minimum = 800
-    const updated = await compile()
-    expect(updated).toContain('800px')
-    expect(updated).not.toContain('400px')
+    expect(await compile(toned({ system, inputs: ['entry.js'] }))).toContain(
+      '400px',
+    )
+    // The deprecated collector can no longer add CSS a system does not declare.
+    await expect(
+      compile(
+        toned({
+          system,
+          inputs: ['entry.js'],
+          conditions: () => ['card/>=800px'],
+        }),
+      ),
+    ).rejects.toThrow(/add 800 to conditions\.widths\.containers\.card/)
   } finally {
     await rm(root, { recursive: true, force: true })
   }
 })
 
 test('Vite and programmatic builds share collection, validation and the asset manifest', async () => {
-  const ui = defineSystem({}, { containers: { card: {} } })
+  const ui = defineSystem(
+    {},
+    { containers: { card: {} }, widths: { containers: { card: [400] } } },
+  )
   const sheet = ui.stylesheet({
     Root: { '@card/>=400px': { $style: { opacity: 0 } } },
   })
@@ -81,7 +88,7 @@ test('Vite and programmatic builds share collection, validation and the asset ma
   const css = await load('\0virtual:toned.css')
   const js = await load('\0virtual:toned.manifest')
   const manifest = JSON.parse(js!.slice('export default '.length))
-  const expected = buildStyles(ui, { sheets: [sheet], layer: 'components' })
+  const expected = buildStyles(ui, { layer: 'components' })
   expect(css).toBe(expected.css)
   expect(manifest).toEqual(expected.manifest)
   expect(collections).toBe(1)

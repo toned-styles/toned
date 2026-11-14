@@ -6,6 +6,7 @@ import { ContainerSizesStore } from './container-store.ts'
 import { ContainerSizesContext, ContainerStoreContext } from './containers.tsx'
 import { addWith } from './host-props.ts'
 import { elementProps } from './style-view.ts'
+import { provideWithin, WithinContext } from './within.tsx'
 
 // Host props are platform-dependent; the public callable checks explicit `as`.
 // oxlint-disable-next-line typescript/no-explicit-any -- adapter boundary
@@ -18,6 +19,8 @@ type PartHostProps = {
   conditions?: HostConditions
 }
 type ResolvedPartHostProps = PartHostProps & { target: unknown }
+
+const NO_MARKERS: readonly string[] = Object.freeze([])
 
 /** Shared host rendering for every binding surface. No component factory runs
  * during render, and no host configuration is captured at module evaluation. */
@@ -56,7 +59,33 @@ export function PartHost(input: PartHostProps) {
         ? resolveElement(kind ?? TYPE_BY_TAG[as] ?? 'view')
         : as
   }, [resolveElement, platform, kind, as])
-  const hostInput = { ...input, conditions, target }
+  // A native provider part gives its context markers to its subtree.
+  const within = useContext(WithinContext)
+  const markers =
+    platform === 'native'
+      ? input.instance.contextMarkers(input.part)
+      : NO_MARKERS
+  const markerKey = markers.join('\0')
+  const provided = useMemo(
+    () => (markerKey ? provideWithin(within, markerKey.split('\0')) : within),
+    [within, markerKey],
+  )
+  const hostInput =
+    provided === within
+      ? { ...input, conditions, target }
+      : {
+          ...input,
+          conditions,
+          target,
+          props: {
+            ...input.props,
+            children: createElement(
+              WithinContext.Provider,
+              { value: provided },
+              input.props['children'],
+            ),
+          },
+        }
   const name =
     input.instance.config.mediaMode === 'runtime'
       ? input.instance.containerName(input.part)

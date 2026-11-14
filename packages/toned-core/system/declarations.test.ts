@@ -81,10 +81,12 @@ describe('declaration normalization', () => {
     ).toEqual({
       [q.media('md')]: {
         [q.container('field', 'wide')]: {
-          [q.platform('web')]: { style: { opacity: 0 } },
+          // The internal form; q.platform returns the authored '@platform web'.
+          '@platform.web': { style: { opacity: 0 } },
         },
       },
     })
+    expect(q.platform('web')).toBe('@platform web')
     expect(q.state('focus-visible')).toBe(':focus-visible')
     expect(q.part('Root').state('hover')).toBe('Root:hover')
     expect(typeof q.all(q.media('md'))).toBe('string')
@@ -270,6 +272,34 @@ test('strict descriptors reject unknown facts, while pure declarations read no t
   ).toThrow('undeclared state')
   expect(system.style({ dynamic: 'base' })).toEqual({ dynamic: 'base' })
   expect(Object.isFrozen(system.style({ dynamic: 'base' }))).toBe(true)
+})
+
+test('an undeclared fact names itself and what is declared', () => {
+  const system = defineSystem({
+    id: 'named',
+    tokens: { dynamic },
+    conditions: {
+      media: { md: 768, lg: 1024 },
+      states: { open: "[data-state='open']" },
+      containers: { card: { sm: 300 } },
+    },
+  })
+  const sheet = (rules: object) => () => system.stylesheet(rules as any)
+  expect(sheet({ Root: { '@mdd': { dynamic: 'zero' } } })).toThrow(
+    "Toned: undeclared media condition 'mdd' in '@mdd'; declared media: '@md', '@lg', or a width declared in conditions.widths (q.media(dp(600)))",
+  )
+  expect(sheet({ Root: { '@md&!xx': { dynamic: 'zero' } } })).toThrow(
+    "undeclared media condition 'xx' in '@md&!xx'; declared media: '@md', '@lg'",
+  )
+  expect(sheet({ Root: { '@cardd/sm': { dynamic: 'zero' } } })).toThrow(
+    "undeclared container condition 'cardd/sm' in '@cardd/sm'; declared containers: '@card/sm'",
+  )
+  expect(sheet({ Root: { ':opne': { dynamic: 'zero' } } })).toThrow(
+    "Toned: undeclared state ':opne' in ':opne'; declared states: ':open'; built-in: ':hover', ':active', ':focus', ':focus-visible', ':focus-within'",
+  )
+  expect(
+    sheet({ Root: {}, 'Root:hovr': { Root: { dynamic: 'zero' } } }),
+  ).toThrow("undeclared state ':hovr' in 'Root:hovr'")
 })
 
 test('declared footprints survive immutable construction without resolver probes', () => {

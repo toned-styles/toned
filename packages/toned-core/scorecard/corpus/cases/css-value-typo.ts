@@ -5,7 +5,7 @@ export default defineCase({
   id: 'css-value-typo',
   description: "A CSS keyword typo (`cursor: 'pointr'`)",
   category: 'css',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /'pointer'/,
   sheets: () => [
     ui.stylesheet({

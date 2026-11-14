@@ -346,3 +346,201 @@ const names = (diagnostics: Diagnostic[]) =>
     expect(result.diagnostics).toEqual([])
   })
 }
+
+{
+  const resultFixture = fixture(
+    {
+      'alias.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform.web':{$style:{cursor:'pointer'}},"@platform.native":{$style:{opacity:1}}}})`,
+      'fragment.ts': `export const ring={'@platform.web':{$style:{outlineWidth:2}}}`,
+      'both.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{cursor:'pointer'}},'@platform.web':{$style:{userSelect:'none'}}}})`,
+      'canonical.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{cursor:'pointer'}}}})`,
+      'other.ts': `const config={'@platform.web.extra':1}`,
+    },
+    { 'toned/canonical-platform-key': 'error' },
+    true,
+  )
+
+  test("the '@platform.web' alias is an error, fixed to '@platform web' unless both are written", () => {
+    const result = resultFixture()
+    expect(result.files['alias.ts']).toContain(
+      `'@platform web':{$style:{cursor:'pointer'}},"@platform native":`,
+    )
+    expect(result.files['fragment.ts']).toContain(`{'@platform web':{`)
+    expect(result.files['both.ts']).toContain(`'@platform.web':{$style`)
+    expect(names(result.diagnostics)).toEqual(['both.ts'])
+    expect(result.diagnostics[0]!.message).toContain(
+      "merge them into one '@platform web' block",
+    )
+  })
+}
+
+{
+  const resultFixture = fixture(
+    {
+      'platform.ts': `import {stylesheet} from '@toned/core';const ring={'@platform web':{$style:{outlineWidth:2}}} as const;const pointer={'@platform web':{$style:{cursor:'pointer'}}};stylesheet({Root:{...ring,...pointer}})`,
+      'style.ts': `import {stylesheet} from '@toned/core';const ring={$style:{outlineWidth:2}};stylesheet({Root:{...ring,$style:{cursor:'pointer'}}})`,
+      'alias.ts': `import {stylesheet} from '@toned/core';const ring={'@platform.web':{$style:{outlineWidth:2}}};stylesheet({Root:{'@platform web':{$style:{cursor:'pointer'}},...ring}})`,
+      'condition.ts': `import {stylesheet} from '@toned/core';const hover={':hover':{opacity:1}};stylesheet({Root:{...hover,':hover':{gap:1}}})`,
+      'nested.ts': `import {stylesheet} from '@toned/core';const ring={$style:{outlineWidth:2}};stylesheet({Root:{'@md':{...ring,$style:{cursor:'pointer'}}}})`,
+      'system.ts': `import {ui} from './ui';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};ui.stylesheet({Root:{...a,...b}})`,
+      'distinct.ts': `import {stylesheet} from '@toned/core';const ring={'@platform web':{$style:{outlineWidth:2}}};stylesheet({Root:{...ring,gap:1,'@platform native':{$style:{opacity:1}}}})`,
+      'tokens.ts': `import {stylesheet} from '@toned/core';const base={gap:1};stylesheet({Root:{...base,gap:2}})`,
+      'unknown.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{...dynamic,$style:{cursor:'pointer'}}})`,
+      'outside.ts': `const a={$style:{opacity:1}};const b={$style:{zIndex:1}};export const c={...a,...b}`,
+      // A system's stylesheet re-exported by destructuring, as an app's
+      // design-system module writes it, and imported from that module.
+      'reexport.ts': `import {defineSystem} from '@toned/core';const system=defineSystem({});export const {stylesheet}=system;const a={$style:{opacity:1}};const b={$style:{zIndex:1}};stylesheet({Root:{...a,...b}})`,
+      'imported.ts': `import {stylesheet} from '../toned/system';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};stylesheet({Root:{...a,...b}})`,
+      'imported-system.ts': `import {carehome} from './system';export const {stylesheet:sheet}=carehome;const a={$style:{opacity:1}};const b={$style:{zIndex:1}};sheet({Root:{gap:1}}).extend({Root:{...a,...b}})`,
+      'member.ts': `import {carehome} from './system';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};carehome.stylesheet({Root:{...a,...b}})`,
+      'unrelated.ts': `import {css} from 'other';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};css({Root:{...a,...b}})`,
+    },
+    {
+      'toned/no-shadowing-spread': [
+        'error',
+        { modules: { './ui': { ui: 'system' } } },
+      ],
+    },
+  )
+
+  test('a spread whose $style, platform or condition key is set again is an error naming the key', () => {
+    const result = resultFixture()
+    expect(names(result.diagnostics)).toEqual([
+      'alias.ts',
+      'condition.ts',
+      'imported-system.ts',
+      'imported.ts',
+      'member.ts',
+      'nested.ts',
+      'platform.ts',
+      'reexport.ts',
+      'style.ts',
+      'system.ts',
+    ])
+    const message = (file: string) =>
+      result.diagnostics.find((d) => d.filename.endsWith(file))!.message
+    expect(message('platform.ts')).toContain(
+      "spreads '@platform web', which ...pointer also sets",
+    )
+    expect(message('platform.ts')).toContain('$style: [')
+    expect(message('style.ts')).toContain("spreads '$style'")
+    expect(message('alias.ts')).toContain("'@platform web'")
+    expect(message('condition.ts')).toContain("spreads ':hover'")
+  })
+}
+
+{
+  const resultFixture = fixture(
+    {
+      'raw.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{cursor:'pointer','--toned-b-placeholder-color':'red','--toned-b-scrollbar-background-color':tone}}}})`,
+      'only.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{':hover':{$style:{'--toned-b-scrollbar-display':'none'}}}})`,
+      'fragment.ts': `export const hidden={'@platform web':{$style:{'--toned-b-scrollbar-display':'none'}}}`,
+      'existing.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{$bridge:{placeholder:{color:'red'}},'@platform web':{$bridge:{icon:{size:1}},$style:{'--toned-b-scrollbar-display':'none'}}}})`,
+      'list.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:[ring,{'--toned-b-scrollbar-display':'none'}]}}})`,
+      'read.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{borderColor:'var(--toned-b-placeholder-color)','--brand':'red'}}}})`,
+    },
+    { 'toned/prefer-bridge-key': 'error' },
+    true,
+  )
+
+  test('a raw --toned-b-* key in $style is an error, fixed to $bridge beside it', () => {
+    const result = resultFixture()
+    expect(result.files['raw.ts']).toContain(
+      `'@platform web':{$style: { cursor:'pointer' }, $bridge: { placeholder: { color: 'red' }, scrollbar: { backgroundColor: tone } }}`,
+    )
+    expect(result.files['only.ts']).toContain(
+      `':hover':{$bridge: { scrollbar: { display: 'none' } }}`,
+    )
+    expect(result.files['fragment.ts']).toContain(
+      `{'@platform web':{$bridge: { scrollbar: { display: 'none' } }}}`,
+    )
+    // An existing $bridge, or a list, is merged by hand.
+    expect(result.files['existing.ts']).toContain(
+      `$style:{'--toned-b-scrollbar-display':'none'}`,
+    )
+    expect(result.files['list.ts']).toContain(`'--toned-b-scrollbar-display'`)
+    expect(names(result.diagnostics)).toEqual(['existing.ts', 'list.ts'])
+    expect(result.diagnostics[0]!.message).toContain(
+      'write $bridge: { scrollbar: { display: … } }',
+    )
+  })
+}
+
+{
+  const resultFixture = fixture(
+    {
+      'builders.ts': `import {ui} from './ui';ui.stylesheet(q=>({Root:{[q.state('open')]:{opacity:0},[q.media('md')]:{opacity:1},[q.container('field','wide')]:{gap:1},[q.platform('web')]:{$style:{cursor:'pointer'}},[q.not(q.media('lg'))]:{gap:2}},[q.part('Trigger').state('open')]:{Chevron:{opacity:0}}}))`,
+      'algebra.ts': `import {ui} from './ui';const {q}=ui;ui.stylesheet({Root:{[q.all(q.media('md'),q.not(q.media('lg')))]:{gap:1},[q.any(q.media('md'),q.container('field','wide'))]:{gap:2},[q.all(q.media('md'),q.state('hover'))]:{opacity:0},[q.all(q.state('open'),q.state('hover'))]:{gap:4}}})`,
+      'variants.ts': `import {ui} from './ui';ui.stylesheet({Root:{}}).variants(($,q)=>({[$.size('s')]:{Root:{[q.state('hover')]:{opacity:0}}}}))`,
+      'aliases.ts': `import {ui} from './ui';ui.stylesheet({Root:{'@media md':{gap:1},'@container field wide':{gap:2},'@media (min-width: 10px)':{gap:3}}})`,
+      'kept.ts': `import {ui} from './ui';ui.stylesheet(q=>({Root:{[q.container('field',dp(400))]:{gap:1},[q.media(dp(600))]:{gap:2},[q.any(q.media('md'),q.state('hover'))]:{gap:3},[q.not(q.state('hover'))]:{gap:4},[q.all($.size('s'),q.media('md'))]:{gap:5},[q.all(q.media(name))]:{gap:6}},[q.part('Root').has('Item','open')]:{Item:{gap:1}}}))`,
+      'duplicate.ts': `import {ui} from './ui';ui.stylesheet(q=>({Root:{'@md':{gap:1},[q.media('md')]:{gap:2}}}))`,
+      'strings.ts': `import {ui} from './ui';ui.stylesheet({Root:{':open':{opacity:0},'@md&!lg':{gap:1},'@field/wide':{gap:2}}})`,
+      'other.ts': `const css={'@media md':{color:'red'}};q.state('open')`,
+      'motion.ts': `import {ui} from './ui';defineMotion(ui,{states:{[ui.q.all(ui.q.state('open'),ui.q.state('saving'))]:{duration:1}}})`,
+    },
+    {
+      'toned/canonical-condition-key': [
+        'error',
+        { modules: { './ui': { ui: 'system' } } },
+      ],
+    },
+    true,
+  )
+
+  test('a q builder with a string form is an error, fixed to the string', () => {
+    const result = resultFixture()
+    const builders = result.files['builders.ts']
+    expect(builders).toContain(`':open':{opacity:0}`)
+    expect(builders).toContain(`'@md':{opacity:1}`)
+    expect(builders).toContain(`'@field/wide':{gap:1}`)
+    expect(builders).toContain(`'@platform web':{$style:{cursor:'pointer'}}`)
+    expect(builders).toContain(`'@!lg':{gap:2}`)
+    expect(builders).toContain(`'Trigger:open':{Chevron:{opacity:0}}`)
+    const algebra = result.files['algebra.ts']
+    expect(algebra).toContain(`'@md&!lg':{gap:1}`)
+    expect(algebra).toContain(`'@md|field/wide':{gap:2}`)
+    expect(algebra).toContain(`'@md': { ':hover': {opacity:0} }`)
+    expect(algebra).toContain(`':open:hover':{gap:4}`)
+    expect(result.files['variants.ts']).toContain(`':hover':{opacity:0}`)
+    expect(result.files['aliases.ts']).toContain(
+      `'@md':{gap:1},'@field/wide':{gap:2},'@media (min-width: 10px)':{gap:3}`,
+    )
+  })
+
+  test('builders a string cannot express stay, and a fix never duplicates a key', () => {
+    const result = resultFixture()
+    expect(result.files['duplicate.ts']).toContain(`[q.media('md')]:{gap:2}`)
+    expect(result.files['motion.ts']).toContain(`[ui.q.all(`)
+    expect(result.files['kept.ts']).toContain(`[q.container('field',dp(400))]`)
+    expect(names(result.diagnostics)).toEqual(['duplicate.ts'])
+    expect(result.diagnostics[0]!.message).toContain(
+      "Write '@md' instead of this q builder",
+    )
+    expect(result.diagnostics[0]!.message).toContain(
+      "This part already has a '@md' block, so merge them by hand",
+    )
+  })
+}
+
+{
+  const resultFixture = fixture(
+    {
+      'rules.ts': `import {stylesheet, webRules} from '@toned/core';stylesheet({Root:{'@platform web':{$webRules:webRules({'&::before':{content:'"*"'}})}}})`,
+      'fragment.ts': `import {webRules} from '@toned/core';export const marker={'$webRules':webRules({'&[aria-disabled=true]':{opacity:0.5}})}`,
+      'states.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{':disabled':{opacity:0.5}}})`,
+      'other.ts': `const config={webRules:1}`,
+    },
+    { 'toned/no-web-rules': 'warn' },
+  )
+
+  test('$webRules is deprecated: each block is reported, naming the replacements', () => {
+    const result = resultFixture()
+    expect(names(result.diagnostics)).toEqual(['fragment.ts', 'rules.ts'])
+    const message = result.diagnostics[0]!.message
+    expect(message).toContain('deprecated')
+    expect(message).toContain('declared state')
+    expect(message).toContain('bridge')
+    expect(message).toContain('relation')
+  })
+}

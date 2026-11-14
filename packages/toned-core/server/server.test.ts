@@ -4,6 +4,7 @@ import { buildStyles } from '../build/index.ts'
 import * as manifestValidation from '../build/manifest.ts'
 import { dp } from '../core/values.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
+import type { Variants } from '../types/index.ts'
 import { createNativeRenderer, createWebRenderer } from './index.ts'
 
 test('pure native rendering evaluates platform predicates against native', () => {
@@ -123,9 +124,14 @@ test('web renderer defaults preserve CSS variable tokens through snapshots and l
 })
 
 test('successful manifest validation is weakly cached per renderer and sheet; failures are retried', () => {
-  const system = defineSystem({ id: 'validation-cache', tokens: {} })
+  const system = defineSystem({
+    id: 'validation-cache',
+    tokens: {},
+    conditions: { widths: { media: [777] } },
+  })
   const sheet = system.stylesheet({ Root: { $style: { opacity: 1 } } })
-  const manifest = buildStyles(system, { sheets: [sheet] }).manifest
+  // A manifest from a build that predates the 777px width.
+  const manifest = { ...buildStyles(system).manifest, conditions: [] }
   const renderer = createWebRenderer(system, { manifest })
   const assertConditions = vi.spyOn(
     manifestValidation,
@@ -150,6 +156,7 @@ test('successful manifest validation is weakly cached per renderer and sheet; fa
     const other = defineSystem({
       id: 'validation-cache',
       tokens: {},
+      conditions: { widths: { media: [777] } },
     }).stylesheet({ Root: {} })
     for (let i = 0; i < 2; i++)
       expect(() => renderer.validate(other)).toThrow('different system')
@@ -159,12 +166,21 @@ test('successful manifest validation is weakly cached per renderer and sheet; fa
 })
 
 test('renderer owns an immutable manifest snapshot before any sheet validation', () => {
-  const system = defineSystem({ id: 'manifest-snapshot', tokens: {} })
+  const system = defineSystem({
+    id: 'manifest-snapshot',
+    tokens: {},
+    conditions: { widths: { media: [777, 999] } },
+  })
   const sheet = system.stylesheet((q) => ({
     Root: {},
     [q.media(dp(777))]: { Root: { $style: { opacity: 0 } } },
   }))
-  const built = buildStyles(system, { sheets: [sheet] }).manifest
+  // A manifest from a build that predates the 999px width.
+  const full = buildStyles(system).manifest
+  const built = {
+    ...full,
+    conditions: full.conditions.filter((atom) => atom !== '>=999px'),
+  }
   const manifest = {
     ...built,
     conditions: [...built.conditions],
@@ -267,4 +283,42 @@ test('explicit composition keeps opaque mutable theme and token payloads live', 
   expect(sourced.style['opacity']).toBe(0.25)
   payload.value = 0.5
   expect(sourced.style['opacity']).toBe(0.5)
+})
+test('renderer.resolve memoises a sheet, variants and immutable tokens', () => {
+  let resolutions = 0
+  const system = defineSystem({
+    opacity: defineToken({
+      values: [0, 1],
+      resolve: (value) => {
+        resolutions++
+        return { opacity: value }
+      },
+    }),
+  })
+  const sheet = system
+    .stylesheet({ Root: { opacity: 1 } })
+    .variants(($: Variants<{ faded: boolean }>) => ({
+      [$.faded(true)]: { Root: { opacity: 0 } },
+    }))
+  const renderer = createNativeRenderer(system, { tokens: {} })
+  const first = renderer.resolve(sheet, { variants: { faded: true } } as never)
+  expect(first.Root.style['opacity']).toBe(0)
+  const resolved = resolutions
+  for (let i = 0; i < 50; i++)
+    expect(
+      renderer.resolve(sheet, { variants: { faded: true } } as never),
+    ).toBe(first)
+  expect(resolutions).toBe(resolved)
+  expect(renderer.resolve(sheet, {} as never).Root.style['opacity']).toBe(1)
+  expect(
+    renderer.resolve(sheet, { variants: { faded: false } } as never).Root.style[
+      'opacity'
+    ],
+  ).toBe(1)
+  // Caller-owned token objects are not snapshots and are never memoised.
+  const tokens = {}
+  const before = resolutions
+  renderer.resolve(sheet, { tokens } as never)
+  renderer.resolve(sheet, { tokens } as never)
+  expect(resolutions).toBe(before + 2)
 })

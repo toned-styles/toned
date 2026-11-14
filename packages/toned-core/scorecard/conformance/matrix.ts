@@ -5,7 +5,10 @@
  * - types: does a call of the target with the feature's sheet type-check?
  *   A generated probe file per pair is checked with the tsc CI uses, so the
  *   answer comes from the published types, not from a list.
- * - runtime: does the call return without throwing or warning?
+ * - runtime: does the call return without throwing or warning? A
+ *   deprecation notice (`Toned deprecated: …`) is not a rejection: the
+ *   feature still works on the target, and the scorecard counts deprecated
+ *   API on its own (the purity suite's `deprecated` mutations).
  *
  * The outcome is `type-error` when the types refuse the pair, otherwise
  * `rejected` (with the runtime message) or `works`. `works` means the
@@ -17,9 +20,13 @@ import { join, relative } from 'node:path'
 
 import { capture, compileDiagnostics } from '../probe.ts'
 
+const isDeprecation = (report: string) =>
+  /^(?:\[toned\] )?Toned deprecated: /.test(report)
+
 export type Feature = {
   description: string
-  sheet: () => unknown
+  /** Builds the feature's sheet for a target (most ignore the target). */
+  sheet: (target: string) => unknown
   /** Passed to the target as its second argument when present. */
   options?: unknown
 }
@@ -46,6 +53,17 @@ export type MatrixInput = {
   featuresModule: string
   /** Module exporting `targets`, imported by the type probes. */
   targetsModule: string
+  /**
+   * The probe's call, as source, when the sheet must be built in the probe
+   * itself (a declared-target system's stylesheet call is what the types
+   * reject there). Default: `targets[target](features[feature].sheet())`.
+   */
+  probe?: (feature: string, target: string) => string
+  /** Extra imports a custom probe needs: module path → named exports. */
+  probeImports?: (
+    feature: string,
+    target: string,
+  ) => Readonly<Record<string, readonly string[]>>
 }
 
 function typeProbes(input: MatrixInput): Map<string, string | undefined> {
@@ -71,7 +89,12 @@ function typeProbes(input: MatrixInput): Map<string, string | undefined> {
           [
             `import { features } from ${JSON.stringify(specifier(input.featuresModule))}`,
             `import { targets } from ${JSON.stringify(specifier(input.targetsModule))}`,
-            `targets[${JSON.stringify(target)}](${args.join(', ')})`,
+            ...Object.entries(input.probeImports?.(feature, target) ?? {}).map(
+              ([module, names]) =>
+                `import { ${names.join(', ')} } from ${JSON.stringify(specifier(module))}`,
+            ),
+            input.probe?.(feature, target) ??
+              `targets[${JSON.stringify(target)}](${args.join(', ')})`,
             '',
           ].join('\n'),
         )
@@ -92,11 +115,13 @@ export async function buildMatrix(input: MatrixInput): Promise<Cell[]> {
   const cells: Cell[] = []
   for (const [feature, definition] of Object.entries(input.features)) {
     for (const [target, resolve] of Object.entries(input.targets)) {
-      const reports = await capture(() =>
-        'options' in definition
-          ? resolve(definition.sheet(), definition.options)
-          : resolve(definition.sheet()),
-      )
+      const reports = (
+        await capture(() =>
+          'options' in definition
+            ? resolve(definition.sheet(target), definition.options)
+            : resolve(definition.sheet(target)),
+        )
+      ).filter((report) => !isDeprecation(report))
       const typeError = types.get(`${feature}\u0000${target}`)
       const runtime = reports.length ? 'rejected' : 'works'
       const message = typeError ?? reports[0]

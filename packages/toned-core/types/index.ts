@@ -11,6 +11,26 @@ export { SYMBOL_INIT } from '../utils/symbols.ts'
 // Config types
 export type { Config, HostConditions, Platform } from './config.ts'
 export type { PortableTokenStyle } from './style.ts'
+export type {
+  InlineSafeStyle,
+  StyleListEntry,
+  StyleOf,
+  StyleValue,
+  SystemTargets,
+  Target,
+  Targeted,
+  TargetsOf,
+} from './targets.ts'
+export type {
+  NamespacedVariables,
+  StyleVariablesCheck,
+  VariableNames,
+} from './variables.ts'
+export type {
+  KeywordGrammars,
+  Keywords,
+  StyleKeywordCheck,
+} from './keywords.ts'
 // Stylesheet types.
 // StylesheetInstance and the brand declarations (_internalBrand, _symRef,
 // _symInit) are exported so a host package can EXPORT a stylesheet: without
@@ -58,6 +78,7 @@ export type {
   ElementType,
   InlineStyle,
   ResolveContext,
+  ResponsiveTokens,
   TokenAlphaConfig,
   TokenConfig,
   TokenKeys,

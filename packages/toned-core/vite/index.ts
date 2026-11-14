@@ -17,7 +17,10 @@ export interface TonedPluginOptions<
 > {
   /** Prefer the complete system ref, which carries its runtime namespace. */
   system: S | TokenSystem<S>
-  /** Explicit sheets, including lazy declarations; recollect on watched changes. */
+  /**
+   * @deprecated The build reads only the system. Sheets are collected only for
+   * the deprecated `$webRules` extension; see `buildStyles`.
+   */
   sheets?:
     | readonly object[]
     | (() => readonly object[] | Promise<readonly object[]>)
@@ -41,7 +44,10 @@ export interface TonedPluginOptions<
   themes?: false | { default?: string }
   /** Explicit declaration modules/assets watched by the build. */
   inputs?: readonly string[]
-  /** Recollect after a watched declaration changes; include lazy sheets. */
+  /**
+   * @deprecated Ad-hoc atoms come from the system's `conditions.widths`; a
+   * collected atom the system does not declare fails the build.
+   */
   conditions?:
     | readonly string[]
     | (() => readonly string[] | Promise<readonly string[]>)

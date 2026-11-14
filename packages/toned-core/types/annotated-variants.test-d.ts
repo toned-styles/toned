@@ -80,6 +80,7 @@ base.variants(($: Variants<Mods>) => ({
   // @ts-expect-error optional means omittable; undefined is not a selectable value
   [$.size(undefined)]: { Root: { padding: 2 } },
 }))
+// @ts-expect-error the key '@mdd' is an unknown condition
 base.variants(($: Variants<Mods>, q) => ({
   // @ts-expect-error query names stay system-bound
   [$.size('s')]: { Root: { [q.media('mdd')]: { padding: 2 } } },

@@ -32,17 +32,17 @@ export const ui = defineSystem({
 type ButtonVariants = { size: 's' | 'm'; variant: 'accent' | 'quiet' }
 
 export const button = ui
-  .stylesheet((q) => ({
+  .stylesheet({
     Root: {
       $kind: 'pressable',
       bgColor: 'primary',
-      [q.state('hover')]: { bgColor: 'primary-hover' },
+      ':hover': { bgColor: 'primary-hover' },
       '@platform web': { $style: { cursor: 'pointer' } },
     },
-  }))
-  .variants(($: Variants<ButtonVariants>, q) => ({
+  })
+  .variants(($: Variants<ButtonVariants>) => ({
     [$.size('s').variant('quiet')]: {
-      Root: { opacity: 0.5, [q.media('md')]: { opacity: 1 } },
+      Root: { opacity: 0.5, '@md': { opacity: 1 } },
     },
   }))
 ```
@@ -59,9 +59,117 @@ style subset for that part kind. Foreign platform blocks are filtered before
 capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
 shorthand because their web/native meanings differ; use semantic typography or
 explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
-in its platform block. Legacy `$$type`, `style`, `@md`, `@field/wide`, and
-`@platform.web` remain compatibility spellings. New code should use canonical
-metadata and explicit platform scopes for platform-specific styles.
+in its platform block. Legacy `$$type` and `style` remain compatibility
+spellings. New code should use canonical metadata and explicit
+platform scopes for platform-specific styles.
+
+A platform block has one spelling, `'@platform web'` (or `'@platform native'`),
+which is also what `q.platform('web')` returns (`toned/canonical-condition-key`
+rewrites `[q.platform('web')]` to the string). The `'@platform.web'` alias is
+deprecated: it still resolves, the lint rule `toned/canonical-platform-key`
+rejects it and fixes the key, and writing both spellings in one part is a type
+error (and throws), because one block would replace the other.
+
+### Targets
+
+A system can declare the renderers it is rendered by:
+
+```ts
+export const site = defineSystem({ id: 'site', targets: ['web'], tokens })
+site.stylesheet({ Root: { $style: { cursor: 'pointer', maxWidth: '42rem' } } })
+```
+
+`targets` is a list of `'web' | 'native' | 'email' | 'pdf' | 'tailwind'`, and a
+part's style type is what every declared target supports:
+
+| Targets                              | `$style` (and `$style` inside conditions) |
+| ------------------------------------ | ----------------------------------------- |
+| omitted, or `['web', 'native']`      | the portable style, as above              |
+| `['web']`, `['tailwind']`            | web CSS, as inside `'@platform web'`      |
+| `['web', 'email']`, `['email']`      | inline-safe CSS: no CSS variables         |
+| `['native']`                         | the native style subset                   |
+| `['pdf']`, any mix of web and native | the portable style                        |
+
+Inside a platform block the type narrows to the targets that read it (web reads
+`'@platform web'`; email and Tailwind do too; native and PDF read
+`'@platform native'`). A system with a static target (`'email'` or `'pdf'`)
+renders one style per part, so a condition key (`':hover'`, `'@md'`, a declared
+state, a cross-part key) is a type error that names the static target and
+suggests a variant; with an email target, `$webRules`, `$grid` and `$area` are
+type errors too. Creating a renderer for a target the system did not declare
+throws, naming the declared targets. Without `targets` nothing changes: every
+renderer is allowed and the remaining checks happen at render time.
+
+### Keyword values are checked
+
+csstype types most CSS properties as their keywords plus any string, so in web
+CSS `cursor: 'pointr'` would compile and do nothing. For the properties whose
+values are a closed keyword set (`cursor`, `display`, `overflow`, the box
+alignment properties, `fontStyle`, `fontWeight`, `textAlign`, `textTransform`,
+`textDecorationLine`, `borderStyle`, `whiteSpace`, `touchAction` and a few more:
+the `KeywordGrammars` table in `types/keywords.ts`), a literal string value must
+be one of its keywords, compared without case. The keywords are csstype's,
+which include the vendor values still in use (`textAlign: '-webkit-center'`,
+`cursor: '-webkit-grab'`), plus the two `display` values it leaves out and a line
+clamp needs: `'-webkit-box'` and `'-webkit-inline-box'`. A property that takes several
+keywords takes a space-separated list of them (`display: 'inline flex'`,
+`alignItems: 'safe center'`). A CSS-wide keyword (`inherit`, `unset`, …) is
+always accepted, and so is any value with a function or quoted text in it
+(`var(--x)`, `env(…)`, `url(hand.svg), pointer`). Anything else is a type error
+naming the property, the wrong word, the closest keyword and the keywords:
+
+```text
+'pointr' is not a 'cursor' keyword. Did you mean 'pointer'? Keywords: 'alias', …
+```
+
+A value typed `string` (computed at runtime) is not checked. Properties csstype
+types as a closed union (`position`, `visibility`, `pointerEvents`, `boxSizing`,
+`objectFit`, …) were checked already, and portable and native styles are closed
+unions too. `listStyleType` is not checked: a custom counter style is any name.
+
+### Compose fragments with a `$style` list
+
+```ts
+const focusRing = { outlineWidth: 2, outlineStyle: 'solid' } as const
+Root: {
+  '@platform web': { $style: [focusRing, still && motionless, { maxWidth: '42rem' }] },
+}
+```
+
+`$style` takes a list wherever it takes an object (parts, conditions and
+platform blocks, with the same part-kind typing). Entries merge in order and the
+last wins; falsy entries are skipped, so `cond && fragment` works; a `null`
+property in any entry (`{ opacity: 1, zIndex: null }`) unsets what an earlier
+entry set, and in `extend` removes the inherited value as a single `null` does. The list is folded once,
+when the declaration is normalized. Spreading two fragments into a part instead
+(`{ ...focusRing, ...pointer }`) silently keeps only the last `$style`,
+platform or condition block: `toned/no-shadowing-spread` reports that, naming
+the shadowed key.
+
+### Bridges: `$bridge`
+
+A bridge reaches what an element's own style cannot: a pseudo-element
+(`::placeholder`, `::-webkit-scrollbar`) or a descendant (` svg`). The system
+declares it once, and a part writes its parameters by bridge and property name:
+
+```ts
+conditions: {
+  bridges: { scrollbar: { selector: '::-webkit-scrollbar', properties: ['display'] } },
+}
+// in a sheet:
+List: { $bridge: { scrollbar: { display: 'none' } } }
+```
+
+`$bridge` goes wherever `$style` goes (a part, a condition, a platform block,
+beside `$style`). Core writes the inline custom property the bridge's generated
+rule reads, `--toned-b-scrollbar-display`; the name is core's own, so a
+namespaced system never renames it, and the rule and the value always agree. An
+undeclared bridge or property is a type error listing the declared ones, and
+throws when the sheet is created. Writing the variable by hand in `$style` is a
+type error when no declared bridge reads it, and `toned/prefer-bridge-key`
+rewrites it to `$bridge` otherwise. A token can still resolve to a bridge
+parameter (`resolve: (v) => ({ [bridgeVarName('placeholder', 'color')]: … })`)
+to give it a semantic scale.
 
 New descriptor systems use fixed logical pixels for both viewport and container
 thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
@@ -75,39 +183,61 @@ no vertical text layout. See [portable values and logical layout](core/README.md
 
 ## Conditions and precedence
 
-The finite builders `q.state`, `q.media`, `q.container(name, step)`,
-`q.part(name).state`, and `q.platform` return literal keys. Human aliases include
-`:hover`, `@media md`, `@container field wide`, and `@platform web`.
-Query builders are bound to their system: use the callback's `q` (which also
-knows declared part names) or that system's `ui.q`. Compound platform predicates
-filter execution but keep `$style` portable. Nest an explicit
-`[q.platform('web')]` or `[q.platform('native')]` block to widen its style types.
+A condition is a string key. Write it directly; the compiler checks every name
+in it against the system's declarations:
 
-Use the same computed-key form for compound queries, including inside a part:
+| Condition | Key |
+| --- | --- |
+| A state (built-in or declared) | `':hover'`, `':open'` |
+| Two states together | `':open:hover'` |
+| A declared media threshold | `'@md'` |
+| A fixed width | `'@>=768px'` |
+| A declared container step | `'@field/wide'` |
+| Media and container algebra | `'@md&!lg'`, `'@md\|field/wide'`, `'@!md'` |
+| A media condition and a state | nest them: `'@md': { ':hover': { … } }` |
+| Another part's state, at the sheet root | `'Trigger:open': { Chevron: { … } }` |
+| A platform block | `'@platform web'` |
 
 ```ts
-const emphasis = ui.stylesheet((q) => ({
+const emphasis = ui.stylesheet({
   Root: {
     opacity: 1,
-    [q.not(q.any(q.media('md'), q.state('hover')))]: { opacity: 0 },
+    '@md&!lg': { opacity: 0.5 },
+    '@md': { ':hover': { opacity: 0 } },
   },
-}))
+})
 ```
+
+The system-bound `q` builders (the stylesheet callback's `q`, the variants
+callback's second argument, or `ui.q`) remain for what a string cannot express:
+
+- a computed threshold, `q.media(dp(600))` and `q.container(name, dp(300))`;
+- a relation between registered parts,
+  `q.part('Root').has('Item', 'checked', { scope: 'descendant' })`;
+- a disjunction or negation involving a state or a relation,
+  `q.not(q.any(q.media('md'), q.state('hover')))`, and a variant selector as an
+  operand (`q.all($.size('s'), q.media('md'))`).
+
+A builder call that has a string form (`[q.state('open')]`, `[q.media('md')]`,
+`[q.all(q.media('md'), q.state('hover'))]`, `[q.part('Item').state('hover')]`,
+`[q.platform('web')]`) is a lint error, and `toned/canonical-condition-key`
+rewrites it to the string, or to the nested form for a media condition with a
+state. It does the same for the long aliases `'@media md'` (`'@md'`) and
+`'@container field wide'` (`'@field/wide'`). A rewrite that would repeat a key
+the object already has is reported without a fix: merge the two blocks.
 
 A system's `media` names fixed width thresholds, and may also name a raw web
 media condition: a parenthesised query, or one led by a media type
 (`all`, `print`, `screen`):
 `media: { md: 768, motionless: '(prefers-reduced-motion: reduce)', print: 'print' }`. It is a
-condition like any other (`'@motionless': { … }`, `q.media('motionless')`),
-toggled by the build. Native has no such query and refuses it unless the host
-declares one.
+condition like any other (`'@motionless': { … }`), toggled by the build. Native
+has no such query and refuses it unless the host declares it.
 
 The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
-compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
-methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
-`q.container(name, dp(number))`, supply the resolved logical width: 100 legacy
-units at the default 4px base become `dp(400)`. Named steps retain the owning
-system's declared threshold through `q.container(name, 'wide')`.
+compatibility in `@toned/core/compat`. `cq(name).min(number)` values use a
+system's spacing scale. When migrating to `q.container(name, dp(number))`,
+supply the resolved logical width: 100 legacy units at the default 4px base
+become `dp(400)`. A named step is the string `'@field/wide'`.
 
 Compound builders produce self-contained deterministic keys; they do not allocate
 registry IDs or normalize Boolean expressions into an exponentially growing DNF.
@@ -115,9 +245,9 @@ Pass operands inline or as a readonly tuple so TypeScript retains the expression
 and can validate every referenced part. Arbitrary runtime arrays lose that exact
 key information and are not accepted by checked declarations. Each expression is
 bounded to 512 nodes and 64 KiB and fails explicitly if it exceeds either limit.
-A bare `q.state(...)` binds to its enclosing part; sheet-level groups use
-`q.part('Root').state(...)`. The direct cross-part shorthand selects one source;
-use `q.all` or `q.any` for compound cross-part conditions.
+A bare `':hover'` (or `q.state(...)`) binds to its enclosing part; sheet-level
+groups name the part, `'Root:hover'`. The direct cross-part key selects one
+source; use `q.all` or `q.any` for compound cross-part conditions.
 An axis builder can be reused as a direct variant key and as an operand in
 `q.all`, `q.any` and `q.not`; reading an operand does not declare another rule.
 Compound query keys are primitive strings. Repeating the same complete key in
@@ -132,6 +262,18 @@ Annotate the single `.variants` callback and put compound conditions directly in
 its returned objects. Query builders return typed `QueryKey` strings; use those
 keys in declarations rather than assembling predicate objects. Explicit-generic
 callback and object variant declarations remain compatible.
+
+A key a stylesheet does not accept is a type error whose text names the fix:
+its value is checked against `TonedError<"…">` (a type exported from
+`@toned/core`), so the compiler prints, for example,
+`TonedError<"Unknown state ':opne'. Did you mean ':open'? Declared states: ':open'; built-in: …">`.
+Unknown tokens, CSS properties, states, media and condition-expression atoms
+(`'@md&!xx'`), parts in cross-part keys, raw selectors (`"[data-state='open']"`
+names the declared state to write), web-only CSS and CSS variables in portable
+`$style`, and conditions written inside `$style` each have a message. The
+runtime errors for the same facts name the key and the declared set too. A
+sheet-level `'@<name>'` block is not checked by type (root keys are open); it
+fails at construction with the declared media.
 
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. A variant block comes after its part, so a field the
@@ -175,6 +317,187 @@ The matcher keeps a fast unsigned single-word path and uses multiple words beyon
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
 
+### Declared states and their relations
+
+A system declares the states its markup sets, by selector:
+`states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
+its own state with `':open'`. On the web the toggle is a
+non-inheriting registered custom property (`@property … { inherits: false }`),
+so a state on an ancestor never reaches a descendant; this needs a browser with
+`@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
+contains `:hover` is gated in `@media (hover: hover)`, as `:hover` is.
+
+Another part reads a state only through a relation the state declares:
+
+```ts
+states: {
+  open: { selector: "[data-state='open']", relations: ['ancestor'] },
+  'size-sm': { selector: "[data-size='sm']", relations: ['sibling'] },
+  checked: "[data-state='checked']", // its own part only
+}
+```
+
+- `ancestor`: `'Trigger:open'` styles the
+  parts inside the nearest `Trigger` in the state.
+- `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
+  siblings.
+
+When the parts that react live in another sheet, they write the channel key
+themselves (`Chip: { ':sib-checked': { … } }`), and the source's sheet marks
+its part with an empty key, `'Input~:checked': {}` (or `'Root:open': {}` for
+the ancestor relation). The empty key styles nothing in its own sheet; it makes
+the part a source, and it still needs the relation declared.
+
+Each relation is CSS that every styled element pays for in style
+recalculation; the sibling one grows with the square of a list's length. A
+key reading a state through an undeclared relation is a type error and throws
+when the sheet is built, naming the declaration to add. `:hover` and
+`:focus-within` keep their built-in relations. The selector of a state that
+declares a relation must be an attribute or pseudo-class selector.
+
+Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
+channel. Which states need a relation depends on your sheets, so do not work
+from a list: run the type check, and each error names a key that reads a state
+through a relation and the declaration to add. They come from `'Part:state'`
+and `'Part~:state'` keys and from the lowered channel keys a part can write
+itself, `':src-<state>'` (ancestor) and `':sib-<state>'` (sibling). A label
+that fades after a disabled control (`Label: { ':sib-disabled': { … } }`)
+reports:
+
+```text
+Toned: ':sib-disabled' needs state 'disabled' to declare the sibling relation, e.g. states: { 'disabled': { selector, relations: ['sibling'] } }
+```
+
+so `disabled: ':disabled'` becomes
+`disabled: { selector: ':disabled', relations: ['sibling'] }`. A key in a sheet
+the types cannot see whole (`extend`, an untyped caller) throws the same
+message when the sheet is built.
+
+### Context markers: style a part by an ancestor component
+
+`'Trigger:open'` relates parts of one sheet. To style a part by the state or
+kind of an ancestor in another component (a title inside a hovered card, a
+paragraph inside an FAQ answer), the system declares the context and what it
+offers, a provider part declares it, and the part keys on it:
+
+```ts
+const ui = defineSystem({
+  id: 'site',
+  tokens,
+  conditions: {
+    contexts: {
+      card: { states: ['hover'] },
+      prose: { values: ['faq', 'callout'] },
+    },
+  },
+})
+
+const card = ui.stylesheet({ Root: { $context: 'card', padding: 4 } })
+const prose = ui
+  .stylesheet({ Root: { $context: 'prose' } })
+  .variants(($: Variants<{ kind: 'faq' | 'callout' }>) => ({
+    [$.kind('faq')]: { Root: { $context: 'prose=faq' } },
+    [$.kind('callout')]: { Root: { $context: 'prose=callout' } },
+  }))
+
+const title = ui.stylesheet({
+  Root: {
+    textColor: 'muted',
+    '@within card:hover': { textColor: 'accent' },
+    '@within prose=faq': { fontSize: 'sm' },
+  },
+})
+```
+
+- `'@within card'` applies inside a `card` provider, `'@within prose=faq'`
+  inside one whose value is `faq`, `'@within card:hover'` while it is hovered.
+  The nearest provider of a context answers.
+- `$context` is static: set it on the part, or in a variant block to follow a
+  variant. It takes one marker, or a list when a part provides two contexts.
+- A context's `states` are its relation channel, as a state's `relations`
+  are: built-in states (`hover`, `focus`, `focus-visible`, `focus-within`,
+  `active`) or declared states whose selector attaches to the provider. A
+  hover state is gated in `@media (hover: hover)`.
+- `'@within …'` nests with other conditions (`'@md': { '@within prose': … }`).
+  It cannot be negated: style the default outside and override inside.
+- An undeclared context, value or state is a type error and throws when the
+  sheet is built, naming the declaration to add. So is `$context` inside a
+  condition.
+
+On the web the provider carries marker classes (`site--_cx_card`, and
+`site--_cx_prose_faq` for a value) and the system's CSS carries one
+`:where()` rule per declared context, value and state, generated from the
+declaration alone: no sheet is read. Each rule sets an inherited custom
+property on the provider, and a descendant reads it through its ordinary
+condition chain, so specificity is zero everywhere and the rule's subject is
+the provider, not every descendant. A context costs 43 bytes, a value 76 and
+a hover state 112 (`bun scorecard/scorecard.ts`, `css.bytesPerContext*`);
+style recalculation does not grow with the number of declared contexts
+(`benchmarks/README.md`).
+
+On native, a provider rendered as a toned element (`createElements`, `<s.Root>`)
+gives its markers to the React tree below it, and `useStyles` reads them, so
+`'@within card'` and `'@within prose=faq'` work the same way. A provider
+spread as props (`{...s.Root}`) cannot wrap its children and provides
+nothing. Native has no provider state across components: in a system whose
+`targets` include `'native'`, `'@within card:hover'` is a type error outside
+`'@platform web'`, and the native renderer throws for one it meets.
+
+### Shorthands and CSS-wide keywords under conditions
+
+On the web a part's conditions compile into one inline style, where each
+conditional field reads `var(--rule, <value at rest>)`. Two consequences:
+
+- A shorthand and one of its longhands in different blocks of one part
+  (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
+  write the longhands, or set the whole shorthand in each condition. A longhand
+  a token writes counts too: the `animation` token writes `animationName`, so
+  a raw `animation: 'none'` under a condition beside it is a type error, and
+  the fix is `$style: { animationName: 'none' }`. Sheets the
+  types cannot see whole (`extend`, variants, untyped callers) are handled at
+  resolve time: the shorthand is split into its longhands (`transition`,
+  `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
+  `margin`, `inset`, `gap`, `flex`, `flexFlow`, the `place*` pairs, and a
+  single-colour `background`), so each longhand has one chain. A value that
+  cannot be split without the browser (a `var()`, an `animation`, a layered
+  `background`) throws, naming both fields and the fix; when every field
+  involved is unconditional it is left as written. Chromium's computed styles
+  for the split forms are checked by `node benchmarks/cascade-browser.mjs`.
+- A CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`, `revert-layer`)
+  under a condition is a type error and throws at resolve time: a keyword that
+  reaches a property through a custom property computes as `unset`. At rest it
+  is the chain's fallback, where it works. Set the value the state should take,
+  or write a selector rule with `$webRules`.
+
+### Responsive atoms: declared pairs
+
+A legacy-form system can compile a token's values under a named condition to
+classes (`@md:maxW_32`) instead of an inline chain, so a caller's own utility
+class still overrides the responsive default. Declare which conditions each
+token responds to:
+
+```ts
+defineSystem(tokens, {
+  breakpoints,
+  responsiveTokens: { maxW: ['sm', 'md'], textStep: ['md'] },
+})
+```
+
+Only the declared token and condition pairs emit atoms. Setting `maxW` directly
+under `'@lg'` is a type error naming the declared conditions, and throws at
+resolve where types cannot see the sheet (`extend`, variants). A condition nested
+under another (`':hover': { '@lg': … }`) keeps its chain. A name that is not a
+token or a declared condition is refused when the system is defined. The pairs
+come from the declaration only: the build never reads a stylesheet to find them.
+
+The list form, `responsiveTokens: ['maxW']`, is kept for compatibility and emits
+the token under every declared condition, including non-width ones such as
+`(pointer: coarse)`. To migrate, replace the list with the record, listing for
+each token the conditions its sheets use; the type errors name any you miss.
+In a responsive atom, four equal sides of `margin`, `padding`, `inset`,
+`borderWidth`, `borderStyle`, `borderColor` or `borderRadius` are written as
+the one shorthand.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant
@@ -202,23 +525,35 @@ part that can be rendered independently. The same composition rules apply inside
 media, container, cross-part, compound-query and platform groups. Put the condition
 around a part map when composing under that condition; `$compose` nested inside an
 individual part's condition block is rejected. Root query groups must name their
-source part (`q.part('Root').state('hover')`); local `q.state('hover')` belongs inside
+source part (`'Root:hover'`); a local `':hover'` belongs inside
 that part's declarations.
 
 ## Build CSS before rendering
 
 ```ts
-// Build script; include lazy stylesheet declarations explicitly.
+// Build script. The build reads only the system declaration.
 import { buildStyles } from '@toned/core/build'
-const { css, manifest } = buildStyles(ui, {
-  sheets: [button, emphasis],
-  layer: 'components',
-})
+const { css, manifest } = buildStyles(ui, { layer: 'components' })
 // Write css to an application asset and manifest to a generated module.
 ```
 
+The build never reads a stylesheet: every condition a sheet may use is declared
+by the system (named `media` and `containers` steps, `states`, and the unnamed
+width thresholds listed in `widths`), so adding, editing or deleting a sheet
+changes neither the CSS nor the manifest. A sheet that uses a width the system
+does not declare is a type error, and an error when the sheet is created where
+types cannot see the width; both name where to declare it. The `sheets` and
+`conditions` options are deprecated. `conditions` changes nothing (an atom it
+lists must be declared, or the build throws). `sheets` is read only for the
+deprecated `$webRules` extension; without one it changes nothing and warns in
+development.
+
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
-condition variables and keyframes with their ID. Theme variables consumed by such
+condition variables and keyframes with their ID. Bridge parameters
+(`--toned-b-*`) are the exception: core writes and reads them under one name in
+every system. Their resting reset on each `._` element carries no specificity
+(`:where(._)`), so two systems' CSS can be bundled in either order and a setter
+class from either one still wins. Theme variables consumed by such
 a system must use the same namespace. Declared `themes` are namespaced by the
 build; for a separately generated palette, `namespaceCss` from
 `@toned/core/system` applies the same prefix. A system consuming an existing application palette can
@@ -227,9 +562,27 @@ declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
 runtime output; classes, condition toggles and undeclared variables remain isolated.
 The immutable, validated list is part of the manifest contract. External variables
 must be supplied by the application; Toned does not discover or emit their values.
+
+In a namespaced system, every `var(--x)` written in `$style` must name a variable
+the system owns or a listed one. The system owns a custom property a sheet sets
+(`$style: { '--bar': '3rem' }` on any of its parts, conditions or variants, or in
+the base sheet it extends) and core's own `--toned-*` / `--toned_*` parameters,
+bridge variables included, which never need listing. Any other name would be
+renamed to `--<id>-x` and resolve to nothing, its fallback hiding the mistake, so:
+
+- where the value is a literal and the list is a literal tuple, it is a type error
+  naming the variable, the listed ones and the fix;
+- in development, creating the sheet throws the same message. The check reads each
+  `$style` once per sheet, never per resolve, and runs where toned's development
+  warnings run: `process` exists and `NODE_ENV` is not `production` (Node, Bun,
+  SSR and tests; a browser bundle without `process` skips it). A list computed at
+  runtime (`names.map(…)`) is `string[]` to the compiler, so only this check sees it.
+
+A variable set by a different sheet, or by the application outside toned, belongs
+in `externalCssVariables`. Text in quotes or `url()` is not a reference.
 Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
-The build manifest records ad-hoc conditions and the exact static system schema,
+The build manifest records the declared width atoms and the exact static system schema,
 including named query thresholds, alpha channels/steps, token applicability and pseudo-rule presence. A pure web renderer rejects a changed schema
 or an undeclared condition with a regeneration instruction; it never injects a rule.
 Token names are canonicalized in that schema, so a bundler changing module-export
@@ -239,13 +592,14 @@ not reorder emitted CSS or weaken its byte-level artifact fingerprint.
 `@toned/core/build` contains generators only. `@toned/core/dev/inject` is an
 explicit optional development tool. The `@toned/core/dom` entry remains for compatibility.
 The Vite plugin serves `virtual:toned.css`; import it explicitly, supply watched
-`inputs`, and pass the complete system ref with a `sheets` collector, e.g.
-`toned({ system: ui, sheets: () => [button], inputs: ['./button.ts'] })`.
+`inputs`, and pass the complete system ref, e.g.
+`toned({ system: ui, inputs: ['./system.ts'] })`. Its `sheets` and `conditions`
+collectors are deprecated, as in `buildStyles`.
 It delegates to the same build path and exposes the paired manifest through
 `virtual:toned.manifest` (a default export). Both modules share one collection per
 build or watched invalidation. Passing a raw `system.system` token dictionary
-remains compatible, but requires an explicit namespace `id` and condition
-collector; it cannot collect sheets or check their runtime namespace.
+remains compatible, but requires an explicit namespace `id`; it cannot collect
+sheets or check their runtime namespace.
 The plugin does not insert a style node into HTML; the application imports the
 CSS module.
 
@@ -254,42 +608,83 @@ CSS module.
 When a host has several systems, extra generated stylesheets, or consumers that
 do not run Vite (tests, Metro), write **output files** instead of generated
 files. Each `<name>.toned.ts` default-exports a build artifact, or `{ css, data }`,
-finishing its work while it is imported (top-level `await`):
+finishing its work while it is imported (top-level `await`). `defineOutput` types
+the export, so a misspelled key, data that is not JSON or an unawaited promise is
+a type error:
 
 ```ts
 // src/toned/ui.toned.ts
 import { buildStyles } from '@toned/core/build'
-export default buildStyles(ui, { sheets: [button], layer: 'components' })
+import { defineOutput } from '@toned/core/outputs'
+export default defineOutput(buildStyles(ui, { layer: 'components' }))
 
 // src/toned/ui-palette.toned.ts
-export default { css: paletteCss() }
+const notes = new URL('./palette.md', import.meta.url)
+export default defineOutput({
+  css: paletteCss(readFileSync(notes, 'utf8')),
+  data: { swatches },
+  inputs: [notes], // read outside the imports: rebuild when it changes
+})
 ```
 
 The file name is the output name. A stylesheet imports the CSS at any depth,
 keeping its own cascade order: `@import 'toned:ui' layer(components);`. Code
 imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS as
 a string. An output file may import another output, which is how a usage
-inventory can feed the system it narrows.
+inventory can feed the system it narrows; outputs that import each other are an
+error naming the cycle.
 
-| Consumer             | Entry                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
-| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
-| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
-| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
+The package that owns the outputs declares them once, in its package.json:
 
-`outputs` are globs relative to the root. The Vite plugin builds the outputs with
-Vite's module runner (Vite 6 or later) when the build or dev server starts. In
-dev it watches every file an output read, and an edit rebuilds that output and
-the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
-for other Vite config the files need. CSS `@import` resolves through aliases
-rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
-outside the source tree, and an unknown name fails as that missing file. Bun
-imports an output file only when one of its specifiers is first loaded; give
-`cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
-test files) build each output once and read it after. Metro
-reads the same cache layout from `node_modules/.cache/toned`; restart it after
-changing declarations. Add `@toned/core/vite/client` to `types` (or a
+```json
+{ "name": "@acme/ui", "toned": { "outputs": ["src/toned/*.toned.ts"] } }
+```
+
+Every consumer then finds them from its own root through the dependency graph:
+the root package's dependencies of every kind, then, for each workspace package
+or dependency that has a `toned` field, its `dependencies`, `optionalDependencies`
+and `peerDependencies`. A published package that ships outputs declares a `toned`
+field (even `{}` to pass a dependency's outputs on). Explicit `outputs` globs,
+relative to the consumer's root, replace the declarations.
+
+| Consumer             | Entry                                                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| Vite                 | `tonedOutputs()` from `@toned/core/vite`                                                           |
+| Bun (tests, scripts) | `bun --preload @toned/core/bun/register`, or `Bun.plugin(tonedBunPlugin())` from `@toned/core/bun` |
+| Metro                | `withTonedOutputs(config)` or `withTonedOutputsSync(config)` from `@toned/core/metro`              |
+| Anything else        | `loadOutput(name, { root })` from `@toned/core/outputs/runner`                                     |
+
+All four use one loader (Vite 6 or later): each output is evaluated by Vite's
+module runner in its own module graph, never in the process that imports it, so
+an output never depends on what its host already loaded. Loads that overlap
+share one runner, so a module two outputs import runs once. The same shape
+checks, error messages (`toned:nope is not a Toned output; the outputs are: …`,
+`toned:ui has no "tokens"; it has: css, manifest`) and data keys apply to every
+consumer; `outputs/contract.test.ts` runs one suite against all four. JSX
+compiles with the automatic runtime; pass `runner` for other Vite config the
+files need.
+
+The Vite plugin builds the outputs when the build or dev server starts, once for
+every environment of a build (it is `sharedDuringBuild`). In dev it watches every
+file an output read and its `inputs`; an edit rebuilds that output and the
+outputs importing it, a new or deleted output file is picked up without a
+restart, and a failed build shows in the error overlay while the other outputs
+keep serving. CSS `@import` resolves through aliases rather than plugin hooks,
+so the CSS is written to `<vite cacheDir>/toned/<name>.css`, outside the source
+tree. An unknown name, from CSS or code, fails the build with
+`toned:<name> is not a Toned output; the outputs are: …`.
+
+Bun builds an output only when one of its specifiers is first loaded, and serves
+every data key, including by dynamic `import()`. With `cacheDir`, the processes
+of a run (such as `--isolate`d test files) share builds: an entry is keyed by the
+root and globs and records a hash of every file the output read, so it is
+rebuilt when one changes and never served to another project. The register
+preload keeps that cache in `node_modules/.cache/toned/bun` (or
+`TONED_OUTPUTS_CACHE`). The first build in a process costs the module runner
+(about 250 ms for 75 component modules); a cached one costs hashing its files.
+
+Metro reads the same cache layout from `node_modules/.cache/toned`; restart it
+after changing declarations. Add `@toned/core/vite/client` to `types` (or a
 triple-slash reference) for the `toned:` module declarations.
 
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
@@ -464,6 +859,7 @@ const responsive = ui.stylesheet({
   Root: {
     '@platform web': {
       $grid: compact,
+      // 600 is declared in the system: conditions.widths.media
       [ui.q.media(dp(600))]: { $grid: message },
     },
   },
@@ -511,14 +907,22 @@ agent and prints a markdown table, then JSON; `--json` prints only the JSON
 `{ library, version, metrics, details }`, whose metric names are stable.
 
 - **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
-  stage each mistake is caught at (compile, build, runtime or silent) and
-  whether the report names the fix, computed with the same `tsc` and runtime.
+  stage each mistake is caught at (compile, lint, build, runtime or silent)
+  and whether the report names the fix, computed with the same `tsc`, one
+  oxlint run of `@toned/eslint-plugin`'s recommended rules over the case
+  files, and the runtime. A case whose mistake only a lint rule sees records
+  `baseline: { stage: 'lint', … }`; lint ranks after compile because it only
+  runs where an application enables it.
+  A case's own `build` step (building a named output, say) counts as build.
 - **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
   its canonical spelling and every alias in use; spellings per intent.
 - **Build purity**: which outputs change when a fixture sheet is added,
   edited or deleted.
 - **Target conformance**: each feature on the web, native, inline and PDF
-  renderers: works, rejected at runtime, or a type error.
+  renderers: works, rejected at runtime, or a type error. A second matrix
+  writes each feature for a system that declares only that target
+  (`targets: [t]`), where a feature the target cannot render should be a type
+  error (`conformance.declared.*`).
 
 Each gate's test fails only when a number gets worse than its recorded
 baseline. When one improves, update the baseline beside the case.
@@ -559,7 +963,21 @@ the final subscriber leaves. Native relations require `parentOf` and
 `subscribeTopology`; semantic states beyond hover, active and focus additionally
 require `readState`. Unsupported host capabilities throw named errors.
 
-Use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
+**`$webRules` is deprecated.** It is the one construct whose CSS comes from sheet
+content, so it cannot keep the guarantee that the build reads only the system.
+Existing blocks keep working while their sheets are passed to
+`buildStyles({ sheets })`; the lint rule `toned/no-web-rules` (recommended, a
+warning) and a development warning name the replacements. Migrate each block by
+what it says:
+
+| A `$webRules` block for                                   | Write instead                                                                                                                  |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| a DOM or ARIA fact (`&[aria-disabled=true]`, `&:checked`) | a declared state: `conditions.states: { disabled: '[aria-disabled=true]' }`, then `':disabled': { … }`                         |
+| a pseudo-element (`&::placeholder`)                       | a declared bridge (`conditions.bridges`) and a token whose resolver writes `bridgeVarName(…)`; `$bridge` where it is available |
+| a part in relation to another (`& > input:checked`)       | a registered-part relation: `[q.part('Root').has('Input', 'checked')]: { … }`                                                  |
+| a browser media feature (`(prefers-reduced-motion)`)      | a named media condition: `conditions.media: { still: '(prefers-reduced-motion: reduce)' }`                                     |
+
+Until migrated, use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
 `'@platform web'` block for CSS selectors or pseudo-elements. Styles use checked
 CSS property types. Each entry has one `&`-anchored selector; comma lists and
 at-rules are rejected as selector keys. Exact DOM child syntax such as
@@ -613,13 +1031,13 @@ the axes the sheet already has, and those win over everything.
 const compact = button.extend({ Root: { padding: null } }, ($) => ({
   [$.size('s')]: { Root: { padding: 4 } },
 }))
-const artifact = buildStyles(ui, { sheets: [button, compact] })
+const artifact = buildStyles(ui)
 const web = createWebRenderer(ui, { manifest: artifact.manifest })
 const props = web.resolve(compact, { variants: { size: 's' } })
 ```
 
-Collect derived sheets before building when they introduce conditions or other
-CSS structure. Pure/native renderers resolve these layers directly; React hooks
+A derived sheet adds no CSS: any width it uses is declared by the system, like
+every other sheet's. Pure/native renderers resolve these layers directly; React hooks
 and element families consume the derived sheet, and React's `StyleOverrides`
 takes the same derived sheet. `null` removes an inherited leaf at that exact
 path before matching; it does not erase a separate variant declaration.
@@ -656,9 +1074,9 @@ Switching is CSS only: changing the attribute rerenders nothing, and classes and
 inline styles stay as they were.
 
 ```ts
-const artifact = buildStyles(ui, { sheets }) // themes included
-buildStyles(ui, { sheets, themes: { default: 'night' } }) // another default
-buildStyles(ui, { sheets, themes: false }) // deliver them yourself
+const artifact = buildStyles(ui) // themes included
+buildStyles(ui, { themes: { default: 'night' } }) // another default
+buildStyles(ui, { themes: false }) // deliver them yourself
 ```
 
 A class sets each side of a box separately, so a field read by a four-sided
@@ -674,7 +1092,8 @@ This is static schema checking, not validation of untrusted JSON. Applications
 validate external theme data before passing it to a renderer. Existing untyped
 `defineToken` remains compatible; adopting the typed factory is incremental.
 
-Fixed query thresholds can also be colocated at the use site:
+A fixed width threshold without a name is written at the use site, and declared
+in the system's `widths`:
 
 ```ts
 import { defineSystem, defineToken, dp } from '@toned/core'
@@ -687,7 +1106,10 @@ const layout = defineSystem({
       resolve: (value) => ({ opacity: value }),
     }),
   },
-  conditions: { containers: { card: {} } },
+  conditions: {
+    containers: { card: {} },
+    widths: { media: [600], containers: { card: [300] } },
+  },
 })
 layout.stylesheet((q) => ({
   Root: {
@@ -697,14 +1119,27 @@ layout.stylesheet((q) => ({
 }))
 ```
 
-The container name must be declared in the system; its threshold may be local.
+The build emits CSS for exactly the declared widths, so `q.media(dp(700))` here
+is a type error ("700px is not a width the system declares … add 700 to
+conditions.widths.media"), and so is the literal key `'@>=700px'`. A width the
+compiler cannot see (`dp(config.width)`) is refused when the sheet is created,
+with the same instruction. Widths are fixed logical pixels; a container's list
+needs the container declared in `containers`. The legacy numeric container key
+(`'@card/>=100'`, a spacing-scale multiple) and string lengths are refused: write
+`q.container('card', dp(<px>))` and declare the width. A literal key spells
+the width as its plain number in px, as `q.media(dp(768))` writes it:
+`'@>=768px'`, never `'@>=768.0px'`, `'@>=7.68e2px'` or `'@>=768PX'`. Another
+spelling is a type error and is refused when the sheet is created, naming the
+plain one ("'@>=768.0px' spells the width 768px another way: write
+'@>=768px'").
 These keys retain exact literal types (`@>=600px`, `@card/>=300px`) and compose
 with `q.all`, `q.any`, and `q.not`. Mix variants into these expressions through
 checked selectors such as `$.size('s')`; unchecked raw `'[size=s]'` operands are
 rejected by the query helper types. Both host evaluators and generated query
 preludes use the same fixed pixel number. Percentage, font-relative, and
-custom-property thresholds are rejected. Include sheets containing these
-queries in the normal build inventory, including lazy or overridden sheets.
+custom-property thresholds are rejected. The declared widths are part of the
+manifest's system definition, so a renderer refuses a manifest built before a
+width was added.
 Typed-theme systems also check renderer construction and per-resolution
 `tokens` against their declared schema.
 

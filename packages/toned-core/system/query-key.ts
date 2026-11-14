@@ -25,8 +25,13 @@ type Unescape<S extends string> = Replace<
   '%25',
   '%'
 >
+/** Query keys encode a platform atom in its internal `'@platform.web'` form,
+ *  so both spellings build the same key. */
+type InternalAtom<T extends string> = T extends `@platform ${infer P}`
+  ? `@platform.${P}`
+  : T
 type Encoded<T extends string> =
-  SelectorText<T> extends infer S extends string
+  SelectorText<InternalAtom<T>> extends infer S extends string
     ? S extends `@query ${infer Body}`
       ? Body
       : `a:${Escape<S>}|`
@@ -105,7 +110,9 @@ const unescape = (value: string) =>
 export const isQueryKey = (value: string): value is QueryKey =>
   value.startsWith(PREFIX)
 const encode = (input: string) =>
-  isQueryKey(input) ? input.slice(PREFIX.length) : `a:${escape(input)}|`
+  isQueryKey(input)
+    ? input.slice(PREFIX.length)
+    : `a:${escape(input.replace(/^@platform /, '@platform.'))}|`
 export function booleanQuery(
   op: 'all' | 'any',
   operands: readonly string[],

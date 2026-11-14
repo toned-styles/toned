@@ -5,9 +5,12 @@
  */
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
+import type { Contexts } from '../system/contexts.ts'
+import type { StateDeclaration } from '../system/states.ts'
+import type { DeclaredWidths } from '../system/widths.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
-import type { PlatformStyle } from './style.ts'
+import type { StyleOf, StyleValue } from './targets.ts'
 
 /**
  * Token values object - maps token names to their resolved values.
@@ -140,6 +143,12 @@ export type TokenTypeConfig = {
   inherit?: boolean
 }
 
+/** `responsiveTokens`: token → the conditions it emits atoms for (canonical),
+ *  or the legacy list of tokens that emit atoms under every condition. */
+export type ResponsiveTokens =
+  | readonly string[]
+  | Readonly<Record<string, readonly string[]>>
+
 /**
  * Breakpoints configuration wrapper.
  * Use `__breakpoints` to define responsive breakpoints.
@@ -243,10 +252,12 @@ export type TokenStyleDeclaration = {
     | Breakpoints<any>
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
-    | Record<string, string>
+    | Record<string, StateDeclaration>
+    | Contexts
     | Record<string, number | LogicalLength | MediaCondition>
     | Containers
-    | readonly string[]
+    | ResponsiveTokens
+    | DeclaredWidths
     | number
     | undefined
   // oxlint-disable-next-line typescript/no-explicit-any -- an open key set; a precise Record breaks breakpoint-key indexing on generic sheets (TS2536 under TS 6)
@@ -265,7 +276,9 @@ export type TokenStyleDeclaration = {
    * is what a radix component's "on"/"open" state must do. Alias → selector;
    * the selector is applied to the element (`._<selector>`).
    */
-  states?: Record<string, string>
+  states?: Record<string, StateDeclaration>
+  /** Context markers — see system/contexts.ts. */
+  contexts?: Contexts
   /**
    * Tokens whose breakpoint overrides compile to RESPONSIVE ATOMIC CLASSES
    * instead of inline var-fallback chains. A chain rides the element's style
@@ -277,8 +290,14 @@ export type TokenStyleDeclaration = {
    * layer as (and after) the resting atomics — so it beats the resting value
    * by order at equal specificity and still loses to the caller's utilities.
    * Non-enumerated values (boxed-primitive escapes) keep the chain.
+   *
+   * Canonical form: a record naming the conditions each token responds to,
+   * `{ maxW: ['md', 'lg'] }`. Only those pairs emit atoms, and a sheet setting
+   * the token directly under another named condition is a type error (and a
+   * resolve error where types cannot see it). The legacy list, `['maxW']`,
+   * emits the token under every declared condition. See system/responsive.ts.
    */
-  responsiveTokens?: readonly string[]
+  responsiveTokens?: ResponsiveTokens
   /** Named size containers and their steps — see `Containers`. */
   containers?: Containers
   /**
@@ -287,6 +306,8 @@ export type TokenStyleDeclaration = {
    * it, so `min(100)` is 400px exactly as `gap: 2` is 8px, on every platform.
    */
   base?: number
+  /** Declared unnamed width thresholds — see `SystemOptions.widths`. */
+  widths?: DeclaredWidths
 }
 
 /** Filter out 'breakpoints' key from token style keys */
@@ -298,6 +319,7 @@ export type TokenKeys<S> = Exclude<
   | 'responsiveTokens'
   | 'containers'
   | 'base'
+  | 'widths'
   | 'externalCssVariables'
 >
 
@@ -370,8 +392,53 @@ export type TokenStyle<
   TokenStyleForbidden<S, ET> & {
     /** @deprecated Use $style; the compatibility spelling retains host tuning. */
     style?: InlineStyle
-    $style?: PlatformStyle<ET, Host>
+    /** One style object, or a list merged in order (`[a, cond && b, { … }]`):
+     *  the last entry wins, falsy entries are skipped, `null` unsets. */
+    $style?: StyleValue<StyleOf<S, ET, Host>>
+    /** A declared bridge's parameters by bridge and property name
+     *  (`$bridge: { placeholder: { color: 'red' } }`); core writes the
+     *  `--toned-b-<bridge>-<property>` custom property the bridge reads. */
+    $bridge?: BridgeStyle<S>
   }
+
+/** The bridges a system declares, by name (`{}` when it declares none). */
+export type DeclaredBridges<S> = S extends {
+  readonly bridges: infer B extends Record<
+    string,
+    { readonly properties: readonly string[] }
+  >
+}
+  ? B
+  : {}
+
+/** The properties bridge `N` declares. */
+export type BridgeProperties<B, N> = N extends keyof B
+  ? B[N] extends { readonly properties: readonly (infer P extends string)[] }
+    ? P
+    : never
+  : never
+
+/** A bridge parameter's value, as a style value is written. */
+type BridgeValue = string | number | null
+
+/** Any bridge and property: what an undeclared name is written against. */
+type AnyBridgeStyle = {
+  readonly [bridge: string]: { readonly [property: string]: BridgeValue }
+}
+
+/**
+ * `$bridge`'s shape: each declared bridge, with its declared properties, for
+ * completions. The open index beside them keeps an undeclared name from
+ * being an excess-property error: the stylesheet validation reports it
+ * instead, as a `TonedError` listing the declared bridges or properties.
+ */
+export type BridgeStyle<S> = string extends keyof S
+  ? AnyBridgeStyle
+  : {
+      readonly [N in keyof DeclaredBridges<S>]?: {
+        readonly [P in BridgeProperties<DeclaredBridges<S>, N>]?: BridgeValue
+      } & { readonly [property: string]: BridgeValue }
+    } & AnyBridgeStyle
 
 type DynamicTokenValue<C> = C extends { dynamic: 'number' }
   ? number
