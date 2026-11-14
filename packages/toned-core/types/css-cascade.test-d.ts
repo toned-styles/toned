@@ -1,3 +1,5 @@
+import type { Properties } from 'csstype'
+
 /**
  * Compile-time contracts for what a condition cannot carry on the web: a
  * shorthand in one condition beside its longhand in another, and a CSS-wide
@@ -114,3 +116,27 @@ type Messages = keyof PartCascadeCheck<
 const message: Messages =
   "Toned: 'animation' in $style and the longhand 'animationName' a token writes are set under different conditions; outside its condition the conditional one reverts the other. Write the longhand in $style instead of 'animation' (for animation: 'none', write animationName: 'none')"
 void message
+
+// A token whose `resolve` is typed loosely (a whole `CSSProperties`, as a
+// system's published declaration types it) names no field it always writes,
+// so a shorthand beside it is not a conflict: only the keys a result type
+// requires count.
+const flexLayout = defineToken({
+  values: ['column', 'row'] as const,
+  resolve: (value): Properties => ({
+    display: 'flex',
+    flexDirection: value,
+  }),
+})
+const loose = defineSystem({
+  id: 'loose',
+  tokens: { flexLayout },
+  conditions: { media: { md: 768 } },
+})
+loose.stylesheet({
+  Root: {
+    flexLayout: 'column',
+    '@platform web': { $style: { gap: '0.5rem', padding: '0.5rem' } },
+    '@md': { '@platform web': { $style: { padding: '0.75rem' } } },
+  },
+})

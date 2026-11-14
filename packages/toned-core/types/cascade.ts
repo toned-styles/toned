@@ -62,13 +62,19 @@ type StyleBlocks<
             : never
     }[keyof P & string]
 
-/** The fields the tokens set in one block write, from each token's `resolve`
- * result type (the `animation` token writes `animationName`). */
+/** The keys a result type always has. A loosely typed result (a whole
+ * `CSSProperties`) has none, so it names no field. */
+type RequiredFields<R> = {
+  [K in keyof R & string]-?: {} extends Pick<R, K> ? never : K
+}[keyof R & string]
+
+/** The fields the tokens set in one block always write, from each token's
+ * `resolve` result type (the `animation` token writes `animationName`). */
 type TokenFields<P, S> = {
   [K in keyof P & keyof S & string]: S[K] extends {
     resolve: (...args: never[]) => infer R
   }
-    ? keyof R & string
+    ? RequiredFields<R>
     : never
 }[keyof P & keyof S & string]
 
