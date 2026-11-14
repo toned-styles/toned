@@ -1,5 +1,10 @@
 import { resolveCssPlan } from '../backends/css/plan.ts'
-import { compileRules, foldOperations, resolvePlan } from '../core/plan.ts'
+import {
+  compileRules,
+  foldOperations,
+  resolvePlan,
+  type ShadowDiagnostic,
+} from '../core/plan.ts'
 import { resolveTokenStyle } from '../core/resolve.ts'
 import { gridRegistrations } from '../grid/validation.ts'
 import {
@@ -392,7 +397,9 @@ export function createStylesheet<
       .diagnostics) {
       warnOnce(
         `shadow:${diagnostic.earlier.id}:${diagnostic.later.id}:${diagnostic.field}`,
-        `${diagnostic.later.part}.${diagnostic.field}: later declaration ${diagnostic.later.path.join(' / ')} shadows the earlier compound ${diagnostic.earlier.path.join(' / ')}; source order wins. Use renderer.explain(sheet, inputs) to inspect all writes.`,
+        diagnostic.code === 'variant-shadows-condition'
+          ? variantShadowMessage(diagnostic, mergedRules)
+          : `${diagnostic.later.part}.${diagnostic.field}: later declaration ${diagnostic.later.path.join(' / ')} shadows the earlier compound ${diagnostic.earlier.path.join(' / ')}; source order wins. Use renderer.explain(sheet, inputs) to inspect all writes.`,
       )
     }
   }
@@ -408,6 +415,42 @@ export function createStylesheet<
     ]),
   })
   return stylesheet
+}
+
+/**
+ * The development warning for a variant that overrides the part's own
+ * conditional value (core/plan.ts, `variant-shadows-condition`), written in
+ * the author's spelling: the variant's key, the part's condition keys and the
+ * nested block to add.
+ */
+function variantShadowMessage(
+  diagnostic: ShadowDiagnostic,
+  rules: Readonly<Record<PropertyKey, unknown>>,
+): string {
+  const { earlier, later, field } = diagnostic
+  const part = later.part
+  // A cross-part key is stored `<part>:<state>`; inside the part it is ':state'.
+  const conditions = earlier.path
+    .slice(0, earlier.path.lastIndexOf(part))
+    .map((key) => (key.startsWith(`${part}:`) ? key.slice(part.length) : key))
+  const axes = new Set(later.path.slice(0, later.path.lastIndexOf(part)))
+  const variant =
+    Object.keys(rules).find(
+      (key) =>
+        key.startsWith('[') &&
+        [...axes].every((axis) => key.includes(`[${axis}=`)) &&
+        Object.hasOwn((rules[key] ?? {}) as object, part),
+    ) ?? [...axes].map((axis) => `[${axis}=…]`).join('')
+  const token = later.token
+  const leaf =
+    token === '$style' || token === 'style'
+      ? `$style: { ${field}: … }`
+      : `${token}: …`
+  const nested = conditions.reduceRight(
+    (inner, key) => `'${key}': { ${inner} }`,
+    leaf,
+  )
+  return `${part}.${field}: the variant '${variant}' sets it with no condition after the part's ${conditions.map((key) => `'${key}'`).join(' / ')} value, so wherever the variant applies its value wins there too (later declarations win). Repeat the condition inside the variant to keep a different value under it: '${variant}': { ${part}: { ${nested} } }.`
 }
 
 /*
