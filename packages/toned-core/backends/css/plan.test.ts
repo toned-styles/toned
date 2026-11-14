@@ -219,6 +219,26 @@ describe('CSS shared-plan adapter', () => {
     expect(output.style).toEqual({})
   })
 
+  it('keeps a declared responsive pair a class and refuses an undeclared one', () => {
+    const system = defineSystem(tokens, {
+      breakpoints: { __breakpoints: { md: 600, lg: 1000 } },
+      responsiveTokens: { gap: ['md'] },
+    })
+    const declared = system.stylesheet({ Root: { gap: 4, '@md': { gap: 8 } } })
+    expect(
+      resolveCssPlan(compilePlan(system, declared, 'web'), system, {})['Root']!
+        .className,
+    ).toBe('_ gap_4 @md:gap_8')
+    const undeclared = system.stylesheet({
+      Root: { gap: 4, '@lg': { gap: 8 } },
+    } as never)
+    expect(() =>
+      resolveCssPlan(compilePlan(system, undeclared, 'web'), system, {}),
+    ).toThrow(
+      "Toned: part 'Root' sets gap under '@lg', which has no responsive atom: responsiveTokens declares gap for 'md' only. Add 'lg' to responsiveTokens.gap, or move the value out of '@lg'",
+    )
+  })
+
   it('honors runtime mode rather than retaining symbolic browser conditions', () => {
     const system = defineSystem(tokens, {
       breakpoints: { __breakpoints: { md: 600 } },

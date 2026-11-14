@@ -451,6 +451,99 @@ type RelationNotDeclared<
     : never
 
 /**
+ * Declared responsive pairs (system/responsive.ts): the record form of
+ * `responsiveTokens`. The legacy list (every condition) and no declaration
+ * are `never`, which makes the checks below free.
+ */
+type ResponsivePairsOf<S> = S extends { responsiveTokens?: infer R }
+  ? R extends readonly unknown[]
+    ? never
+    : R extends Readonly<Record<string, readonly string[]>>
+      ? R
+      : never
+  : never
+
+type QuotedNames<T, Acc extends string = ''> = T extends readonly [
+  infer Head extends string,
+  ...infer Rest,
+]
+  ? QuotedNames<Rest, Acc extends '' ? `'${Head}'` : `${Acc}, '${Head}'`>
+  : Acc extends ''
+    ? 'no condition'
+    : Acc
+
+/** The keys a condition block sets directly, its `$style` included. */
+type BlockKeys<Block> =
+  | (keyof Block & string)
+  | (Block extends { $style?: infer Style } ? keyof Style & string : never)
+
+/** One message per pair-declared token set under condition `B` it does not
+ *  declare. */
+type UndeclaredPairs<Keys extends string, B extends string, R> = {
+  [T in Keys & keyof R & string]: R[T] extends readonly (infer Declared)[]
+    ? B extends Declared
+      ? never
+      : `Toned: ${T} has no responsive atom under '@${B}': responsiveTokens declares ${T} for ${QuotedNames<R[T]>} only. Add '${B}' to responsiveTokens.${T}, or move the value out of '@${B}'`
+    : never
+}[Keys & keyof R & string]
+
+/** The named condition a written key opens directly (`'@md'`, `'@media md'`). */
+type NamedCondition<
+  K,
+  Names extends string,
+> = K extends `@media ${infer B extends Names}`
+  ? B
+  : K extends `@${infer B extends Names}`
+    ? B
+    : never
+
+type PartPairMessages<P, R, Names extends string> = {
+  [K in keyof P & string]: K extends
+    | '@platform web'
+    | '@platform.web'
+    | '@platform native'
+    | '@platform.native'
+    ? PartPairMessages<P[K], R, Names>
+    : [NamedCondition<K, Names>] extends [never]
+      ? never
+      : UndeclaredPairs<BlockKeys<P[K]>, NamedCondition<K, Names>, R>
+}[keyof P & string]
+
+type PairCheck<M> = [M] extends [never]
+  ? unknown
+  : { [Message in M & string]: never }
+
+/**
+ * A part setting a pair-declared responsive token directly under a named
+ * condition the token does not declare: a required property naming the fix.
+ * Nested conditions (`':hover': { '@lg': … }`) compile to a chain and pass.
+ */
+type PartPairCheck<S, P> = [ResponsivePairsOf<S>] extends [never]
+  ? unknown
+  : PairCheck<
+      PartPairMessages<
+        P,
+        ResponsivePairsOf<S>,
+        keyof InferBreakpoints<S> & string
+      >
+    >
+
+/** The same check for a root condition block (`'@lg': { Root: { … } }`). */
+type RootPairCheck<S, K, Block> = [ResponsivePairsOf<S>] extends [never]
+  ? unknown
+  : [NamedCondition<K, keyof InferBreakpoints<S> & string>] extends [never]
+    ? unknown
+    : PairCheck<
+        {
+          [Part in keyof Block & string]: UndeclaredPairs<
+            BlockKeys<Block[Part]>,
+            NamedCondition<K, keyof InferBreakpoints<S> & string>,
+            ResponsivePairsOf<S>
+          >
+        }[keyof Block & string]
+      >
+
+/**
  * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
  * `${Elements}${CrossSuffix}` union is never built. Enumerating it as mapped
  * keys (root, variant conditions, and each part) would make a sheet cost
@@ -847,7 +940,8 @@ export type StylesheetValidation<
             true,
             true
           > &
-            PartCascadeCheck<T[K]>
+            PartCascadeCheck<T[K]> &
+            PartPairCheck<S, T[K]>
       : RootKeyValidation<S, T, K, Elements, Kinds>
 }
 
@@ -883,7 +977,8 @@ type RootKeyValidation<
             Elements,
             false,
             true
-          >
+          > &
+            RootPairCheck<S, K, T[K]>
         : unknown
       : K extends `${string}:${string}` | `${string}~${string}`
         ? IsCrossElementKey<K, Elements, S> extends true

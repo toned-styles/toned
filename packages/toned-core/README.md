@@ -225,6 +225,35 @@ conditional field reads `var(--rule, <value at rest>)`. Two consequences:
   is the chain's fallback, where it works. Set the value the state should take,
   or write a selector rule with `$webRules`.
 
+### Responsive atoms: declared pairs
+
+A legacy-form system can compile a token's values under a named condition to
+classes (`@md:maxW_32`) instead of an inline chain, so a caller's own utility
+class still overrides the responsive default. Declare which conditions each
+token responds to:
+
+```ts
+defineSystem(tokens, {
+  breakpoints,
+  responsiveTokens: { maxW: ['sm', 'md'], textStep: ['md'] },
+})
+```
+
+Only the declared token and condition pairs emit atoms. Setting `maxW` directly
+under `'@lg'` is a type error naming the declared conditions, and throws at
+resolve where types cannot see the sheet (`extend`, variants). A condition nested
+under another (`':hover': { '@lg': … }`) keeps its chain. A name that is not a
+token or a declared condition is refused when the system is defined. The pairs
+come from the declaration only: the build never reads a stylesheet to find them.
+
+The list form, `responsiveTokens: ['maxW']`, is kept for compatibility and emits
+the token under every declared condition, including non-width ones such as
+`(pointer: coarse)`. To migrate, replace the list with the record, listing for
+each token the conditions its sheets use; the type errors name any you miss.
+In a responsive atom, four equal sides of `margin`, `padding`, `inset`,
+`borderWidth`, `borderStyle`, `borderColor` or `borderRadius` are written as
+the one shorthand.
+
 ## Reuse named fragments and part declarations
 
 Declare a named fragment with `[$('interactive')]` inside the same variant

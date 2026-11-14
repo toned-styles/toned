@@ -32,6 +32,8 @@ const METRICS = [
   'css.fixtureGzipBytes',
   'css.bytesPerDeclaredState',
   'css.rulesPerDeclaredState',
+  'css.responsiveAtomBytes',
+  'css.responsiveAtomGzipBytes',
   'docs.coreReadmeWords',
 ]
 

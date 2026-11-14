@@ -10,6 +10,10 @@ import { evaluatePredicate, FALSE } from '../../core/predicates.ts'
 import { resolveAlphaChannels } from '../../core/resolve.ts'
 import { separateShorthands } from '../../core/shorthands.ts'
 import { namespaceOutput } from '../../system/namespace.ts'
+import {
+  responsivePairs,
+  undeclaredPairMessage,
+} from '../../system/responsive.ts'
 import type { TokenSystem, Tokens } from '../../types/index.ts'
 import type { AnyDeclaration } from '../../types/system.ts'
 import {
@@ -333,20 +337,34 @@ function lowerCssOperations(
     if (unconditional(operation.predicate))
       lastStatic.set(operation.origin.token, operation.origin.id)
   const responsive = new Set<string>()
-  if (!system.id && useClassName) {
-    for (const token of config.responsiveTokens ?? []) {
+  if (!system.id) {
+    for (const [token, declared] of responsivePairs(config)) {
       const conditional = operations.filter(
         (operation) =>
           operation.origin.token === token &&
           !unconditional(operation.predicate),
       )
+      const named = (operation: ResolvedOperation) =>
+        operation.predicate.op === 'atom' &&
+        operation.predicate.fact.kind === 'media' &&
+        operation.predicate.fact.min === undefined
+          ? operation.predicate.fact.name
+          : undefined
+      // A declared pair is the only condition a token's atoms exist for; one
+      // written directly under another is refused in every mode, so a sheet
+      // that resolves in a test also resolves in the browser.
+      if (declared)
+        for (const operation of conditional) {
+          const name = named(operation)
+          if (name !== undefined && !declared.has(name))
+            throw new Error(undeclaredPairMessage(part, token, name, declared))
+        }
       if (
+        useClassName &&
         conditional.length &&
         conditional.every(
           (operation) =>
-            operation.predicate.op === 'atom' &&
-            operation.predicate.fact.kind === 'media' &&
-            operation.predicate.fact.min === undefined &&
+            named(operation) !== undefined &&
             config[token]?.values?.includes(operation.tokenValue),
         )
       )

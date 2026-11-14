@@ -33,6 +33,7 @@ import { getConfig, resolveModes } from './config.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
 import { createQueries } from './queries.ts'
+import { responsivePairs } from './responsive.ts'
 import { type StateDeclaration, validateStates } from './states.ts'
 import { createTokenComposer } from './token-composer.ts'
 
@@ -175,6 +176,26 @@ export function defineUnit<T>(
 }
 
 /**
+ * The record form of `responsiveTokens` names tokens of this system and
+ * conditions it declares (system/responsive.ts); the legacy list is unchecked.
+ */
+type DeclaredResponsivePairs<S, C> = C extends {
+  responsiveTokens: infer R extends Readonly<Record<string, readonly string[]>>
+}
+  ? R extends readonly unknown[]
+    ? unknown
+    : {
+        responsiveTokens: {
+          [T in keyof R]: T extends keyof S
+            ? readonly (C extends { breakpoints: { __breakpoints: infer B } }
+                ? keyof B & string
+                : never)[]
+            : never
+        }
+      }
+  : unknown
+
+/**
  * Define a complete token system with all tokens and optional configuration.
  *
  * Returns an object with:
@@ -204,7 +225,10 @@ export function defineSystem<
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
->(system: S, config?: C): TokenSystem<S & C, C>
+>(
+  system: S,
+  config?: C & NoInfer<DeclaredResponsivePairs<S, C>>,
+): TokenSystem<S & C, C>
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
@@ -291,6 +315,8 @@ export function defineSystem<
     }) as StylesheetType<S & C>,
     exec: createCssExecutor(system, config, id),
   }
+  // Refuse a responsive pair naming no token or condition at definition.
+  responsivePairs(ref.system as Parameters<typeof responsivePairs>[0])
 
   return ref
 }

@@ -90,6 +90,87 @@ describe('generate', () => {
       )
     })
 
+    test('declared pairs emit only the conditions each token names', () => {
+      const result = generate({
+        maxW,
+        breakpoints: {
+          __breakpoints: {
+            sm: 480,
+            md: 768,
+            lg: 1024,
+            coarse: '(pointer: coarse)',
+          },
+        },
+        responsiveTokens: { maxW: ['md'] },
+      })
+      expect(result).toContain(
+        '@media (min-width: 768px) {.\\@md\\:maxW_gutter{max-width:calc(100% - 2rem);}.\\@md\\:maxW_32{max-width:32rem;}}',
+      )
+      expect(result).not.toContain('\\@sm\\:maxW')
+      expect(result).not.toContain('\\@lg\\:maxW')
+      expect(result).not.toContain('\\@coarse\\:maxW')
+    })
+
+    test('a token listed without conditions keeps every breakpoint (the legacy list)', () => {
+      const result = generate({
+        maxW,
+        breakpoints: {
+          __breakpoints: { sm: 480, coarse: '(pointer: coarse)' },
+        },
+        responsiveTokens: ['maxW'],
+      })
+      expect(result).toContain('\\@sm\\:maxW_32')
+      expect(result).toContain('\\@coarse\\:maxW_32')
+    })
+
+    test('four equal sides collapse to one shorthand in a responsive atom', () => {
+      const margin = {
+        values: [1],
+        resolve: () => ({
+          marginLeft: '4px',
+          marginTop: '4px',
+          marginBottom: '4px',
+          marginRight: '4px',
+        }),
+      }
+      const uneven = {
+        values: [1],
+        resolve: () => ({
+          paddingLeft: '4px',
+          paddingTop: '2px',
+          paddingBottom: '4px',
+          paddingRight: '4px',
+        }),
+      }
+      const result = generate({
+        margin,
+        uneven,
+        breakpoints: { __breakpoints: { md: 768 } },
+        responsiveTokens: { margin: ['md'], uneven: ['md'] },
+      })
+      expect(result).toContain('.\\@md\\:margin_1{margin:4px;}')
+      expect(result).toContain(
+        '.\\@md\\:uneven_1{padding-left:4px;padding-top:2px;padding-bottom:4px;padding-right:4px;}',
+      )
+    })
+
+    test('a pair naming an undeclared token or condition is refused', () => {
+      expect(() =>
+        generate({
+          maxW,
+          breakpoints: { __breakpoints: { md: 768 } },
+          responsiveTokens: { maxW: ['xl'] },
+        }),
+      ).toThrow(/responsiveTokens\.maxW names 'xl'.*'md'/)
+      expect(() =>
+        generate({
+          maxW,
+          breakpoints: { __breakpoints: { md: 768 } },
+          responsiveTokens: { maxH: ['md'] },
+        }),
+      ).toThrow(/responsiveTokens names 'maxH'/)
+    })
+
     test('un-opted tokens emit no responsive classes', () => {
       const result = generate({
         maxW,

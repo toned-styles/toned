@@ -278,6 +278,23 @@ export const intents: readonly Intent[] = [
       },
     ],
   },
+  {
+    id: 'responsive-atoms',
+    intent: 'Give a token responsive classes under the conditions it uses',
+    canonical: {
+      spelling: "responsiveTokens: { maxW: ['md', 'lg'] }",
+      note: 'only the declared pairs emit atoms; another pair is a type error',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "responsiveTokens: ['maxW']",
+        status: 'compatible',
+        note: 'emits the token under every declared condition, including non-width ones',
+        source: 'readme',
+      },
+    ],
+  },
 ]
 
 /** Spellings an author can write today: the canonical one plus live aliases. */
