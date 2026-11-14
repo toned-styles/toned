@@ -34,7 +34,9 @@ describe('intent table', () => {
     expect(count('platform-block')).toBe(1)
     expect(count('compose-fragments')).toBe(1)
     expect(count('hover-gating')).toBe(4)
-    expect(count('ancestor-hover')).toBe(3)
+    // Its cross-component alias moved to 'ancestor-component'.
+    expect(count('ancestor-hover')).toBe(2)
+    expect(count('ancestor-component')).toBe(3)
     // The raw bridge variable is a lint error now (toned/prefer-bridge-key).
     expect(count('placeholder-colour')).toBe(2)
     expect(count('component-option')).toBe(2)

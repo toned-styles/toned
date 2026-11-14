@@ -5,6 +5,7 @@
  */
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
+import type { Contexts } from '../system/contexts.ts'
 import type { StateDeclaration } from '../system/states.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
@@ -251,6 +252,7 @@ export type TokenStyleDeclaration = {
     | Record<string, AnimationInput>
     | Record<string, BridgeConfig>
     | Record<string, StateDeclaration>
+    | Contexts
     | Record<string, number | LogicalLength | MediaCondition>
     | Containers
     | ResponsiveTokens
@@ -273,6 +275,8 @@ export type TokenStyleDeclaration = {
    * the selector is applied to the element (`._<selector>`).
    */
   states?: Record<string, StateDeclaration>
+  /** Context markers — see system/contexts.ts. */
+  contexts?: Contexts
   /**
    * Tokens whose breakpoint overrides compile to RESPONSIVE ATOMIC CLASSES
    * instead of inline var-fallback chains. A chain rides the element's style

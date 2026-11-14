@@ -9,6 +9,7 @@ import type {
 import type { Target } from '../types/targets.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
+import type { Contexts } from './contexts.ts'
 import type { StateDeclaration } from './states.ts'
 import type { SystemTheme } from './theme-types.ts'
 
@@ -31,6 +32,11 @@ export type SystemOptions = {
   animations?: Record<string, AnimationInput>
   bridges?: Record<string, BridgeConfig>
   states?: Record<string, StateDeclaration>
+  /**
+   * Context markers (system/contexts.ts): each context's values and the
+   * provider states descendants may read, `{ card: { states: ['hover'] } }`.
+   */
+  contexts?: Contexts
   /** See `TokenStyleDeclaration.responsiveTokens`. */
   responsiveTokens?: ResponsiveTokens
   /** See `TokenStyleDeclaration.containers`. */

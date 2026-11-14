@@ -2,6 +2,13 @@ import type { BridgeConfig } from '../types/tokens.ts'
 import { fixedQueryWidth } from '../utils/conditions.ts'
 import { bridgeVarName } from '../utils/css.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
+import {
+  type Contexts,
+  contextMarkers,
+  isWithinKey,
+  parseWithinKey,
+  withinError,
+} from './contexts.ts'
 import type { QueryPredicate } from './queries.ts'
 import { isQueryKey, queryExpression } from './query-key.ts'
 import type { StateDeclaration } from './states.ts'
@@ -79,6 +86,9 @@ export type NormalizeOptions = {
   /** The system's declared bridges; `$bridge` names are checked against
    *  them. Omitted only where no system is known. */
   bridges?: Readonly<Record<string, BridgeConfig>>
+  /** The system's declared contexts; `$context` markers are checked
+   *  against them. Omitted only where no system is known. */
+  contexts?: Contexts
 }
 
 /** Canonicalize author-facing aliases once, before matcher compilation. */
@@ -88,6 +98,7 @@ export function normalizeDeclarations<T>(
 ): T {
   if (!isRecord(input)) return input
   const bridges = options ? (options.bridges ?? {}) : undefined
+  const contexts = options ? (options.contexts ?? {}) : undefined
   const out: Record<string, unknown> = {}
   if (
     '$kind' in input &&
@@ -107,13 +118,15 @@ export function normalizeDeclarations<T>(
         ? '$$type'
         : key === '$style' || key === '$bridge'
           ? 'style'
-          : key.startsWith('@media ')
-            ? `@${key.slice(7)}`
-            : key.startsWith('@container ')
-              ? `@${key.slice(11).trim().replace(/\s+/g, '/')}`
-              : key.startsWith('@platform ')
-                ? `@platform.${key.slice(10)}`
-                : key
+          : key === '$context'
+            ? '$$context'
+            : key.startsWith('@media ')
+              ? `@${key.slice(7)}`
+              : key.startsWith('@container ')
+                ? `@${key.slice(11).trim().replace(/\s+/g, '/')}`
+                : key.startsWith('@platform ')
+                  ? `@platform.${key.slice(10)}`
+                  : key
     if (
       (key.startsWith(':') || key.startsWith('@')) &&
       isRecord(value) &&
@@ -122,16 +135,29 @@ export function normalizeDeclarations<T>(
       throw new Error(
         'Toned: part kind is static and cannot change inside a condition',
       )
+    if (
+      (key.startsWith(':') || key.startsWith('@')) &&
+      !key.startsWith('@platform') &&
+      isRecord(value) &&
+      ('$context' in value || '$$context' in value)
+    )
+      throw new Error(
+        `Toned: $context is static and cannot change inside '${key}'; set it on the part, or in a variant block`,
+      )
     const normalized =
-      key === '$bridge'
-        ? immutableSnapshot(bridgeStyle(value, bridges))
-        : canonical === 'style'
-          ? immutableSnapshot(
-              Array.isArray(value) ? foldStyleList(value) : value,
-            )
-          : canonical === '$grid' || canonical === '$area'
-            ? value
-            : normalizeDeclarations(value, options)
+      key === '$context'
+        ? contexts
+          ? immutableSnapshot(contextMarkers(value, contexts))
+          : value
+        : key === '$bridge'
+          ? immutableSnapshot(bridgeStyle(value, bridges))
+          : canonical === 'style'
+            ? immutableSnapshot(
+                Array.isArray(value) ? foldStyleList(value) : value,
+              )
+            : canonical === '$grid' || canonical === '$area'
+              ? value
+              : normalizeDeclarations(value, options)
     out[canonical] =
       canonical === 'style' && isRecord(out[canonical]) && isRecord(normalized)
         ? { ...out[canonical], ...normalized }
@@ -154,6 +180,7 @@ export function validateDeclarations(
     breakpoints?: { __breakpoints: Record<string, number | string> }
     containers?: Record<string, Record<string, unknown>>
     states?: Record<string, StateDeclaration>
+    contexts?: Contexts
   },
 ): void {
   const builtInStates = [
@@ -187,6 +214,14 @@ export function validateDeclarations(
       } else if (key.startsWith('@platform.')) {
         if (!['web', 'native'].includes(key.slice(10)))
           throw new Error(`Toned: unknown platform ${key}`)
+      } else if (isWithinKey(key)) {
+        const error = withinError(
+          parseWithinKey(key),
+          key,
+          `'${key}'`,
+          system.contexts,
+        )
+        if (error) throw new Error(error)
       } else if (key.startsWith('@')) {
         // Legacy boolean condition spelling may be retained at the sheet root.
         const atoms = key
@@ -226,7 +261,8 @@ export function validateDeclarations(
         key !== 'style' &&
         key !== '$grid' &&
         key !== '$area' &&
-        key !== '$webRules'
+        key !== '$webRules' &&
+        key !== '$$context'
       )
         walk(value)
     }

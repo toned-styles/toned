@@ -123,10 +123,27 @@ export const intents: readonly Intent[] = [
         note: 'hover on the ancestor, relying on inherited properties',
         source: review,
       },
+    ],
+  },
+  {
+    id: 'ancestor-component',
+    intent: "Style a part by an ancestor component's state or kind",
+    canonical: {
+      spelling: "'@within card:hover': { … }",
+      note: "the provider part declares `$context: 'card'` (`'prose=faq'` for a valued context, in a variant block); the system declares `contexts: { card: { states: ['hover'] }, prose: { values: ['faq'] } }`. `'@within prose=faq'` and `'@within card'` read a value and the context itself",
+      source: 'readme',
+    },
+    aliases: [
       {
         spelling: "':in-hovered-card': { … }",
         status: 'workaround',
-        note: "a hand-written selector state such as `':is([data-pause]:hover > *)'`; 28 on the website, some depending on class-name strings",
+        note: "a hand-written selector state such as `':is([class~=\"tnd-bento-card\"]:hover *)'`: the website branch's 17 `in-hovered-*` / `in-open-*` states, each coupled to a `tnd-` class-name string",
+        source: review,
+      },
+      {
+        spelling: "':in-faq-answer': { … }",
+        status: 'workaround',
+        note: "a hand-written selector state such as `':where([data-prose=\"faq\"] > *)'`: the website branch's 10 prose `in-*` states, written with `:where` where the hover ones use `:is`",
         source: review,
       },
     ],

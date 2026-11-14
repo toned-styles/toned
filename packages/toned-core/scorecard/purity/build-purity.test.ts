@@ -15,6 +15,7 @@ const baseline: Record<string, readonly ('css' | 'manifest')[]> = {
   'add-compound-condition': [],
   'add-local-media': ['css', 'manifest'],
   'add-source-channel': [],
+  'add-context-sheets': [],
   'add-web-rules': ['css', 'manifest'],
   'add-derived-sheet': ['css', 'manifest'],
 }

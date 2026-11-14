@@ -3,6 +3,7 @@ import {
   resolveConfiguredToken,
 } from '../core/resolve.ts'
 import { SHORTHANDS } from '../core/shorthands.ts'
+import { type Contexts, contextCss } from '../system/contexts.ts'
 import { namespaceCss } from '../system/namespace.ts'
 import { responsivePairs } from '../system/responsive.ts'
 import {
@@ -134,6 +135,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     animations,
     bridges,
     states,
+    contexts,
     responsiveTokens: _responsiveTokens,
     containers,
     base,
@@ -213,6 +215,11 @@ export function generate<const S extends TokenStyleDeclaration>(
     }
     styles += stateToggles
   }
+
+  // Context markers (system/contexts.ts): one :where() rule per declared
+  // context, value and state, written on the provider and inherited by its
+  // subtree. Generated from the declaration alone, like the state toggles.
+  styles += contextCss(contexts as Contexts | undefined, declaredStates, scope)
 
   // Bridges: one static parameter-reading rule per target, plus the `._`
   // boundary reset so a parameter never inherits across component boundaries.

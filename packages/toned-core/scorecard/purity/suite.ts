@@ -89,6 +89,20 @@ export const mutations: readonly Mutation[] = [
     ),
   },
   {
+    id: 'add-context-sheets',
+    description:
+      "add a provider (`$context: 'card'`) and a sheet keyed on it (`'@within card:hover'`)",
+    apply: (sheets) => ({
+      ...add('tile', () =>
+        ui.stylesheet({ Root: { $context: 'card', padding: 1 } }),
+      )(sheets),
+      caption: () =>
+        ui.stylesheet({
+          Root: { opacity: 1, '@within card:hover': { opacity: 0.5 } },
+        }),
+    }),
+  },
+  {
     id: 'add-web-rules',
     description: 'add a sheet with a `$webRules` CSS extension',
     apply: add('marked', () =>

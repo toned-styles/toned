@@ -17,15 +17,15 @@ go to the OS temporary directory, and results are printed as JSON on stdout.
 
 ## Runners
 
-| Command                                                                       | Measures                                                                    |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `node benchmarks/compare-matcher.mjs [revision]`                              | Rule compilation and variant-state matching in `StyleMatcher`               |
-| `node benchmarks/completion.mjs [revision] [--raw-style \| --platform-style]` | Controllers, host writes, `useStyles` in React, SSR/CSS sizes, typechecking |
-| `node benchmarks/provider.mjs [revision] [--pairs=N]`                         | `TonedProvider` and `createElements` in React, explicit `t`, a native host  |
-| `bun benchmarks/design-tools.ts [files] [coldSamples]`                        | Compiler indexing, incremental updates, queries and token completion        |
-| `node --experimental-strip-types benchmarks/design-tools-shared.ts [files]`   | Invalidation when many consumers share one design system                    |
-| `node benchmarks/state-recalc.mjs [revision] [--rows=…] [--states=…]`         | Chromium style recalculation per declared state, by list length             |
-| `node benchmarks/cascade-browser.mjs`                                         | A check, not a timing: Chromium computes the shorthand splits correctly     |
+| Command                                                                              | Measures                                                                      |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `node benchmarks/compare-matcher.mjs [revision]`                                     | Rule compilation and variant-state matching in `StyleMatcher`                 |
+| `node benchmarks/completion.mjs [revision] [--raw-style \| --platform-style]`        | Controllers, host writes, `useStyles` in React, SSR/CSS sizes, typechecking   |
+| `node benchmarks/provider.mjs [revision] [--pairs=N]`                                | `TonedProvider` and `createElements` in React, explicit `t`, a native host    |
+| `bun benchmarks/design-tools.ts [files] [coldSamples]`                               | Compiler indexing, incremental updates, queries and token completion          |
+| `node --experimental-strip-types benchmarks/design-tools-shared.ts [files]`          | Invalidation when many consumers share one design system                      |
+| `node benchmarks/state-recalc.mjs [revision] [--rows=…] [--states=…] [--contexts=…]` | Chromium style recalculation per declared state (and context), by list length |
+| `node benchmarks/cascade-browser.mjs`                                                | A check, not a timing: Chromium computes the shorthand splits correctly       |
 
 The three `.mjs` runners accept an optional Git revision of this repository. The
 runner extracts that revision's `packages/toned-core` (and `toned-react` where
@@ -120,6 +120,35 @@ Per declared state and 1,000 elements, a string state now costs 0.0007 to
 with list length; before it cost 0.10, 0.35 and 0.58 ms at 1,001, 5,001 and
 10,001 elements. A state that declares the sibling relation still pays that
 quadratic cost, which is why the relation is opt-in.
+
+### A list inside a context
+
+`state-recalc.mjs --contexts=0,10,40` lays the same rows out inside one
+provider element, every element reading the provider's value through a
+custom-property chain, and changes the provider's value (every row answers;
+an element after the provider must not). It measures N declared contexts
+(`context`, system/contexts.ts) against the hand-written ancestor states they
+replace (`ancestor-selector`: N declared states such as
+`':where([data-prose="faq"] *)'`, as the HQ website writes them).
+
+Recorded on 2026-11-14, Chromium 148 headless on an Apple M4 (macOS, load
+average about 5), current sources
+([results/state-recalc-contexts.json](results/state-recalc-contexts.json)):
+
+| ms, first pass / provider change |   1,002 el. |     5,002 el. |    10,002 el. |
+| -------------------------------- | ----------: | ------------: | ------------: |
+| None declared                    |    0.77 / 0 |      4.11 / 0 |      9.28 / 0 |
+| 10 contexts                      | 0.76 / 0.84 |   4.22 / 4.63 |  9.28 / 10.53 |
+| 40 contexts                      | 0.78 / 0.86 |   4.18 / 4.66 |  9.28 / 10.47 |
+| 10 ancestor selector states      | 1.29 / 1.33 |   6.64 / 7.05 | 14.37 / 16.57 |
+| 40 ancestor selector states      | 2.68 / 2.73 | 13.77 / 14.43 | 28.70 / 30.93 |
+
+A context's rule matches the provider alone, so the first pass does not grow
+with the number of declared contexts; an ancestor selector state is checked
+by every element, so it grows with each one declared (0.5 ms per 10 states
+per 1,000 elements here). Changing the provider's value recalculates the
+subtree under it either way, about the cost of its first pass. The CSS is
+217 bytes per context with two values, against 186 for one ancestor state.
 
 ## Current results
 

@@ -13,7 +13,14 @@
  * for changing one middle row's `data-state`, as the median of 7 rounds.
  *
  * The run asserts what it measures: the toggled row answers the state, its
- * children and the following row do not. */
+ * children and the following row do not.
+ *
+ * `--contexts=0,10,40` adds a list inside a context: the same rows inside
+ * one provider element, every element reading the provider's value through
+ * a custom-property chain, for N declared contexts (`context`) and for the
+ * hand-written ancestor selector states they replace (`ancestor-selector`,
+ * `:where([data-prose="…"] *)`). The toggle changes the provider's value,
+ * which every row answers; an element after the provider must not. */
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -30,6 +37,10 @@ const option = (name, fallback) =>
 const revision = args.find((arg) => !arg.startsWith('--'))
 const rowCounts = option('rows', '100,500,1000')
 const stateCounts = option('states', '0,51,211')
+const contextCounts = args.some((arg) => arg.startsWith('--contexts='))
+  ? option('contexts', '0')
+  : []
+if (contextCounts.length && !contextCounts.includes(0)) contextCounts.unshift(0)
 if (!stateCounts.includes(0)) stateCounts.unshift(0)
 const ROUNDS = 7
 
@@ -44,14 +55,14 @@ const resolvePlaywright = () => {
   )
 }
 
-const generate = (coreDir, form) => {
+const generate = (coreDir, form, counts = stateCounts) => {
   const run = spawnSync(
     'bun',
     [
       join(root, 'benchmarks/state-recalc-css.ts'),
       coreDir,
       form,
-      ...stateCounts.map(String),
+      ...counts.map(String),
     ],
     { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 },
   )
@@ -68,6 +79,69 @@ const markup = (rows) => {
     html += '</div>'
   }
   return `${html}</div>`
+}
+
+/** Rows inside one provider; `variable` is the toggle each element reads. */
+const contextMarkup = (rows, variable) => {
+  const read = `outline-style:solid;outline-color:var(${variable}, rgb(255, 0, 0))`
+  let html =
+    '<div id="provider" class="_ bench--_cx_c0 bench--_cx_c0_v1" data-prose="c0-v1"><div id="list" style="display:flex;flex-wrap:wrap">'
+  for (let row = 0; row < rows; row++) {
+    html += `<div class="_" style="${read}">`
+    for (let child = 0; child < 9; child++)
+      html += `<span class="_" style="${read}">x</span>`
+    html += '</div>'
+  }
+  return `${html}</div></div><div id="outside" class="_" style="${read}"></div>`
+}
+
+async function measureContext(browser, css, rows, variable, check) {
+  const page = await browser.newPage()
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Performance.enable')
+  const recalc = async () =>
+    (await cdp.send('Performance.getMetrics')).metrics.find(
+      (metric) => metric.name === 'RecalcStyleDuration',
+    ).value * 1000
+  const initial = []
+  const toggle = []
+  for (let round = 0; round < ROUNDS; round++) {
+    await page.setContent(`<style>${css}</style><body></body>`)
+    await page.evaluate(() => getComputedStyle(document.body).color)
+    let before = await recalc()
+    const resting = await page.evaluate(
+      (html) => {
+        document.body.innerHTML = html
+        return getComputedStyle(document.querySelector('#list span'))
+          .outlineColor
+      },
+      contextMarkup(rows, variable),
+    )
+    initial.push((await recalc()) - before)
+    before = await recalc()
+    const answers = await page.evaluate(() => {
+      const provider = document.getElementById('provider')
+      provider.className = '_ bench--_cx_c0 bench--_cx_c0_v0'
+      provider.setAttribute('data-prose', 'c0-v0')
+      const paint = (element) => getComputedStyle(element).outlineColor
+      const list = document.getElementById('list')
+      return [
+        paint(list.lastElementChild.lastElementChild),
+        paint(document.getElementById('outside')),
+      ]
+    })
+    toggle.push((await recalc()) - before)
+    if (round === 0 && check) {
+      const red = 'rgb(255, 0, 0)'
+      const [inside, outside] = answers
+      if (resting !== red || inside === red || outside !== red)
+        throw new Error(
+          `state-recalc: wrong context answer (resting ${resting}, inside ${inside}, outside ${outside})`,
+        )
+    }
+  }
+  await page.close()
+  return { initialMs: median(initial), toggleMs: median(toggle) }
 }
 
 const median = (values) => {
@@ -154,6 +228,7 @@ try {
   const browser = await chromium.launch()
   const version = browser.version()
   const results = []
+  const contextResults = []
   try {
     for (const core of cores)
       for (const [form, byCount] of Object.entries(core.css))
@@ -185,11 +260,50 @@ try {
             })
           }
         }
+    if (contextCounts.length) {
+      const coreDir = join(root, 'packages/toned-core')
+      const forms = {
+        context: '--bench-toned_cx_c0_v0',
+        'ancestor-selector': '--bench-toned_in-c0-v0',
+      }
+      for (const [form, variable] of Object.entries(forms)) {
+        const byCount = generate(coreDir, form, contextCounts)
+        for (const rows of rowCounts) {
+          const elements = rows * 10 + 2
+          const baseline = await measureContext(
+            browser,
+            byCount[0],
+            rows,
+            variable,
+            false,
+          )
+          for (const count of contextCounts.filter((n) => n > 0)) {
+            const timing = await measureContext(
+              browser,
+              byCount[count],
+              rows,
+              variable,
+              true,
+            )
+            contextResults.push({
+              form,
+              declared: count,
+              elements,
+              initialMs: Number(timing.initialMs.toFixed(2)),
+              toggleMs: Number(timing.toggleMs.toFixed(2)),
+              noneInitialMs: Number(baseline.initialMs.toFixed(2)),
+              noneToggleMs: Number(baseline.toggleMs.toFixed(2)),
+              cssBytes: byCount[count].length - byCount[0].length,
+            })
+          }
+        }
+      }
+    }
   } finally {
     await browser.close()
   }
   process.stdout.write(
-    `${JSON.stringify({ chromium: version, rounds: ROUNDS, results }, null, 2)}\n`,
+    `${JSON.stringify({ chromium: version, rounds: ROUNDS, results, ...(contextResults.length ? { contextResults } : {}) }, null, 2)}\n`,
   )
 } finally {
   if (temp) rmSync(temp, { recursive: true, force: true })

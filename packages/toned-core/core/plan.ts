@@ -182,6 +182,7 @@ export function compileRules(
   ) => {
     predicate = specializePlatform(predicate, platform)
     if (predicate === FALSE) return
+    if (platform === 'native') refuseContextStates(predicate)
     for (const [part, style] of Object.entries(rule)) {
       const entries: readonly TokenOperation[] = style[TOKEN_OPERATIONS] ?? []
       for (const entry of entries) {
@@ -189,10 +190,14 @@ export function compileRules(
           kinds[part] = String(entry.value)
           continue
         }
-        const extension = ['$grid', '$area', '$webRules', 'className'].includes(
-          entry.key,
-        )
-        if (extension) requiredExtensions.add(entry.key)
+        // A context marker is host metadata, not a style: the CSS backend
+        // writes it as marker classes and a native host provides it to the
+        // tree, so no backend is required to accept it.
+        const marker = entry.key === '$$context'
+        const extension =
+          marker ||
+          ['$grid', '$area', '$webRules', 'className'].includes(entry.key)
+        if (extension && !marker) requiredExtensions.add(entry.key)
         const order = nextOrder++
         const cross =
           path.length === 1 && typeof path[0] === 'string'
@@ -330,6 +335,18 @@ export function compileRules(
   rememberPlan(rules, system, platform, plan)
   if (prepared !== rules) rememberPlan(prepared, system, platform, plan)
   return plan
+}
+
+/** A context state has no native carrier: diagnose it rather than drop it. */
+function refuseContextStates(predicate: Predicate): void {
+  if (predicate.op === 'atom') {
+    const fact = predicate.fact
+    if (fact.kind === 'context' && fact.state !== undefined)
+      throw new Error(
+        `Toned: '@within ${fact.name}:${fact.state}' reads a provider state, which native cannot track across components: put it under '@platform web'`,
+      )
+  } else if (predicate.op === 'not') refuseContextStates(predicate.operand)
+  else for (const operand of predicate.operands) refuseContextStates(operand)
 }
 
 function rememberPlan(

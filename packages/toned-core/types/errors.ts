@@ -18,6 +18,7 @@
  */
 import type { Properties } from 'csstype'
 
+import type { WithinKeyMessage } from './contexts.ts'
 import type { PortableInlineStyle } from './style.ts'
 
 declare const TONED_ERROR: unique symbol
@@ -256,6 +257,8 @@ export type KeyVocabulary = {
   media: string
   containerNames: string
   containers: string
+  /** The system's declared contexts, for `'@within …'` keys. */
+  contexts: unknown
 }
 
 /** What a rejected key's value is checked against, for an element or a map
@@ -270,7 +273,9 @@ type ElementKeyMessage<
   V extends KeyVocabulary,
 > = K extends `@platform${string}`
   ? `Unknown platform block '${K}': write '@platform web' or '@platform native'`
-  : K extends `@${infer Body}`
+  : K extends `@within${string}`
+    ? WithinKeyMessage<K, V['contexts']>
+    : K extends `@${infer Body}`
     ? ConditionMessage<
         K,
         FirstBadAtom<

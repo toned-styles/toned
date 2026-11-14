@@ -1,5 +1,6 @@
 import { resolveCssPlan } from '../backends/css/plan.ts'
 import { compileRules, foldOperations, resolvePlan } from '../core/plan.ts'
+import { evaluatePredicate, TRUE } from '../core/predicates.ts'
 import { resolveTokenStyle } from '../core/resolve.ts'
 import { gridRegistrations } from '../grid/validation.ts'
 import {
@@ -8,6 +9,7 @@ import {
   type HostIntegration,
 } from '../hosts/index.ts'
 import { getConfig } from '../system/config.ts'
+import { isWithinKey } from '../system/contexts.ts'
 import { assertDeclaredCssVariables } from '../system/css-variables.ts'
 import {
   normalizeDeclarations,
@@ -320,7 +322,10 @@ export function createStylesheet<
         `Toned: variant default ${axis} must be a defined scalar value`,
       )
   }
-  const declared = { bridges: ref.config?.bridges }
+  const declared = {
+    bridges: ref.config?.bridges,
+    contexts: ref.config?.contexts,
+  }
   rules = normalizeDeclarations(rules, declared)
   variantRules = normalizeDeclarations(variantRules, declared)
   // Merge base rules with variants - StyleMatcher handles the format directly
@@ -1128,6 +1133,50 @@ export class Base {
     )
     if (out && remember) this.lastContainerSizes = sizes
     return out
+  }
+
+  /**
+   * The context markers `part` provides under the current variants, in
+   * order, the last per context winning (`['card', 'prose=faq']`). A native
+   * host provides them to its subtree; web writes them as marker classes.
+   */
+  contextMarkers(part: string): readonly string[] {
+    const plan = compileRules(this.ref, this.rules, 'native')
+    let markers: Map<string, string> | undefined
+    for (const extension of plan.extensions) {
+      if (extension.token !== '$$context' || extension.origin.part !== part)
+        continue
+      if (
+        evaluatePredicate(extension.predicate, this.modsState, 'native') !==
+        TRUE
+      )
+        continue
+      markers ??= new Map()
+      for (const marker of [extension.value].flat() as string[])
+        markers.set(marker.split('=')[0]!, marker)
+    }
+    return markers ? [...markers.values()] : EMPTY_CONTAINER_NAMES
+  }
+
+  /**
+   * Sets this sheet's `'@within …'` facts from those an ancestor provides
+   * (`{ '@within prose=faq': true }`), rematching when one changed. Returns
+   * whether the sheet reads any.
+   */
+  applyWithin(facts: Readonly<Record<string, boolean>>): boolean {
+    let reads = false
+    let changed = false
+    for (const key of this.controllerPlan.keys) {
+      if (!isWithinKey(key)) continue
+      reads = true
+      const value = facts[key] === true
+      if (this.modsState[key] !== value) {
+        this.modsState[key] = value
+        changed = true
+      }
+    }
+    if (changed) this.matchStyles()
+    return reads
   }
 
   containerDependencies(part?: string): readonly string[] {
