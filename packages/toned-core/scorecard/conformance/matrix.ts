@@ -19,7 +19,8 @@ import { capture, compileDiagnostics } from '../probe.ts'
 
 export type Feature = {
   description: string
-  sheet: () => unknown
+  /** Builds the feature's sheet for a target (most ignore the target). */
+  sheet: (target: string) => unknown
   /** Passed to the target as its second argument when present. */
   options?: unknown
 }
@@ -46,6 +47,17 @@ export type MatrixInput = {
   featuresModule: string
   /** Module exporting `targets`, imported by the type probes. */
   targetsModule: string
+  /**
+   * The probe's call, as source, when the sheet must be built in the probe
+   * itself (a declared-target system's stylesheet call is what the types
+   * reject there). Default: `targets[target](features[feature].sheet())`.
+   */
+  probe?: (feature: string, target: string) => string
+  /** Extra imports a custom probe needs: module path → named exports. */
+  probeImports?: (
+    feature: string,
+    target: string,
+  ) => Readonly<Record<string, readonly string[]>>
 }
 
 function typeProbes(input: MatrixInput): Map<string, string | undefined> {
@@ -71,7 +83,12 @@ function typeProbes(input: MatrixInput): Map<string, string | undefined> {
           [
             `import { features } from ${JSON.stringify(specifier(input.featuresModule))}`,
             `import { targets } from ${JSON.stringify(specifier(input.targetsModule))}`,
-            `targets[${JSON.stringify(target)}](${args.join(', ')})`,
+            ...Object.entries(input.probeImports?.(feature, target) ?? {}).map(
+              ([module, names]) =>
+                `import { ${names.join(', ')} } from ${JSON.stringify(specifier(module))}`,
+            ),
+            input.probe?.(feature, target) ??
+              `targets[${JSON.stringify(target)}](${args.join(', ')})`,
             '',
           ].join('\n'),
         )
@@ -94,8 +111,8 @@ export async function buildMatrix(input: MatrixInput): Promise<Cell[]> {
     for (const [target, resolve] of Object.entries(input.targets)) {
       const reports = await capture(() =>
         'options' in definition
-          ? resolve(definition.sheet(), definition.options)
-          : resolve(definition.sheet()),
+          ? resolve(definition.sheet(target), definition.options)
+          : resolve(definition.sheet(target)),
       )
       const typeError = types.get(`${feature}\u0000${target}`)
       const runtime = reports.length ? 'rejected' : 'works'

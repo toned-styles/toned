@@ -4,7 +4,11 @@
  *
  * - compile: any TypeScript diagnostic in the case file, from one `tsc` run
  *   with toned-core's own compiler options;
- * - build: `buildStyles` throws or warns for the case's sheets;
+ * - lint: any diagnostic from toned's lint plugin (its recommended rules), from
+ *   one oxlint run over the case files, with the fixture system's `ui` known
+ *   as a system;
+ * - build: `buildStyles` throws or warns for the case's sheets, or the case's
+ *   own `build` step (an output build) does;
  * - runtime: importing the case, constructing its sheets, resolving them
  *   through the web renderer or running its `exercise` throws or warns;
  * - silent: none of the above.
@@ -22,7 +26,13 @@ import type { StylesheetInstance } from '../../types/index.ts'
 import { resetWarnings } from '../../utils/warn.ts'
 import { __resetWarnings } from '../../utils/warnOnce.ts'
 import { ui as fixtureSystem } from '../fixture/system.ts'
-import { capture, compileDiagnostics, coreRoot } from '../probe.ts'
+import {
+  capture,
+  compileDiagnostics,
+  coreRoot,
+  lintDiagnostics,
+  specifierFrom,
+} from '../probe.ts'
 import { type CorpusCase, STAGES, type Stage } from './case.ts'
 
 export type Report = { stage: Exclude<Stage, 'silent'>; message: string }
@@ -73,6 +83,7 @@ async function runtimeReports(
       () => (manifest = buildStyles(system, { sheets: typed }).manifest),
     ),
   )
+  if (meta.build) add('build', await capture(() => meta?.build?.()))
   if (manifest) {
     const web = createWebRenderer(system, { manifest })
     add(
@@ -96,6 +107,9 @@ export async function runCorpus(dir: string): Promise<CaseResult[]> {
     .sort()
     .map((name) => join(dir, name))
   const diagnostics = compileDiagnostics(files)
+  const lint = await lintDiagnostics(files, {
+    [specifierFrom(dir, join(coreRoot, 'scorecard/fixture/system.ts'))]: ['ui'],
+  })
   const results: CaseResult[] = []
   for (const file of files) {
     const { meta, reports: later } = await runtimeReports(file)
@@ -106,6 +120,10 @@ export async function runCorpus(dir: string): Promise<CaseResult[]> {
     const reports: Report[] = [
       ...(diagnostics.get(file) ?? []).map((message) => ({
         stage: 'compile' as const,
+        message,
+      })),
+      ...(lint.get(file) ?? []).map((message) => ({
+        stage: 'lint' as const,
         message,
       })),
       ...later,

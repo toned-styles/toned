@@ -59,9 +59,64 @@ style subset for that part kind. Foreign platform blocks are filtered before
 capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
 shorthand because their web/native meanings differ; use semantic typography or
 explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
-in its platform block. Legacy `$$type`, `style`, `@md`, `@field/wide`, and
-`@platform.web` remain compatibility spellings. New code should use canonical
-metadata and explicit platform scopes for platform-specific styles.
+in its platform block. Legacy `$$type`, `style`, `@md`, and `@field/wide` remain
+compatibility spellings. New code should use canonical metadata and explicit
+platform scopes for platform-specific styles.
+
+A platform block has one spelling, `'@platform web'` (or `'@platform native'`),
+which is also what `q.platform('web')` returns. The `'@platform.web'` alias is
+deprecated: it still resolves, the lint rule `toned/canonical-platform-key`
+rejects it and fixes the key, and writing both spellings in one part is a type
+error (and throws), because one block would replace the other.
+
+### Targets
+
+A system can declare the renderers it is rendered by:
+
+```ts
+export const site = defineSystem({ id: 'site', targets: ['web'], tokens })
+site.stylesheet({ Root: { $style: { cursor: 'pointer', maxWidth: '42rem' } } })
+```
+
+`targets` is a list of `'web' | 'native' | 'email' | 'pdf' | 'tailwind'`, and a
+part's style type is what every declared target supports:
+
+| Targets                              | `$style` (and `$style` inside conditions) |
+| ------------------------------------ | ----------------------------------------- |
+| omitted, or `['web', 'native']`      | the portable style, as above              |
+| `['web']`, `['tailwind']`            | web CSS, as inside `'@platform web'`      |
+| `['web', 'email']`, `['email']`      | inline-safe CSS: no CSS variables         |
+| `['native']`                         | the native style subset                   |
+| `['pdf']`, any mix of web and native | the portable style                        |
+
+Inside a platform block the type narrows to the targets that read it (web reads
+`'@platform web'`; email and Tailwind do too; native and PDF read
+`'@platform native'`). A system with a static target (`'email'` or `'pdf'`)
+renders one style per part, so a condition key (`':hover'`, `'@md'`, a declared
+state, a cross-part key) is a type error that names the static target and
+suggests a variant; with an email target, `$webRules`, `$grid` and `$area` are
+type errors too. Creating a renderer for a target the system did not declare
+throws, naming the declared targets. Without `targets` nothing changes: every
+renderer is allowed and the remaining checks happen at render time.
+
+### Compose fragments with a `$style` list
+
+```ts
+const focusRing = { outlineWidth: 2, outlineStyle: 'solid' } as const
+Root: {
+  '@platform web': { $style: [focusRing, still && motionless, { maxWidth: '42rem' }] },
+}
+```
+
+`$style` takes a list wherever it takes an object (parts, conditions and
+platform blocks, with the same part-kind typing). Entries merge in order and the
+last wins; falsy entries are skipped, so `cond && fragment` works; a `null`
+property in any entry (`{ opacity: 1, zIndex: null }`) unsets what an earlier
+entry set, and in `extend` removes the inherited value as a single `null` does. The list is folded once,
+when the declaration is normalized. Spreading two fragments into a part instead
+(`{ ...focusRing, ...pointer }`) silently keeps only the last `$style`,
+platform or condition block: `toned/no-shadowing-spread` reports that, naming
+the shadowed key.
 
 New descriptor systems use fixed logical pixels for both viewport and container
 thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
@@ -133,6 +188,18 @@ its returned objects. Query builders return typed `QueryKey` strings; use those
 keys in declarations rather than assembling predicate objects. Explicit-generic
 callback and object variant declarations remain compatible.
 
+A key a stylesheet does not accept is a type error whose text names the fix:
+its value is checked against `TonedError<"…">` (a type exported from
+`@toned/core`), so the compiler prints, for example,
+`TonedError<"Unknown state ':opne'. Did you mean ':open'? Declared states: ':open'; built-in: …">`.
+Unknown tokens, CSS properties, states, media and condition-expression atoms
+(`'@md&!xx'`), parts in cross-part keys, raw selectors (`"[data-state='open']"`
+names the declared state to write), web-only CSS and CSS variables in portable
+`$style`, and conditions written inside `$style` each have a message. The
+runtime errors for the same facts name the key and the declared set too. A
+sheet-level `'@<name>'` block is not checked by type (root keys are open); it
+fails at construction with the declared media.
+
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
 order within a layer; a higher override layer still wins over the whole lower layer.
@@ -190,6 +257,12 @@ states: {
 - `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
   siblings.
 
+When the parts that react live in another sheet, they write the channel key
+themselves (`Chip: { ':sib-checked': { … } }`), and the source's sheet marks
+its part with an empty key, `'Input~:checked': {}` (or `'Root:open': {}` for
+the ancestor relation). The empty key styles nothing in its own sheet; it makes
+the part a source, and it still needs the relation declared.
+
 Each relation is CSS that every styled element pays for in style
 recalculation; the sibling one grows with the square of a list's length. A
 key reading a state through an undeclared relation is a type error and throws
@@ -198,9 +271,22 @@ when the sheet is built, naming the declaration to add. `:hover` and
 declares a relation must be an attribute or pseudo-class selector.
 
 Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
-channel. For each state your sheets read as `'Part:state'` or `'Part~:state'`,
-rewrite `name: selector` to `name: { selector, relations: [...] }`; the type
-errors list every such key.
+channel. Which states need a relation depends on your sheets, so do not work
+from a list: run the type check, and each error names a key that reads a state
+through a relation and the declaration to add. They come from `'Part:state'`
+and `'Part~:state'` keys and from the lowered channel keys a part can write
+itself, `':src-<state>'` (ancestor) and `':sib-<state>'` (sibling). A label
+that fades after a disabled control (`Label: { ':sib-disabled': { … } }`)
+reports:
+
+```text
+Toned: ':sib-disabled' needs state 'disabled' to declare the sibling relation, e.g. states: { 'disabled': { selector, relations: ['sibling'] } }
+```
+
+so `disabled: ':disabled'` becomes
+`disabled: { selector: ':disabled', relations: ['sibling'] }`. A key in a sheet
+the types cannot see whole (`extend`, an untyped caller) throws the same
+message when the sheet is built.
 
 ### Shorthands and CSS-wide keywords under conditions
 
@@ -209,7 +295,10 @@ conditional field reads `var(--rule, <value at rest>)`. Two consequences:
 
 - A shorthand and one of its longhands in different blocks of one part
   (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
-  write the longhands, or set the whole shorthand in each condition. Sheets the
+  write the longhands, or set the whole shorthand in each condition. A longhand
+  a token writes counts too: the `animation` token writes `animationName`, so
+  a raw `animation: 'none'` under a condition beside it is a type error, and
+  the fix is `$style: { animationName: 'none' }`. Sheets the
   types cannot see whole (`extend`, variants, untyped callers) are handled at
   resolve time: the shorthand is split into its longhands (`transition`,
   `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
@@ -333,42 +422,82 @@ CSS module.
 When a host has several systems, extra generated stylesheets, or consumers that
 do not run Vite (tests, Metro), write **output files** instead of generated
 files. Each `<name>.toned.ts` default-exports a build artifact, or `{ css, data }`,
-finishing its work while it is imported (top-level `await`):
+finishing its work while it is imported (top-level `await`). `defineOutput` types
+the export, so a misspelled key, data that is not JSON or an unawaited promise is
+a type error:
 
 ```ts
 // src/toned/ui.toned.ts
 import { buildStyles } from '@toned/core/build'
-export default buildStyles(ui, { sheets: [button], layer: 'components' })
+import { defineOutput } from '@toned/core/outputs'
+export default defineOutput(buildStyles(ui, { sheets: [button], layer: 'components' }))
 
 // src/toned/ui-palette.toned.ts
-export default { css: paletteCss() }
+const notes = new URL('./palette.md', import.meta.url)
+export default defineOutput({
+  css: paletteCss(readFileSync(notes, 'utf8')),
+  data: { swatches },
+  inputs: [notes], // read outside the imports: rebuild when it changes
+})
 ```
 
 The file name is the output name. A stylesheet imports the CSS at any depth,
 keeping its own cascade order: `@import 'toned:ui' layer(components);`. Code
 imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS as
 a string. An output file may import another output, which is how a usage
-inventory can feed the system it narrows.
+inventory can feed the system it narrows; outputs that import each other are an
+error naming the cycle.
+
+The package that owns the outputs declares them once, in its package.json:
+
+```json
+{ "name": "@acme/ui", "toned": { "outputs": ["src/toned/*.toned.ts"] } }
+```
+
+Every consumer then finds them from its own root through the dependency graph:
+the root package's dependencies of every kind, then, for each workspace package
+or dependency that has a `toned` field, its `dependencies`, `optionalDependencies`
+and `peerDependencies`. A published package that ships outputs declares a `toned`
+field (even `{}` to pass a dependency's outputs on). Explicit `outputs` globs,
+relative to the consumer's root, replace the declarations.
 
 | Consumer             | Entry                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------ |
-| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
-| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
-| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
-| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
+| Vite                 | `tonedOutputs()` from `@toned/core/vite`                                                   |
+| Bun (tests, scripts) | `bun --preload @toned/core/bun/register`, or `Bun.plugin(tonedBunPlugin())` from `@toned/core/bun` |
+| Metro                | `withTonedOutputs(config)` or `withTonedOutputsSync(config)` from `@toned/core/metro`      |
+| Anything else        | `loadOutput(name, { root })` from `@toned/core/outputs/runner`                             |
 
-`outputs` are globs relative to the root. The Vite plugin builds the outputs with
-Vite's module runner (Vite 6 or later) when the build or dev server starts. In
-dev it watches every file an output read, and an edit rebuilds that output and
-the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
-for other Vite config the files need. CSS `@import` resolves through aliases
-rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
-outside the source tree, and an unknown name fails as that missing file. Bun
-imports an output file only when one of its specifiers is first loaded; give
-`cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
-test files) build each output once and read it after. Metro
-reads the same cache layout from `node_modules/.cache/toned`; restart it after
-changing declarations. Add `@toned/core/vite/client` to `types` (or a
+All four use one loader (Vite 6 or later): each output is evaluated by Vite's
+module runner in its own module graph, never in the process that imports it, so
+an output never depends on what its host already loaded. Loads that overlap
+share one runner, so a module two outputs import runs once. The same shape
+checks, error messages (`toned:nope is not a Toned output; the outputs are: …`,
+`toned:ui has no "tokens"; it has: css, manifest`) and data keys apply to every
+consumer; `outputs/contract.test.ts` runs one suite against all four. JSX
+compiles with the automatic runtime; pass `runner` for other Vite config the
+files need.
+
+The Vite plugin builds the outputs when the build or dev server starts, once for
+every environment of a build (it is `sharedDuringBuild`). In dev it watches every
+file an output read and its `inputs`; an edit rebuilds that output and the
+outputs importing it, a new or deleted output file is picked up without a
+restart, and a failed build shows in the error overlay while the other outputs
+keep serving. CSS `@import` resolves through aliases rather than plugin hooks,
+so the CSS is written to `<vite cacheDir>/toned/<name>.css`, outside the source
+tree, and an unknown name fails as that missing file.
+
+Bun builds an output only when one of its specifiers is first loaded, and serves
+every data key, including by dynamic `import()`. With `cacheDir`, the processes
+of a run (such as `--isolate`d test files) share builds: an entry is keyed by the
+root and globs and records a hash of every file the output read, so it is
+rebuilt when one changes and never served to another project. The register
+preload keeps that cache in `node_modules/.cache/toned/bun` (or
+`TONED_OUTPUTS_CACHE`). The first build in a process costs the module runner
+(about 250 ms for 75 component modules); a cached one costs hashing its files.
+
+Metro reads the same cache layout from `node_modules/.cache/toned`; restart it
+after changing declarations. Add `@toned/core/vite/client` to `types` (or a
 triple-slash reference) for the `toned:` module declarations.
 
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
@@ -590,14 +719,22 @@ agent and prints a markdown table, then JSON; `--json` prints only the JSON
 `{ library, version, metrics, details }`, whose metric names are stable.
 
 - **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
-  stage each mistake is caught at (compile, build, runtime or silent) and
-  whether the report names the fix, computed with the same `tsc` and runtime.
+  stage each mistake is caught at (compile, lint, build, runtime or silent)
+  and whether the report names the fix, computed with the same `tsc`, one
+  oxlint run of `@toned/eslint-plugin`'s recommended rules over the case
+  files, and the runtime. A case whose mistake only a lint rule sees records
+  `baseline: { stage: 'lint', … }`; lint ranks after compile because it only
+  runs where an application enables it. A case's own `build` step (building a
+  named output, say) counts as build.
 - **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
   its canonical spelling and every alias in use; spellings per intent.
 - **Build purity**: which outputs change when a fixture sheet is added,
   edited or deleted.
 - **Target conformance**: each feature on the web, native, inline and PDF
-  renderers: works, rejected at runtime, or a type error.
+  renderers: works, rejected at runtime, or a type error. A second matrix
+  writes each feature for a system that declares only that target
+  (`targets: [t]`), where a feature the target cannot render should be a type
+  error (`conformance.declared.*`).
 
 Each gate's test fails only when a number gets worse than its recorded
 baseline. When one improves, update the baseline beside the case.

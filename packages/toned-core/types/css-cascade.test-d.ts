@@ -1,10 +1,14 @@
+import type { Properties } from 'csstype'
+
 /**
  * Compile-time contracts for what a condition cannot carry on the web: a
  * shorthand in one condition beside its longhand in another, and a CSS-wide
  * keyword under a condition. `tsc` is the test: every `@ts-expect-error`
  * fails the build if its error disappears.
  */
-import { defineSystem, defineToken } from '../system/index.ts'
+import { defineAnimations, defineSystem, defineToken } from '../system/index.ts'
+import type { TokenSystem } from '../system/index.ts'
+import type { PartCascadeCheck } from './cascade.ts'
 
 const gap = defineToken({
   values: [1, 2] as const,
@@ -64,5 +68,75 @@ ui.stylesheet({
   // @ts-expect-error — `inherit` cannot pass through a condition's chain
   Root: {
     ':hover': { '@platform web': { $style: { backgroundColor: 'inherit' } } },
+  },
+})
+
+// --- a token's longhand beside a raw shorthand under another condition ---------
+
+// The `animation` token writes `animationName` (and its timing longhands); a
+// raw `animation` under a condition reverts them outside it, and the runtime
+// cannot split `animation: none`. The fix is the longhand.
+const motion = defineAnimations({
+  'fade-in': {
+    keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+    duration: 200,
+  },
+})
+const animated = defineSystem({
+  id: 'animated',
+  tokens: { gap, animation: motion.animation },
+  conditions: {
+    animations: motion.animations,
+    states: { open: '[data-open]' },
+  },
+})
+
+animated.stylesheet({
+  Root: {
+    animation: 'fade-in',
+    ':open': { '@platform web': { $style: { animationName: 'none' } } },
+  },
+})
+animated.stylesheet({
+  // @ts-expect-error — `animation: 'none'` under a condition beside the token
+  Root: {
+    animation: 'fade-in',
+    ':open': { '@platform web': { $style: { animation: 'none' } } },
+  },
+})
+
+type Declaration = typeof animated extends TokenSystem<infer S> ? S : never
+type Messages = keyof PartCascadeCheck<
+  {
+    animation: 'fade-in'
+    ':open': { '@platform web': { $style: { animation: 'none' } } }
+  },
+  Declaration
+>
+const message: Messages =
+  "Toned: 'animation' in $style and the longhand 'animationName' a token writes are set under different conditions; outside its condition the conditional one reverts the other. Write the longhand in $style instead of 'animation' (for animation: 'none', write animationName: 'none')"
+void message
+
+// A token whose `resolve` is typed loosely (a whole `CSSProperties`, as a
+// system's published declaration types it) names no field it always writes,
+// so a shorthand beside it is not a conflict: only the keys a result type
+// requires count.
+const flexLayout = defineToken({
+  values: ['column', 'row'] as const,
+  resolve: (value): Properties => ({
+    display: 'flex',
+    flexDirection: value,
+  }),
+})
+const loose = defineSystem({
+  id: 'loose',
+  tokens: { flexLayout },
+  conditions: { media: { md: 768 } },
+})
+loose.stylesheet({
+  Root: {
+    flexLayout: 'column',
+    '@platform web': { $style: { gap: '0.5rem', padding: '0.5rem' } },
+    '@md': { '@platform web': { $style: { padding: '0.75rem' } } },
   },
 })

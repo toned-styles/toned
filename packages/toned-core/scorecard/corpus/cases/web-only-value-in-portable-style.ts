@@ -5,7 +5,7 @@ export default defineCase({
   id: 'web-only-value-in-portable-style',
   description: 'A web-only value in portable `$style` (`cursor`)',
   category: 'platform',
-  baseline: { stage: 'compile', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /@platform web/,
   sheets: () => [ui.stylesheet({ Root: { $style: { cursor: 'pointer' } } })],
 })

@@ -6,6 +6,11 @@
 import { createCssExecutor } from '../backends/css/execute.ts'
 import { createStylesheet } from '../stylesheet/StyleSheet.ts'
 import type { DefaultSystemKind } from '../types/stylesheet.ts'
+import {
+  type SystemTargets,
+  type Target,
+  TARGETS_LIST,
+} from '../types/targets.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import {
   fixedConditions,
@@ -221,7 +226,10 @@ type DeclaredResponsivePairs<S, C> = C extends {
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
->(definition: SystemDefinition<S, C>): TokenSystem<S & C & DefaultSystemKind, C>
+  const T extends readonly Target[] = never,
+>(
+  definition: SystemDefinition<S, C, T>,
+): TokenSystem<S & C & DefaultSystemKind & SystemTargets<T>, C>
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
@@ -254,6 +262,7 @@ export function defineSystem<
       }) as C)
     : immutableSnapshot(legacyConfig)
   const id = descriptor ? validateSystemId(descriptor.id) : undefined
+  const targets = descriptor?.targets && validateTargets(descriptor.targets)
   validateStates(
     (config as { states?: Record<string, StateDeclaration> } | undefined)
       ?.states,
@@ -278,6 +287,7 @@ export function defineSystem<
   }
   const ref: TokenSystem<S & C, C> = {
     id,
+    ...(targets ? { targets } : {}),
     tokens: Object.freeze({ ...system }) as unknown as TokenSystem<
       S & C,
       C
@@ -319,4 +329,23 @@ export function defineSystem<
   responsivePairs(ref.system as Parameters<typeof responsivePairs>[0])
 
   return ref
+}
+
+/** A declared target list: known names, each once, at least one; frozen. */
+function validateTargets(targets: readonly string[]): readonly Target[] {
+  if (!Array.isArray(targets) || !targets.length)
+    throw new Error(
+      `Toned: targets is empty; declare at least one of ${TARGETS_LIST.map((t) => `'${t}'`).join(', ')}, or omit targets`,
+    )
+  const seen = new Set<string>()
+  for (const target of targets) {
+    if (!TARGETS_LIST.includes(target as Target))
+      throw new Error(
+        `Toned: unknown target '${target}'; targets are ${TARGETS_LIST.map((t) => `'${t}'`).join(', ')}`,
+      )
+    if (seen.has(target))
+      throw new Error(`Toned: target '${target}' is declared twice`)
+    seen.add(target)
+  }
+  return Object.freeze([...targets]) as readonly Target[]
 }

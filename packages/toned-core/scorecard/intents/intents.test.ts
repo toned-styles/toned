@@ -17,9 +17,12 @@ describe('intent table', () => {
     for (const intent of intents) expect(intent.canonical.spelling).not.toBe('')
   })
 
-  test('removed spellings are listed but not counted', () => {
+  test('removed spellings and errors are listed but not counted', () => {
     const derive = intents.find((i) => i.id === 'derive-sheet')
     expect(derive && spellingsOf(derive)).toBe(1)
+    const platform = intents.find((i) => i.id === 'platform-block')
+    expect(platform?.aliases.map((a) => a.status)).toEqual(['error'])
+    expect(platform && spellingsOf(platform)).toBe(1)
   })
 
   test('the stack review baselines are what the table computes', () => {
@@ -27,7 +30,9 @@ describe('intent table', () => {
       const intent = intents.find((i) => i.id === id)
       return intent && spellingsOf(intent)
     }
-    expect(count('web-only-value')).toBe(3)
+    expect(count('web-only-value')).toBe(2)
+    expect(count('platform-block')).toBe(1)
+    expect(count('compose-fragments')).toBe(1)
     expect(count('hover-gating')).toBe(4)
     expect(count('ancestor-hover')).toBe(3)
     expect(count('placeholder-colour')).toBe(3)
@@ -36,8 +41,8 @@ describe('intent table', () => {
   })
 
   test('the platform alias note matches what the query builder returns', () => {
-    // If q.platform starts returning the canonical spelling, update the table.
-    expect(ui.q.platform('web')).toBe('@platform.web')
+    // q.platform returns the canonical spelling; the alias is an error.
+    expect(ui.q.platform('web')).toBe('@platform web')
   })
 
   test('INTENTS.md is generated from the table', () => {

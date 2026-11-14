@@ -37,6 +37,23 @@ export type DefaultSystemKind = { readonly [DEFAULT_KIND]: 'view' }
 import type { ComposableParts } from './composition.ts'
 import type { Config, Platform } from './config.ts'
 import type {
+  ElementKeyError,
+  FirstBadAtom,
+  IsLiteral,
+  QuoteList,
+  StyleKeyError,
+  TonedError,
+} from './errors.ts'
+import type {
+  AllowsCssExtensions,
+  CssExtensionError,
+  PlatformAliasCheck,
+  StaticConditionCheck,
+  StyleEntryOf,
+  StyleObjectOf,
+} from './targets.ts'
+import type {
+  AnyTokenConfig,
   Breakpoints,
   ElementType,
   TokenConfig,
@@ -289,7 +306,31 @@ export type ElementStyleNew<
     false
   >
 } & {
-  [P in Platform as `@platform.${P}` | `@platform ${P}`]?: Host extends Platform
+  /** A platform block: merged in on that platform only. */
+  [P in Platform as `@platform ${P}`]?: Host extends Platform
+    ? P extends Host
+      ? ElementStyleNew<
+          S,
+          AvailablePseudo,
+          AvailableBreakpoints,
+          ET,
+          P,
+          Parts,
+          false
+        >
+      : never
+    : ElementStyleNew<
+        S,
+        AvailablePseudo,
+        AvailableBreakpoints,
+        ET,
+        P,
+        Parts,
+        false
+      >
+} & {
+  /** @deprecated Write `'@platform web'` / `'@platform native'`. */
+  [P in Platform as `@platform.${P}`]?: Host extends Platform
     ? P extends Host
       ? ElementStyleNew<
           S,
@@ -333,7 +374,13 @@ export type ElementStyleNew<
     false
   >
 } & (Host extends 'web'
-    ? { $grid?: GridDefinition; $area?: GridArea; $webRules?: WebRules }
+    ? AllowsCssExtensions<S> extends true
+      ? { $grid?: GridDefinition; $area?: GridArea; $webRules?: WebRules }
+      : {
+          $grid?: CssExtensionError<'$grid'>
+          $area?: CssExtensionError<'$area'>
+          $webRules?: CssExtensionError<'$webRules'>
+        }
     : {})
 
 type InferContainerAliases<S> = S extends {
@@ -544,6 +591,24 @@ type RootPairCheck<S, K, Block> = [ResponsivePairsOf<S>] extends [never]
       >
 
 /**
+ * The message for a part's channel key (`':sib-disabled'`, `':src-open'`: the
+ * lowered spelling of `'Control~:disabled'` / `'Control:disabled'`) whose
+ * declared state does not offer that relation; otherwise `never`.
+ */
+type ChannelNotDeclared<
+  K,
+  S extends TokenStyleDeclaration,
+> = K extends `:${infer Channel extends 'sib' | 'src'}-${infer State}`
+  ? `:${State}` extends InferStatePseudos<S>
+    ? {
+        [
+          M in `Toned: '${K & string}' needs state '${State}' to declare the ${Channel extends 'sib' ? 'sibling' : 'ancestor'} relation, e.g. states: { '${State}': { selector, relations: ['${Channel extends 'sib' ? 'sibling' : 'ancestor'}'] } }`
+        ]: never
+      }
+    : never
+  : never
+
+/**
  * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
  * `${Elements}${CrossSuffix}` union is never built. Enumerating it as mapped
  * keys (root, variant conditions, and each part) would make a sheet cost
@@ -628,7 +693,7 @@ export type ValidateDeclaration<
   Light extends boolean = false,
 > = {
   [K in keyof Input]: K extends ShapeKeys<Shape>
-    ? K extends QueryKey | `:${string}:${string}`
+    ? K extends QueryKey | `:${string}:${string}` | ConditionExprKey
       ? // In the shape (as a pattern), so a Light walk stays Light below it.
         ValidateSpecial<Input, Shape, S, Parts, Local, K, Light>
       : [
@@ -646,37 +711,71 @@ export type ValidateDeclaration<
           Light extends true
           ? unknown
           : ValidLeaf<Input[K], Shape[K]>
-        : Light extends true
-          ? Input[K] extends object
-            ? Input[K] extends readonly unknown[]
-              ? unknown
-              : NonNullable<Shape[K]> extends object
-                ? ValidateDeclaration<
-                    Input[K],
-                    NonNullable<Shape[K]>,
-                    S,
-                    Parts,
-                    K extends Parts ? true : Local,
-                    Light
-                  >
-                : unknown
-            : unknown
-          : Input[K] extends readonly unknown[]
-            ? ValidLeaf<Input[K], Shape[K]>
-            : Input[K] extends object
-              ? NonNullable<Shape[K]> extends object
-                ? ValidateDeclaration<
-                    Input[K],
-                    NonNullable<Shape[K]>,
-                    S,
-                    Parts,
-                    K extends Parts ? true : Local,
-                    Light
-                  >
+        : K extends '$style'
+          ? ValidateStyle<Input[K], Shape[K], S, Parts, Local, Light>
+          : Light extends true
+            ? Input[K] extends object
+              ? Input[K] extends readonly unknown[]
+                ? unknown
+                : NonNullable<Shape[K]> extends object
+                  ? ValidateDeclaration<
+                      Input[K],
+                      NonNullable<Shape[K]>,
+                      S,
+                      Parts,
+                      K extends Parts ? true : Local,
+                      Light
+                    >
+                  : unknown
+              : unknown
+            : Input[K] extends readonly unknown[]
+              ? ValidLeaf<Input[K], Shape[K]>
+              : Input[K] extends object
+                ? NonNullable<Shape[K]> extends object
+                  ? ValidateDeclaration<
+                      Input[K],
+                      NonNullable<Shape[K]>,
+                      S,
+                      Parts,
+                      K extends Parts ? true : Local,
+                      Light
+                    >
+                  : ValidLeaf<Input[K], Shape[K]>
                 : ValidLeaf<Input[K], Shape[K]>
-              : ValidLeaf<Input[K], Shape[K]>
     : ValidateSpecial<Input, Shape, S, Parts, Local, K>
-}
+} & StaticConditionCheck<Input, S> &
+  PlatformAliasCheck<Input>
+
+/**
+ * A written `$style`: one object, walked against the style object, or a list,
+ * whose object entries are each walked against the entry type, so a misspelt
+ * property in a list is reported as it is in the single form.
+ */
+type ValidateStyle<
+  Value,
+  Allowed,
+  S extends TokenStyleDeclaration,
+  Parts extends string,
+  Local extends boolean,
+  Light extends boolean,
+> = Value extends readonly unknown[]
+  ? {
+      [I in keyof Value]: Value[I] extends object
+        ? ValidateDeclaration<
+            Value[I],
+            StyleEntryOf<Allowed>,
+            S,
+            Parts,
+            Local,
+            Light
+          >
+        : unknown
+    }
+  : Value extends object
+    ? ValidateDeclaration<Value, StyleObjectOf<Allowed>, S, Parts, Local, Light>
+    : Light extends true
+      ? unknown
+      : ValidLeaf<Value, Allowed>
 
 /** The keys a plain shape lookup cannot validate: computed query keys,
  *  compound pseudos, and cross-part / cross-element keys. */
@@ -705,58 +804,162 @@ type ValidateSpecial<
           K extends Parts ? true : Local,
           Light
         >
-      : never
-    : never
-  : [
-        typeof CROSS_ELEMENT extends ShapeKeys<Shape> ? true : false,
-        IsCrossElementKey<K, Parts, S>,
-      ] extends [true, true]
-    ? ValidateDeclaration<
-        Input[K],
-        NonNullable<Shape[typeof CROSS_ELEMENT & ShapeKeys<Shape>]>,
-        S,
-        Parts,
-        Local
-      >
-    : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
-      // per written key would make each sheet cost parts × pseudos again.
-      K extends `${infer _Part extends Parts}:${infer Rest}`
-      ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
-        ? K extends ShapeKeys<Shape>
-          ? ValidateDeclaration<
-              Input[K],
-              NonNullable<Shape[K]>,
-              S,
-              Parts,
-              K extends Parts ? true : Local
-            >
-          : typeof CROSS_PART extends ShapeKeys<Shape>
-            ? ValidateDeclaration<
-                Input[K],
-                NonNullable<Shape[typeof CROSS_PART]>,
-                S,
-                never,
-                Local
-              >
-            : never
-        : never
-      : K extends `:${string}:${string}`
-        ? ValidCompound<
-            K,
-            Pseudo | InferStatePseudos<S> | InferStateChannels<S>
-          > extends true
+      : RejectedKey<K, Shape, S, Parts>
+    : QueryKeyError<S, Parts, Local>
+  : K extends ConditionExprKey
+    ? [ConditionExprError<K, S>] extends [never]
+      ? K extends ShapeKeys<Shape>
+        ? ValidateDeclaration<
+            Input[K],
+            NonNullable<Shape[K]>,
+            S,
+            Parts,
+            Local,
+            Light
+          >
+        : RejectedKey<K, Shape, S, Parts>
+      : ConditionExprError<K, S>
+    : [
+          typeof CROSS_ELEMENT extends ShapeKeys<Shape> ? true : false,
+          IsCrossElementKey<K, Parts, S>,
+        ] extends [true, true]
+      ? ValidateDeclaration<
+          Input[K],
+          NonNullable<Shape[typeof CROSS_ELEMENT & ShapeKeys<Shape>]>,
+          S,
+          Parts,
+          Local
+        >
+      : // Peeled with `infer`, never as `${Parts}${Pseudo}`: building that union
+        // per written key would make each sheet cost parts × pseudos again.
+        K extends `${infer _Part extends Parts}:${infer Rest}`
+        ? `:${Rest}` extends Pseudo | InferStatePseudos<S>
           ? K extends ShapeKeys<Shape>
             ? ValidateDeclaration<
                 Input[K],
                 NonNullable<Shape[K]>,
                 S,
                 Parts,
-                K extends Parts ? true : Local,
-                Light
+                K extends Parts ? true : Local
               >
-            : never
-          : never
-        : never
+            : typeof CROSS_PART extends ShapeKeys<Shape>
+              ? ValidateDeclaration<
+                  Input[K],
+                  NonNullable<Shape[typeof CROSS_PART]>,
+                  S,
+                  never,
+                  Local
+                >
+              : RejectedKey<K, Shape, S, Parts>
+          : RejectedKey<K, Shape, S, Parts>
+        : K extends `:${string}:${string}`
+          ? ValidCompound<
+              K,
+              Pseudo | InferStatePseudos<S> | InferStateChannels<S>
+            > extends true
+            ? K extends ShapeKeys<Shape>
+              ? ValidateDeclaration<
+                  Input[K],
+                  NonNullable<Shape[K]>,
+                  S,
+                  Parts,
+                  K extends Parts ? true : Local,
+                  Light
+                >
+              : RejectedKey<K, Shape, S, Parts>
+            : RejectedKey<K, Shape, S, Parts>
+          : [ChannelNotDeclared<K, S>] extends [never]
+            ? RejectedKey<K, Shape, S, Parts>
+            : ChannelNotDeclared<K, S>
+
+/** The condition-expression key shapes (`'@md&!lg'`), whose atoms are
+ *  checked against the declared conditions. */
+type ConditionExprKey =
+  | `@!${string}`
+  | `@${string}&${string}`
+  | `@${string}|${string}`
+
+/** An undeclared atom in a condition expression, as an error; `never` when
+ *  every atom is declared (or the key is a pattern, from a builder). */
+type ConditionExprError<K, S> =
+  IsLiteral<K> extends true
+    ? K extends `@${infer Body}`
+      ? [
+          FirstBadAtom<
+            Body,
+            keyof InferBreakpoints<S> & string,
+            InferContainerNames<S>,
+            InferContainerConditions<S>
+          >,
+        ] extends [never]
+        ? never
+        : ElementKeyError<K & string, KeyVocabularyOf<S, never, never>>
+      : never
+    : never
+
+type InferContainerNames<R> = R extends {
+  containers?: infer C extends Record<string, Record<string, unknown>>
+}
+  ? keyof C & string
+  : never
+
+/** What a rejected key's errors are explained against. */
+type KeyVocabularyOf<S, Parts extends string, Keys> = {
+  keys: Keys
+  parts: Parts
+  declaredStates: InferStatePseudos<S>
+  builtInStates: PseudoState | ':focus-visible' | ':focus-within'
+  stateConfig: S extends { states?: infer States } ? States : {}
+  media: keyof InferBreakpoints<S> & string
+  containerNames: InferContainerNames<S>
+  containers: InferContainerConditions<S>
+}
+
+/** The keys of a system that are tokens (not condition config). */
+type TokenConfigKeys<S> = {
+  [P in keyof S]: S[P] extends AnyTokenConfig ? P : never
+}[keyof S]
+
+/** The keys of an element shape a value may be written for (not the
+ *  forbidden `?: never` members). */
+type WritableKeys<Shape> = {
+  [P in keyof Shape]-?: [NonNullable<Shape[P]>] extends [never] ? never : P
+}[keyof Shape]
+
+/**
+ * What a key the validation rejects is checked against: a `TonedError` whose
+ * text names the mistake and the fix. The shape it was written against says
+ * where it was written — a `$style` object (by host) or an element or a map
+ * of parts — so the message can say which vocabulary applies. Reached only for
+ * a rejected key.
+ */
+type RejectedKey<K, Shape, S, Parts extends string> = K extends string
+  ? ShapeKeys<Shape> extends infer Keys
+    ? '$style' extends Keys
+      ? ElementKeyError<
+          K,
+          KeyVocabularyOf<
+            S,
+            Parts,
+            Extract<WritableKeys<Shape>, TokenConfigKeys<S> | `$${string}`>
+          >
+        >
+      : 'cursor' extends Keys
+        ? StyleKeyError<K, Keys, 'web'>
+        : 'elevation' extends Keys
+          ? StyleKeyError<K, Keys, 'native'>
+          : 'alignContent' extends Keys
+            ? StyleKeyError<K, Keys, 'portable'>
+            : ElementKeyError<K, KeyVocabularyOf<S, Parts, Keys>>
+    : never
+  : TonedError<'Symbol keys are not style keys'>
+
+/** A `q.…` query key naming something the sheet does not declare. */
+type QueryKeyError<
+  S,
+  Parts extends string,
+  Local extends boolean,
+> = TonedError<`This query names a part or state the sheet does not declare${Local extends true ? '' : ', or a part-less state outside a part (write q.part(name).state(name))'}. Declared parts: ${[Parts] extends [never] ? 'none' : QuoteList<Parts>}; states: ${[InferStatePseudos<S>] extends [never] ? 'none' : QuoteList<InferStatePseudos<S>>}`>
 
 /**
  * A LEAF of a validated declaration: what a written value is checked, and
@@ -870,7 +1073,7 @@ export type StylesheetInput<
           S,
           Elements
         >
-      : never
+      : QueryKeyError<S, Elements, false>
     : never
 } & {
   /** Root-level platform blocks: whole per-element maps, filtered like `@md`. */
@@ -940,10 +1143,11 @@ export type StylesheetValidation<
             true,
             true
           > &
-            PartCascadeCheck<T[K]> &
+            PartCascadeCheck<T[K], S> &
             PartPairCheck<S, T[K]>
       : RootKeyValidation<S, T, K, Elements, Kinds>
-}
+} & StaticConditionCheck<T, S> &
+  PlatformAliasCheck<T>
 
 /**
  * The ROOT keys that address parts: condition blocks (`'@md'`, `'@media md'`,
@@ -970,15 +1174,19 @@ type RootKeyValidation<
     ? unknown // the constraint itself (inference failed): nothing to walk
     : K extends `@${string}`
       ? K extends ShapeKeys<StylesheetInput<S, T, Elements, Kinds>>
-        ? ValidateDeclaration<
-            T[K],
-            NonNullable<StylesheetInput<S, T, Elements, Kinds>[K]>,
-            S,
-            Elements,
-            false,
-            true
-          > &
-            RootPairCheck<S, K, T[K]>
+        ? [
+            K extends ConditionExprKey ? ConditionExprError<K, S> : never,
+          ] extends [never]
+          ? ValidateDeclaration<
+              T[K],
+              NonNullable<StylesheetInput<S, T, Elements, Kinds>[K]>,
+              S,
+              Elements,
+              false,
+              true
+            > &
+              RootPairCheck<S, K, T[K]>
+          : ConditionExprError<K, S>
         : unknown
       : K extends `${string}:${string}` | `${string}~${string}`
         ? IsCrossElementKey<K, Elements, S> extends true
@@ -990,7 +1198,14 @@ type RootKeyValidation<
               false,
               true
             >
-          : RelationNotDeclared<K, Elements, S>
+          : [RelationNotDeclared<K, Elements, S>] extends [never]
+            ? RejectedKey<
+                K,
+                ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>,
+                S,
+                Elements
+              >
+            : RelationNotDeclared<K, Elements, S>
         : unknown
 
 // =============================================================================
@@ -1303,7 +1518,7 @@ export type CheckedVariantRules<
               ? unknown
               : ValidVariantKey<K, Mods> extends true
                 ? unknown
-                : never
+                : TonedError<`'${K}' is not a variant selector of the declared axes, a part, a condition or a named fragment: write it as [$.<axis>(value)]. Axes: ${[keyof Mods & string] extends [never] ? 'none' : string extends keyof Mods ? 'any' : QuoteList<keyof Mods>}; parts: ${QuoteList<Elements>}`>
         : never)
 }
 

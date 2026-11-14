@@ -6,6 +6,7 @@ import type {
   BridgeConfig,
   ResponsiveTokens,
 } from '../types/index.ts'
+import type { Target } from '../types/targets.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
 import type { StateDeclaration } from './states.ts'
@@ -124,8 +125,19 @@ export function fixedConditions<C extends SystemOptions>(
     ...(containers ? { containers } : {}),
   }) as C
 }
-export type SystemDefinition<S, C> = {
+export type SystemDefinition<
+  S,
+  C,
+  T extends readonly Target[] = readonly Target[],
+> = {
   id: string
+  /**
+   * The renderers this system is rendered by. A part's `$style` is typed as
+   * what every declared target supports (`['web']`: plain CSS), and a
+   * renderer for an undeclared target throws. Omitted: the portable style,
+   * the same as `['web', 'native']`, and every renderer is allowed.
+   */
+  targets?: T
   /** Explicit references to application-owned CSS variables; all others remain namespaced. */
   externalCssVariables?: readonly string[]
   layout?: LayoutContext

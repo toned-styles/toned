@@ -7,6 +7,7 @@
  * `@ts-expect-error` fails the build if its error disappears.
  */
 import { defineSystem, defineToken } from '../system/index.ts'
+import type { StylesheetValidation } from './stylesheet.ts'
 
 const gap = defineToken({
   values: [1, 2, 4] as const,
@@ -135,6 +136,23 @@ ui.stylesheet({
   // @ts-expect-error — nor through its lowered channel key
   Root: { gap: 1, ':src-checked': { gap: 2 } },
 })
+ui.stylesheet({
+  // @ts-expect-error — nor through the sibling channel key
+  Label: { gap: 1, ':sib-checked': { gap: 2 } },
+})
+// The channel key's error names the relation to declare.
+type ChannelError<K extends string> = StylesheetValidation<
+  (typeof ui)['system'],
+  { Root: { [_ in K]: { gap: 2 } } }
+>['Root'] extends { [_ in K]: infer Message }
+  ? keyof Message
+  : never
+export const sibChannelNamesFix: ChannelError<':sib-checked'> extends `Toned: ':sib-checked' needs state 'checked' to declare the sibling relation, e.g. states: { 'checked': { selector, relations: ['sibling'] } }`
+  ? true
+  : false = true
+export const srcChannelNamesFix: ChannelError<':src-open'> extends `Toned: ':src-open' needs state 'open' to declare the ancestor relation, ${string}relations: ['ancestor']${string}`
+  ? true
+  : false = true
 
 ui.stylesheet({
   Root: { gap: 1 },

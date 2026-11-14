@@ -25,6 +25,7 @@ export type {
   EditorModeProbe,
   EditorOnly,
 } from './types/editor-mode.ts'
+export type { TonedError } from './types/errors.ts'
 export {
   type DerivationStep,
   derivationOf,
@@ -107,6 +108,16 @@ export type {
 } from './types/index.ts'
 // Re-export only public symbols (SYMBOL_INIT needed by toned-react)
 export { SYMBOL_INIT } from './types/index.ts'
+export type {
+  InlineSafeStyle,
+  StyleListEntry,
+  StyleOf,
+  StyleValue,
+  SystemTargets,
+  Target,
+  Targeted,
+  TargetsOf,
+} from './types/targets.ts'
 export type {
   NativeInlineStyle,
   PlatformStyle,

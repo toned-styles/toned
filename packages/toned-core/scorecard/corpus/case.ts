@@ -10,8 +10,12 @@
  */
 import type { TokenSystem } from '../../system/index.ts'
 
-/** Earliest stage at which a mistake is reported, best first. */
-export const STAGES = ['compile', 'build', 'runtime', 'silent'] as const
+/**
+ * Earliest stage at which a mistake is reported, best first. `lint` is toned's
+ * lint plugin (`@toned/eslint-plugin`, recommended rules): static like the
+ * compiler, but only where an application runs it, so it ranks after it.
+ */
+export const STAGES = ['compile', 'lint', 'build', 'runtime', 'silent'] as const
 export type Stage = (typeof STAGES)[number]
 
 export type CaseCategory =
@@ -47,6 +51,11 @@ export type CorpusCase = {
   system?: TokenSystem<any>
   /** Builds the case's stylesheets; runs at runtime (construction). */
   sheets?: () => readonly unknown[]
+  /**
+   * A build step outside `buildStyles`, such as building a named output the
+   * way Vite, Bun or Metro would; what it throws or warns is a build catch.
+   */
+  build?: () => unknown
   /** Extra runtime probe after the build and the web resolve. */
   exercise?: () => unknown
 }

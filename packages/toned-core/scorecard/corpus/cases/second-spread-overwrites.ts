@@ -10,7 +10,7 @@ export default defineCase({
   description:
     "A second object spread of a `'@platform web'` block replaces the first",
   category: 'composition',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'lint', namesFix: true },
   fix: /spread|overwr|\$style: \[/i,
   sheets: () => [ui.stylesheet({ Root: { ...focusRing, ...pointer } })],
 })
