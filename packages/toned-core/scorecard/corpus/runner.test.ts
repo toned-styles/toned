@@ -20,6 +20,15 @@ describe('corpus runner', async () => {
     expect(byId['fixture-compile']?.namesFix).toBe(true)
     expect(byId['fixture-runtime-throw']?.namesFix).toBe(false)
   })
+  test('a toned lint rule reporting in the case file is a lint catch', () => {
+    expect(byId['fixture-lint']).toMatchObject({
+      stage: 'lint',
+      namesFix: true,
+    })
+    expect(byId['fixture-lint']?.message).toMatch(
+      /^toned\(no-shadowing-spread\): /,
+    )
+  })
   test('an error thrown while building CSS is a build catch', () => {
     expect(byId['fixture-build']).toMatchObject({ stage: 'build' })
   })

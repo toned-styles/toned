@@ -123,6 +123,11 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     tokens: SystemTheme<NoInfer<S>>
   },
 ): PureRenderer<S> {
+  const { target } = options.backend
+  if (target && system.targets && !system.targets.includes(target))
+    throw new Error(
+      `Toned renderer: system '${system.id ?? 'legacy'}' declares targets ${system.targets.map((t) => `'${t}'`).join(', ')}, not '${target}': add '${target}' to defineSystem({ targets }) to render it`,
+    )
   const backendManifest = options.backend.manifest
   const sourceManifest = options.manifest ?? backendManifest
   // Renderer validation is identity-cached; its build contract must not change

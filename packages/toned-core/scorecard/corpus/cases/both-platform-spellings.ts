@@ -6,7 +6,7 @@ export default defineCase({
   description:
     "`'@platform web'` and the alias `'@platform.web'` in one part (one block is lost)",
   category: 'platform',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /alias|canonical|both|merge/i,
   sheets: () => [
     ui.stylesheet({

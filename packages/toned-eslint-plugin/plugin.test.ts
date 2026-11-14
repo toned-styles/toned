@@ -346,3 +346,74 @@ const names = (diagnostics: Diagnostic[]) =>
     expect(result.diagnostics).toEqual([])
   })
 }
+
+{
+  const resultFixture = fixture(
+    {
+      'alias.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform.web':{$style:{cursor:'pointer'}},"@platform.native":{$style:{opacity:1}}}})`,
+      'fragment.ts': `export const ring={'@platform.web':{$style:{outlineWidth:2}}}`,
+      'both.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{cursor:'pointer'}},'@platform.web':{$style:{userSelect:'none'}}}})`,
+      'canonical.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{'@platform web':{$style:{cursor:'pointer'}}}})`,
+      'other.ts': `const config={'@platform.web.extra':1}`,
+    },
+    { 'toned/canonical-platform-key': 'error' },
+    true,
+  )
+
+  test("the '@platform.web' alias is an error, fixed to '@platform web' unless both are written", () => {
+    const result = resultFixture()
+    expect(result.files['alias.ts']).toContain(
+      `'@platform web':{$style:{cursor:'pointer'}},"@platform native":`,
+    )
+    expect(result.files['fragment.ts']).toContain(`{'@platform web':{`)
+    expect(result.files['both.ts']).toContain(`'@platform.web':{$style`)
+    expect(names(result.diagnostics)).toEqual(['both.ts'])
+    expect(result.diagnostics[0]!.message).toContain(
+      "merge them into one '@platform web' block",
+    )
+  })
+}
+
+{
+  const resultFixture = fixture(
+    {
+      'platform.ts': `import {stylesheet} from '@toned/core';const ring={'@platform web':{$style:{outlineWidth:2}}} as const;const pointer={'@platform web':{$style:{cursor:'pointer'}}};stylesheet({Root:{...ring,...pointer}})`,
+      'style.ts': `import {stylesheet} from '@toned/core';const ring={$style:{outlineWidth:2}};stylesheet({Root:{...ring,$style:{cursor:'pointer'}}})`,
+      'alias.ts': `import {stylesheet} from '@toned/core';const ring={'@platform.web':{$style:{outlineWidth:2}}};stylesheet({Root:{'@platform web':{$style:{cursor:'pointer'}},...ring}})`,
+      'condition.ts': `import {stylesheet} from '@toned/core';const hover={':hover':{opacity:1}};stylesheet({Root:{...hover,':hover':{gap:1}}})`,
+      'nested.ts': `import {stylesheet} from '@toned/core';const ring={$style:{outlineWidth:2}};stylesheet({Root:{'@md':{...ring,$style:{cursor:'pointer'}}}})`,
+      'system.ts': `import {ui} from './ui';const a={$style:{opacity:1}};const b={$style:{zIndex:1}};ui.stylesheet({Root:{...a,...b}})`,
+      'distinct.ts': `import {stylesheet} from '@toned/core';const ring={'@platform web':{$style:{outlineWidth:2}}};stylesheet({Root:{...ring,gap:1,'@platform native':{$style:{opacity:1}}}})`,
+      'tokens.ts': `import {stylesheet} from '@toned/core';const base={gap:1};stylesheet({Root:{...base,gap:2}})`,
+      'unknown.ts': `import {stylesheet} from '@toned/core';stylesheet({Root:{...dynamic,$style:{cursor:'pointer'}}})`,
+      'outside.ts': `const a={$style:{opacity:1}};const b={$style:{zIndex:1}};export const c={...a,...b}`,
+    },
+    {
+      'toned/no-shadowing-spread': [
+        'error',
+        { modules: { './ui': { ui: 'system' } } },
+      ],
+    },
+  )
+
+  test('a spread whose $style, platform or condition key is set again is an error naming the key', () => {
+    const result = resultFixture()
+    expect(names(result.diagnostics)).toEqual([
+      'alias.ts',
+      'condition.ts',
+      'nested.ts',
+      'platform.ts',
+      'style.ts',
+      'system.ts',
+    ])
+    const message = (file: string) =>
+      result.diagnostics.find((d) => d.filename.endsWith(file))!.message
+    expect(message('platform.ts')).toContain(
+      "spreads '@platform web', which ...pointer also sets",
+    )
+    expect(message('platform.ts')).toContain('$style: [')
+    expect(message('style.ts')).toContain("spreads '$style'")
+    expect(message('alias.ts')).toContain("'@platform web'")
+    expect(message('condition.ts')).toContain("spreads ':hover'")
+  })
+}

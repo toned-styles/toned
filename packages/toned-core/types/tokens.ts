@@ -7,7 +7,7 @@ import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
-import type { PlatformStyle } from './style.ts'
+import type { StyleOf, StyleValue } from './targets.ts'
 
 /**
  * Token values object - maps token names to their resolved values.
@@ -370,7 +370,9 @@ export type TokenStyle<
   TokenStyleForbidden<S, ET> & {
     /** @deprecated Use $style; the compatibility spelling retains host tuning. */
     style?: InlineStyle
-    $style?: PlatformStyle<ET, Host>
+    /** One style object, or a list merged in order (`[a, cond && b, { … }]`):
+     *  the last entry wins, falsy entries are skipped, `null` unsets. */
+    $style?: StyleValue<StyleOf<S, ET, Host>>
   }
 
 type DynamicTokenValue<C> = C extends { dynamic: 'number' }

@@ -199,8 +199,9 @@ ui.stylesheet({
 ui.stylesheet({
   Text: {
     $kind: 'text',
+    // @ts-expect-error auto is a native-only alignment value (reported at
+    // $style, which also takes a list)
     $style: {
-      // @ts-expect-error auto is a native-only alignment value
       textAlign: 'auto',
     },
   },

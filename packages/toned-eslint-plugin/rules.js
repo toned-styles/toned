@@ -4,6 +4,7 @@ import {
   inRender,
   optionsSchema,
   propertyName,
+  returnedObjects,
   sameBag,
   unwrap,
 } from './analysis.js'
@@ -15,6 +16,45 @@ const definition = (description, messages, extra = {}) => ({
   messages,
   ...extra,
 })
+const PLATFORM_ALIAS = /^@platform\.([A-Za-z][\w-]*)$/
+
+/** A key as the cascade sees it: both platform spellings are one block. */
+const canonicalKey = (name) => {
+  const alias = PLATFORM_ALIAS.exec(name)
+  return alias ? `@platform ${alias[1]}` : name
+}
+
+/** Keys whose value a later write REPLACES rather than merges with. */
+const isShadowable = (name) =>
+  name === '$style' ||
+  name.startsWith('@') ||
+  name.startsWith(':') ||
+  name.includes(':') ||
+  name.includes('~')
+
+/** The object literal a spread argument names in this file, if any. */
+function spreadObject(argument, source) {
+  let node = unwrap(argument)
+  for (let depth = 0; node?.type === 'Identifier' && depth < 8; depth++) {
+    let found
+    for (
+      let scope = source.getScope(node);
+      scope && !found;
+      scope = scope.upper
+    )
+      found = scope.set.get(node.name)
+    const def = found?.defs[0]
+    if (
+      def?.type !== 'Variable' ||
+      def.node?.parent?.kind !== 'const' ||
+      def.node.id.type !== 'Identifier'
+    )
+      return null
+    node = unwrap(def.node.init)
+  }
+  return node?.type === 'ObjectExpression' ? node : null
+}
+
 const options = (context, input) => {
   const defaults = typeof input === 'function' ? input(context) : input
   return {
@@ -165,6 +205,130 @@ export function createRules(defaults = {}) {
                   : {}),
               })
             })
+          },
+        }
+      },
+    },
+    'canonical-platform-key': {
+      meta: definition(
+        "Write platform blocks as '@platform web', the one canonical spelling.",
+        {
+          alias:
+            "'{{alias}}' is a deprecated alias: write '{{canonical}}'. The two spellings are one block, so this rule fixes the key.",
+          both: "'{{canonical}}' and its alias '{{alias}}' are both written here, and one block replaces the other: merge them into one '{{canonical}}' block.",
+        },
+        { fixable: 'code' },
+      ),
+      create(context) {
+        return {
+          Property(property) {
+            const name = propertyName(property)
+            const alias =
+              name && !property.computed && PLATFORM_ALIAS.exec(name)
+            if (!alias) return
+            const canonical = `@platform ${alias[1]}`
+            const both = property.parent?.properties?.some(
+              (other) =>
+                other !== property && propertyName(other) === canonical,
+            )
+            const key = property.key
+            const quote =
+              key.type === 'Literal' && typeof key.raw === 'string'
+                ? key.raw[0]
+                : "'"
+            context.report({
+              node: key,
+              messageId: both ? 'both' : 'alias',
+              data: { alias: name, canonical },
+              ...(both
+                ? {}
+                : {
+                    fix: (fixer) =>
+                      fixer.replaceText(key, `${quote}${canonical}${quote}`),
+                  }),
+            })
+          },
+        }
+      },
+    },
+    'no-shadowing-spread': {
+      meta: definition(
+        'Compose style fragments with a $style list, not object spreads that replace each other.',
+        {
+          shadowed:
+            "This spreads '{{key}}', which {{by}} also sets, so one replaces the other instead of merging. Compose the fragments with a list: $style: [a, b, { … }] (inside the '{{key}}' block when it is a platform or condition block).",
+        },
+      ),
+      create(context) {
+        const analysis = createAnalysis(context, options(context, defaults))
+        const source = analysis.source
+        const ownKeys = (object) => {
+          const keys = new Set()
+          for (const property of object?.properties ?? [])
+            if (property.type === 'Property') {
+              const name = propertyName(property)
+              if (name) keys.add(canonicalKey(name))
+            }
+          return keys
+        }
+        const label = (node) =>
+          source.getText(node).length <= 40
+            ? `...${source.getText(node)}`
+            : 'a later spread'
+        const check = (object) => {
+          const entries = object.properties
+          entries.forEach((entry, index) => {
+            if (entry.type !== 'SpreadElement') return
+            const spread = spreadObject(entry.argument, source)
+            if (!spread) return
+            for (const key of ownKeys(spread)) {
+              if (!isShadowable(key)) continue
+              const by = entries.find(
+                (other, at) =>
+                  at !== index &&
+                  (other.type === 'Property'
+                    ? canonicalKey(propertyName(other) ?? '') === key
+                    : at > index &&
+                      ownKeys(spreadObject(other.argument, source)).has(key)),
+              )
+              if (!by) continue
+              context.report({
+                node: entry,
+                messageId: 'shadowed',
+                data: {
+                  key,
+                  by: by.type === 'Property' ? 'the part' : label(by.argument),
+                },
+              })
+              return
+            }
+          })
+        }
+        // Every declaration object of a stylesheet (parts, conditions and
+        // platform blocks), never a $-value such as $style or $webRules.
+        const walk = (object, depth) => {
+          if (depth > 32) return
+          check(object)
+          for (const property of object.properties) {
+            if (property.type !== 'Property') continue
+            const name = propertyName(property)
+            if (name?.startsWith('$')) continue
+            const value = unwrap(property.value)
+            if (value?.type === 'ObjectExpression') walk(value, depth + 1)
+          }
+        }
+        return {
+          CallExpression(node) {
+            const callee = analysis.resolve(node.callee)
+            const inputs =
+              callee?.kind === 'api' && callee.name === 'stylesheet'
+                ? [node.arguments[0]]
+                : callee?.kind === 'sheet-method' &&
+                    ['extend', 'variants'].includes(callee.name)
+                  ? node.arguments
+                  : []
+            for (const object of inputs.flatMap(returnedObjects))
+              walk(object, 0)
           },
         }
       },

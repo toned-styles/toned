@@ -155,7 +155,8 @@ export function createAnalysis(context, options = {}) {
           result = { kind: 'namespace', module }
         else if (specifier.type === 'ImportSpecifier') {
           const name = specifier.imported.name ?? specifier.imported.value
-          if (modules[module]?.[name])
+          if (modules[module]?.[name] === 'system') result = { kind: 'system' }
+          else if (modules[module]?.[name])
             result = { kind: 'api', name: modules[module][name] }
         }
       }
@@ -275,7 +276,7 @@ export function inRender(node, analysis) {
   }
   return false
 }
-function returnedObjects(input) {
+export function returnedObjects(input) {
   const node = unwrap(input)
   if (node?.type === 'ObjectExpression') return [node]
   if (!isFunction(node)) return []
@@ -340,7 +341,10 @@ export const optionsSchema = {
       type: 'object',
       additionalProperties: {
         type: 'object',
-        additionalProperties: { type: 'string', enum: [...apiNames, 'host'] },
+        additionalProperties: {
+          type: 'string',
+          enum: [...apiNames, 'host', 'system'],
+        },
       },
     },
     properties: { type: 'object', additionalProperties: { type: 'string' } },
