@@ -32,6 +32,11 @@
     "./compat": "./compat/index.ts",
     "./utils": "./utils/index.ts",
     "./vite": "./vite/index.ts",
+    "./vite/client": "./vite/client.d.ts",
+    "./outputs": "./outputs/index.ts",
+    "./outputs/runner": "./outputs/runner.ts",
+    "./bun": "./bun/index.ts",
+    "./metro": "./metro/index.ts",
     "./registry": "./registry.ts",
     "./types/stylesheet": "./types/stylesheet.ts",
     "./grid": "./grid/index.ts",
@@ -60,7 +65,7 @@
   "devDependencies": {
     "@toned-config/build": "workspace:*",
     "@toned-config/typescript": "workspace:*",
-    "vite": "^8.3.1"
+    "vite": "catalog:"
   },
   "peerDependencies": {
     "vite": ">=5"

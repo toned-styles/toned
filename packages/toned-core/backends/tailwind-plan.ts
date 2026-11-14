@@ -2,6 +2,7 @@ import { fingerprint, systemDefinition } from '../build/manifest.ts'
 import type { Predicate, ResolvedOperation } from '../core/plan.ts'
 import type { TokenSystem } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
+import { isMediaCondition } from '../utils/media-query.ts'
 import type { ResolvedProps } from './index.ts'
 import { serializeTailwindParameter, type TailwindBackend } from './tailwind.ts'
 
@@ -117,7 +118,7 @@ export function compileTailwindPlan(
       const condition =
         typeof value === 'number'
           ? `(min-width:${value}px)`
-          : value.startsWith('(')
+          : isMediaCondition(value)
             ? value
             : `(min-width:${value})`
       if (condition.includes('var('))
@@ -142,7 +143,7 @@ export function compileTailwindPlan(
       const condition =
         typeof value === 'number'
           ? `(min-width:${value * unit}px)`
-          : value.startsWith('(')
+          : isMediaCondition(value)
             ? value
             : `(min-width:${value})`
       if (condition.includes('var('))

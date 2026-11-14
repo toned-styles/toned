@@ -94,6 +94,14 @@ const emphasis = ui.stylesheet((q) => ({
 }))
 ```
 
+A system's `media` names fixed width thresholds, and may also name a raw web
+media condition: a parenthesised query, or one led by a media type
+(`all`, `print`, `screen`):
+`media: { md: 768, motionless: '(prefers-reduced-motion: reduce)', print: 'print' }`. It is a
+condition like any other (`'@motionless': { … }`, `q.media('motionless')`),
+toggled by the build. Native has no such query and refuses it unless the host
+declares one.
+
 The standalone `bp`, `cq`, `and`, `or` and `not` builders are kept for
 compatibility in `@toned/core/compat`; new declarations use the system-bound `q`
 methods. `cq(name).min(number)` values use a system's spacing scale. When migrating to
@@ -230,6 +238,49 @@ remains compatible, but requires an explicit namespace `id` and condition
 collector; it cannot collect sheets or check their runtime namespace.
 The plugin does not insert a style node into HTML; the application imports the
 CSS module.
+
+### Named outputs: nothing generated is committed
+
+When a host has several systems, extra generated stylesheets, or consumers that
+do not run Vite (tests, Metro), write **output files** instead of generated
+files. Each `<name>.toned.ts` default-exports a build artifact, or `{ css, data }`,
+finishing its work while it is imported (top-level `await`):
+
+```ts
+// src/toned/ui.toned.ts
+import { buildStyles } from '@toned/core/build'
+export default buildStyles(ui, { sheets: [button], layer: 'components' })
+
+// src/toned/ui-palette.toned.ts
+export default { css: paletteCss() }
+```
+
+The file name is the output name. A stylesheet imports the CSS at any depth,
+keeping its own cascade order: `@import 'toned:ui' layer(components);`. Code
+imports `toned:ui/manifest` (or any `data` key), and `toned:ui/css` is the CSS as
+a string. An output file may import another output, which is how a usage
+inventory can feed the system it narrows.
+
+| Consumer             | Entry                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| Vite                 | `tonedOutputs({ outputs: ['src/toned/*.toned.ts'] })` from `@toned/core/vite`              |
+| Bun (tests, scripts) | `Bun.plugin(tonedBunPlugin({ outputs, root }))` from `@toned/core/bun`, in a preload       |
+| Metro                | `withTonedOutputs(config, { outputs })` or `withTonedOutputsSync` from `@toned/core/metro` |
+| Anything else        | `loadOutput(name, { outputs, root })` from `@toned/core/outputs/runner`                    |
+
+`outputs` are globs relative to the root. The Vite plugin builds the outputs with
+Vite's module runner (Vite 6 or later) when the build or dev server starts. In
+dev it watches every file an output read, and an edit rebuilds that output and
+the outputs importing it. JSX compiles with the automatic runtime; pass `runner`
+for other Vite config the files need. CSS `@import` resolves through aliases
+rather than plugin hooks, so the CSS is written to `<vite cacheDir>/toned/<name>.css`,
+outside the source tree, and an unknown name fails as that missing file. Bun
+imports an output file only when one of its specifiers is first loaded; give
+`cacheDir` a fresh directory per run and the run's processes (such as `--isolate`d
+test files) build each output once and read it after. Metro
+reads the same cache layout from `node_modules/.cache/toned`; restart it after
+changing declarations. Add `@toned/core/vite/client` to `types` (or a
+triple-slash reference) for the `toned:` module declarations.
 
 Publish CSS and its manifest together. `assertBuildArtifact({ css, manifest })`
 checks the original generated asset's fingerprint before publication; after
@@ -437,10 +488,30 @@ a condition-only grid registration instead of silently skipping host checks.
 - `stylesheet/applyStyles.ts`: ownership-aware host patching and stale-field reset.
 - `backends/`, `server/`, `build/`: output, pure resolution and build delivery.
 - `grid/`: geometry compilation and host identity checks.
+- `scorecard/`: the measured gates behind toned's quality numbers (below).
 
 Tests cover bit boundaries, reference evaluation, zero/conditional properties,
 selector types, suspended React work, ref cleanup, theme updates and owned native
 patches. A fixture is not certification of a React Native/Fabric device integration.
+
+## Scorecard
+
+`bun scorecard/scorecard.ts` (in this package) runs four gates that need no
+agent and prints a markdown table, then JSON; `--json` prints only the JSON
+`{ library, version, metrics, details }`, whose metric names are stable.
+
+- **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
+  stage each mistake is caught at (compile, build, runtime or silent) and
+  whether the report names the fix, computed with the same `tsc` and runtime.
+- **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
+  its canonical spelling and every alias in use; spellings per intent.
+- **Build purity**: which outputs change when a fixture sheet is added,
+  edited or deleted.
+- **Target conformance**: each feature on the web, native, inline and PDF
+  renderers: works, rejected at runtime, or a type error.
+
+Each gate's test fails only when a number gets worse than its recorded
+baseline. When one improves, update the baseline beside the case.
 
 ## Variant defaults and alpha
 
