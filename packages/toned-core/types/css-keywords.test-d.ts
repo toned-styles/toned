@@ -149,6 +149,26 @@ ui.stylesheet({
   },
   Label: { $kind: 'text', '@platform web': { $style: { fontWeight: '600' } } },
 })
+// Vendor display values csstype leaves out, which a line clamp needs.
+ui.stylesheet({
+  Root: { '@platform web': { $style: { display: '-webkit-box' } } },
+  Label: {
+    $kind: 'text',
+    '@platform web': {
+      $style: {
+        display: '-webkit-inline-box',
+        WebkitBoxOrient: 'vertical',
+        WebkitLineClamp: 2,
+        overflow: 'hidden',
+      },
+    },
+  },
+})
+export const webkitBox: [
+  MessageOf<WebStyle<{ display: '-webkit-box' }>['display']>,
+] extends [never]
+  ? true
+  : false = true
 // A value that is not a literal is not checked.
 declare const dynamic: string
 ui.stylesheet({

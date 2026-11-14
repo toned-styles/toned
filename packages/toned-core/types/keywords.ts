@@ -8,7 +8,8 @@
  * accepted when it is:
  *
  * - one of the property's keywords (csstype's literal members, which include
- *   the CSS-wide `inherit`, `initial`, `unset`, `revert`, `revert-layer`),
+ *   the CSS-wide `inherit`, `initial`, `unset`, `revert`, `revert-layer`,
+ *   plus the vendor values csstype omits, such as `display: '-webkit-box'`),
  *   compared without case, as CSS does;
  * - for a property that takes several keywords (`display: 'inline flex'`,
  *   `alignItems: 'safe center'`), a space-separated list of them;
@@ -70,6 +71,12 @@ type JustifyWords =
 
 type Angle = `${number}${'deg' | 'grad' | 'rad' | 'turn'}`
 
+/** Vendor `display` values csstype leaves out: the legacy flexbox boxes a
+ *  line clamp (`-webkit-line-clamp`) needs. The other table properties'
+ *  vendor values in use (`-webkit-center`, `-webkit-grab`, `-ms-pan-x`, …)
+ *  are csstype keywords already. */
+type VendorDisplay = '-webkit-box' | '-webkit-inline-box'
+
 /**
  * The properties whose literal values are checked, and their grammars. Each
  * is open (`string & {}`) in csstype; the words are csstype's keywords plus
@@ -81,7 +88,7 @@ export interface KeywordGrammars {
   alignSelf: Grammar<AlignWords, true>
   borderStyle: Grammar<Keywords<Property.BorderStyle>, true>
   cursor: Grammar<Keywords<Property.Cursor>>
-  display: Grammar<Keywords<Property.Display>, true>
+  display: Grammar<Keywords<Property.Display> | VendorDisplay, true>
   flexFlow: Grammar<Keywords<Property.FlexFlow>, true>
   fontStyle: Grammar<Keywords<Property.FontStyle> | Angle, true>
   fontWeight: Grammar<
