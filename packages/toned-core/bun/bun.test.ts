@@ -117,3 +117,63 @@ test('a cache directory never serves one root\'s output to another', async () =>
   expect(await load(first)).toContain('.first {}')
   expect(await load(second)).toContain('.second {}')
 })
+
+// Bun keeps every module a namespace `onLoad` hook served, with the realm that
+// loaded it, for the life of the process. Under `bun test --isolate` that is
+// every test file's whole module graph: HQ's DOM suite grew to 15.5 GB and
+// stalled on a 16 GB CI runner. Modules registered with `build.module` are not
+// kept that way, so every key the plugin can name is served through it.
+test('known outputs and every cached data key are served as registered modules', async () => {
+  const root = await tempDir({
+    'demo.toned.ts': outputFile('.a {}'),
+    'other.toned.ts': "export default { data: { tokens: { gap: [1, 2] } } }\n",
+  })
+  const cacheDir = await tempDir()
+  // A first process builds `other` and caches it.
+  await register(tonedBunPlugin({ outputs: ['*.toned.ts'], root, cacheDir }))('toned:other/tokens')
+
+  // The next process (another isolated test file) registers its modules.
+  const modules = new Map<string, () => Promise<{ contents: string }>>()
+  tonedBunPlugin({ outputs: ['*.toned.ts'], root, cacheDir }).setup({
+    module: (specifier, callback) => void modules.set(specifier, callback),
+    onResolve: () => {},
+    onLoad: () => {},
+  })
+  expect([...modules.keys()].sort()).toEqual([
+    'toned:demo',
+    'toned:demo/css',
+    'toned:demo/manifest',
+    'toned:other',
+    'toned:other/css',
+    'toned:other/tokens',
+  ])
+  expect((await modules.get('toned:other/tokens')!()).contents).toBe(
+    'export default {"gap":[1,2]}\n',
+  )
+  expect((await modules.get('toned:demo')!()).contents).toContain('.a {}')
+})
+
+// Merely registering hooks in a namespace makes Bun keep each isolated test
+// file's realm (measured: HQ's DOM suite stalls at 15.5 GB with them, finishes at
+// 10.4 GB without). When every output is cached, every key is a registered
+// module, so the plugin registers no namespace hooks at all.
+test('with every output cached, no namespace hooks are registered', async () => {
+  const root = await tempDir({
+    'demo.toned.ts': outputFile('.a {}'),
+    'other.toned.ts': "export default { data: { tokens: { gap: [1, 2] } } }\n",
+  })
+  const cacheDir = await tempDir()
+  const first = register(tonedBunPlugin({ outputs: ['*.toned.ts'], root, cacheDir }))
+  await first('toned:demo/css')
+  await first('toned:other/tokens')
+
+  const hooks: string[] = []
+  const modules: string[] = []
+  tonedBunPlugin({ outputs: ['*.toned.ts'], root, cacheDir }).setup({
+    module: (specifier) => void modules.push(specifier),
+    onResolve: (options) => void hooks.push(`resolve ${options.namespace ?? '-'}`),
+    onLoad: (options) => void hooks.push(`load ${options.namespace}`),
+  })
+  expect(hooks).toEqual([])
+  expect(modules).toContain('toned:other/tokens')
+})
