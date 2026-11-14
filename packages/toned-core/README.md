@@ -340,9 +340,22 @@ when the sheet is built, naming the declaration to add. `:hover` and
 declares a relation must be an attribute or pseudo-class selector.
 
 Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
-channel. For each state your sheets read as `'Part:state'` or `'Part~:state'`,
-rewrite `name: selector` to `name: { selector, relations: [...] }`; the type
-errors list every such key.
+channel. Which states need a relation depends on your sheets, so do not work
+from a list: run the type check, and each error names a key that reads a state
+through a relation and the declaration to add. They come from `'Part:state'`
+and `'Part~:state'` keys and from the lowered channel keys a part can write
+itself, `':src-<state>'` (ancestor) and `':sib-<state>'` (sibling). A label
+that fades after a disabled control (`Label: { ':sib-disabled': { … } }`)
+reports:
+
+```text
+Toned: ':sib-disabled' needs state 'disabled' to declare the sibling relation, e.g. states: { 'disabled': { selector, relations: ['sibling'] } }
+```
+
+so `disabled: ':disabled'` becomes
+`disabled: { selector: ':disabled', relations: ['sibling'] }`. A key in a sheet
+the types cannot see whole (`extend`, an untyped caller) throws the same
+message when the sheet is built.
 
 ### Context markers: style a part by an ancestor component
 

@@ -619,6 +619,24 @@ type RootPairCheck<S, K, Block> = [ResponsivePairsOf<S>] extends [never]
       >
 
 /**
+ * The message for a part's channel key (`':sib-disabled'`, `':src-open'`: the
+ * lowered spelling of `'Control~:disabled'` / `'Control:disabled'`) whose
+ * declared state does not offer that relation; otherwise `never`.
+ */
+type ChannelNotDeclared<
+  K,
+  S extends TokenStyleDeclaration,
+> = K extends `:${infer Channel extends 'sib' | 'src'}-${infer State}`
+  ? `:${State}` extends InferStatePseudos<S>
+    ? {
+        [
+          M in `Toned: '${K & string}' needs state '${State}' to declare the ${Channel extends 'sib' ? 'sibling' : 'ancestor'} relation, e.g. states: { '${State}': { selector, relations: ['${Channel extends 'sib' ? 'sibling' : 'ancestor'}'] } }`
+        ]: never
+      }
+    : never
+  : never
+
+/**
  * Whether a WRITTEN key is a cross-element key, matched with `infer` so the
  * `${Elements}${CrossSuffix}` union is never built. Enumerating it as mapped
  * keys (root, variant conditions, and each part) would make a sheet cost
@@ -914,7 +932,9 @@ type ValidateSpecial<
                 >
               : RejectedKey<K, Shape, S, Parts>
             : RejectedKey<K, Shape, S, Parts>
-          : RejectedKey<K, Shape, S, Parts>
+          : [ChannelNotDeclared<K, S>] extends [never]
+            ? RejectedKey<K, Shape, S, Parts>
+            : ChannelNotDeclared<K, S>
 
 /** The condition-expression key shapes (`'@md&!lg'`), whose atoms are
  *  checked against the declared conditions. */
