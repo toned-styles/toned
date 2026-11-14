@@ -16,7 +16,9 @@
  *
  * A sheet using a width that is not declared is a type error (the query
  * builders and the literal keys are narrowed to this list) and, where types
- * cannot see it, an error when the sheet is created.
+ * cannot see it, an error when the sheet is created. A width has one
+ * spelling, its plain number in px (`'@>=768px'`, not `'@>=768.0px'`,
+ * `'@>=7.68e2px'` or `'@>=768PX'`); another spelling is an error naming it.
  *
  * @module system/widths
  */
@@ -112,8 +114,15 @@ export function undeclaredWidth(
   if (!atom || atom.step !== null) return undefined
   const written = `'@${serializeAtom({ ...atom, negated: false })}'`
   const emits = 'and the build emits CSS only for declared conditions'
+  // A width has one spelling, its plain number (`>=768px`, as `q.media(dp(768))`
+  // writes it): the types compare the text, so `>=768.0px` would type-check
+  // only here.
+  const respelled = (width: number, canonical: string, builder: string) =>
+    `Toned: ${written} spells the width ${width}px another way: write '@${canonical}', as ${builder} does`
   if (atom.container === null) {
     const width = fixedQueryWidth(`>=${atom.min}`)
+    if (width !== undefined && atom.min !== `${width}px`)
+      return respelled(width, `>=${width}px`, `q.media(dp(${width}))`)
     if (width !== undefined && widths?.media?.includes(width)) return undefined
     return `Toned: ${written} is a width the system does not declare, ${emits}: add ${width ?? atom.min} to conditions.widths.media, or name it in conditions.media and write q.media('<name>')`
   }
@@ -124,6 +133,12 @@ export function undeclaredWidth(
     typeof atom.min === 'string' ? fixedQueryWidth(`>=${atom.min}`) : undefined
   if (width === undefined)
     return `Toned: ${written} is not a fixed width, ${emits}: write q.container('${name}', dp(<px>)) and add the width to conditions.widths.containers.${name}, or name a step in conditions.containers.${name}`
+  if (atom.min !== `${width}px`)
+    return respelled(
+      width,
+      `${name}/>=${width}px`,
+      `q.container('${name}', dp(${width}))`,
+    )
   if (widths?.containers?.[name]?.includes(width)) return undefined
   return `Toned: ${written} is a width the system does not declare, ${emits}: add ${width} to conditions.widths.containers.${name}, or name a step in conditions.containers.${name}`
 }

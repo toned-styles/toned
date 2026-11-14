@@ -969,7 +969,12 @@ compiler cannot see (`dp(config.width)`) is refused when the sheet is created,
 with the same instruction. Widths are fixed logical pixels; a container's list
 needs the container declared in `containers`. The legacy numeric container key
 (`'@card/>=100'`, a spacing-scale multiple) and string lengths are refused: write
-`q.container('card', dp(<px>))` and declare the width.
+`q.container('card', dp(<px>))` and declare the width. A literal key spells
+the width as its plain number in px, as `q.media(dp(768))` writes it:
+`'@>=768px'`, never `'@>=768.0px'`, `'@>=7.68e2px'` or `'@>=768PX'`. Another
+spelling is a type error and is refused when the sheet is created, naming the
+plain one ("'@>=768.0px' spells the width 768px another way: write
+'@>=768px'").
 These keys retain exact literal types (`@>=600px`, `@card/>=300px`) and compose
 with `q.all`, `q.any`, and `q.not`. Mix variants into these expressions through
 checked selectors such as `$.size('s')`; unchecked raw `'[size=s]'` operands are

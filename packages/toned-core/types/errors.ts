@@ -170,19 +170,72 @@ type RawSelectorMessage<K extends string, States, Declared extends string> = {
     : `'${K}' is a raw selector, not a key: it is the declared state ':${Name}', so write ':${Name}'`
   : never
 
+/** Whether a width is written as its plain number (`768`, not `768.0`,
+ *  `7.68e2` or `.5`): the spelling `q.media(dp(n))` writes and the declared
+ *  width atoms are compared with. */
+type PlainNumber<N extends string> = N extends `${infer V extends number}`
+  ? `${V}` extends N
+    ? true
+    : false
+  : false
+
+/** A width written another way than its plain number in px. */
+type WidthSpellingMessage<
+  K extends string,
+  Written extends string,
+  Builder extends string,
+  Key extends string,
+  List extends string,
+> = `'${K}' writes the width ${Written}, and toned spells a width as its plain number (768, not 768.0, 7.68e2 or 768PX), as ${Builder} writes it: write '@${Key}', with n in ${List}`
+
 /** A condition key (`'@mdd'`) or one atom of an expression (`'@md&!xx'`). */
 type ConditionMessage<
   K extends string,
   Atom extends string,
   Media extends string,
   Containers extends string,
-> = Atom extends `>=${infer N}px`
-  ? `'${K}' uses the width ${N}px, which the system does not declare, and the build emits CSS only for declared conditions: add ${N} to conditions.widths.media, or name it in conditions.media`
-  : Atom extends `${infer Name}/>=${infer N}`
-    ? N extends `${infer Px}px`
-      ? `'${K}' uses the width ${Px}px on the container '${Name}', which the system does not declare, and the build emits CSS only for declared conditions: add ${Px} to conditions.widths.containers.${Name} (with '${Name}' declared in conditions.containers), or name a step in conditions.containers.${Name}`
-      : `'${K}' uses '${Name}/>=${N}', which is not a fixed width: write q.container('${Name}', dp(<px>)) and add the width to conditions.widths.containers.${Name}`
-    : `Unknown condition '${K extends `@${Atom}` | `@media ${Atom}` ? K : `${Atom}' in '${K}`}'.${DidYouMean<Atom, Media | Containers, '@'>} Declared media: ${[Media] extends [never] ? 'none' : QuoteList<Media, 8, '@'>}${[Containers] extends [never] ? '' : `; containers: ${QuoteList<Containers, 8, '@'>}`}; or a width declared in conditions.widths, such as q.media(dp(600))`
+> =
+  Lowercase<Atom> extends `>=${infer N}px`
+    ? Atom extends `>=${N}px`
+      ? PlainNumber<N> extends true
+        ? `'${K}' uses the width ${N}px, which the system does not declare, and the build emits CSS only for declared conditions: add ${N} to conditions.widths.media, or name it in conditions.media`
+        : WidthSpellingMessage<
+            K,
+            `${N}px`,
+            'q.media(dp(n))',
+            '>=<n>px',
+            'conditions.widths.media'
+          >
+      : Atom extends `>=${infer Written}`
+        ? WidthSpellingMessage<
+            K,
+            Written,
+            'q.media(dp(n))',
+            '>=<n>px',
+            'conditions.widths.media'
+          >
+        : never
+    : Atom extends `${infer Name}/>=${infer N}`
+      ? Lowercase<N> extends `${infer Px}px`
+        ? N extends `${Px}px`
+          ? PlainNumber<Px> extends true
+            ? `'${K}' uses the width ${Px}px on the container '${Name}', which the system does not declare, and the build emits CSS only for declared conditions: add ${Px} to conditions.widths.containers.${Name} (with '${Name}' declared in conditions.containers), or name a step in conditions.containers.${Name}`
+            : WidthSpellingMessage<
+                K,
+                N,
+                `q.container('${Name}', dp(n))`,
+                `${Name}/>=<n>px`,
+                `conditions.widths.containers.${Name}`
+              >
+          : WidthSpellingMessage<
+              K,
+              N,
+              `q.container('${Name}', dp(n))`,
+              `${Name}/>=<n>px`,
+              `conditions.widths.containers.${Name}`
+            >
+        : `'${K}' uses '${Name}/>=${N}', which is not a fixed width: write q.container('${Name}', dp(<px>)) and add the width to conditions.widths.containers.${Name}`
+      : `Unknown condition '${K extends `@${Atom}` | `@media ${Atom}` ? K : `${Atom}' in '${K}`}'.${DidYouMean<Atom, Media | Containers, '@'>} Declared media: ${[Media] extends [never] ? 'none' : QuoteList<Media, 8, '@'>}${[Containers] extends [never] ? '' : `; containers: ${QuoteList<Containers, 8, '@'>}`}; or a width declared in conditions.widths, such as q.media(dp(600))`
 
 /** The first atom of a condition expression body that is not declared.
  *  `Widths` is every declared width atom (`>=600px`, `card/>=300px`). */

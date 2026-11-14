@@ -151,6 +151,30 @@ export const undeclaredWidth: Has<
 > = true
 // @ts-expect-error — 500px is not a declared width
 ui.stylesheet({ Root: { gap: 1, '@>=500px': { gap: 2 } } })
+// A declared width in another number spelling names the plain spelling.
+export const widthSpelling: Has<
+  Rules<{ Root: { '@>=400.0px': { gap: 2 } } }>['Root']['@>=400.0px'],
+  `'@>=400.0px' writes the width 400.0px, and toned spells a width as its plain number (768, not 768.0, 7.68e2 or 768PX), as q.media(dp(n)) writes it: write '@>=<n>px', with n in conditions.widths.media`
+> = true
+export const widthSpellingUpper: Has<
+  Rules<{ Root: { '@md&>=400PX': { gap: 2 } } }>['Root']['@md&>=400PX'],
+  `'@md&>=400PX' writes the width 400PX, and toned spells a width as its plain number${string}`
+> = true
+const cards = defineSystem({
+  id: 'errors-cards',
+  tokens: { gap },
+  conditions: {
+    containers: { card: {} },
+    widths: { containers: { card: [100] } },
+  },
+})
+export const containerWidthSpelling: Has<
+  StylesheetValidation<
+    (typeof cards)['system'],
+    { Root: { '@card/>=1e2px': { gap: 2 } } }
+  >['Root']['@card/>=1e2px'],
+  `'@card/>=1e2px' writes the width 1e2px, and toned spells a width as its plain number (768, not 768.0, 7.68e2 or 768PX), as q.container('card', dp(n)) writes it: write '@card/>=<n>px', with n in conditions.widths.containers.card`
+> = true
 // Declared atoms and declared widths combine freely.
 ui.stylesheet({
   Root: { gap: 1, '@md&!lg': { gap: 2 }, '@>=400px|lg': { gap: 4 } },
