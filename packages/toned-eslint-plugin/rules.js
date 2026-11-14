@@ -55,6 +55,78 @@ function spreadObject(argument, source) {
   return node?.type === 'ObjectExpression' ? node : null
 }
 
+/**
+ * Whether a callee is spelled as a system's stylesheet, followed through
+ * const aliases and destructuring to an import: `stylesheet` imported by that
+ * name, `{ stylesheet } = system` or `system.stylesheet` on any binding. An
+ * app's design-system module re-exports it (`export const { stylesheet } =
+ * system`), and lint reads one file at a time, so the import cannot be
+ * proven; `no-shadowing-spread` accepts the spelling because a spread that
+ * replaces another is wrong in any declaration object.
+ */
+function spelledStylesheet(input, source, depth = 0) {
+  const node = unwrap(input)
+  if (!node || depth > 8) return false
+  if (node.type === 'MemberExpression')
+    return propertyName(node) === 'stylesheet'
+  if (node.type !== 'Identifier') return false
+  let found
+  for (let scope = source.getScope(node); scope && !found; scope = scope.upper)
+    found = scope.set.get(node.name)
+  const def = found?.defs[0]
+  if (def?.type === 'ImportBinding')
+    return (
+      def.node.type === 'ImportSpecifier' &&
+      (def.node.imported.name ?? def.node.imported.value) === 'stylesheet'
+    )
+  if (def?.type !== 'Variable' || def.node?.parent?.kind !== 'const')
+    return false
+  if (def.node.id.type === 'Identifier')
+    return spelledStylesheet(def.node.init, source, depth + 1)
+  return (
+    def.node.id.type === 'ObjectPattern' &&
+    def.node.id.properties.some(
+      (property) =>
+        property.type === 'Property' &&
+        property.value?.type === 'Identifier' &&
+        property.value.name === node.name &&
+        propertyName(property) === 'stylesheet',
+    )
+  )
+}
+
+/** A `stylesheet(…)` call by that spelling, or `.extend`/`.variants` on one
+ * (directly or through a const alias). */
+function spelledSheetCall(call, source, depth = 0) {
+  const node = unwrap(call)
+  if (node?.type !== 'CallExpression' || depth > 8) return null
+  if (spelledStylesheet(node.callee, source)) return 'stylesheet'
+  const callee = unwrap(node.callee)
+  if (
+    callee?.type !== 'MemberExpression' ||
+    !['extend', 'variants'].includes(propertyName(callee))
+  )
+    return null
+  let object = unwrap(callee.object)
+  if (object?.type === 'Identifier') {
+    let found
+    for (
+      let scope = source.getScope(object);
+      scope && !found;
+      scope = scope.upper
+    )
+      found = scope.set.get(object.name)
+    const def = found?.defs[0]
+    object =
+      def?.type === 'Variable' &&
+      def.node?.parent?.kind === 'const' &&
+      def.node.id.type === 'Identifier'
+        ? def.node.init
+        : null
+  }
+  return spelledSheetCall(object, source, depth + 1) ? 'method' : null
+}
+
 const options = (context, input) => {
   const defaults = typeof input === 'function' ? input(context) : input
   return {
@@ -320,11 +392,17 @@ export function createRules(defaults = {}) {
         return {
           CallExpression(node) {
             const callee = analysis.resolve(node.callee)
-            const inputs =
+            const spelled =
               callee?.kind === 'api' && callee.name === 'stylesheet'
-                ? [node.arguments[0]]
+                ? 'stylesheet'
                 : callee?.kind === 'sheet-method' &&
                     ['extend', 'variants'].includes(callee.name)
+                  ? 'method'
+                  : spelledSheetCall(node, source)
+            const inputs =
+              spelled === 'stylesheet'
+                ? [node.arguments[0]]
+                : spelled === 'method'
                   ? node.arguments
                   : []
             for (const object of inputs.flatMap(returnedObjects))

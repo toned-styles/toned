@@ -1,3 +1,4 @@
+import type { StateDeclaration } from '../../system/states.ts'
 import type { RuleObject } from '../rule-protocol.ts'
 import { StyleMatcher } from '../StyleMatcher.ts'
 import { sharedRuntimeNormalization } from './sharedNormalization.ts'
@@ -15,7 +16,7 @@ export function sharedMatcher(
   rules: RuleObject,
   cssMediaMode: boolean,
   cssPseudoMode: boolean,
-  stateAliases: Readonly<Record<string, string>> | undefined,
+  states: Readonly<Record<string, StateDeclaration>> | undefined,
   platform?: 'web' | 'native',
   sourceOrder = false,
 ): StyleMatcher {
@@ -31,14 +32,14 @@ export function sharedMatcher(
     (sourceOrder ? 16 : 0)
   let matcher = byMode.get(key)
   if (!matcher) {
-    // stateAliases are constant for a given rules object (one system per
+    // states are constant for a given rules object (one system per
     // stylesheet), so they never diverge across cache hits on the same rules.
     matcher = new StyleMatcher(
       rules,
       {
         cssMediaMode,
         cssPseudoMode,
-        stateAliases: Object.keys(stateAliases ?? {}),
+        states,
         platform,
         sourceOrder,
       },

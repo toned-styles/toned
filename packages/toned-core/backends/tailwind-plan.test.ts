@@ -190,3 +190,44 @@ it('does not accept class names mentioned only inside comments or strings as del
     }),
   ).rejects.toThrow('missing compiled candidate')
 })
+
+it('gates a declared state that needs hover, as it gates :hover', () => {
+  const hovering = defineSystem({
+    id: 'utility-hover',
+    tokens: {
+      opacity: defineToken({
+        values: [0, 1],
+        resolve: (opacity) => ({ opacity }),
+      }),
+    },
+    conditions: {
+      states: { 'row-hover': ':is([data-row]:hover)', open: '[data-open]' },
+    },
+  })
+  const sheet = hovering.stylesheet((q) => ({
+    Root: {
+      opacity: 1,
+      [q.state('row-hover')]: { opacity: 0 },
+      [q.state('open')]: { opacity: 0 },
+    },
+  }))
+  const { css } = compileTailwindPlan(
+    profile,
+    hovering,
+    Object.values(
+      resolvePlan(
+        compilePlan(hovering, sheet, 'web'),
+        hovering,
+        {},
+        {},
+        {
+          evaluate: false,
+        },
+      ),
+    ).flat(),
+  )
+  expect(css).toMatch(
+    /@media \(hover:hover\)\{[^{}]*:is\(\[data-row\]:hover\)\{/,
+  )
+  expect(css).not.toMatch(/@media \(hover:hover\)\{[^{}]*\[data-open\]\{/)
+})
