@@ -6,7 +6,7 @@ export default defineCase({
   description:
     '`var(--brand)` in a namespaced system without `externalCssVariables`',
   category: 'variables',
-  baseline: { stage: 'silent', namesFix: false },
+  baseline: { stage: 'compile', namesFix: true },
   fix: /externalCssVariables/,
   sheets: () => [
     ui.stylesheet({

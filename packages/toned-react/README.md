@@ -458,6 +458,27 @@ finishes; unmounting cancels it. Frames patch the existing web/native host witho
 React renders. The [motion contract](../toned-core/motion/README.md) lists supported
 properties, reduced-motion sources and the native JS-thread capability boundary.
 
+`MotionClockProvider` gives every `useMotion` below it one clock. Tests and replays
+pass `createTestClock()` and step time with `clock.advance(ms)` instead of sleeping:
+
+```tsx
+const clock = createTestClock()
+render(
+  <MotionClockProvider clock={clock}>
+    <Panel />
+  </MotionClockProvider>,
+)
+act(() => {
+  clock.advance(90)
+})
+```
+
+State-keyed motion comes from `defineMotion(ui, { states })` (see the motion
+contract). The host's declared states pick the transition. When the states live
+in a store instead, such as a Weft run's open waits, pass that store as
+`useMotion(panel, { states })`, where `states` is `{ current(), subscribe() }`.
+Keep the clock and the store stable: a new identity replaces the controller.
+
 ## Adaptive layouts
 
 `useAdaptiveVariants(store)` from `@toned/react/adaptive` reads an adaptive layout

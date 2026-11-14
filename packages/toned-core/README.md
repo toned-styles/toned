@@ -59,9 +59,91 @@ style subset for that part kind. Foreign platform blocks are filtered before
 capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
 shorthand because their web/native meanings differ; use semantic typography or
 explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
-in its platform block. Legacy `$$type`, `style`, `@md`, `@field/wide`, and
-`@platform.web` remain compatibility spellings. New code should use canonical
-metadata and explicit platform scopes for platform-specific styles.
+in its platform block. Legacy `$$type`, `style`, `@md`, and `@field/wide` remain
+compatibility spellings. New code should use canonical metadata and explicit
+platform scopes for platform-specific styles.
+
+A platform block has one spelling, `'@platform web'` (or `'@platform native'`),
+which is also what `q.platform('web')` returns. The `'@platform.web'` alias is
+deprecated: it still resolves, the lint rule `toned/canonical-platform-key`
+rejects it and fixes the key, and writing both spellings in one part is a type
+error (and throws), because one block would replace the other.
+
+### Targets
+
+A system can declare the renderers it is rendered by:
+
+```ts
+export const site = defineSystem({ id: 'site', targets: ['web'], tokens })
+site.stylesheet({ Root: { $style: { cursor: 'pointer', maxWidth: '42rem' } } })
+```
+
+`targets` is a list of `'web' | 'native' | 'email' | 'pdf' | 'tailwind'`, and a
+part's style type is what every declared target supports:
+
+| Targets                              | `$style` (and `$style` inside conditions) |
+| ------------------------------------ | ----------------------------------------- |
+| omitted, or `['web', 'native']`      | the portable style, as above              |
+| `['web']`, `['tailwind']`            | web CSS, as inside `'@platform web'`      |
+| `['web', 'email']`, `['email']`      | inline-safe CSS: no CSS variables         |
+| `['native']`                         | the native style subset                   |
+| `['pdf']`, any mix of web and native | the portable style                        |
+
+Inside a platform block the type narrows to the targets that read it (web reads
+`'@platform web'`; email and Tailwind do too; native and PDF read
+`'@platform native'`). A system with a static target (`'email'` or `'pdf'`)
+renders one style per part, so a condition key (`':hover'`, `'@md'`, a declared
+state, a cross-part key) is a type error that names the static target and
+suggests a variant; with an email target, `$webRules`, `$grid` and `$area` are
+type errors too. Creating a renderer for a target the system did not declare
+throws, naming the declared targets. Without `targets` nothing changes: every
+renderer is allowed and the remaining checks happen at render time.
+
+### Keyword values are checked
+
+csstype types most CSS properties as their keywords plus any string, so in web
+CSS `cursor: 'pointr'` would compile and do nothing. For the properties whose
+values are a closed keyword set (`cursor`, `display`, `overflow`, the box
+alignment properties, `fontStyle`, `fontWeight`, `textAlign`, `textTransform`,
+`textDecorationLine`, `borderStyle`, `whiteSpace`, `touchAction` and a few more:
+the `KeywordGrammars` table in `types/keywords.ts`), a literal string value must
+be one of its keywords, compared without case. The keywords are csstype's,
+which include the vendor values still in use (`textAlign: '-webkit-center'`,
+`cursor: '-webkit-grab'`), plus the two `display` values it leaves out and a line
+clamp needs: `'-webkit-box'` and `'-webkit-inline-box'`. A property that takes several
+keywords takes a space-separated list of them (`display: 'inline flex'`,
+`alignItems: 'safe center'`). A CSS-wide keyword (`inherit`, `unset`, …) is
+always accepted, and so is any value with a function or quoted text in it
+(`var(--x)`, `env(…)`, `url(hand.svg), pointer`). Anything else is a type error
+naming the property, the wrong word, the closest keyword and the keywords:
+
+```text
+'pointr' is not a 'cursor' keyword. Did you mean 'pointer'? Keywords: 'alias', …
+```
+
+A value typed `string` (computed at runtime) is not checked. Properties csstype
+types as a closed union (`position`, `visibility`, `pointerEvents`, `boxSizing`,
+`objectFit`, …) were checked already, and portable and native styles are closed
+unions too. `listStyleType` is not checked: a custom counter style is any name.
+
+### Compose fragments with a `$style` list
+
+```ts
+const focusRing = { outlineWidth: 2, outlineStyle: 'solid' } as const
+Root: {
+  '@platform web': { $style: [focusRing, still && motionless, { maxWidth: '42rem' }] },
+}
+```
+
+`$style` takes a list wherever it takes an object (parts, conditions and
+platform blocks, with the same part-kind typing). Entries merge in order and the
+last wins; falsy entries are skipped, so `cond && fragment` works; a `null`
+property in any entry (`{ opacity: 1, zIndex: null }`) unsets what an earlier
+entry set, and in `extend` removes the inherited value as a single `null` does. The list is folded once,
+when the declaration is normalized. Spreading two fragments into a part instead
+(`{ ...focusRing, ...pointer }`) silently keeps only the last `$style`,
+platform or condition block: `toned/no-shadowing-spread` reports that, naming
+the shadowed key.
 
 New descriptor systems use fixed logical pixels for both viewport and container
 thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
@@ -133,6 +215,18 @@ its returned objects. Query builders return typed `QueryKey` strings; use those
 keys in declarations rather than assembling predicate objects. Explicit-generic
 callback and object variant declarations remain compatible.
 
+A key a stylesheet does not accept is a type error whose text names the fix:
+its value is checked against `TonedError<"…">` (a type exported from
+`@toned/core`), so the compiler prints, for example,
+`TonedError<"Unknown state ':opne'. Did you mean ':open'? Declared states: ':open'; built-in: …">`.
+Unknown tokens, CSS properties, states, media and condition-expression atoms
+(`'@md&!xx'`), parts in cross-part keys, raw selectors (`"[data-state='open']"`
+names the declared state to write), web-only CSS and CSS variables in portable
+`$style`, and conditions written inside `$style` each have a message. The
+runtime errors for the same facts name the key and the declared set too. A
+sheet-level `'@<name>'` block is not checked by type (root keys are open); it
+fails at construction with the declared media.
+
 In descriptor systems, later matching declarations within a precedence layer win
 each resolved field. Legacy systems retain their historical pseudo/breakpoint
 order within a layer; a higher override layer still wins over the whole lower layer.
@@ -164,6 +258,117 @@ literal strings at runtime and in TypeScript, including multi-value selections.
 The matcher keeps a fast unsigned single-word path and uses multiple words beyond
 32 allocated values. Equality uses exact rule membership and output operations,
 not a lossy XOR hash. Caches are bounded and compiled plans are shared.
+
+### Declared states and their relations
+
+A system declares the states its markup sets, by selector:
+`states: { open: "[data-state='open']", disabled: ':disabled' }`. A part reads
+its own state with `q.state('open')` (`':open'`). On the web the toggle is a
+non-inheriting registered custom property (`@property … { inherits: false }`),
+so a state on an ancestor never reaches a descendant; this needs a browser with
+`@property` (Chrome 85, Safari 16.4, Firefox 128). A state whose selector
+contains `:hover` is gated in `@media (hover: hover)`, as `:hover` is.
+
+Another part reads a state only through a relation the state declares:
+
+```ts
+states: {
+  open: { selector: "[data-state='open']", relations: ['ancestor'] },
+  'size-sm': { selector: "[data-size='sm']", relations: ['sibling'] },
+  checked: "[data-state='checked']", // its own part only
+}
+```
+
+- `ancestor`: `[q.part('Trigger').state('open')]` (`'Trigger:open'`) styles the
+  parts inside the nearest `Trigger` in the state.
+- `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
+  siblings.
+
+When the parts that react live in another sheet, they write the channel key
+themselves (`Chip: { ':sib-checked': { … } }`), and the source's sheet marks
+its part with an empty key, `'Input~:checked': {}` (or `'Root:open': {}` for
+the ancestor relation). The empty key styles nothing in its own sheet; it makes
+the part a source, and it still needs the relation declared.
+
+Each relation is CSS that every styled element pays for in style
+recalculation; the sibling one grows with the square of a list's length. A
+key reading a state through an undeclared relation is a type error and throws
+when the sheet is built, naming the declaration to add. `:hover` and
+`:focus-within` keep their built-in relations. The selector of a state that
+declares a relation must be an attribute or pseudo-class selector.
+
+Upgrading from 1.0: a string state no longer offers the `ancestor` or `sibling`
+channel. Which states need a relation depends on your sheets, so do not work
+from a list: run the type check, and each error names a key that reads a state
+through a relation and the declaration to add. They come from `'Part:state'`
+and `'Part~:state'` keys and from the lowered channel keys a part can write
+itself, `':src-<state>'` (ancestor) and `':sib-<state>'` (sibling). A label
+that fades after a disabled control (`Label: { ':sib-disabled': { … } }`)
+reports:
+
+```text
+Toned: ':sib-disabled' needs state 'disabled' to declare the sibling relation, e.g. states: { 'disabled': { selector, relations: ['sibling'] } }
+```
+
+so `disabled: ':disabled'` becomes
+`disabled: { selector: ':disabled', relations: ['sibling'] }`. A key in a sheet
+the types cannot see whole (`extend`, an untyped caller) throws the same
+message when the sheet is built.
+
+### Shorthands and CSS-wide keywords under conditions
+
+On the web a part's conditions compile into one inline style, where each
+conditional field reads `var(--rule, <value at rest>)`. Two consequences:
+
+- A shorthand and one of its longhands in different blocks of one part
+  (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
+  write the longhands, or set the whole shorthand in each condition. A longhand
+  a token writes counts too: the `animation` token writes `animationName`, so
+  a raw `animation: 'none'` under a condition beside it is a type error, and
+  the fix is `$style: { animationName: 'none' }`. Sheets the
+  types cannot see whole (`extend`, variants, untyped callers) are handled at
+  resolve time: the shorthand is split into its longhands (`transition`,
+  `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
+  `margin`, `inset`, `gap`, `flex`, `flexFlow`, the `place*` pairs, and a
+  single-colour `background`), so each longhand has one chain. A value that
+  cannot be split without the browser (a `var()`, an `animation`, a layered
+  `background`) throws, naming both fields and the fix; when every field
+  involved is unconditional it is left as written. Chromium's computed styles
+  for the split forms are checked by `node benchmarks/cascade-browser.mjs`.
+- A CSS-wide keyword (`inherit`, `initial`, `unset`, `revert`, `revert-layer`)
+  under a condition is a type error and throws at resolve time: a keyword that
+  reaches a property through a custom property computes as `unset`. At rest it
+  is the chain's fallback, where it works. Set the value the state should take,
+  or write a selector rule with `$webRules`.
+
+### Responsive atoms: declared pairs
+
+A legacy-form system can compile a token's values under a named condition to
+classes (`@md:maxW_32`) instead of an inline chain, so a caller's own utility
+class still overrides the responsive default. Declare which conditions each
+token responds to:
+
+```ts
+defineSystem(tokens, {
+  breakpoints,
+  responsiveTokens: { maxW: ['sm', 'md'], textStep: ['md'] },
+})
+```
+
+Only the declared token and condition pairs emit atoms. Setting `maxW` directly
+under `'@lg'` is a type error naming the declared conditions, and throws at
+resolve where types cannot see the sheet (`extend`, variants). A condition nested
+under another (`':hover': { '@lg': … }`) keeps its chain. A name that is not a
+token or a declared condition is refused when the system is defined. The pairs
+come from the declaration only: the build never reads a stylesheet to find them.
+
+The list form, `responsiveTokens: ['maxW']`, is kept for compatibility and emits
+the token under every declared condition, including non-width ones such as
+`(pointer: coarse)`. To migrate, replace the list with the record, listing for
+each token the conditions its sheets use; the type errors name any you miss.
+In a responsive atom, four equal sides of `margin`, `padding`, `inset`,
+`borderWidth`, `borderStyle`, `borderColor` or `borderRadius` are written as
+the one shorthand.
 
 ## Reuse named fragments and part declarations
 
@@ -217,6 +422,24 @@ declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
 runtime output; classes, condition toggles and undeclared variables remain isolated.
 The immutable, validated list is part of the manifest contract. External variables
 must be supplied by the application; Toned does not discover or emit their values.
+
+In a namespaced system, every `var(--x)` written in `$style` must name a variable
+the system owns or a listed one. The system owns a custom property a sheet sets
+(`$style: { '--bar': '3rem' }` on any of its parts, conditions or variants, or in
+the base sheet it extends) and core's own `--toned-*` / `--toned_*` parameters,
+bridge variables included, which never need listing. Any other name would be
+renamed to `--<id>-x` and resolve to nothing, its fallback hiding the mistake, so:
+
+- where the value is a literal and the list is a literal tuple, it is a type error
+  naming the variable, the listed ones and the fix;
+- in development, creating the sheet throws the same message. The check reads each
+  `$style` once per sheet, never per resolve, and runs where toned's development
+  warnings run: `process` exists and `NODE_ENV` is not `production` (Node, Bun,
+  SSR and tests; a browser bundle without `process` skips it). A list computed at
+  runtime (`names.map(…)`) is `string[]` to the compiler, so only this check sees it.
+
+A variable set by a different sheet, or by the application outside toned, belongs
+in `externalCssVariables`. Text in quotes or `url()` is not a reference.
 Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
 The build manifest records ad-hoc conditions and the exact static system schema,
@@ -541,15 +764,22 @@ agent and prints a markdown table, then JSON; `--json` prints only the JSON
 `{ library, version, metrics, details }`, whose metric names are stable.
 
 - **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
-  stage each mistake is caught at (compile, build, runtime or silent) and
-  whether the report names the fix, computed with the same `tsc` and runtime.
-  A case's own `build` step (building a named output, say) counts as build.
+  stage each mistake is caught at (compile, lint, build, runtime or silent)
+  and whether the report names the fix, computed with the same `tsc`, one
+  oxlint run of `@toned/eslint-plugin`'s recommended rules over the case
+  files, and the runtime. A case whose mistake only a lint rule sees records
+  `baseline: { stage: 'lint', … }`; lint ranks after compile because it only
+  runs where an application enables it. A case's own `build` step (building a
+  named output, say) counts as build.
 - **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
   its canonical spelling and every alias in use; spellings per intent.
 - **Build purity**: which outputs change when a fixture sheet is added,
   edited or deleted.
 - **Target conformance**: each feature on the web, native, inline and PDF
-  renderers: works, rejected at runtime, or a type error.
+  renderers: works, rejected at runtime, or a type error. A second matrix
+  writes each feature for a system that declares only that target
+  (`targets: [t]`), where a feature the target cannot render should be a type
+  error (`conformance.declared.*`).
 
 Each gate's test fails only when a number gets worse than its recorded
 baseline. When one improves, update the baseline beside the case.

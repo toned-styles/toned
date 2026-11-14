@@ -13,6 +13,8 @@
  * - app-helper: written by an application on top of toned (not toned API);
  * - workaround: accepted toned API used for something it was not meant for;
  * - redundant: accepted, and has no effect;
+ * - error: still accepted at runtime, but the compiler or a toned lint rule
+ *   rejects it with a message naming the canonical spelling; not counted;
  * - removed: no longer exported, but still taught somewhere; not counted.
  */
 export type AliasStatus =
@@ -20,6 +22,7 @@ export type AliasStatus =
   | 'app-helper'
   | 'workaround'
   | 'redundant'
+  | 'error'
   | 'removed'
 
 export type Source = 'readme' | 'stack-review' | 'probe'
@@ -40,20 +43,21 @@ export const intents: readonly Intent[] = [
     id: 'web-only-value',
     intent: 'Use a value only on web',
     canonical: {
-      spelling: "'@platform web': { $style: { … } }",
+      spelling: "$style: { … } in a system declaring targets: ['web']",
+      note: "in a system with several targets, `'@platform web': { $style: { … } }`",
       source: 'readme',
     },
     aliases: [
       {
         spelling: "'@platform.web': { $style: { … } }",
-        status: 'compatible',
-        note: "`q.platform('web')` returns this spelling",
+        status: 'error',
+        note: '`toned/canonical-platform-key` rejects it and fixes the key',
         source: 'probe',
       },
       {
         spelling: '...web({ … })',
         status: 'app-helper',
-        note: 'an app helper spread into a part; nine copies in two different types in HQ; a second spread overwrites the first',
+        note: "an app helper spread into a part; nine copies in two different types in HQ; replaced by `targets: ['web']`, pending the HQ migration",
         source: review,
       },
     ],
@@ -63,7 +67,7 @@ export const intents: readonly Intent[] = [
     intent: 'Apply hover only on devices that can hover',
     canonical: {
       spelling: "':hover': { … }",
-      note: 'core already wraps `:hover` and the source channel in `@media (hover: hover)`',
+      note: 'core wraps `:hover`, the source channel and every declared state whose selector contains `:hover` in `@media (hover: hover)`',
       source: review,
     },
     aliases: [
@@ -76,14 +80,31 @@ export const intents: readonly Intent[] = [
       {
         spelling: "':row-hover': { … }",
         status: 'workaround',
-        note: "a declared state whose selector contains `:hover` (`states: { 'row-hover': '…:hover' }`); not gated by core",
+        note: "a declared state whose selector contains `:hover` (`states: { 'row-hover': '…:hover' }`); gated by core like `:hover`",
         source: review,
       },
       {
         spelling: "'@can-hover': { ':row-hover': { … } }",
-        status: 'workaround',
-        note: 'the wrapper is needed here, unlike above; an author cannot tell which case applies',
+        status: 'redundant',
+        note: 'core gates a declared state whose selector contains `:hover`, so the wrapper does nothing',
         source: review,
+      },
+    ],
+  },
+  {
+    id: 'ancestor-state',
+    intent: 'Style a part while an ancestor part is in a declared state',
+    canonical: {
+      spelling: "[q.part('Trigger').state('open')]: { Chevron: { … } }",
+      note: "the state declares the relation: `states: { open: { selector, relations: ['ancestor'] } }`; a state without it is a type error",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "'Trigger:open': { Chevron: { … } }",
+        status: 'compatible',
+        note: 'the literal key the builder returns',
+        source: 'readme',
       },
     ],
   },
@@ -198,13 +219,34 @@ export const intents: readonly Intent[] = [
   {
     id: 'platform-block',
     intent: 'Open a platform block',
-    canonical: { spelling: "'@platform web'", source: 'readme' },
+    canonical: {
+      spelling: "'@platform web'",
+      note: "what `q.platform('web')` returns",
+      source: 'readme',
+    },
     aliases: [
       {
         spelling: "'@platform.web'",
-        status: 'compatible',
-        note: "what `q.platform('web')` returns; both in one part lose one block silently",
+        status: 'error',
+        note: 'deprecated; `toned/canonical-platform-key` fixes it, and both spellings in one part are a type error',
         source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'compose-fragments',
+    intent: 'Compose shared style fragments into a part',
+    canonical: {
+      spelling: '$style: [focusRing, cond && still, { … }]',
+      note: 'merged in order, the last wins; falsy entries are skipped; `null` unsets',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'Root: { ...focusRing, ...still }',
+        status: 'error',
+        note: '`toned/no-shadowing-spread` reports a spread whose `$style`, platform or condition key is set again, naming the key',
+        source: review,
       },
     ],
   },
@@ -262,6 +304,105 @@ export const intents: readonly Intent[] = [
     ],
   },
   {
+    id: 'state-motion',
+    intent: 'Animate a part when a declared state changes',
+    canonical: {
+      spelling: "defineMotion(ui, { states: { ':open': transition } })",
+      note: 'the same declared states (or a `q.all` of them) that style the part; a Weft run passes its open waits as the `states` source',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'useMotion(open ? slow : fast)',
+        status: 'workaround',
+        note: 'a new options identity replaces the controller and cancels the running transition',
+        source: 'probe',
+      },
+      {
+        spelling: "attachMotion(host, { states: { ':open': … } })",
+        status: 'error',
+        note: 'a type error naming `defineMotion(system, { states })`, which checks the state names',
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'colour-motion',
+    intent: 'Animate a colour',
+    canonical: {
+      spelling: "properties: ['backgroundColor']",
+      note: 'interpolated in Oklab on web and native; token colours resolve through the active theme',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "'@platform web': { $style: { transition: 'background-color 200ms' } }",
+        status: 'workaround',
+        note: 'web only, interpolated in sRGB, not on the shared clock, and reduced motion is left to the author',
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'transform-motion',
+    intent: 'Move, scale or rotate a part',
+    canonical: {
+      spelling: "properties: ['translateY', 'scale']",
+      note: 'separate channels; individual CSS transform properties on web, the transform array on native',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "'@platform web': { $style: { transform: 'translateY(8px)', transition: 'transform 200ms' } }",
+        status: 'workaround',
+        note: 'web only; one transform string, so translate and scale cannot be interrupted separately',
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'motion-clock',
+    intent: 'Step motion time in a test or replay',
+    canonical: {
+      spelling: 'createTestClock() + clock.advance(ms)',
+      note: 'one clock shared through `attachMotion(host, motion, { clock })` or `<MotionClockProvider clock={clock}>`',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'frames: driver',
+        status: 'compatible',
+        note: "one motion's own clock; it takes precedence over the shared clock",
+        source: 'readme',
+      },
+      {
+        spelling: 'a hand-written frame driver with a pending-callback map',
+        status: 'workaround',
+        note: "what toned's own motion tests wrote before `createTestClock`",
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'responsive-atoms',
+    intent: 'Give a token responsive classes under the conditions it uses',
+    canonical: {
+      spelling: "responsiveTokens: { maxW: ['md', 'lg'] }",
+      note: 'only the declared pairs emit atoms; another pair is a type error',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "responsiveTokens: ['maxW']",
+        status: 'compatible',
+        note: 'emits the token under every declared condition, including non-width ones',
+        source: 'readme',
+      },
+    ],
+  },
+  {
     id: 'declare-outputs',
     intent: "Make a package's named outputs available to its consumers",
     canonical: {
@@ -314,9 +455,13 @@ export const intents: readonly Intent[] = [
   },
 ]
 
-/** Spellings an author can write today: the canonical one plus live aliases. */
+/** Spellings an author can write today without being told otherwise: the
+ *  canonical one plus the aliases nothing rejects. */
 export const spellingsOf = (intent: Intent): number =>
-  1 + intent.aliases.filter((alias) => alias.status !== 'removed').length
+  1 +
+  intent.aliases.filter(
+    (alias) => alias.status !== 'removed' && alias.status !== 'error',
+  ).length
 
 export function intentMetrics(table: readonly Intent[] = intents) {
   const counts = table.map(spellingsOf)
@@ -365,7 +510,8 @@ export function renderIntentTable(table: readonly Intent[] = intents): string {
     '',
     'Each author intent, its one canonical spelling, and every other spelling in use',
     'today. The target is one spelling per intent, with every alias an error that',
-    'names the canonical spelling. Removed spellings are listed but not counted.',
+    'names the canonical spelling. Spellings that are errors (compiler or toned lint',
+    'rule) and removed spellings are listed but not counted.',
     '',
     `${metrics.intents} intents, ${metrics.spellingsTotal} spellings (mean ${metrics.spellingsMean}, max ${metrics.spellingsMax}); ${metrics.intentsWithOneSpelling} with one spelling.`,
     '',

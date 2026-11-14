@@ -44,6 +44,7 @@ export type QueryAtom<C, Parts extends string = string> =
   | ContainerAtoms<C>
   | `@>=${number}px`
   | `@${keyof Containers<C> & string}/>=${number}px`
+  | `@platform ${Platform}`
   | `@platform.${Platform}`
   | `${Parts}:${State<C>}`
   | `[${string}]`
@@ -81,7 +82,9 @@ export type QueryBuilder<C, Parts extends string = string> = {
       options?: { scope?: Scope },
     ): RelationQuery<N, Target, St, Scope>
   }
-  platform<P extends Platform>(platform: P): `@platform.${P}`
+  /** The canonical `'@platform web'` key (the `'@platform.web'` alias is
+   *  still accepted, and deprecated). */
+  platform<P extends Platform>(platform: P): `@platform ${P}`
   all<const A extends readonly QueryOperand<C, Parts>[]>(
     ...operands: A
   ): BooleanQuery<'all', A>
@@ -123,7 +126,7 @@ export function createQueries<C, Parts extends string = string>(): QueryBuilder<
         options?: { scope?: 'child' | 'descendant' },
       ) => relationQuery(name, part, state, options?.scope ?? 'descendant'),
     }),
-    platform: (platform: string) => `@platform.${platform}`,
+    platform: (platform: string) => `@platform ${platform}`,
     all: (...operands: string[]) => booleanQuery('all', operands),
     any: (...operands: string[]) => booleanQuery('any', operands),
     not: (operand: string) => notQuery(operand),
