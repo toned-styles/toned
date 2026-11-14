@@ -28,6 +28,23 @@ ui.stylesheet({
   Label: { $kind: 'text', $style: [{ color: 'red' }, { fontSize: 12 }] },
 })
 
+// An entry may set some properties and unset others.
+ui.stylesheet({
+  Root: {
+    $style: [
+      { opacity: 0.5, zIndex: 2 },
+      { opacity: 1, zIndex: null },
+    ],
+  },
+})
+ui.stylesheet({
+  Root: {
+    '@platform web': {
+      $style: [focusRing, { cursor: 'pointer', outlineWidth: null }],
+    },
+  },
+})
+
 // @ts-expect-error web-only CSS in a portable list entry
 ui.stylesheet({ Root: { $style: [{ opacity: 0.5 }, { cursor: 'pointer' }] } })
 ui.stylesheet({

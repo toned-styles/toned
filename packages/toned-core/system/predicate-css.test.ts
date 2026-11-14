@@ -79,7 +79,7 @@ test('conditional zero values ride guarded property writes and fall back to rest
       ).toBe(media && hover ? '0' : '1')
 })
 test('complement state toggles exist without any viewport configuration', () => {
-  expect(generate({})).toContain('._ {--toned_hover-not: ;}')
+  expect(generate({})).toMatch(/\._ \{--toned_hover-not: ;[^}]*\}/)
   expect(generate({})).toContain('._:hover {--toned_hover-not: initial;}')
 })
 test('namespace leaves caller scope and literal strings and URLs intact', () => {

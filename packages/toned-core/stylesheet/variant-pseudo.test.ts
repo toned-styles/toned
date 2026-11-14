@@ -194,10 +194,11 @@ describe('declared states (data-state / attribute selectors)', () => {
   )
   const css = generate(stateSystem.system)
 
-  test('each state emits a self-scoped, ungated toggle with nested reset', () => {
-    expect(css).toContain('html {--toned_open: initial;}')
+  test('each state emits a self-scoped, ungated toggle', () => {
+    // Self-scoped by registration: a non-inheriting toggle never reaches a
+    // descendant's chain, so no nested reset rule is needed.
     expect(css).toContain(
-      "._[data-state='open'] {--toned_open: ;} ._[data-state='open'] ._ {--toned_open: initial;} ._[data-state='open'] ._[data-state='open'] {--toned_open: ;}",
+      "@property --toned_open {syntax:'*';inherits:false;}._[data-state='open'] {--toned_open: ;--toned_open-not: initial;}",
     )
     // not hover-gated
     expect(css).not.toContain('@media (hover: hover) {._[data-state')

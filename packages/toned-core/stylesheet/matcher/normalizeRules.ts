@@ -26,6 +26,7 @@ export {
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../rule-protocol.ts'
+import type { StateDeclaration } from '../../system/states.ts'
 
 export type Conditions = ReadonlyMap<string, readonly string[]>
 export interface NormalizedRule {
@@ -158,7 +159,7 @@ export function normalizeRules(
   options: {
     cssMediaMode: boolean
     cssPseudoMode: boolean
-    stateAliases?: readonly string[]
+    states?: Readonly<Record<string, StateDeclaration>>
     sourceOrder?: boolean
     platform?: 'web' | 'native'
   },
@@ -527,7 +528,7 @@ export function normalizeRules(
     predicate = undefined
     predicateIdentity = ''
     const declaration = options.cssPseudoMode
-      ? resolveCrossHoverCss(authored, options.stateAliases ?? [], elementSet)
+      ? resolveCrossHoverCss(authored, options.states, elementSet)
       : authored
     walk(new Map(), declaration)
     if (layer && Object.keys(layerBase).length) {

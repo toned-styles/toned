@@ -34,7 +34,14 @@ function fixture() {
   const system = defineSystem({
     id: 'native-semantic-states',
     tokens: {},
-    conditions: { states: { selected: '[aria-selected="true"]' } },
+    conditions: {
+      states: {
+        selected: {
+          selector: '[aria-selected="true"]',
+          relations: ['ancestor'],
+        },
+      },
+    },
   })
   const rules = {
     Root: {

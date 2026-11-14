@@ -2,6 +2,7 @@ import { fixedQueryWidth } from '../utils/conditions.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import type { QueryPredicate } from './queries.ts'
 import { isQueryKey, queryExpression } from './query-key.ts'
+import type { StateDeclaration } from './states.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null &&
@@ -96,7 +97,7 @@ export function validateDeclarations(
   system: {
     breakpoints?: { __breakpoints: Record<string, number | string> }
     containers?: Record<string, Record<string, unknown>>
-    states?: Record<string, string>
+    states?: Record<string, StateDeclaration>
   },
 ): void {
   const builtInStates = [

@@ -52,6 +52,11 @@ export type CorpusCase = {
   system?: TokenSystem<any>
   /** Builds the case's stylesheets; runs at runtime (construction). */
   sheets?: () => readonly unknown[]
+  /**
+   * A build step outside `buildStyles`, such as building a named output the
+   * way Vite, Bun or Metro would; what it throws or warns is a build catch.
+   */
+  build?: () => unknown
   /** Extra runtime probe after the build and the web resolve. */
   exercise?: () => unknown
 }
