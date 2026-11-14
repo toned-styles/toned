@@ -8,6 +8,30 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' &&
   Object.getPrototypeOf(value) === Object.prototype
 
+/**
+ * Folds a `$style` list into one style object: entries merge in order and the
+ * last wins, and falsy entries (`cond && fragment`) are skipped. A `null`
+ * value unsets what an earlier entry set; with nothing earlier in the list to
+ * unset it is kept, so in `extend` it still removes the inherited property,
+ * as the single form's `null` does.
+ */
+function foldStyleList(list: readonly unknown[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  list.forEach((entry, index) => {
+    if (entry === false || entry === null || entry === undefined) return
+    if (!isRecord(entry))
+      throw new Error(
+        `Toned: $style list entry ${index} is ${typeof entry === 'object' ? 'not a plain object' : `a ${typeof entry}`}; each entry is a style object, or false/null/undefined to skip it`,
+      )
+    for (const [property, value] of Object.entries(entry)) {
+      if (value === null && property in out && out[property] !== null)
+        delete out[property]
+      else out[property] = value
+    }
+  })
+  return out
+}
+
 /** Canonicalize author-facing aliases once, before matcher compilation. */
 export function normalizeDeclarations<T>(input: T): T {
   if (!isRecord(input)) return input
@@ -18,6 +42,12 @@ export function normalizeDeclarations<T>(input: T): T {
     input['$kind'] !== input['$$type']
   )
     throw new Error('Toned: $kind and $$type must agree')
+  for (const key of Object.keys(input)) {
+    if (key.startsWith('@platform.') && `@platform ${key.slice(10)}` in input)
+      throw new Error(
+        `Toned: '@platform ${key.slice(10)}' and its alias '${key}' are both written here, and one would replace the other; merge them into one '@platform ${key.slice(10)}' block`,
+      )
+  }
   for (const [key, value] of Object.entries(input)) {
     const canonical =
       key === '$kind'
@@ -41,7 +71,7 @@ export function normalizeDeclarations<T>(input: T): T {
       )
     const normalized =
       canonical === 'style'
-        ? immutableSnapshot(value)
+        ? immutableSnapshot(Array.isArray(value) ? foldStyleList(value) : value)
         : canonical === '$grid' || canonical === '$area'
           ? value
           : normalizeDeclarations(value)

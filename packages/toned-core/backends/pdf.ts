@@ -86,6 +86,7 @@ function validate(field: string, value: unknown): void {
 /** Static point-based layout shared by the React PDF and Forme document hosts. */
 export const pdfBackend: OutputBackend = Object.freeze({
   id: 'pdf',
+  target: 'pdf',
   platform: 'native',
   browserConditions: false,
   validatePlan: (plan) => assertStaticPlan(plan, 'PDF'),

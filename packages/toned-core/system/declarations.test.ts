@@ -81,10 +81,12 @@ describe('declaration normalization', () => {
     ).toEqual({
       [q.media('md')]: {
         [q.container('field', 'wide')]: {
-          [q.platform('web')]: { style: { opacity: 0 } },
+          // The internal form; q.platform returns the authored '@platform web'.
+          '@platform.web': { style: { opacity: 0 } },
         },
       },
     })
+    expect(q.platform('web')).toBe('@platform web')
     expect(q.state('focus-visible')).toBe(':focus-visible')
     expect(q.part('Root').state('hover')).toBe('Root:hover')
     expect(typeof q.all(q.media('md'))).toBe('string')

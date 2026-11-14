@@ -25,6 +25,8 @@ For Oxlint 1.69 or newer, configure the JavaScript plugins explicitly:
 {
   "jsPlugins": ["@toned/eslint-plugin"],
   "rules": {
+    "toned/canonical-platform-key": "error",
+    "toned/no-shadowing-spread": "error",
     "toned/react/no-create-elements-in-render": "error",
     "toned/react/no-partial-host-bag": "error",
     "toned/prefer-canonical-declarations": "warn"
@@ -32,13 +34,15 @@ For Oxlint 1.69 or newer, configure the JavaScript plugins explicitly:
 }
 ```
 
-| Rule                                       | Checks                                                                                                                                            | Automatic fix                                                                           |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `toned/react/no-create-elements-in-render` | Proven `createElements` calls inside named components, hooks, React `memo`/`forwardRef` callbacks, and render-time `useMemo`/`useState` callbacks | No: hoisting captured values needs a design decision                                    |
-| `toned/react/no-partial-host-bag`          | A proven `useStyles` part's `style`, `className`, or `ref` passed alone to an intrinsic or known native host                                      | No: merge caller props with `withProps` deliberately                                    |
-| `toned/prefer-canonical-declarations`      | Declaration `style`/`$$type` aliases and explicitly generic `.variants<Mods>(...)`                                                                | Renames ordinary keys only; skips duplicate keys, spreads, computed keys, and shorthand |
-| `toned/no-global-config`                   | Proven process-global `setConfig` calls                                                                                                           | No: install an explicit renderer/provider at the application boundary                   |
-| `toned/prefer-semantic-tokens`             | Opt-in static raw style properties with configured semantic alternatives                                                                          | No: lint cannot prove visual equivalence                                                |
+| Rule                                       | Checks                                                                                                                                                                                                           | Automatic fix                                                                                                          |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `toned/react/no-create-elements-in-render` | Proven `createElements` calls inside named components, hooks, React `memo`/`forwardRef` callbacks, and render-time `useMemo`/`useState` callbacks                                                                | No: hoisting captured values needs a design decision                                                                   |
+| `toned/react/no-partial-host-bag`          | A proven `useStyles` part's `style`, `className`, or `ref` passed alone to an intrinsic or known native host                                                                                                     | No: merge caller props with `withProps` deliberately                                                                   |
+| `toned/prefer-canonical-declarations`      | Declaration `style`/`$$type` aliases and explicitly generic `.variants<Mods>(...)`                                                                                                                               | Renames ordinary keys only; skips duplicate keys, spreads, computed keys, and shorthand                                |
+| `toned/canonical-platform-key`             | Any `'@platform.web'` / `'@platform.native'` object key (the deprecated alias), and both spellings in one object                                                                                                 | Rewrites the key to `'@platform web'`, keeping its quotes; no fix when both spellings are present (merge them by hand) |
+| `toned/no-shadowing-spread`                | A spread into a stylesheet's part, condition or platform block whose `$style`, `'@platform …'` or condition key the part or a later spread also sets (the fragment must be a `const` object literal in the file) | No: compose with a `$style` list, `$style: [a, b, { … }]`                                                              |
+| `toned/no-global-config`                   | Proven process-global `setConfig` calls                                                                                                                                                                          | No: install an explicit renderer/provider at the application boundary                                                  |
+| `toned/prefer-semantic-tokens`             | Opt-in static raw style properties with configured semantic alternatives                                                                                                                                         | No: lint cannot prove visual equivalence                                                                               |
 
 Canonical authoring keeps component identities stable and preserves Toned's host
 ref and interaction props:
@@ -116,7 +120,9 @@ reexports are not loaded or guessed. Supply explicit contracts per rule:
 `createTonedPlugin(options)` accepts a
 configuration object or `(context) => options` for a host-specific wrapper.
 Such a wrapper can map known files lexically without evaluating their modules.
-Only configure exports whose provenance the application owns.
+Only configure exports whose provenance the application owns. Map an export to
+`"system"` when it is a toned system instance (`{ "./ui": { "ui": "system" } }`),
+so `ui.stylesheet(…)` calls are recognised.
 
 Alias and declaration traversal stop at 32 levels; declaration walks inspect at
 most 4096 objects per call. Caches are per rule/file and weakly keyed by lexical

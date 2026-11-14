@@ -59,9 +59,64 @@ style subset for that part kind. Foreign platform blocks are filtered before
 capability validation. Portable raw styles exclude `lineHeight` and numeric `flex`
 shorthand because their web/native meanings differ; use semantic typography or
 explicit flex fields, or a platform block. Native `textAlign: 'auto'` also stays
-in its platform block. Legacy `$$type`, `style`, `@md`, `@field/wide`, and
-`@platform.web` remain compatibility spellings. New code should use canonical
-metadata and explicit platform scopes for platform-specific styles.
+in its platform block. Legacy `$$type`, `style`, `@md`, and `@field/wide` remain
+compatibility spellings. New code should use canonical metadata and explicit
+platform scopes for platform-specific styles.
+
+A platform block has one spelling, `'@platform web'` (or `'@platform native'`),
+which is also what `q.platform('web')` returns. The `'@platform.web'` alias is
+deprecated: it still resolves, the lint rule `toned/canonical-platform-key`
+rejects it and fixes the key, and writing both spellings in one part is a type
+error (and throws), because one block would replace the other.
+
+### Targets
+
+A system can declare the renderers it is rendered by:
+
+```ts
+export const site = defineSystem({ id: 'site', targets: ['web'], tokens })
+site.stylesheet({ Root: { $style: { cursor: 'pointer', maxWidth: '42rem' } } })
+```
+
+`targets` is a list of `'web' | 'native' | 'email' | 'pdf' | 'tailwind'`, and a
+part's style type is what every declared target supports:
+
+| Targets                              | `$style` (and `$style` inside conditions) |
+| ------------------------------------ | ----------------------------------------- |
+| omitted, or `['web', 'native']`      | the portable style, as above              |
+| `['web']`, `['tailwind']`            | web CSS, as inside `'@platform web'`      |
+| `['web', 'email']`, `['email']`      | inline-safe CSS: no CSS variables         |
+| `['native']`                         | the native style subset                   |
+| `['pdf']`, any mix of web and native | the portable style                        |
+
+Inside a platform block the type narrows to the targets that read it (web reads
+`'@platform web'`; email and Tailwind do too; native and PDF read
+`'@platform native'`). A system with a static target (`'email'` or `'pdf'`)
+renders one style per part, so a condition key (`':hover'`, `'@md'`, a declared
+state, a cross-part key) is a type error that names the static target and
+suggests a variant; with an email target, `$webRules`, `$grid` and `$area` are
+type errors too. Creating a renderer for a target the system did not declare
+throws, naming the declared targets. Without `targets` nothing changes: every
+renderer is allowed and the remaining checks happen at render time.
+
+### Compose fragments with a `$style` list
+
+```ts
+const focusRing = { outlineWidth: 2, outlineStyle: 'solid' } as const
+Root: {
+  '@platform web': { $style: [focusRing, still && motionless, { maxWidth: '42rem' }] },
+}
+```
+
+`$style` takes a list wherever it takes an object (parts, conditions and
+platform blocks, with the same part-kind typing). Entries merge in order and the
+last wins; falsy entries are skipped, so `cond && fragment` works; an entry of
+`null`s (`{ zIndex: null }`) unsets what an earlier entry set, and in `extend`
+removes the inherited value as a single `null` does. The list is folded once,
+when the declaration is normalized. Spreading two fragments into a part instead
+(`{ ...focusRing, ...pointer }`) silently keeps only the last `$style`,
+platform or condition block: `toned/no-shadowing-spread` reports that, naming
+the shadowed key.
 
 New descriptor systems use fixed logical pixels for both viewport and container
 thresholds. Numeric logical lengths are accepted; font-relative, theme-relative,
@@ -514,14 +569,21 @@ agent and prints a markdown table, then JSON; `--json` prints only the JSON
 `{ library, version, metrics, details }`, whose metric names are stable.
 
 - **Mistake corpus** (`scorecard/corpus/cases/`, one file per mistake): the
-  stage each mistake is caught at (compile, build, runtime or silent) and
-  whether the report names the fix, computed with the same `tsc` and runtime.
+  stage each mistake is caught at (compile, lint, build, runtime or silent)
+  and whether the report names the fix, computed with the same `tsc`, one
+  oxlint run of `@toned/eslint-plugin`'s recommended rules over the case
+  files, and the runtime. A case whose mistake only a lint rule sees records
+  `baseline: { stage: 'lint', … }`; lint ranks after compile because it only
+  runs where an application enables it.
 - **Intent table** ([`INTENTS.md`](scorecard/intents/INTENTS.md)): each intent,
   its canonical spelling and every alias in use; spellings per intent.
 - **Build purity**: which outputs change when a fixture sheet is added,
   edited or deleted.
 - **Target conformance**: each feature on the web, native, inline and PDF
-  renderers: works, rejected at runtime, or a type error.
+  renderers: works, rejected at runtime, or a type error. A second matrix
+  writes each feature for a system that declares only that target
+  (`targets: [t]`), where a feature the target cannot render should be a type
+  error (`conformance.declared.*`).
 
 Each gate's test fails only when a number gets worse than its recorded
 baseline. When one improves, update the baseline beside the case.

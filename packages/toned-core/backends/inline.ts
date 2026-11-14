@@ -4,6 +4,7 @@ import { assertStaticPlan } from './static-plan.ts'
 /** Concrete web style props for email/static HTML, with no CSS asset dependency. */
 export const inlineBackend: OutputBackend = Object.freeze({
   id: 'inline-web',
+  target: 'email',
   platform: 'web',
   browserConditions: false,
   validatePlan(plan) {

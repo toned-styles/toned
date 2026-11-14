@@ -2,6 +2,7 @@ import type { BuildManifest } from '../build/manifest.ts'
 import type { CompiledPlan, ResolvedOperation } from '../core/plan.ts'
 import type { TokenSystem } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
+import type { Target } from '../types/targets.ts'
 
 /** Output adapters consume resolved fields, never selector strings or host refs. */
 export type StyleFields = Readonly<Record<string, unknown>>
@@ -17,6 +18,9 @@ export type ResolvedProps = Readonly<{ style: StyleFields; className?: string }>
  */
 export type OutputBackend = Readonly<{
   id: string
+  /** The system target this backend renders; checked against a system's
+   *  declared `targets`. A custom backend without one is not checked. */
+  target?: Target
   platform: 'web' | 'native'
   browserConditions: boolean
   /** Build profiles must be bound to their validated artifact before rendering. */
@@ -33,6 +37,7 @@ export type OutputBackend = Readonly<{
 
 export const cssVariablesBackend: OutputBackend = Object.freeze({
   id: 'css-vars',
+  target: 'web',
   platform: 'web',
   browserConditions: true,
   resolve: (input: ResolvedProps) =>

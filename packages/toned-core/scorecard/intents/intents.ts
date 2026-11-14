@@ -13,6 +13,8 @@
  * - app-helper: written by an application on top of toned (not toned API);
  * - workaround: accepted toned API used for something it was not meant for;
  * - redundant: accepted, and has no effect;
+ * - error: still accepted at runtime, but the compiler or a toned lint rule
+ *   rejects it with a message naming the canonical spelling; not counted;
  * - removed: no longer exported, but still taught somewhere; not counted.
  */
 export type AliasStatus =
@@ -20,6 +22,7 @@ export type AliasStatus =
   | 'app-helper'
   | 'workaround'
   | 'redundant'
+  | 'error'
   | 'removed'
 
 export type Source = 'readme' | 'stack-review' | 'probe'
@@ -40,20 +43,21 @@ export const intents: readonly Intent[] = [
     id: 'web-only-value',
     intent: 'Use a value only on web',
     canonical: {
-      spelling: "'@platform web': { $style: { … } }",
+      spelling: "$style: { … } in a system declaring targets: ['web']",
+      note: "in a system with several targets, `'@platform web': { $style: { … } }`",
       source: 'readme',
     },
     aliases: [
       {
         spelling: "'@platform.web': { $style: { … } }",
-        status: 'compatible',
-        note: "`q.platform('web')` returns this spelling",
+        status: 'error',
+        note: '`toned/canonical-platform-key` rejects it and fixes the key',
         source: 'probe',
       },
       {
         spelling: '...web({ … })',
         status: 'app-helper',
-        note: 'an app helper spread into a part; nine copies in two different types in HQ; a second spread overwrites the first',
+        note: "an app helper spread into a part; nine copies in two different types in HQ; replaced by `targets: ['web']`, pending the HQ migration",
         source: review,
       },
     ],
@@ -198,13 +202,34 @@ export const intents: readonly Intent[] = [
   {
     id: 'platform-block',
     intent: 'Open a platform block',
-    canonical: { spelling: "'@platform web'", source: 'readme' },
+    canonical: {
+      spelling: "'@platform web'",
+      note: "what `q.platform('web')` returns",
+      source: 'readme',
+    },
     aliases: [
       {
         spelling: "'@platform.web'",
-        status: 'compatible',
-        note: "what `q.platform('web')` returns; both in one part lose one block silently",
+        status: 'error',
+        note: 'deprecated; `toned/canonical-platform-key` fixes it, and both spellings in one part are a type error',
         source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'compose-fragments',
+    intent: 'Compose shared style fragments into a part',
+    canonical: {
+      spelling: '$style: [focusRing, cond && still, { … }]',
+      note: 'merged in order, the last wins; falsy entries are skipped; `null` unsets',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'Root: { ...focusRing, ...still }',
+        status: 'error',
+        note: '`toned/no-shadowing-spread` reports a spread whose `$style`, platform or condition key is set again, naming the key',
+        source: review,
       },
     ],
   },
@@ -263,9 +288,13 @@ export const intents: readonly Intent[] = [
   },
 ]
 
-/** Spellings an author can write today: the canonical one plus live aliases. */
+/** Spellings an author can write today without being told otherwise: the
+ *  canonical one plus the aliases nothing rejects. */
 export const spellingsOf = (intent: Intent): number =>
-  1 + intent.aliases.filter((alias) => alias.status !== 'removed').length
+  1 +
+  intent.aliases.filter(
+    (alias) => alias.status !== 'removed' && alias.status !== 'error',
+  ).length
 
 export function intentMetrics(table: readonly Intent[] = intents) {
   const counts = table.map(spellingsOf)
@@ -314,7 +343,8 @@ export function renderIntentTable(table: readonly Intent[] = intents): string {
     '',
     'Each author intent, its one canonical spelling, and every other spelling in use',
     'today. The target is one spelling per intent, with every alias an error that',
-    'names the canonical spelling. Removed spellings are listed but not counted.',
+    'names the canonical spelling. Spellings that are errors (compiler or toned lint',
+    'rule) and removed spellings are listed but not counted.',
     '',
     `${metrics.intents} intents, ${metrics.spellingsTotal} spellings (mean ${metrics.spellingsMean}, max ${metrics.spellingsMax}); ${metrics.intentsWithOneSpelling} with one spelling.`,
     '',

@@ -43,6 +43,14 @@ import type {
   TonedError,
 } from './errors.ts'
 import type {
+  AllowsCssExtensions,
+  CssExtensionError,
+  PlatformAliasCheck,
+  StaticConditionCheck,
+  StyleEntryOf,
+  StyleObjectOf,
+} from './targets.ts'
+import type {
   AnyTokenConfig,
   Breakpoints,
   ElementType,
@@ -281,7 +289,31 @@ export type ElementStyleNew<
     false
   >
 } & {
-  [P in Platform as `@platform.${P}` | `@platform ${P}`]?: Host extends Platform
+  /** A platform block: merged in on that platform only. */
+  [P in Platform as `@platform ${P}`]?: Host extends Platform
+    ? P extends Host
+      ? ElementStyleNew<
+          S,
+          AvailablePseudo,
+          AvailableBreakpoints,
+          ET,
+          P,
+          Parts,
+          false
+        >
+      : never
+    : ElementStyleNew<
+        S,
+        AvailablePseudo,
+        AvailableBreakpoints,
+        ET,
+        P,
+        Parts,
+        false
+      >
+} & {
+  /** @deprecated Write `'@platform web'` / `'@platform native'`. */
+  [P in Platform as `@platform.${P}`]?: Host extends Platform
     ? P extends Host
       ? ElementStyleNew<
           S,
@@ -325,7 +357,13 @@ export type ElementStyleNew<
     false
   >
 } & (Host extends 'web'
-    ? { $grid?: GridDefinition; $area?: GridArea; $webRules?: WebRules }
+    ? AllowsCssExtensions<S> extends true
+      ? { $grid?: GridDefinition; $area?: GridArea; $webRules?: WebRules }
+      : {
+          $grid?: CssExtensionError<'$grid'>
+          $area?: CssExtensionError<'$area'>
+          $webRules?: CssExtensionError<'$webRules'>
+        }
     : {})
 
 type InferContainerAliases<S> = S extends {
@@ -519,37 +557,71 @@ export type ValidateDeclaration<
           Light extends true
           ? unknown
           : ValidLeaf<Input[K], Shape[K]>
-        : Light extends true
-          ? Input[K] extends object
-            ? Input[K] extends readonly unknown[]
-              ? unknown
-              : NonNullable<Shape[K]> extends object
-                ? ValidateDeclaration<
-                    Input[K],
-                    NonNullable<Shape[K]>,
-                    S,
-                    Parts,
-                    K extends Parts ? true : Local,
-                    Light
-                  >
-                : unknown
-            : unknown
-          : Input[K] extends readonly unknown[]
-            ? ValidLeaf<Input[K], Shape[K]>
-            : Input[K] extends object
-              ? NonNullable<Shape[K]> extends object
-                ? ValidateDeclaration<
-                    Input[K],
-                    NonNullable<Shape[K]>,
-                    S,
-                    Parts,
-                    K extends Parts ? true : Local,
-                    Light
-                  >
+        : K extends '$style'
+          ? ValidateStyle<Input[K], Shape[K], S, Parts, Local, Light>
+          : Light extends true
+            ? Input[K] extends object
+              ? Input[K] extends readonly unknown[]
+                ? unknown
+                : NonNullable<Shape[K]> extends object
+                  ? ValidateDeclaration<
+                      Input[K],
+                      NonNullable<Shape[K]>,
+                      S,
+                      Parts,
+                      K extends Parts ? true : Local,
+                      Light
+                    >
+                  : unknown
+              : unknown
+            : Input[K] extends readonly unknown[]
+              ? ValidLeaf<Input[K], Shape[K]>
+              : Input[K] extends object
+                ? NonNullable<Shape[K]> extends object
+                  ? ValidateDeclaration<
+                      Input[K],
+                      NonNullable<Shape[K]>,
+                      S,
+                      Parts,
+                      K extends Parts ? true : Local,
+                      Light
+                    >
+                  : ValidLeaf<Input[K], Shape[K]>
                 : ValidLeaf<Input[K], Shape[K]>
-              : ValidLeaf<Input[K], Shape[K]>
     : ValidateSpecial<Input, Shape, S, Parts, Local, K>
-}
+} & StaticConditionCheck<Input, S> &
+  PlatformAliasCheck<Input>
+
+/**
+ * A written `$style`: one object, walked against the style object, or a list,
+ * whose object entries are each walked against the entry type, so a misspelt
+ * property in a list is reported as it is in the single form.
+ */
+type ValidateStyle<
+  Value,
+  Allowed,
+  S extends TokenStyleDeclaration,
+  Parts extends string,
+  Local extends boolean,
+  Light extends boolean,
+> = Value extends readonly unknown[]
+  ? {
+      [I in keyof Value]: Value[I] extends object
+        ? ValidateDeclaration<
+            Value[I],
+            StyleEntryOf<Allowed>,
+            S,
+            Parts,
+            Local,
+            Light
+          >
+        : unknown
+    }
+  : Value extends object
+    ? ValidateDeclaration<Value, StyleObjectOf<Allowed>, S, Parts, Local, Light>
+    : Light extends true
+      ? unknown
+      : ValidLeaf<Value, Allowed>
 
 /** The keys a plain shape lookup cannot validate: computed query keys,
  *  compound pseudos, and cross-part / cross-element keys. */
@@ -916,7 +988,8 @@ export type StylesheetValidation<
             true
           >
       : RootKeyValidation<S, T, K, Elements, Kinds>
-}
+} & StaticConditionCheck<T, S> &
+  PlatformAliasCheck<T>
 
 /**
  * The ROOT keys that address parts: condition blocks (`'@md'`, `'@media md'`,

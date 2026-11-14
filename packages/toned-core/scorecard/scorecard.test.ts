@@ -33,6 +33,11 @@ const METRICS = [
   'css.bytesPerDeclaredState',
   'css.rulesPerDeclaredState',
   'docs.coreReadmeWords',
+  'corpus.lint',
+  'conformance.declared.cells',
+  'conformance.declared.works',
+  'conformance.declared.rejected',
+  'conformance.declared.typeErrors',
 ]
 
 describe('scorecard', async () => {
@@ -59,6 +64,7 @@ describe('scorecard', async () => {
     const m = card.metrics
     expect(
       (m['corpus.compile'] ?? 0) +
+        (m['corpus.lint'] ?? 0) +
         (m['corpus.build'] ?? 0) +
         (m['corpus.runtime'] ?? 0) +
         (m['corpus.silent'] ?? 0),
@@ -71,6 +77,11 @@ describe('scorecard', async () => {
         (m['conformance.rejected'] ?? 0) +
         (m['conformance.typeErrors'] ?? 0),
     ).toBe(m['conformance.cells'])
+    expect(
+      (m['conformance.declared.works'] ?? 0) +
+        (m['conformance.declared.rejected'] ?? 0) +
+        (m['conformance.declared.typeErrors'] ?? 0),
+    ).toBe(m['conformance.declared.cells'])
   })
 
   test('the JSON round-trips and the markdown names every metric', () => {

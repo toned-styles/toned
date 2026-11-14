@@ -10,8 +10,12 @@
  */
 import type { TokenSystem } from '../../system/index.ts'
 
-/** Earliest stage at which a mistake is reported, best first. */
-export const STAGES = ['compile', 'build', 'runtime', 'silent'] as const
+/**
+ * Earliest stage at which a mistake is reported, best first. `lint` is toned's
+ * lint plugin (`@toned/eslint-plugin`, recommended rules): static like the
+ * compiler, but only where an application runs it, so it ranks after it.
+ */
+export const STAGES = ['compile', 'lint', 'build', 'runtime', 'silent'] as const
 export type Stage = (typeof STAGES)[number]
 
 export type CaseCategory =

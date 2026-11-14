@@ -4,6 +4,11 @@ Backends receive resolved field operations, their symbolic predicates and origin
 The common plan owns normalization, token evaluation, platform specialization and
 source order. Backends lower those fields to their supported output vocabulary.
 
+Each built-in backend names the system target it renders (`target`: `'web'` for
+CSS variables, `'native'`, `'email'` for inline, `'pdf'`, `'tailwind'`).
+`createRenderer` refuses a backend whose target a system with declared
+`targets` does not list. A custom backend without `target` is not checked.
+
 ## CSS variables and atomic classes
 
 SSR, mounted CSS hosts and direct `system.exec` calls all consume the same compiled
