@@ -203,3 +203,12 @@ export const variantKey: VariantKeyMessage extends `'wat' is not a variant selec
 ui.stylesheet({ Root: { gap: 1 } }).variants((_$: Variants<Axes>) => ({
   wat: { Root: { gap: 2 } },
 }))
+
+// --- a declared state where a state can't go ------------------------------------
+// A state at the top of a sheet applies to no part. The message must not call a
+// declared state unknown and then suggest that same state.
+
+export const stateAtSheetLevel: Has<
+  Rules<{ ':open': { Root: { gap: 1 } } }>[':open'],
+  `':open' is a declared state, but a state at the top of a sheet applies to no part: write it inside a part ({ Root: { ':open': … } }), or name the part ('Root:open')`
+> = true

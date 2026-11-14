@@ -218,6 +218,26 @@ type CrossKeyMessage<K extends string, V extends KeyVocabulary> = (
     : `Unknown part '${Part}' in '${K}'.${DidYouMean<Part, V['parts']>} Declared parts: ${QuoteList<V['parts']>}`
   : never
 
+/** A part to name in an example: `Root` when the sheet has one. */
+type FirstPart<Parts extends string> = 'Root' extends Parts
+  ? 'Root'
+  : [Parts] extends [never]
+    ? 'Root'
+    : Literals<Parts> extends infer P extends string
+      ? [P] extends [never]
+        ? 'Root'
+        : UnionFirst<P>
+      : 'Root'
+
+/** One member of a union (the compiler's first), for an example. */
+type UnionFirst<U> = (U extends unknown ? (u: () => U) => void : never) extends (
+  u: infer I,
+) => void
+  ? I extends () => infer R
+    ? R
+    : never
+  : never
+
 /** The token names among an element shape's keys. */
 type TokenNames<Keys> = Exclude<
   Literals<Keys>,
@@ -269,19 +289,16 @@ type ElementKeyMessage<
     : K extends `[${string}`
       ? RawSelectorMessage<K, V['stateConfig'], V['declaredStates']>
       : K extends `:${infer Body}`
-        ? StateMessage<
-            K,
-            FirstBadState<
-              Body,
-              V['declaredStates'] | V['builtInStates']
-            > extends infer Bad extends string
-              ? [Bad] extends [never]
-                ? Body
-                : Bad
-              : Body,
-            V['declaredStates'],
-            V['builtInStates']
-          >
+        ? [FirstBadState<Body, V['declaredStates'] | V['builtInStates']>] extends [never]
+          ? // Every state is declared, so the key was rejected for where it is: the
+            // top of a sheet, where it applies to no part.
+            `'${K}' is a declared state, but a state at the top of a sheet applies to no part: write it inside a part ({ ${FirstPart<V['parts']>}: { '${K}': … } }), or name the part ('${FirstPart<V['parts']>}${K}')`
+          : StateMessage<
+              K,
+              FirstBadState<Body, V['declaredStates'] | V['builtInStates']> & string,
+              V['declaredStates'],
+              V['builtInStates']
+            >
         : K extends `${string}:${string}` | `${string}~${string}`
           ? CrossKeyMessage<K, V>
           : [Extract<V['parts'], Literals<V['keys']>>] extends [never]
