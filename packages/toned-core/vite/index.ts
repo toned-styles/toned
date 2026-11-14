@@ -120,3 +120,4 @@ export default function toned<S extends TokenStyleDeclaration>(
     },
   }
 }
+export { tonedOutputs, type TonedOutputsPluginOptions } from './outputs.ts'
