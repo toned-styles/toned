@@ -2,6 +2,7 @@
 // native hosts use media.native.ts.
 
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
+import { isMediaCondition } from '../utils/media-query.ts'
 
 export const initMedia = <S extends TokenStyleDeclaration>(
   { config }: TokenSystem<S>,
@@ -22,7 +23,7 @@ export const initMedia = <S extends TokenStyleDeclaration>(
         w?.matchMedia(
           typeof value === 'number'
             ? `(min-width: ${value}px)`
-            : value.startsWith('(')
+            : isMediaCondition(value)
               ? value
               : `(min-width: ${value})`,
         ),
