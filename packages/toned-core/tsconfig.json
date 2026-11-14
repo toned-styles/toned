@@ -1,5 +1,12 @@
 {
   "extends": "@toned-config/typescript/lib",
+  "exclude": [
+    "**/node_modules/**",
+    "**/.build/**",
+    "**/.dist/**",
+    "**/.tsc/**",
+    "scorecard/**/cases/**"
+  ],
   "references": [
     {
       "path": "../../config/build"
