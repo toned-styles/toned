@@ -79,3 +79,43 @@ test.skipIf(!hasBun)(
   },
   20_000,
 )
+
+test.skipIf(!hasBun)(
+  'every worker of `bun test --parallel` loads toned: imports',
+  async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'toned-register-parallel-')),
+    )
+    dirs.push(root)
+    const suite = (name: string) =>
+      [
+        "import { expect, test } from 'bun:test'",
+        "import manifest from 'toned:ui/manifest'",
+        `test('${name}', () => expect(manifest).toEqual({ systemId: 'ui' }))`,
+      ].join('\n')
+    const files: Record<string, string> = {
+      'package.json': JSON.stringify({
+        name: 'app',
+        toned: { outputs: ['styles/*.toned.ts'] },
+      }),
+      'styles/ui.toned.ts':
+        "export default { css: '.ui {}', manifest: { systemId: 'ui' } }\n",
+      'a.test.ts': suite('a'),
+      'b.test.ts': suite('b'),
+    }
+    for (const [path, content] of Object.entries(files)) {
+      await mkdir(join(root, path, '..'), { recursive: true })
+      await writeFile(join(root, path), content)
+    }
+    const run = spawnSync(
+      'bun',
+      ['test', '--parallel', '--preload', register],
+      { cwd: root, encoding: 'utf8' },
+    )
+    // bun test reports on stderr.
+    expect(run.stderr).not.toContain('Cannot find module')
+    expect(run.stderr).toContain(' 2 pass')
+    expect(run.status).toBe(0)
+  },
+  20_000,
+)
