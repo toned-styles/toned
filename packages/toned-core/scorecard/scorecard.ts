@@ -17,6 +17,7 @@ import { gzipSync } from 'node:zlib'
 import { buildStyles } from '../build/index.ts'
 import { defineSystem, defineToken } from '../system/index.ts'
 import { runDeclaredSuite } from './conformance/declared.ts'
+import { runMotionSuite } from './conformance/motion.ts'
 import { runConformanceSuite } from './conformance/suite.ts'
 import { runCorpus } from './corpus/runner.ts'
 import { ui } from './fixture/system.ts'
@@ -57,6 +58,7 @@ export async function runScorecard(): Promise<Scorecard> {
   const purity = runPuritySuite()
   const conformance = await runConformanceSuite()
   const declared = await runDeclaredSuite()
+  const motion = await runMotionSuite()
   const css = buildStyles(ui, { sheets: [] }).css
   const perState = cssPerDeclaredState()
   const count = <T>(items: readonly T[], test: (item: T) => boolean) =>
@@ -121,6 +123,16 @@ export async function runScorecard(): Promise<Scorecard> {
         declared,
         (c) => c.outcome === 'type-error',
       ),
+      'conformance.motion.cells': motion.length,
+      'conformance.motion.works': count(motion, (c) => c.outcome === 'works'),
+      'conformance.motion.rejected': count(
+        motion,
+        (c) => c.outcome === 'rejected',
+      ),
+      'conformance.motion.typeErrors': count(
+        motion,
+        (c) => c.outcome === 'type-error',
+      ),
     },
     details: {
       corpus: corpus.map(({ reports: _reports, ...result }) => result),
@@ -133,6 +145,7 @@ export async function runScorecard(): Promise<Scorecard> {
       })),
       conformance,
       declaredConformance: declared,
+      motionConformance: motion,
     },
   }
 }
@@ -151,6 +164,7 @@ export function renderMarkdown(card: Scorecard): string {
   }[]
   const declared = (card.details['declaredConformance'] ??
     []) as typeof conformance
+  const motion = (card.details['motionConformance'] ?? []) as typeof conformance
   const matrix = (cells: typeof conformance) => {
     const targets = [...new Set(cells.map((c) => c.target))]
     const features = [...new Set(cells.map((c) => c.feature))]
@@ -200,6 +214,12 @@ export function renderMarkdown(card: Scorecard): string {
     'Each feature in a system that declares only that target (`targets: [t]`).',
     '',
     ...matrix(declared),
+    '',
+    '## Motion conformance',
+    '',
+    'Motion declared with `defineMotion` for a system that declares only that target, stepped with a test clock.',
+    '',
+    ...matrix(motion),
     '',
   ].join('\n')
 }

@@ -286,6 +286,88 @@ export const intents: readonly Intent[] = [
       },
     ],
   },
+  {
+    id: 'state-motion',
+    intent: 'Animate a part when a declared state changes',
+    canonical: {
+      spelling: "defineMotion(ui, { states: { ':open': transition } })",
+      note: 'the same declared states (or a `q.all` of them) that style the part; a Weft run passes its open waits as the `states` source',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'useMotion(open ? slow : fast)',
+        status: 'workaround',
+        note: 'a new options identity replaces the controller and cancels the running transition',
+        source: 'probe',
+      },
+      {
+        spelling: "attachMotion(host, { states: { ':open': … } })",
+        status: 'error',
+        note: 'a type error naming `defineMotion(system, { states })`, which checks the state names',
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'colour-motion',
+    intent: 'Animate a colour',
+    canonical: {
+      spelling: "properties: ['backgroundColor']",
+      note: 'interpolated in Oklab on web and native; token colours resolve through the active theme',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "'@platform web': { $style: { transition: 'background-color 200ms' } }",
+        status: 'workaround',
+        note: 'web only, interpolated in sRGB, not on the shared clock, and reduced motion is left to the author',
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'transform-motion',
+    intent: 'Move, scale or rotate a part',
+    canonical: {
+      spelling: "properties: ['translateY', 'scale']",
+      note: 'separate channels; individual CSS transform properties on web, the transform array on native',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "'@platform web': { $style: { transform: 'translateY(8px)', transition: 'transform 200ms' } }",
+        status: 'workaround',
+        note: 'web only; one transform string, so translate and scale cannot be interrupted separately',
+        source: 'probe',
+      },
+    ],
+  },
+  {
+    id: 'motion-clock',
+    intent: 'Step motion time in a test or replay',
+    canonical: {
+      spelling: 'createTestClock() + clock.advance(ms)',
+      note: 'one clock shared through `attachMotion(host, motion, { clock })` or `<MotionClockProvider clock={clock}>`',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'frames: driver',
+        status: 'compatible',
+        note: "one motion's own clock; it takes precedence over the shared clock",
+        source: 'readme',
+      },
+      {
+        spelling: 'a hand-written frame driver with a pending-callback map',
+        status: 'workaround',
+        note: "what toned's own motion tests wrote before `createTestClock`",
+        source: 'probe',
+      },
+    ],
+  },
 ]
 
 /** Spellings an author can write today without being told otherwise: the

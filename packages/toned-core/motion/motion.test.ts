@@ -202,7 +202,7 @@ describe('portable motion coordinated host output', () => {
       setStyles(other.host, { style: { opacity: 'var(--x)' } }, other.owner),
     ).toThrow('must be finite')
     expect(() =>
-      attachMotion(other.host, { properties: ['color' as never] }),
+      attachMotion(other.host, { properties: ['zIndex' as never] }),
     ).toThrow('Unsupported motion property')
   })
 })

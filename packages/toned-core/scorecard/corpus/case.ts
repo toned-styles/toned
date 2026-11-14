@@ -28,6 +28,7 @@ export type CaseCategory =
   | 'cascade'
   | 'outputs'
   | 'platform'
+  | 'motion'
 
 export type Baseline = {
   stage: Stage

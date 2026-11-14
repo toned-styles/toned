@@ -38,6 +38,10 @@ const METRICS = [
   'conformance.declared.works',
   'conformance.declared.rejected',
   'conformance.declared.typeErrors',
+  'conformance.motion.cells',
+  'conformance.motion.works',
+  'conformance.motion.rejected',
+  'conformance.motion.typeErrors',
 ]
 
 describe('scorecard', async () => {
@@ -82,6 +86,11 @@ describe('scorecard', async () => {
         (m['conformance.declared.rejected'] ?? 0) +
         (m['conformance.declared.typeErrors'] ?? 0),
     ).toBe(m['conformance.declared.cells'])
+    expect(
+      (m['conformance.motion.works'] ?? 0) +
+        (m['conformance.motion.rejected'] ?? 0) +
+        (m['conformance.motion.typeErrors'] ?? 0),
+    ).toBe(m['conformance.motion.cells'])
   })
 
   test('the JSON round-trips and the markdown names every metric', () => {
