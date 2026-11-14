@@ -424,7 +424,7 @@ function variantShadowDiagnostics(
               other.fields.includes(field) &&
               wanted.every((fact) => implies(other.facts, fact)),
           )
-          if (!restated)
+          if (!restated && !sameWrite(earlier.operation, later.operation, field))
             diagnostics.push({
               code: 'variant-shadows-condition',
               field,
@@ -436,6 +436,23 @@ function variantShadowDiagnostics(
     }
   }
   return diagnostics
+}
+
+/** Whether two operations write the same value to `field`: the same token
+ * with an equal value, or `$style` blocks giving the field the same value. A
+ * variant that matches the part's conditional value overrides nothing. */
+function sameWrite(
+  earlier: DeclarationOperation,
+  later: DeclarationOperation,
+  field: string,
+): boolean {
+  const isStyle = (token: string) => token === 'style' || token === '$style'
+  if (isStyle(earlier.token) && isStyle(later.token)) {
+    const a = (earlier.value ?? {}) as Record<string, unknown>
+    const b = (later.value ?? {}) as Record<string, unknown>
+    return Object.hasOwn(a, field) && Object.hasOwn(b, field) && a[field] === b[field]
+  }
+  return earlier.token === later.token && earlier.value === later.value
 }
 
 function shadowDiagnostics(

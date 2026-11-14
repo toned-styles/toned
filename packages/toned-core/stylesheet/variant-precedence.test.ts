@@ -94,6 +94,19 @@ describe('a variant beside the part’s conditions', () => {
     expect(warnings().filter((text) => text.includes('Repeat'))).toEqual([])
   })
 
+  test('a variant writing the same value the part has at the width does not warn', () => {
+    // `always` shows the logo below `lg` too: at `lg` it already matches.
+    ui.stylesheet({
+      Root: { $style: { display: 'none' }, '@md': { $style: { display: 'flex' } } },
+    }).variants(($: Variants<Tone>) => ({
+      [$.tone('quiet')]: { Root: { $style: { display: 'flex' } } },
+    }))
+    ui.stylesheet({ Root: { opacity: 1, '@md': { opacity: 0.5 } } }).variants(
+      ($: Variants<Tone>) => ({ [$.tone('quiet')]: { Root: { opacity: 0.5 } } }),
+    )
+    expect(warnings().filter((text) => text.includes('Repeat'))).toEqual([])
+  })
+
   test('the variant that repeats the condition does not warn', () => {
     repeated()
     expect(warnings().filter((text) => text.includes('Repeat'))).toEqual([])
