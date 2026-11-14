@@ -115,14 +115,18 @@ export type StyleOf<
 type Falsy = false | null | undefined
 
 /**
- * One `$style` list entry: a style, or an object of `null`s that unsets what
- * earlier entries set (`[base, { zIndex: null }]`). A style and its unsets
- * are separate entries: typing every property as `T[K] | null` (or mapping
- * the style's keys to `null`) makes the renderer's `t` too complex for the
- * checker to represent (TS2590). The validation walk still checks an unset's
- * keys against the style's, so a misspelt one is reported.
+ * One `$style` list entry: a style whose properties may also be `null`, which
+ * unsets what earlier entries set (`[base, { opacity: 1, zIndex: null }]`).
+ *
+ * The mapping distributes over `T` explicitly (`T extends unknown`): a style
+ * is a union of per-kind objects, and a homomorphic mapping of the whole
+ * union with `| null` on every property makes the renderer's `t` too complex
+ * for the checker to represent (TS2590). Mapped one member at a time it stays
+ * small.
  */
-export type StyleListEntry<T> = T | { readonly [property: string]: null }
+export type StyleListEntry<T> =
+  | T
+  | (T extends unknown ? { readonly [K in keyof T]?: T[K] | null } : never)
 
 /**
  * What `$style` accepts: one style object, or a list merged in order (the
