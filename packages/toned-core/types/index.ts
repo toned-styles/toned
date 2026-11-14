@@ -26,6 +26,11 @@ export type {
   StyleVariablesCheck,
   VariableNames,
 } from './variables.ts'
+export type {
+  KeywordGrammars,
+  Keywords,
+  StyleKeywordCheck,
+} from './keywords.ts'
 // Stylesheet types.
 // StylesheetInstance and the brand declarations (_internalBrand, _symRef,
 // _symInit) are exported so a host package can EXPORT a stylesheet: without

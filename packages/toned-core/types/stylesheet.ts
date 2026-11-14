@@ -42,6 +42,7 @@ import type {
   StyleKeyError,
   TonedError,
 } from './errors.ts'
+import type { StyleKeywordCheck } from './keywords.ts'
 import type {
   AllowsCssExtensions,
   CssExtensionError,
@@ -625,7 +626,8 @@ type ValidateStyle<
             Local,
             Light
           > &
-            StyleVariablesCheck<Value[I], S, Root>
+            StyleVariablesCheck<Value[I], S, Root> &
+            StyleKeywordCheck<Value[I], StyleEntryOf<Allowed>>
         : unknown
     }
   : Value extends object
@@ -637,7 +639,8 @@ type ValidateStyle<
         Local,
         Light
       > &
-        StyleVariablesCheck<Value, S, Root>
+        StyleVariablesCheck<Value, S, Root> &
+        StyleKeywordCheck<Value, StyleObjectOf<Allowed>>
     : Light extends true
       ? unknown
       : ValidLeaf<Value, Allowed>
