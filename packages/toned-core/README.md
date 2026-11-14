@@ -228,7 +228,10 @@ conditional field reads `var(--rule, <value at rest>)`. Two consequences:
 
 - A shorthand and one of its longhands in different blocks of one part
   (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
-  write the longhands, or set the whole shorthand in each condition. Sheets the
+  write the longhands, or set the whole shorthand in each condition. A longhand
+  a token writes counts too: the `animation` token writes `animationName`, so
+  a raw `animation: 'none'` under a condition beside it is a type error, and
+  the fix is `$style: { animationName: 'none' }`. Sheets the
   types cannot see whole (`extend`, variants, untyped callers) are handled at
   resolve time: the shorthand is split into its longhands (`transition`,
   `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,

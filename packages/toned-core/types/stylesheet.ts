@@ -865,7 +865,7 @@ export type StylesheetValidation<
             true,
             true
           > &
-            PartCascadeCheck<T[K]>
+            PartCascadeCheck<T[K], S>
       : RootKeyValidation<S, T, K, Elements, Kinds>
 }
 

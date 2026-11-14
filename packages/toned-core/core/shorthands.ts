@@ -522,8 +522,14 @@ export function separateShorthands<T extends FieldOperation>(
       continue
     }
     const other = involved.find((item) => item !== operation)!
+    // `animation: none` reads as a keyframes name, but its fix is one
+    // longhand: the `animation` token writes `animationName` and the rest.
+    const fix =
+      operation.field === 'animation' && String(operation.value) === 'none'
+        ? `Write animationName: 'none' instead of 'animation: none'.`
+        : `Write the longhands (${TABLE[operation.field]!.join(', ')}) instead of '${operation.field}', or set '${operation.field}' in full in each condition.`
     throw new Error(
-      `Toned: part '${part}' sets '${operation.field}' and '${other.field}', and one of them only under a condition. Outside that condition the conditional one reverts the other, and '${operation.field}: ${String(operation.value)}' cannot be split into longhands statically. Write the longhands (${TABLE[operation.field]!.join(', ')}) instead of '${operation.field}', or set '${operation.field}' in full in each condition.`,
+      `Toned: part '${part}' sets '${operation.field}' and '${other.field}', and one of them only under a condition. Outside that condition the conditional one reverts the other, and '${operation.field}: ${String(operation.value)}' cannot be split into longhands statically. ${fix}`,
     )
   }
   return output
