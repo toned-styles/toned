@@ -1,3 +1,5 @@
+import { isAbsolute } from 'node:path'
+
 import { type InlineConfig, type Plugin, runnerImport } from 'vite'
 
 import { discoverOutputs } from './discover.ts'
@@ -60,7 +62,10 @@ export function createOutputsLoader(options: OutputsOptions) {
       root: options.root,
       plugins: [modules, ...(options.runner?.plugins ?? [])],
     }).then(({ module, dependencies }) => {
-      sources.set(name, { files: [file, ...dependencies], outputs: imported })
+      // An imported output's module id is virtual (`\0toned:…`): it is tracked
+      // through `outputs`, and a watcher cannot take it as a path.
+      const read = dependencies.filter(dependency => isAbsolute(dependency))
+      sources.set(name, { files: [file, ...read], outputs: imported })
       return toOutput(module, file)
     })
     loaded.set(name, promise)
