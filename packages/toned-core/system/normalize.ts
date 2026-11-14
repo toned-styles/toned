@@ -145,7 +145,7 @@ export function validateDeclarations(
               !(container! in (system.breakpoints?.__breakpoints ?? {}))
             )
               throw new Error(
-                `Toned: undeclared media condition '${atom}' in '${key}'; declared media: ${quoted(Object.keys(system.breakpoints?.__breakpoints ?? {}), '@')}, or a fixed width such as '@>=768px'`,
+                `Toned: undeclared media condition '${atom}' in '${key}'; declared media: ${quoted(Object.keys(system.breakpoints?.__breakpoints ?? {}), '@')}, or a width declared in conditions.widths (q.media(dp(600)))`,
               )
           } else if (
             !system.containers?.[container!] ||

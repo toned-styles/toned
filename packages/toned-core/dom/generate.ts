@@ -13,6 +13,7 @@ import {
   stateSelector,
   validateStates,
 } from '../system/states.ts'
+import { declaredWidthAtoms } from '../system/widths.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
 import { isAnimationDefinition } from '../types/index.ts'
 import {
@@ -122,9 +123,10 @@ export function generate<const S extends TokenStyleDeclaration>(
     /** Stable system identity; namespaces classes, parameters and animations. */
     id?: string
     /**
-     * Ad-hoc condition ATOMS to emit toggles for (canonical `name/>=len`
-     * spellings) — the union a generator script collects from the system
-     * ref's `usedConditions` after importing every stylesheet module.
+     * Extra ad-hoc condition ATOMS to emit toggles for (canonical
+     * `name/>=len` spellings), beside the widths the declaration lists in
+     * `widths`, which are always emitted. Low-level: `buildStyles` emits the
+     * declared widths only.
      */
     conditions?: readonly string[]
   },
@@ -139,10 +141,14 @@ export function generate<const S extends TokenStyleDeclaration>(
     base,
     layoutContext: layout,
     externalCssVariables,
+    widths,
     ...system
   } = declaration
   const responsive = responsivePairs(declaration)
-  assertConditionSlugs({ breakpoints, containers }, opts?.conditions)
+  const conditions = [
+    ...new Set([...declaredWidthAtoms(widths), ...(opts?.conditions ?? [])]),
+  ].sort()
+  assertConditionSlugs({ breakpoints, containers }, conditions)
   const scope = opts?.scope ? `${opts.scope} ` : ''
   let styles = ''
 
@@ -355,7 +361,7 @@ export function generate<const S extends TokenStyleDeclaration>(
       rules += `@media ${condition} { html { ${varName}: ; ${varName}-not: initial; } }`
     }
 
-    for (const atomKey of [...(opts?.conditions ?? [])].sort()) {
+    for (const atomKey of conditions) {
       const atom = parseConditionKey(atomKey)?.[0]?.[0]
       if (!atom || atom.container !== null || atom.step !== null) continue
       const variable = `--${atomSlug(atom)}`
@@ -384,7 +390,7 @@ export function generate<const S extends TokenStyleDeclaration>(
   // the element's NEAREST ancestor container of that name as matching — the
   // runtime binding mirrors that lookup on native. Chains guard on
   // `var(--cq-<name>-<step>)`.
-  if (containers || opts?.conditions?.length) {
+  if (containers || conditions.length) {
     let cqResets = ''
     let cqRules = ''
     // Container NUMBERS ride the universal spacing scale (× base, default
@@ -416,7 +422,7 @@ export function generate<const S extends TokenStyleDeclaration>(
     // declared container names, registered by createStylesheet on the system
     // ref and passed here by the generator script (which must import the
     // stylesheet modules first). Sorted for deterministic output.
-    for (const atomKey of [...(opts?.conditions ?? [])].sort()) {
+    for (const atomKey of conditions) {
       const expr = parseConditionKey(atomKey)
       const atom = expr?.[0]?.[0]
       if (!atom || atom.container === null || atom.step !== null) continue

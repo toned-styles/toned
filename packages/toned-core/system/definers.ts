@@ -42,6 +42,7 @@ import { createQueries } from './queries.ts'
 import { responsivePairs } from './responsive.ts'
 import { type StateDeclaration, validateStates } from './states.ts'
 import { createTokenComposer } from './token-composer.ts'
+import { validateWidths } from './widths.ts'
 
 export type { TokenSystem }
 
@@ -272,6 +273,10 @@ export function defineSystem<
     (config as { states?: Record<string, StateDeclaration> } | undefined)
       ?.states,
   )
+  validateWidths(
+    (config as SystemOptions | undefined)?.widths,
+    (config as SystemOptions | undefined)?.containers,
+  )
   for (const key of Object.keys(system)) {
     if (
       /^[$@:]/.test(key) ||
@@ -285,6 +290,7 @@ export function defineSystem<
         'animations',
         'bridges',
         'responsiveTokens',
+        'widths',
         'externalCssVariables',
       ].includes(key)
     )

@@ -286,7 +286,7 @@ test('an undeclared fact names itself and what is declared', () => {
   })
   const sheet = (rules: object) => () => system.stylesheet(rules as any)
   expect(sheet({ Root: { '@mdd': { dynamic: 'zero' } } })).toThrow(
-    "Toned: undeclared media condition 'mdd' in '@mdd'; declared media: '@md', '@lg', or a fixed width such as '@>=768px'",
+    "Toned: undeclared media condition 'mdd' in '@mdd'; declared media: '@md', '@lg', or a width declared in conditions.widths (q.media(dp(600)))",
   )
   expect(sheet({ Root: { '@md&!xx': { dynamic: 'zero' } } })).toThrow(
     "undeclared media condition 'xx' in '@md&!xx'; declared media: '@md', '@lg'",

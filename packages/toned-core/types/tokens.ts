@@ -6,6 +6,7 @@
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
 import type { StateDeclaration } from '../system/states.ts'
+import type { DeclaredWidths } from '../system/widths.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
 import type { StyleOf, StyleValue } from './targets.ts'
@@ -254,6 +255,7 @@ export type TokenStyleDeclaration = {
     | Record<string, number | LogicalLength | MediaCondition>
     | Containers
     | ResponsiveTokens
+    | DeclaredWidths
     | number
     | undefined
   // oxlint-disable-next-line typescript/no-explicit-any -- an open key set; a precise Record breaks breakpoint-key indexing on generic sheets (TS2536 under TS 6)
@@ -300,6 +302,8 @@ export type TokenStyleDeclaration = {
    * it, so `min(100)` is 400px exactly as `gap: 2` is 8px, on every platform.
    */
   base?: number
+  /** Declared unnamed width thresholds — see `SystemOptions.widths`. */
+  widths?: DeclaredWidths
 }
 
 /** Filter out 'breakpoints' key from token style keys */
@@ -311,6 +315,7 @@ export type TokenKeys<S> = Exclude<
   | 'responsiveTokens'
   | 'containers'
   | 'base'
+  | 'widths'
   | 'externalCssVariables'
 >
 

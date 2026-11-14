@@ -150,6 +150,7 @@ export const intents: readonly Intent[] = [
       {
         spelling: "$webRules: webRules({ '&::placeholder': { color: … } })",
         status: 'workaround',
+        note: 'deprecated: `toned/no-web-rules` warns, naming the bridge',
         source: 'readme',
       },
     ],
@@ -182,7 +183,7 @@ export const intents: readonly Intent[] = [
       {
         spelling: "$webRules: webRules({ '&[aria-disabled=true]': { … } })",
         status: 'workaround',
-        note: 'web only; native, inline and PDF reject CSS extensions',
+        note: 'web only; native, inline and PDF reject CSS extensions; deprecated: `toned/no-web-rules` warns, naming declared states',
         source: 'readme',
       },
     ],
@@ -299,6 +300,23 @@ export const intents: readonly Intent[] = [
       {
         spelling: "'@container field wide': { … }",
         status: 'compatible',
+        source: 'readme',
+      },
+    ],
+  },
+  {
+    id: 'width-condition',
+    intent: 'Apply a width threshold that has no name',
+    canonical: {
+      spelling: '[q.media(dp(600))]: { … }',
+      note: "the width is declared in the system: `conditions.widths: { media: [600] }` (containers: `widths.containers.card`, `q.container('card', dp(300))`); an undeclared width is a type error naming where to declare it",
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: "'@>=600px': { … }",
+        status: 'compatible',
+        note: 'the literal key `q.media` returns; narrowed to the declared widths too',
         source: 'readme',
       },
     ],

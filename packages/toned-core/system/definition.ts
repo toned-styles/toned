@@ -11,6 +11,7 @@ import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
 import type { StateDeclaration } from './states.ts'
 import type { SystemTheme } from './theme-types.ts'
+import type { DeclaredWidths } from './widths.ts'
 
 export type { MediaCondition } from '../utils/media-query.ts'
 
@@ -40,6 +41,14 @@ export type SystemOptions = {
   >
   /** See `TokenStyleDeclaration.base` — px per numeric unit (default 4). */
   base?: number
+  /**
+   * Unnamed width thresholds the sheets may write at the use site, in fixed
+   * logical pixels: `widths: { media: [600], containers: { card: [300] } }`
+   * admits `q.media(dp(600))` and `q.container('card', dp(300))`. The build
+   * reads only the system, so a width gets CSS only when it is listed here
+   * (or named in `media` / `containers`). See system/widths.ts.
+   */
+  widths?: DeclaredWidths
   externalCssVariables?: readonly string[]
 }
 /** Portable named query thresholds are fixed logical lengths. Legacy systems

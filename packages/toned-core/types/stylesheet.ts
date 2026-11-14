@@ -22,6 +22,7 @@ import type { GridArea, GridDefinition } from '../grid/index.ts'
 import type { QueryBuilder } from '../system/queries.ts'
 import type { QueryKey, ValidQueryKey } from '../system/query-key.ts'
 import type { StateDeclaration, StateRelation } from '../system/states.ts'
+import type { WidthAtomOf } from '../system/widths.ts'
 import type { WebRules } from '../web/rules.ts'
 import type { PartCascadeCheck } from './cascade.ts'
 import type { EditorOnly } from './editor-mode.ts'
@@ -84,24 +85,18 @@ type InferContainerConditions<R> = R extends {
   : never
 
 /**
- * The condition-EXPRESSION key shapes: ad-hoc min-widths on DECLARED
- * container names (`'@card/>=100'` — `'@nope/>=100'` is a compile error),
- * negations, and compound (`&`) / disjunctive (`|`) expressions — what the
- * `cq`/`bp`/`not`/`and`/`or` builders serialize to.
+ * The condition-EXPRESSION key shapes: DECLARED width atoms (`'@>=600px'`,
+ * `'@card/>=300px'`, from `conditions.widths`; an undeclared width is a
+ * compile error naming where to declare it), negations, and compound (`&`) /
+ * disjunctive (`|`) expressions — what the `cq`/`bp`/`not`/`and`/`or`
+ * builders serialize to.
  *
  * These also compose inside element rules. ValidateDeclaration checks the
  * actual inferred keys recursively, so a pattern key cannot suppress token
  * typo checks on the surrounding object.
  */
-type AdHocAtomKeys<R> = R extends {
-  containers?: infer C extends Record<string, Record<string, unknown>>
-}
-  ? { [N in keyof C & string]: `${N}/>=${string}` }[keyof C & string]
-  : never
-
 type ConditionExprKeys<R> =
-  | `@>=${number}px`
-  | `@${AdHocAtomKeys<R>}`
+  | `@${WidthAtomOf<R>}`
   // Wide on purpose: `not()` cannot statically name the atom it negates.
   | `@!${string}`
   | `@${string}&${string}`
@@ -900,7 +895,7 @@ type ConditionExprError<K, S> =
           FirstBadAtom<
             Body,
             keyof InferBreakpoints<S> & string,
-            InferContainerNames<S>,
+            WidthAtomOf<S>,
             InferContainerConditions<S>
           >,
         ] extends [never]
@@ -925,6 +920,7 @@ type KeyVocabularyOf<S, Parts extends string, Keys> = {
   media: keyof InferBreakpoints<S> & string
   containerNames: InferContainerNames<S>
   containers: InferContainerConditions<S>
+  widths: WidthAtomOf<S>
 }
 
 /** The keys of a system that are tokens (not condition config). */
@@ -1216,7 +1212,11 @@ type RootKeyValidation<
           : [RelationNotDeclared<K, Elements, S>] extends [never]
             ? RejectedKey<
                 K,
-                ElementMap<S, Elements, DeclarationKinds<S, T, Elements, Kinds>>,
+                ElementMap<
+                  S,
+                  Elements,
+                  DeclarationKinds<S, T, Elements, Kinds>
+                >,
                 S,
                 Elements
               >

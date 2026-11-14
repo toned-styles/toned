@@ -44,6 +44,8 @@ const METRICS = [
   'conformance.motion.works',
   'conformance.motion.rejected',
   'conformance.motion.typeErrors',
+  'purity.deprecated',
+  'purity.deprecatedImpure',
 ]
 
 describe('scorecard', async () => {

@@ -251,6 +251,23 @@ export function createRules(defaults = {}) {
         }
       },
     },
+    'no-web-rules': {
+      meta: definition(
+        'Report the deprecated $webRules extension, whose CSS comes from sheet content.',
+        {
+          deprecated:
+            "$webRules is deprecated: it generates CSS from sheet content, so the build has to read the sheet. Use a declared state (conditions.states, written ':disabled') for a DOM or ARIA fact, a declared bridge (conditions.bridges, a token writing bridgeVarName) for a pseudo-element such as ::placeholder, a registered-part relation (q.part('Item').has(…)) for a structural selector, or $bridge where it is available.",
+        },
+      ),
+      create(context) {
+        return {
+          Property(property) {
+            if (propertyName(property) !== '$webRules') return
+            context.report({ node: property.key, messageId: 'deprecated' })
+          },
+        }
+      },
+    },
     'no-shadowing-spread': {
       meta: definition(
         'Compose style fragments with a $style list, not object spreads that replace each other.',

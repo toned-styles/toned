@@ -176,31 +176,34 @@ type ConditionMessage<
   Atom extends string,
   Media extends string,
   Containers extends string,
-> = `Unknown condition '${K extends `@${Atom}` | `@media ${Atom}` ? K : `${Atom}' in '${K}`}'.${DidYouMean<Atom, Media | Containers, '@'>} Declared media: ${[Media] extends [never] ? 'none' : QuoteList<Media, 8, '@'>}${[Containers] extends [never] ? '' : `; containers: ${QuoteList<Containers, 8, '@'>}`}; or a width such as '@>=768px'`
+> = Atom extends `>=${infer N}px`
+  ? `'${K}' uses the width ${N}px, which the system does not declare, and the build emits CSS only for declared conditions: add ${N} to conditions.widths.media, or name it in conditions.media`
+  : Atom extends `${infer Name}/>=${infer N}`
+    ? N extends `${infer Px}px`
+      ? `'${K}' uses the width ${Px}px on the container '${Name}', which the system does not declare, and the build emits CSS only for declared conditions: add ${Px} to conditions.widths.containers.${Name} (with '${Name}' declared in conditions.containers), or name a step in conditions.containers.${Name}`
+      : `'${K}' uses '${Name}/>=${N}', which is not a fixed width: write q.container('${Name}', dp(<px>)) and add the width to conditions.widths.containers.${Name}`
+    : `Unknown condition '${K extends `@${Atom}` | `@media ${Atom}` ? K : `${Atom}' in '${K}`}'.${DidYouMean<Atom, Media | Containers, '@'>} Declared media: ${[Media] extends [never] ? 'none' : QuoteList<Media, 8, '@'>}${[Containers] extends [never] ? '' : `; containers: ${QuoteList<Containers, 8, '@'>}`}; or a width declared in conditions.widths, such as q.media(dp(600))`
 
-/** The first atom of a condition expression body that is not declared. */
+/** The first atom of a condition expression body that is not declared.
+ *  `Widths` is every declared width atom (`>=600px`, `card/>=300px`). */
 export type FirstBadAtom<
   Body extends string,
   Media extends string,
-  ContainerNames extends string,
+  Widths extends string,
   Containers extends string,
 > = Body extends `${infer Head}&${infer Tail}`
-  ? [FirstBadAtom<Head, Media, ContainerNames, Containers>] extends [never]
-    ? FirstBadAtom<Tail, Media, ContainerNames, Containers>
-    : FirstBadAtom<Head, Media, ContainerNames, Containers>
+  ? [FirstBadAtom<Head, Media, Widths, Containers>] extends [never]
+    ? FirstBadAtom<Tail, Media, Widths, Containers>
+    : FirstBadAtom<Head, Media, Widths, Containers>
   : Body extends `${infer Head}|${infer Tail}`
-    ? [FirstBadAtom<Head, Media, ContainerNames, Containers>] extends [never]
-      ? FirstBadAtom<Tail, Media, ContainerNames, Containers>
-      : FirstBadAtom<Head, Media, ContainerNames, Containers>
+    ? [FirstBadAtom<Head, Media, Widths, Containers>] extends [never]
+      ? FirstBadAtom<Tail, Media, Widths, Containers>
+      : FirstBadAtom<Head, Media, Widths, Containers>
     : Body extends `!${infer Atom}`
-      ? FirstBadAtom<Atom, Media, ContainerNames, Containers>
+      ? FirstBadAtom<Atom, Media, Widths, Containers>
       : IsLiteral<Body> extends false
         ? never
-        : Body extends
-              | Media
-              | Containers
-              | `>=${number}px`
-              | `${ContainerNames}/>=${string}`
+        : Body extends Media | Containers | Widths
           ? never
           : Body
 
@@ -230,9 +233,9 @@ type FirstPart<Parts extends string> = 'Root' extends Parts
       : 'Root'
 
 /** One member of a union (the compiler's first), for an example. */
-type UnionFirst<U> = (U extends unknown ? (u: () => U) => void : never) extends (
-  u: infer I,
-) => void
+type UnionFirst<U> = (
+  U extends unknown ? (u: () => U) => void : never
+) extends (u: infer I) => void
   ? I extends () => infer R
     ? R
     : never
@@ -256,6 +259,8 @@ export type KeyVocabulary = {
   media: string
   containerNames: string
   containers: string
+  /** Declared width atoms (`>=600px`, `card/>=300px`). */
+  widths: string
 }
 
 /** What a rejected key's value is checked against, for an element or a map
@@ -276,7 +281,7 @@ type ElementKeyMessage<
         FirstBadAtom<
           Body extends `media ${infer Atom}` ? Atom : Body,
           V['media'],
-          V['containerNames'],
+          V['widths'],
           V['containers']
         > extends infer Bad extends string
           ? [Bad] extends [never]
@@ -289,13 +294,16 @@ type ElementKeyMessage<
     : K extends `[${string}`
       ? RawSelectorMessage<K, V['stateConfig'], V['declaredStates']>
       : K extends `:${infer Body}`
-        ? [FirstBadState<Body, V['declaredStates'] | V['builtInStates']>] extends [never]
+        ? [
+            FirstBadState<Body, V['declaredStates'] | V['builtInStates']>,
+          ] extends [never]
           ? // Every state is declared, so the key was rejected for where it is: the
             // top of a sheet, where it applies to no part.
             `'${K}' is a declared state, but a state at the top of a sheet applies to no part: write it inside a part ({ ${FirstPart<V['parts']>}: { '${K}': … } }), or name the part ('${FirstPart<V['parts']>}${K}')`
           : StateMessage<
               K,
-              FirstBadState<Body, V['declaredStates'] | V['builtInStates']> & string,
+              FirstBadState<Body, V['declaredStates'] | V['builtInStates']> &
+                string,
               V['declaredStates'],
               V['builtInStates']
             >
