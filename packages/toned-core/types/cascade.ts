@@ -74,9 +74,15 @@ type TokenFields<P, S> = {
   [K in keyof P & keyof S & string]: S[K] extends {
     resolve: (...args: never[]) => infer R
   }
-    ? RequiredFields<R>
+    ? WithLonghands<RequiredFields<R>>
     : never
 }[keyof P & keyof S & string]
+
+/** A field and, when it is a shorthand (`borderColor`), the longhands it
+ * writes, so a token's shorthand meets a `$style` shorthand sharing one. */
+type WithLonghands<F> =
+  | F
+  | (F extends keyof Table ? Table[F][number] & string : never)
 
 /** Every block of a part that sets tokens: its condition path and the fields
  * those tokens write. Walked only for a part whose `$style` sets a shorthand. */

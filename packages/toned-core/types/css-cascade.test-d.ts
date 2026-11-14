@@ -140,3 +140,29 @@ loose.stylesheet({
     '@md': { '@platform web': { $style: { padding: '0.75rem' } } },
   },
 })
+
+// A token that writes a shorthand (`borderColor`, the four side colours) beside
+// a conditional `$style` shorthand sharing a longhand with it (`borderTop`
+// carries `borderTopColor`) conflicts too: the runtime cannot split them.
+const borderColor = defineToken({
+  values: ['line'] as const,
+  resolve: () => ({ borderColor: 'gray' }),
+})
+const bordered = defineSystem({
+  id: 'bordered',
+  tokens: { borderColor },
+  conditions: { states: { open: '[data-open]' } },
+})
+bordered.stylesheet({
+  Root: {
+    borderColor: 'line',
+    ':open': { '@platform web': { $style: { borderTopWidth: '2px' } } },
+  },
+})
+bordered.stylesheet({
+  // @ts-expect-error — `borderTop` under a condition beside the `borderColor` token
+  Root: {
+    borderColor: 'line',
+    ':open': { '@platform web': { $style: { borderTop: '1px solid red' } } },
+  },
+})
