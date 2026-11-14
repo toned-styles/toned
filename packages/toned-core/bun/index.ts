@@ -108,9 +108,11 @@ export function tonedBunPlugin(options: TonedBunPluginOptions = {}) {
         parseOutputSpecifier(path) ? { path, namespace: 'toned' } : undefined,
       )
       // Bun reads `toned:` as this plugin's namespace, and a dynamic `import()`
-      // reaches only a resolver registered in it.
+      // reaches only a resolver registered in it. It may hand over the path
+      // without the prefix (a `bun test --parallel` worker does); answered
+      // that way, the worker never calls the loader, so the answer is prefixed.
       build.onResolve({ filter: /.*/, namespace: 'toned' }, ({ path }) => ({
-        path,
+        path: path.startsWith(OUTPUT_PREFIX) ? path : `${OUTPUT_PREFIX}${path}`,
         namespace: 'toned',
       }))
       build.onLoad({ filter: /.*/, namespace: 'toned' }, async ({ path }) => {
