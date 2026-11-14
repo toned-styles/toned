@@ -134,7 +134,17 @@ keys in declarations rather than assembling predicate objects. Explicit-generic
 callback and object variant declarations remain compatible.
 
 In descriptor systems, later matching declarations within a precedence layer win
-each resolved field. Legacy systems retain their historical pseudo/breakpoint
+each resolved field. A variant block comes after its part, so a field the
+variant sets with no condition wins over the part's own conditional value for
+that field (`'@md'`, `':hover'`) wherever the variant applies: with
+`Root: { paddingTop: 2, '@md': { paddingTop: 4 } }` and a variant setting
+`paddingTop: 1`, the variant's `1` holds at `md` too. To keep a different value
+under the condition, repeat it in the variant,
+`[$.size('s')]: { Root: { paddingTop: 1, '@md': { paddingTop: 4 } } }`.
+When the part's condition is a width (`'@md'`, a container step), building a
+sheet that does not repeat it warns once in development, naming the block to
+add; a variant replacing a state or context value (`':hover'`,
+`'@within prose'`) is the usual reset and does not warn. Legacy systems retain their historical pseudo/breakpoint
 order within a layer; a higher override layer still wins over the whole lower layer.
 A compound variant has no implicit specificity bonus. Use `.variants(($: Variants<Mods>, q) => ({ … }))` to infer the schema and
 check the complete returned declaration, including excess keys in nested rules.
