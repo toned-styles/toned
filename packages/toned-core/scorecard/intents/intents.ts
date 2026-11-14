@@ -391,7 +391,7 @@ export const intents: readonly Intent[] = [
       {
         spelling: "'@>=600px': { … }",
         status: 'compatible',
-        note: 'the literal key `q.media` returns; narrowed to the declared widths too',
+        note: "the literal key `q.media` returns; narrowed to the declared widths, in one spelling (`'@>=600px'`, not `'@>=600.0px'`)",
         source: 'readme',
       },
     ],

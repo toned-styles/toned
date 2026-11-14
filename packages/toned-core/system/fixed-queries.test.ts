@@ -191,54 +191,47 @@ it('build rejects named container steps colliding with local threshold toggle na
   expect(other).toBeDefined()
 })
 
-it.each(['768.0px', '768PX', '1e3px', '.5px'])(
-  'fixed viewport %s shares one build/runtime CSS identity',
-  (spelling) => {
+it.each([
+  ['768.0px', '768px'],
+  ['768PX', '768px'],
+  ['1e3px', '1000px'],
+  ['.5px', '0.5px'],
+])(
+  'a fixed viewport width spelled %s throws, naming its one spelling',
+  (spelling, canonical) => {
     const ui = defineSystem({
       id: 'fixed-spelling',
       tokens: {},
       conditions: { widths: { media: [768, 1000, 0.5] } },
     })
-    const sheet = ui.stylesheet({
-      Root: {
-        $style: { opacity: 1 },
-        [`@>=${spelling}`]: { $style: { opacity: 0.5 } },
-      },
-    } as never)
-    const artifact = buildStyles(ui)
-    const props = createWebRenderer(ui, {
-      tokens: {},
-      manifest: artifact.manifest,
-    }).resolve(sheet) as Record<string, { style: object }>
-    const variables = JSON.stringify(props['Root']!.style).match(
-      /--fixed-spelling-fixed-media-gte[a-zA-Z0-9]+/g,
-    )!
-    expect(variables.length).toBeGreaterThan(0)
-    for (const variable of variables)
-      expect(artifact.css).toContain(`${variable}:`)
-    const native = createNativeRenderer(ui, { tokens: {} }).resolve(sheet, {
-      facts: { [`@>=${spelling}`]: true },
-    }) as Record<string, { style: Record<string, unknown> }>
-    expect(native['Root']!.style['opacity']).toBe(0.5)
+    const write = (width: string) =>
+      ui.stylesheet({
+        Root: {
+          $style: { opacity: 1 },
+          [`@>=${width}`]: { $style: { opacity: 0.5 } },
+        },
+      } as never)
+    expect(() => write(spelling)).toThrow(
+      `Toned: '@>=${spelling}' spells the width ${canonical} another way: write '@>=${canonical}', as q.media(dp(${canonical.slice(0, -2)})) does`,
+    )
+    expect(() => write(canonical)).not.toThrow()
   },
 )
 
-it('equivalent fixed viewport spellings can share a generated toggle', () => {
+it('a container width has one spelling too', () => {
   const ui = defineSystem({
-    id: 'fixed-equivalent',
+    id: 'fixed-container-spelling',
     tokens: {},
-    conditions: { widths: { media: [768] } },
-  })
-  const sheet = ui.stylesheet({
-    Root: {
-      '@>=768px': { $style: { opacity: 0.5 } },
-      '@>=768.0PX': { $style: { opacity: 1 } },
+    conditions: {
+      containers: { card: {} },
+      widths: { containers: { card: [1000] } },
     },
-  } as never)
-  const artifact = buildStyles(ui)
+  })
   expect(() =>
-    createWebRenderer(ui, { tokens: {}, manifest: artifact.manifest }).resolve(
-      sheet,
-    ),
-  ).not.toThrow()
+    ui.stylesheet({
+      Root: { '@card/>=1e3px': { $style: { opacity: 1 } } },
+    } as never),
+  ).toThrow(
+    "Toned: '@card/>=1e3px' spells the width 1000px another way: write '@card/>=1000px', as q.container('card', dp(1000)) does",
+  )
 })
