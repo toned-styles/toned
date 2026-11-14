@@ -14,7 +14,7 @@
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, type MockInstance, test, vi } from 'vitest'
 
 import { buildStyles } from '../build/index.ts'
 import { ui } from '../scorecard/fixture/system.ts'
@@ -58,17 +58,15 @@ const resolvePlaywright = (): Playwright | undefined => {
 }
 const playwright = resolvePlaywright()
 
-let warned: string[] = []
-const { warn } = console
+let warn: MockInstance<typeof console.warn>
 beforeEach(() => {
   resetWarnings()
-  warned = []
-  console.warn = (...args: unknown[]) => void warned.push(String(args[0]))
+  warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 afterEach(() => {
-  console.warn = warn
+  warn.mockRestore()
 })
-const warnings = (): string[] => warned
+const warnings = (): string[] => warn.mock.calls.map((args) => String(args[0]))
 
 describe('a variant beside the part’s conditions', () => {
   test('warns in development, naming the condition to repeat in the variant', () => {
