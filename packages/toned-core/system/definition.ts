@@ -127,6 +127,7 @@ export type SystemDefinition<
   S,
   C,
   T extends readonly Target[] = readonly Target[],
+  E extends readonly string[] = readonly string[],
 > = {
   id: string
   /**
@@ -136,8 +137,13 @@ export type SystemDefinition<
    * the same as `['web', 'native']`, and every renderer is allowed.
    */
   targets?: T
-  /** Explicit references to application-owned CSS variables; all others remain namespaced. */
-  externalCssVariables?: readonly string[]
+  /**
+   * Explicit references to application-owned CSS variables; all others remain
+   * namespaced. A `var()` in `$style` must name one of these or a variable
+   * the system owns (one a sheet sets, or core's `--toned-*`): any other name
+   * is a type error, where the value is a literal, and throws in development.
+   */
+  externalCssVariables?: E
   layout?: LayoutContext
   tokens: S
   conditions?: C & FixedConditions<C>

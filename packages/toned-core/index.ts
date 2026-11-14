@@ -119,6 +119,11 @@ export type {
   TargetsOf,
 } from './types/targets.ts'
 export type {
+  NamespacedVariables,
+  StyleVariablesCheck,
+  VariableNames,
+} from './types/variables.ts'
+export type {
   NativeInlineStyle,
   PlatformStyle,
   PortableInlineStyle,

@@ -284,6 +284,24 @@ declare `externalCssVariables: ['--brand', '--font-body']` beside its `id` and
 runtime output; classes, condition toggles and undeclared variables remain isolated.
 The immutable, validated list is part of the manifest contract. External variables
 must be supplied by the application; Toned does not discover or emit their values.
+
+In a namespaced system, every `var(--x)` written in `$style` must name a variable
+the system owns or a listed one. The system owns a custom property a sheet sets
+(`$style: { '--bar': '3rem' }` on any of its parts, conditions or variants, or in
+the base sheet it extends) and core's own `--toned-*` / `--toned_*` parameters,
+bridge variables included, which never need listing. Any other name would be
+renamed to `--<id>-x` and resolve to nothing, its fallback hiding the mistake, so:
+
+- where the value is a literal and the list is a literal tuple, it is a type error
+  naming the variable, the listed ones and the fix;
+- in development, creating the sheet throws the same message. The check reads each
+  `$style` once per sheet, never per resolve, and runs where toned's development
+  warnings run: `process` exists and `NODE_ENV` is not `production` (Node, Bun,
+  SSR and tests; a browser bundle without `process` skips it). A list computed at
+  runtime (`names.map(…)`) is `string[]` to the compiler, so only this check sees it.
+
+A variable set by a different sheet, or by the application outside toned, belongs
+in `externalCssVariables`. Text in quotes or `url()` is not a reference.
 Resolver implementation
 changes still require rebuilding the CSS asset; schema validation is not a source-code hash.
 The build manifest records ad-hoc conditions and the exact static system schema,
