@@ -53,6 +53,33 @@ function cssPerDeclaredState() {
 }
 
 /**
+ * CSS a system pays for context markers, measured by difference: one more
+ * context, one more value on it, and one more (hover) state on it.
+ */
+function cssPerContext() {
+  const gap = defineToken({ values: [1], resolve: (value) => ({ gap: value }) })
+  const css = (contexts?: Record<string, object>) =>
+    buildStyles(
+      defineSystem({
+        id: 'cost',
+        tokens: { gap },
+        conditions: contexts ? { contexts } : {},
+      }),
+      { sheets: [] },
+    ).css
+  const none = css()
+  const one = css({ a: {} })
+  const value = css({ a: { values: ['x'] } })
+  const state = css({ a: { states: ['hover'] } })
+  return {
+    context: one.length - none.length,
+    value: value.length - one.length,
+    state: state.length - one.length,
+    rulesPerPair: cssRules(value).length - cssRules(one).length,
+  }
+}
+
+/**
  * The responsive atoms of the responsive fixture, measured by difference: the
  * fixture's CSS minus the same system without `responsiveTokens`.
  */
@@ -75,6 +102,7 @@ export async function runScorecard(): Promise<Scorecard> {
   const motion = await runMotionSuite()
   const css = buildStyles(ui, { sheets: [] }).css
   const perState = cssPerDeclaredState()
+  const perContext = cssPerContext()
   const responsiveAtoms = responsiveAtomCost()
   const count = <T>(items: readonly T[], test: (item: T) => boolean) =>
     items.filter(test).length
@@ -150,6 +178,10 @@ export async function runScorecard(): Promise<Scorecard> {
         motion,
         (c) => c.outcome === 'type-error',
       ),
+      'css.bytesPerContext': perContext.context,
+      'css.bytesPerContextValue': perContext.value,
+      'css.bytesPerContextState': perContext.state,
+      'css.rulesPerContextPair': perContext.rulesPerPair,
     },
     details: {
       corpus: corpus.map(({ reports: _reports, ...result }) => result),

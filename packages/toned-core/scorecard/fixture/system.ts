@@ -2,7 +2,8 @@
  * The scorecard's fixture system: a small, self-contained descriptor system
  * with every vocabulary the corpus and suites exercise. Tokens have finite
  * scales, one named media threshold (`md`), one declared state (`open`), one
- * bridge (`placeholder`) and one application-owned CSS variable. It is
+ * bridge (`placeholder`), two contexts (`card` offering hover, `prose` with
+ * the value `faq`) and one application-owned CSS variable. It is
  * namespaced (`id`), so an unlisted `var()` is renamed, as in a real app.
  * One animation (`fade-in`) and one bridge token (`placeholderColor`) cover
  * motion and bridges.
@@ -72,6 +73,10 @@ export const ui = defineSystem({
     animations: motion.animations,
     media: { md: 768 },
     states: { open: "[data-state='open']" },
+    contexts: {
+      card: { states: ['hover'] },
+      prose: { values: ['faq'] },
+    },
     bridges: {
       placeholder: { selector: '::placeholder', properties: ['color'] },
     },

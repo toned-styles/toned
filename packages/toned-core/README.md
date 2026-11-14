@@ -341,6 +341,76 @@ channel. For each state your sheets read as `'Part:state'` or `'Part~:state'`,
 rewrite `name: selector` to `name: { selector, relations: [...] }`; the type
 errors list every such key.
 
+### Context markers: style a part by an ancestor component
+
+`'Trigger:open'` relates parts of one sheet. To style a part by the state or
+kind of an ancestor in another component (a title inside a hovered card, a
+paragraph inside an FAQ answer), the system declares the context and what it
+offers, a provider part declares it, and the part keys on it:
+
+```ts
+const ui = defineSystem({
+  id: 'site',
+  tokens,
+  conditions: {
+    contexts: {
+      card: { states: ['hover'] },
+      prose: { values: ['faq', 'callout'] },
+    },
+  },
+})
+
+const card = ui.stylesheet({ Root: { $context: 'card', padding: 4 } })
+const prose = ui
+  .stylesheet({ Root: { $context: 'prose' } })
+  .variants(($: Variants<{ kind: 'faq' | 'callout' }>) => ({
+    [$.kind('faq')]: { Root: { $context: 'prose=faq' } },
+    [$.kind('callout')]: { Root: { $context: 'prose=callout' } },
+  }))
+
+const title = ui.stylesheet({
+  Root: {
+    textColor: 'muted',
+    '@within card:hover': { textColor: 'accent' },
+    '@within prose=faq': { fontSize: 'sm' },
+  },
+})
+```
+
+- `'@within card'` applies inside a `card` provider, `'@within prose=faq'`
+  inside one whose value is `faq`, `'@within card:hover'` while it is hovered.
+  The nearest provider of a context answers.
+- `$context` is static: set it on the part, or in a variant block to follow a
+  variant. It takes one marker, or a list when a part provides two contexts.
+- A context's `states` are its relation channel, as a state's `relations`
+  are: built-in states (`hover`, `focus`, `focus-visible`, `focus-within`,
+  `active`) or declared states whose selector attaches to the provider. A
+  hover state is gated in `@media (hover: hover)`.
+- `'@within …'` nests with other conditions (`'@md': { '@within prose': … }`).
+  It cannot be negated: style the default outside and override inside.
+- An undeclared context, value or state is a type error and throws when the
+  sheet is built, naming the declaration to add. So is `$context` inside a
+  condition.
+
+On the web the provider carries marker classes (`site--_cx_card`, and
+`site--_cx_prose_faq` for a value) and the system's CSS carries one
+`:where()` rule per declared context, value and state, generated from the
+declaration alone: no sheet is read. Each rule sets an inherited custom
+property on the provider, and a descendant reads it through its ordinary
+condition chain, so specificity is zero everywhere and the rule's subject is
+the provider, not every descendant. A context costs 43 bytes, a value 76 and
+a hover state 112 (`bun scorecard/scorecard.ts`, `css.bytesPerContext*`);
+style recalculation does not grow with the number of declared contexts
+(`benchmarks/README.md`).
+
+On native, a provider rendered as a toned element (`createElements`, `<s.Root>`)
+gives its markers to the React tree below it, and `useStyles` reads them, so
+`'@within card'` and `'@within prose=faq'` work the same way. A provider
+spread as props (`{...s.Root}`) cannot wrap its children and provides
+nothing. Native has no provider state across components: in a system whose
+`targets` include `'native'`, `'@within card:hover'` is a type error outside
+`'@platform web'`, and the native renderer throws for one it meets.
+
 ### Shorthands and CSS-wide keywords under conditions
 
 On the web a part's conditions compile into one inline style, where each

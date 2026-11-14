@@ -44,6 +44,10 @@ const METRICS = [
   'conformance.motion.works',
   'conformance.motion.rejected',
   'conformance.motion.typeErrors',
+  'css.bytesPerContext',
+  'css.bytesPerContextValue',
+  'css.bytesPerContextState',
+  'css.rulesPerContextPair',
 ]
 
 describe('scorecard', async () => {

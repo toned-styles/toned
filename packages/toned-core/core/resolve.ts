@@ -24,7 +24,13 @@ export function resolveToken(
   tokens: Tokens,
   platform: 'web' | 'native',
 ): Record<string, unknown> {
-  if (value == null || key === '$kind' || key === '$$type') return {}
+  if (
+    value == null ||
+    key === '$kind' ||
+    key === '$$type' ||
+    key === '$$context'
+  )
+    return {}
   if (key === 'style' || key === '$style')
     return resolvePortableFields(value as Record<string, unknown>, tokens, {
       ...system.system.layoutContext,

@@ -9,6 +9,7 @@ import {
 import { evaluatePredicate, FALSE } from '../../core/predicates.ts'
 import { resolveAlphaChannels } from '../../core/resolve.ts'
 import { separateShorthands } from '../../core/shorthands.ts'
+import { markerClasses, withinVariable } from '../../system/contexts.ts'
 import { namespaceOutput } from '../../system/namespace.ts'
 import {
   responsivePairs,
@@ -31,6 +32,7 @@ import { compileWebRules, isWebRules } from '../../web/rules.ts'
 import type { ResolvedProps } from '../index.ts'
 
 const EXTENSIONS = [
+  '$$context',
   '$grid',
   '$area',
   '$webRules',
@@ -124,6 +126,14 @@ export function compileCssPredicateGuard(
             negate,
           )
         return `var(--toned_${fact.name}${negate ? '-not' : ''})`
+      }
+      if (fact.kind === 'context') {
+        // A context toggle has no complement: no spelling negates it.
+        if (negate)
+          throw new Error(
+            `Toned CSS: '@within ${fact.name}' cannot be negated; style the default outside the context and override it inside`,
+          )
+        return `var(${withinVariable(fact)})`
       }
       if (fact.kind === 'media' || fact.kind === 'container') {
         const slug = atomSlug(
@@ -638,6 +648,9 @@ export function resolveCssPlan(
     options.part === undefined
       ? plan.extensions
       : (index.extensions.get(options.part) ?? [])
+  // Context markers per part and context name: the last applicable one wins,
+  // so a variant block replaces the base marker of the same context.
+  const markers = new Map<string, Map<string, string>>()
   for (const extension of extensions) {
     const part = output[extension.origin.part]
     if (!part) continue
@@ -654,6 +667,13 @@ export function resolveCssPlan(
       throw new Error(
         `Toned CSS: ${extension.token} cannot be conditional on a browser fact`,
       )
+    if (extension.token === '$$context') {
+      const byName = markers.get(extension.origin.part) ?? new Map()
+      for (const marker of [extension.value].flat() as string[])
+        byName.set(marker.split('=')[0]!, marker)
+      markers.set(extension.origin.part, byName)
+      continue
+    }
     if (extension.token === '$pseudoRules') {
       const effect = extension.value as { token: string; value: unknown }
       const vocabulary: readonly unknown[] =
@@ -691,6 +711,22 @@ export function resolveCssPlan(
         className:
           `${part.className ?? ''} ${compileWebRules(extension.value, system.id ?? 'legacy').className}`.trim(),
       }
+    }
+  }
+  const namespace =
+    system.id && options.namespace !== false ? `${system.id}--` : ''
+  for (const [name, byName] of markers) {
+    const part = output[name]!
+    const classes = [...byName.values()].flatMap((marker) =>
+      markerClasses(marker).map((marker) => `${namespace}${marker}`),
+    )
+    output[name] = {
+      ...part,
+      className: [
+        ...new Set([...(part.className ?? '').split(' '), ...classes]),
+      ]
+        .filter(Boolean)
+        .join(' '),
     }
   }
   return output

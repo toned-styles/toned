@@ -31,6 +31,7 @@ import { useOverriddenSheet } from './overrides.tsx'
 import { useRuntimeConfig, VALIDATE_SHEET } from './runtime-config.ts'
 import { styleView } from './style-view.ts'
 import { useTokenConfig } from './token-config.ts'
+import { WithinContext } from './within.tsx'
 
 /**
  * `$`-prefixed keys such as `$style` belong to the stylesheet language. Passed
@@ -215,6 +216,10 @@ export function useStyles<T extends StylesheetLike>(
       ? committed.current.candidate
       : undefined,
   )
+  // Native reads the context markers its ancestors provide; web CSS carries
+  // them with no JS.
+  const within = useContext(WithinContext)
+  if (config.platform === 'native') prepared.applyWithin?.(within)
   const conditions = prepared.conditionState?.(containerSizes)
   if (conditions) {
     Object.assign(prepared.modsState, conditions)
@@ -335,6 +340,7 @@ export const bind = _bind as <T extends StylesheetLike>(
 ) => BoundElementsOf<T>
 
 export { ContainerSizesContext } from './containers.tsx'
+export { WithinContext } from './within.tsx'
 export { registerRenderer, type ServerRenderer } from './server-registry.ts'
 export type { StyleOverride } from './overrides.tsx'
 export { StyleOverrides } from './overrides.tsx'

@@ -65,6 +65,10 @@ const declare = <const T extends Target>(target: T) =>
       animations: motion.animations,
       media: { md: 768 },
       states: { open: "[data-state='open']" },
+      contexts: {
+        card: { states: ['hover'] },
+        prose: { values: ['faq'] },
+      },
       bridges: {
         placeholder: { selector: '::placeholder', properties: ['color'] },
       },
@@ -164,6 +168,20 @@ export const features = {
   bridge: {
     description: 'a bridge token (placeholder colour)',
     rules: { Root: { placeholderColor: 'muted' } },
+  },
+  'context-provider': {
+    description:
+      "a context marker on a provider part (`$context: 'prose=faq'`)",
+    rules: { Root: { $context: 'prose=faq', gap: 1 } },
+  },
+  'context-value': {
+    description:
+      "a part keyed on an ancestor's context value (`'@within prose=faq'`)",
+    rules: { Root: { gap: 1, '@within prose=faq': { gap: 2 } } },
+  },
+  'context-state': {
+    description: "a part keyed on an ancestor's state (`'@within card:hover'`)",
+    rules: { Root: { opacity: 1, '@within card:hover': { opacity: 0.5 } } },
   },
   grid: {
     description: 'a typed web grid in a web block',

@@ -36,6 +36,7 @@ import { isAnimationDefinition } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
 import type { AnyTokenConfig } from '../types/tokens.ts'
 import { getConfig, resolveModes } from './config.ts'
+import { type Contexts, validateContexts } from './contexts.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
 import { createQueries } from './queries.ts'
@@ -268,10 +269,11 @@ export function defineSystem<
     : immutableSnapshot(legacyConfig)
   const id = descriptor ? validateSystemId(descriptor.id) : undefined
   const targets = descriptor?.targets && validateTargets(descriptor.targets)
-  validateStates(
-    (config as { states?: Record<string, StateDeclaration> } | undefined)
-      ?.states,
-  )
+  const declaredConditions = config as
+    | { states?: Record<string, StateDeclaration>; contexts?: Contexts }
+    | undefined
+  validateStates(declaredConditions?.states)
+  validateContexts(declaredConditions?.contexts, declaredConditions?.states)
   for (const key of Object.keys(system)) {
     if (
       /^[$@:]/.test(key) ||
@@ -281,6 +283,7 @@ export function defineSystem<
         'breakpoints',
         'containers',
         'states',
+        'contexts',
         'base',
         'animations',
         'bridges',
@@ -324,7 +327,10 @@ export function defineSystem<
     ) => {
       const declaration = normalizeDeclarations(
         typeof rules === 'function' ? rules(ref.q) : rules,
-        { bridges: (config as SystemOptions | undefined)?.bridges },
+        {
+          bridges: (config as SystemOptions | undefined)?.bridges,
+          contexts: (config as SystemOptions | undefined)?.contexts,
+        },
       )
       if (id) validateDeclarations(declaration, config ?? {})
       return createStylesheet(ref as TokenSystem<AnyDeclaration>, declaration)

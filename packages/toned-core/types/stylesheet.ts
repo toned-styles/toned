@@ -62,6 +62,13 @@ import type {
   TokenStyleDeclaration,
 } from './tokens.ts'
 import type { StyleBridgeCheck, ValidateBridge } from './bridges.ts'
+import type {
+  ContextInCondition,
+  ContextMarker,
+  DeclaredContexts,
+  ValidateContextMarker,
+  WithinKey,
+} from './contexts.ts'
 import type { StyleVariablesCheck } from './variables.ts'
 import type { ValidVariantKey } from './variant-keys.ts'
 
@@ -272,6 +279,29 @@ export type ElementStyleNew<
   $kind?: Static extends true ? ET : never
   /** @deprecated Use $kind. */
   $$type?: Static extends true ? ET : never
+  /**
+   * The context this part provides to its subtree (`'card'`, or
+   * `'prose=faq'` for a valued context; a list when it provides two).
+   * Static: set it on the part or in a variant block.
+   */
+  $context?: Static extends true
+    ? // `string & {}` keeps the declared markers as completions while an
+      // undeclared one reaches the validation, whose TonedError names them.
+      | ContextMarker<S>
+        | (string & {})
+        | readonly (ContextMarker<S> | (string & {}))[]
+    : ContextInCondition
+} & {
+  /** Inside the nearest provider of a declared context (system/contexts.ts). */
+  [K in WithinKey<S, Host>]?: ElementStyleNew<
+    S,
+    AvailablePseudo,
+    AvailableBreakpoints,
+    ET,
+    Host,
+    Parts,
+    false
+  >
 } & {
   [
     P in AvailablePseudo | InferStateChannels<S> | `:${string}:${string}`
@@ -689,7 +719,9 @@ export type ValidateDeclaration<
         ValidateSpecial<Input, Shape, S, Parts, Local, K, Light, Root>
       : K extends '$bridge'
         ? ValidateBridge<Input[K], S>
-        : [
+        : K extends '$context'
+          ? ValidateContextMarker<Input[K], Shape[K], S>
+          : [
             K extends '$style' | `$named$_${string}`
               ? false
               : K extends `$${string}`
@@ -930,6 +962,7 @@ type KeyVocabularyOf<S, Parts extends string, Keys> = {
   media: keyof InferBreakpoints<S> & string
   containerNames: InferContainerNames<S>
   containers: InferContainerConditions<S>
+  contexts: DeclaredContexts<S>
 }
 
 /** The keys of a system that are tokens (not condition config). */
