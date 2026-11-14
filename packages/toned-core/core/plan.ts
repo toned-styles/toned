@@ -93,6 +93,13 @@ export interface CompiledPlan {
   readonly extensions: readonly DeclarationOperation[]
   readonly operations: readonly DeclarationOperation[]
   readonly diagnostics: readonly ShadowDiagnostic[]
+  /**
+   * Parts named as the source of a root channel key (`'Input~:checked'`,
+   * `'Root:hover'`), whether or not the key styles anything in this sheet:
+   * an empty key (`'Input~:checked': {}`) marks a source for targets in
+   * another sheet, which read `':sib-checked'` themselves.
+   */
+  readonly channelSources: readonly string[]
 }
 export interface ShadowDiagnostic {
   readonly code: 'shadowed-field'
@@ -178,6 +185,42 @@ function checkChannelKey(
     throw new Error(
       undeclaredRelationMessage(`:${written}`, state, relation, states[state]!),
     )
+}
+/**
+ * The sources of a sheet's root channel keys (`'<part>:<state>'`,
+ * `'<part>~:<state>'`) that ride a CSS channel: `:hover`, an ancestor
+ * `:focus-within`, or a declared state offering the relation. A declared state
+ * read through a relation it does not declare throws, even when the key is
+ * empty, as it does when the key styles a target.
+ */
+function rootChannelSources(
+  layers: readonly object[],
+  parts: ReadonlySet<string>,
+  states: Readonly<Record<string, StateDeclaration>>,
+): string[] {
+  const sources = new Set<string>()
+  for (const layer of layers)
+    for (const key of Object.keys(layer ?? {})) {
+      const cross = /^([^:@[\]$]+):([^:]+)$/.exec(key)
+      if (!cross) continue
+      const [, written, state] = cross as unknown as [string, string, string]
+      const sibling = written.endsWith('~')
+      const source = sibling ? written.slice(0, -1) : written
+      if (!parts.has(source)) continue
+      const relation: StateRelation = sibling ? 'sibling' : 'ancestor'
+      if (Object.hasOwn(states, state)) {
+        if (!stateRelations(states[state]).includes(relation))
+          throw new Error(
+            undeclaredRelationMessage(key, state, relation, states[state]!),
+          )
+      } else if (
+        state !== 'hover' &&
+        !(state === 'focus-within' && relation === 'ancestor')
+      )
+        continue
+      sources.add(source)
+    }
+  return [...sources].sort()
 }
 /** Shared declaration compiler. Its result contains only immutable declaration
  * data and semantic facts; CSS selectors/classes and host state are adapters. */
@@ -307,6 +350,11 @@ export function compileRules(
       !!entry.predicate,
     )
   }
+  const channelSources = rootChannelSources(
+    layers,
+    normalized.elementSet,
+    declaredStates,
+  )
   if (platform === 'web') validateGridDeclarations(prepared, extensions)
   if (system.id)
     for (const part of normalized.elementSet) kinds[part] ??= 'view'
@@ -314,7 +362,7 @@ export function compileRules(
   // deferred beyond a later unconditional occurrence by the spelling adapter.
   operations.sort((left, right) => left.origin.layer - right.origin.layer)
   extensions.sort((left, right) => left.origin.layer - right.origin.layer)
-  const id = `${system.id ?? 'legacy'}-${digest(JSON.stringify({ operations, kinds, extensions }))}`
+  const id = `${system.id ?? 'legacy'}-${digest(JSON.stringify({ operations, kinds, extensions, channelSources }))}`
   for (const entry of [...operations, ...extensions])
     (entry.origin as { id: string }).id = `${id}/${entry.origin.order}`
   // These containers were just created by this compiler. Freeze them directly
@@ -356,6 +404,7 @@ export function compileRules(
     parts: Object.freeze([...normalized.elementSet]),
     kinds: Object.freeze(kinds),
     requiredExtensions: Object.freeze([...requiredExtensions]),
+    channelSources: Object.freeze(channelSources),
     operations: immutableOperations,
     extensions: immutableExtensions,
     diagnostics: Object.freeze(

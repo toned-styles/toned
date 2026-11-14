@@ -49,7 +49,7 @@ const extensionIndexes = new WeakMap<
 function extensionIndex(plan: CompiledPlan) {
   let index = extensionIndexes.get(plan)
   if (!index) {
-    const sources = new Set<string>()
+    const sources = new Set<string>(plan.channelSources)
     const extensions = new Map<string, DeclarationOperation[]>()
     for (const operation of [...plan.operations, ...plan.extensions]) {
       if (operation.origin.legacyChannel)

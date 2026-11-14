@@ -73,6 +73,19 @@ describe('a shorthand beside a conditional longhand', () => {
     )
   })
 
+  it("names animationName: 'none' for the animation token beside a conditional animation: none", () => {
+    expect(() =>
+      root(
+        ui.stylesheet({
+          Root: {
+            animation: 'fade-in',
+            ':open': { '@platform web': { $style: { animation: 'none' } } },
+          },
+        } as never),
+      ),
+    ).toThrow(/Write animationName: 'none' instead of 'animation: none'/)
+  })
+
   it('keeps static, unsplittable pairs as authored', () => {
     const style = root(
       ui.stylesheet({

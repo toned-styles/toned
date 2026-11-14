@@ -332,6 +332,12 @@ states: {
 - `sibling`: `'Trigger~:size-sm'` styles the parts that follow `Trigger` as
   siblings.
 
+When the parts that react live in another sheet, they write the channel key
+themselves (`Chip: { ':sib-checked': { … } }`), and the source's sheet marks
+its part with an empty key, `'Input~:checked': {}` (or `'Root:open': {}` for
+the ancestor relation). The empty key styles nothing in its own sheet; it makes
+the part a source, and it still needs the relation declared.
+
 Each relation is CSS that every styled element pays for in style
 recalculation; the sibling one grows with the square of a list's length. A
 key reading a state through an undeclared relation is a type error and throws
@@ -434,7 +440,10 @@ conditional field reads `var(--rule, <value at rest>)`. Two consequences:
 
 - A shorthand and one of its longhands in different blocks of one part
   (`transition` at rest, `transitionProperty` under `':open'`) is a type error:
-  write the longhands, or set the whole shorthand in each condition. Sheets the
+  write the longhands, or set the whole shorthand in each condition. A longhand
+  a token writes counts too: the `animation` token writes `animationName`, so
+  a raw `animation: 'none'` under a condition beside it is a type error, and
+  the fix is `$style: { animationName: 'none' }`. Sheets the
   types cannot see whole (`extend`, variants, untyped callers) are handled at
   resolve time: the shorthand is split into its longhands (`transition`,
   `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,

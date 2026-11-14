@@ -1210,7 +1210,7 @@ export type StylesheetValidation<
             true,
             T
           > &
-            PartCascadeCheck<T[K]> &
+            PartCascadeCheck<T[K], S> &
             PartPairCheck<S, T[K]>
       : RootKeyValidation<S, T, K, Elements, Kinds>
 } & StaticConditionCheck<T, S> &
