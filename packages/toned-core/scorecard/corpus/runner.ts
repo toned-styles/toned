@@ -4,7 +4,8 @@
  *
  * - compile: any TypeScript diagnostic in the case file, from one `tsc` run
  *   with toned-core's own compiler options;
- * - build: `buildStyles` throws or warns for the case's sheets;
+ * - build: `buildStyles` throws or warns for the case's sheets, or the case's
+ *   own `build` step (an output build) does;
  * - runtime: importing the case, constructing its sheets, resolving them
  *   through the web renderer or running its `exercise` throws or warns;
  * - silent: none of the above.
@@ -73,6 +74,7 @@ async function runtimeReports(
       () => (manifest = buildStyles(system, { sheets: typed }).manifest),
     ),
   )
+  if (meta.build) add('build', await capture(() => meta?.build?.()))
   if (manifest) {
     const web = createWebRenderer(system, { manifest })
     add(

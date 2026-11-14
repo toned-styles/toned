@@ -364,3 +364,76 @@ it('does not mistake user part names for authored Boolean query boundaries', () 
         expect(cssTestValue(style, 'gap', guards)).toBe(expected)
     }
 })
+
+describe('legacy cascade ranking', () => {
+  const legacy = () =>
+    defineSystem(tokens, {
+      states: { busy: '[aria-busy=true]', open: '[data-open]' },
+      breakpoints: { __breakpoints: { md: 600, lg: 900 } },
+      containers: { card: { s: 200, l: 400 }, rail: { s: 100 } },
+    } as never)
+  const rules = {
+    Root: {
+      gap: 4,
+      style: { opacity: 1 },
+      ':open': { gap: 8 },
+      ':hover': { gap: 12, paint: 'red' },
+      ':busy': { gap: 20 },
+      '@lg': { gap: 12 },
+      '@md': { gap: 8 },
+      '@card/l': { paint: 'blue' },
+      '@rail/s': { paint: 'red' },
+      '@card/s': { gap: 0 },
+    },
+  }
+
+  it('orders a layer by the fixed media, container and state ladder', () => {
+    const system = legacy()
+    const plan = compileRules(system, rules, 'web')
+    const resolved = resolveCssPlan(plan, system, {}, {}, { part: 'Root' })
+    expect(resolved).toMatchInlineSnapshot(`
+      {
+        "Root": {
+          "className": "_ gap_4",
+          "style": {
+            "--toned-rule-10-gap": "var(--cq-card-s) 0px",
+            "--toned-rule-2-gap": "var(--toned_open) 8px",
+            "--toned-rule-3-gap": "var(--toned_hover) 12px",
+            "--toned-rule-4-color": "var(--toned_hover) red",
+            "--toned-rule-5-gap": "var(--toned_busy) 20px",
+            "--toned-rule-6-gap": "var(--media-lg) 12px",
+            "--toned-rule-7-gap": "var(--media-md) 8px",
+            "--toned-rule-8-color": "var(--cq-card-l) blue",
+            "--toned-rule-9-color": "var(--cq-rail-s) red",
+            "color": "var(--toned-rule-4-color, var(--toned-rule-9-color, var(--toned-rule-8-color, revert-layer)))",
+            "gap": "var(--toned-rule-2-gap, var(--toned-rule-5-gap, var(--toned-rule-3-gap, var(--toned-rule-10-gap, var(--toned-rule-6-gap, var(--toned-rule-7-gap, 4px))))))",
+            "opacity": 1,
+          },
+        },
+      }
+    `)
+  })
+
+  it('derives the ladder once per system, not per resolve or comparison', () => {
+    const system = legacy()
+    const plan = compileRules(system, rules, 'web')
+    const config = system.system as {
+      states: object
+      containers: object
+    }
+    const first = resolveCssPlan(plan, system, {}, {}, { part: 'Root' })
+    const keys = vi.spyOn(Object, 'keys')
+    try {
+      for (let i = 0; i < 10; i++)
+        expect(resolveCssPlan(plan, system, {}, {}, { part: 'Root' })).toEqual(
+          first,
+        )
+      const ladderReads = keys.mock.calls.filter(
+        ([value]) => value === config.states || value === config.containers,
+      ).length
+      expect(ladderReads).toBe(0)
+    } finally {
+      keys.mockRestore()
+    }
+  })
+})

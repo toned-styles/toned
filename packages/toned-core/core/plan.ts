@@ -12,7 +12,11 @@ import type {
   Tokens,
 } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
-import { immutableSnapshot } from '../utils/immutable.ts'
+import {
+  certifyImmutableReference,
+  freezeOwned,
+  immutableSnapshot,
+} from '../utils/immutable.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import {
   conditionPredicate,
@@ -30,6 +34,13 @@ import { logicalFields } from './values.ts'
 
 export type { Fact, Facts, Predicate } from './predicates.ts'
 export { evaluatePredicate, factKey } from './predicates.ts'
+
+// The shared constants are frozen leaves; certify them so a resolve carries
+// them by identity rather than snapshotting a copy for every operation.
+for (const constant of [TRUE, FALSE] as const) {
+  certifyImmutableReference((constant as { operands: object }).operands)
+  certifyImmutableReference(constant)
+}
 
 export interface DeclarationOrigin {
   readonly id: string
@@ -247,7 +258,10 @@ export function compileRules(
   // These containers were just created by this compiler. Freeze them directly
   // rather than deep-cloning the complete plan and every shared TRUE predicate.
   // Author-provided token values still cross an immutable snapshot boundary.
+  // Origins are certified snapshots too, so every later resolve carries them
+  // by identity instead of copying them.
   const predicates = new Map<Predicate, Predicate>()
+  const origins = new Map<DeclarationOrigin, DeclarationOrigin>()
   const freezeOperation = (
     operation: DeclarationOperation,
   ): DeclarationOperation => {
@@ -256,15 +270,20 @@ export function compileRules(
       predicate = immutableSnapshot(operation.predicate)
       predicates.set(operation.predicate, predicate)
     }
-    Object.freeze(operation.origin.path)
-    if (operation.origin.legacyChannel)
-      Object.freeze(operation.origin.legacyChannel)
-    if (operation.origin.source) Object.freeze(operation.origin.source)
-    Object.freeze(operation.origin)
-    return Object.freeze({
+    let origin = origins.get(operation.origin)
+    if (!origin) {
+      const { legacyChannel, source } = operation.origin
+      if (legacyChannel) freezeOwned(legacyChannel)
+      if (source) freezeOwned(source)
+      freezeOwned(operation.origin.path)
+      origin = freezeOwned(operation.origin)
+      origins.set(operation.origin, origin)
+    }
+    return freezeOwned({
       ...operation,
       value: immutableSnapshot(operation.value),
       predicate,
+      origin,
     })
   }
   const immutableOperations = Object.freeze(operations.map(freezeOperation))
@@ -462,16 +481,21 @@ export function resolvePlan(
       plan.platform,
     )
     for (const [field, value] of Object.entries(fields)) {
-      parts[operation.origin.part]!.push({
-        field,
-        value,
-        tokenValue: operation.value,
-        predicate,
-        origin: operation.origin,
-      })
+      parts[operation.origin.part]!.push(
+        freezeOwned({
+          field,
+          value,
+          tokenValue: operation.value,
+          predicate,
+          origin: operation.origin,
+        }),
+      )
     }
   }
-  return immutableSnapshot(parts)
+  // Plan data is already certified; only resolver output and reduced
+  // predicates are snapshotted, and these fresh containers frozen in place.
+  for (const part in parts) freezeOwned(parts[part]!)
+  return freezeOwned(parts)
 }
 
 export function foldOperations(operations: readonly ResolvedOperation[]) {
