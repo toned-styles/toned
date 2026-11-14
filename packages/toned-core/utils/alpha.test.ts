@@ -221,9 +221,9 @@ describe('bridges', async () => {
     )
   })
 
-  test('pseudo-element parameters keep their boundary reset, before setters', () => {
-    expect(css).toContain('._ {--toned-b-placeholder-color: initial;}')
-    expect(css.indexOf('._ {--toned-b-placeholder-color')).toBeLessThan(
+  test('pseudo-element parameters keep their boundary reset, below every setter', () => {
+    expect(css).toContain(':where(._) {--toned-b-placeholder-color: initial;}')
+    expect(css.indexOf(':where(._) {--toned-b-placeholder-color')).toBeLessThan(
       css.indexOf('.placeholderColor_muted'),
     )
   })

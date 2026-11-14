@@ -532,7 +532,9 @@ development.
 Deliver the asset before first paint. Namespaced systems prefix generated classes,
 condition variables and keyframes with their ID. Bridge parameters
 (`--toned-b-*`) are the exception: core writes and reads them under one name in
-every system. Theme variables consumed by such
+every system. Their resting reset on each `._` element carries no specificity
+(`:where(._)`), so two systems' CSS can be bundled in either order and a setter
+class from either one still wins. Theme variables consumed by such
 a system must use the same namespace. Declared `themes` are namespaced by the
 build; for a separately generated palette, `namespaceCss` from
 `@toned/core/system` applies the same prefix. A system consuming an existing application palette can

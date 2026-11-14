@@ -229,8 +229,11 @@ export function generate<const S extends TokenStyleDeclaration>(
 
   // Bridges: one static parameter-reading rule per target, plus the `._`
   // boundary reset so a parameter never inherits across component boundaries.
-  // The reset precedes every token class (emitted below), so a setter class
-  // beats it on order at equal specificity; an inline parameter wins outright.
+  // The reset carries no specificity (`:where(._)`): a parameter's name is
+  // shared by every system on the page, so another system's reset can come
+  // after this system's setter classes in a bundle, and only specificity, not
+  // order, keeps every setter class above every reset. An inline parameter
+  // wins outright.
   //
   // The unset fallback must preserve the property's pre-bridge behavior:
   // INHERITED properties fall back to `inherit` (an icon with no iconColor
@@ -283,7 +286,7 @@ export function generate<const S extends TokenStyleDeclaration>(
       }
       styles += `${scope}._${bridge.selector} {${rule}}`
     }
-    if (resets) styles += `${scope}._ {${resets}}`
+    if (resets) styles += `${scope}:where(._) {${resets}}`
   }
 
   // Named animations: enumerated and system-compiled, like the tokens. The
