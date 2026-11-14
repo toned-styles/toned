@@ -107,7 +107,10 @@ values are a closed keyword set (`cursor`, `display`, `overflow`, the box
 alignment properties, `fontStyle`, `fontWeight`, `textAlign`, `textTransform`,
 `textDecorationLine`, `borderStyle`, `whiteSpace`, `touchAction` and a few more:
 the `KeywordGrammars` table in `types/keywords.ts`), a literal string value must
-be one of its keywords, compared without case. A property that takes several
+be one of its keywords, compared without case. The keywords are csstype's,
+which include the vendor values still in use (`textAlign: '-webkit-center'`,
+`cursor: '-webkit-grab'`), plus the two `display` values it leaves out and a line
+clamp needs: `'-webkit-box'` and `'-webkit-inline-box'`. A property that takes several
 keywords takes a space-separated list of them (`display: 'inline flex'`,
 `alignItems: 'safe center'`). A CSS-wide keyword (`inherit`, `unset`, …) is
 always accepted, and so is any value with a function or quoted text in it
