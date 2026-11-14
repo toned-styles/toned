@@ -141,6 +141,33 @@ export function compilePlan(
   return compileRules(system, declaration.rules, platform)
 }
 
+/**
+ * A part's own channel key (`':sib-disabled'`, `':src-open'`, the lowered
+ * spelling of `'Control~:disabled'` / `'Control:open'`) reads a declared state
+ * through a relation; the system emits that channel's CSS only when the state
+ * declares the relation, so an undeclared one throws, naming it. Keys the
+ * cross-element rewrite lowered were checked there already.
+ */
+function checkChannelKey(
+  key: string,
+  states: Readonly<Record<string, StateDeclaration>>,
+): void {
+  // Conditions are keyed `<part>:<state>`; a channel key is `<part>:sib-<state>`.
+  const channel = /^[^:]*:((sib|src)-(.+))$/.exec(key)
+  if (!channel) return
+  const [, written, prefix, state] = channel as unknown as [
+    string,
+    string,
+    string,
+    string,
+  ]
+  if (!Object.hasOwn(states, state) || Object.hasOwn(states, written)) return
+  const relation: StateRelation = prefix === 'sib' ? 'sibling' : 'ancestor'
+  if (!stateRelations(states[state]).includes(relation))
+    throw new Error(
+      undeclaredRelationMessage(`:${written}`, state, relation, states[state]!),
+    )
+}
 /** Shared declaration compiler. Its result contains only immutable declaration
  * data and semantic facts; CSS selectors/classes and host state are adapters. */
 export function compileRules(
@@ -246,7 +273,13 @@ export function compileRules(
     }
   }
   append(normalized.list['']?.rule ?? {}, TRUE, [])
+  const declaredStates = (system.system.states ?? {}) as Record<
+    string,
+    StateDeclaration
+  >
   for (const entry of normalized.ordered) {
+    for (const key of entry.conditions.keys())
+      checkChannelKey(key, declaredStates)
     const operands = [...entry.conditions].map(([key, values]) =>
       conditionPredicate(key, values),
     )
