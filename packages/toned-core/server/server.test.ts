@@ -4,6 +4,7 @@ import { buildStyles } from '../build/index.ts'
 import * as manifestValidation from '../build/manifest.ts'
 import { dp } from '../core/values.ts'
 import { defineSystem, defineToken } from '../system/definers.ts'
+import type { Variants } from '../types/index.ts'
 import { createNativeRenderer, createWebRenderer } from './index.ts'
 
 test('pure native rendering evaluates platform predicates against native', () => {
@@ -267,4 +268,42 @@ test('explicit composition keeps opaque mutable theme and token payloads live', 
   expect(sourced.style['opacity']).toBe(0.25)
   payload.value = 0.5
   expect(sourced.style['opacity']).toBe(0.5)
+})
+test('renderer.resolve memoises a sheet, variants and immutable tokens', () => {
+  let resolutions = 0
+  const system = defineSystem({
+    opacity: defineToken({
+      values: [0, 1],
+      resolve: (value) => {
+        resolutions++
+        return { opacity: value }
+      },
+    }),
+  })
+  const sheet = system
+    .stylesheet({ Root: { opacity: 1 } })
+    .variants(($: Variants<{ faded: boolean }>) => ({
+      [$.faded(true)]: { Root: { opacity: 0 } },
+    }))
+  const renderer = createNativeRenderer(system, { tokens: {} })
+  const first = renderer.resolve(sheet, { variants: { faded: true } } as never)
+  expect(first.Root.style['opacity']).toBe(0)
+  const resolved = resolutions
+  for (let i = 0; i < 50; i++)
+    expect(
+      renderer.resolve(sheet, { variants: { faded: true } } as never),
+    ).toBe(first)
+  expect(resolutions).toBe(resolved)
+  expect(renderer.resolve(sheet, {} as never).Root.style['opacity']).toBe(1)
+  expect(
+    renderer.resolve(sheet, { variants: { faded: false } } as never).Root.style[
+      'opacity'
+    ],
+  ).toBe(1)
+  // Caller-owned token objects are not snapshots and are never memoised.
+  const tokens = {}
+  const before = resolutions
+  renderer.resolve(sheet, { tokens } as never)
+  renderer.resolve(sheet, { tokens } as never)
+  expect(resolutions).toBe(before + 2)
 })

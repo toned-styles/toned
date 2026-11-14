@@ -10,6 +10,7 @@ import {
   isImmutableValue,
 } from '../utils/immutable.ts'
 import { mergeStyle } from '../utils/mergeStyle.ts'
+import { BoundedMemo, plainKey } from '../utils/plain-key.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
 import { SYMBOL_ACCESS, SYMBOL_REF, SYMBOL_STYLE } from '../utils/symbols.ts'
 import { normalizeDeclarations } from './normalize.ts'
@@ -54,7 +55,12 @@ export function createTokenComposer<S extends TokenStyleDeclaration>(
   resolve?: (value: TokenStyle<S>) => { style: object; className?: string },
   immutableContext = false,
 ): TFun<S> {
-  return ((...values: Record<string | symbol, unknown>[]) => {
+  // Explicit composers resolve plain declarations against a fixed immutable
+  // context, so equal inputs share one normalized value and one output.
+  const memo = immutableContext
+    ? new BoundedMemo<Composition>(MAX_COMPOSITIONS)
+    : undefined
+  const compose = (values: Record<string | symbol, unknown>[]) => {
     const ref = reference()
     const value: Record<string, unknown> & { style?: unknown } = {}
     for (const entry of values) {
@@ -62,7 +68,7 @@ export function createTokenComposer<S extends TokenStyleDeclaration>(
       const source = normalizeDeclarations(unwrap(entry))
       mergeDeclarations(value, source)
     }
-    if (SYMBOL_REF in value) return value
+    if (SYMBOL_REF in value) return { passthrough: value }
     // Explicit composers own immutable context and declarations. Legacy system.t
     // deliberately re-reads the installed context on every getter access.
     if (immutableContext) {
@@ -92,6 +98,23 @@ export function createTokenComposer<S extends TokenStyleDeclaration>(
       cached ??= immutableSnapshot(resolveOutput())
       return cached
     }
+    return { ref, value, output, reusable }
+  }
+  type Composition = Exclude<
+    ReturnType<typeof compose>,
+    { passthrough: object }
+  >
+  return ((...values: Record<string | symbol, unknown>[]) => {
+    const key = memo && plainKey(values)
+    let composed = key === undefined ? undefined : memo!.get(key)
+    if (!composed) {
+      const result = compose(values)
+      if ('passthrough' in result) return result.passthrough
+      composed = result
+      if (key !== undefined && composed.reusable) memo!.set(key, composed)
+    }
+    const { ref, value, output } = composed
+    // A fresh wrapper per call: callers never share an object they can extend.
     return {
       [SYMBOL_REF]: ref,
       [SYMBOL_STYLE]: value,
@@ -105,3 +128,4 @@ export function createTokenComposer<S extends TokenStyleDeclaration>(
     }
   }) as unknown as TFun<S>
 }
+const MAX_COMPOSITIONS = 1024
