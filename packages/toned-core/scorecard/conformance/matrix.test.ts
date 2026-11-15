@@ -20,7 +20,7 @@ describe('conformance matrix builder', async () => {
     cells.find((c) => c.feature === feature && c.target === target)
 
   test('one cell per feature and target', () => {
-    expect(cells).toHaveLength(6)
+    expect(cells).toHaveLength(9)
   })
   test('a resolve that neither throws nor warns works', () => {
     expect(at('ok', 'loose')).toMatchObject({ outcome: 'works' })
@@ -30,6 +30,14 @@ describe('conformance matrix builder', async () => {
     expect(at('bad', 'throws')).toMatchObject({
       outcome: 'rejected',
       message: 'Error: bad is not supported here',
+    })
+  })
+  test('a stylesheet resolves in every variant combination, not only its options', () => {
+    // The options name only the quiet tone; the loud one is still resolved.
+    expect(at('toned', 'loose')).toMatchObject({ outcome: 'works' })
+    expect(at('toned', 'throws')).toMatchObject({
+      outcome: 'rejected',
+      message: 'Error: loud is not supported here (variants tone=loud)',
     })
   })
   test('a target whose types refuse the sheet is a type error, even if it would run', () => {

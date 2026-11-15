@@ -3,7 +3,6 @@ import { describe, expect, test, vi } from 'vitest'
 import { createQueries } from '../system/queries.ts'
 import {
   deepMerge,
-  extractOrderedKeys,
   mergeRules,
   processVariantRules,
 } from './variantProcessing.ts'
@@ -84,82 +83,6 @@ describe('deepMerge', () => {
     expect(deepMerge(target, source)).toEqual({
       a: { b: { c: 1, d: 99, e: 3 } },
     })
-  })
-})
-
-describe('extractOrderedKeys', () => {
-  test('extracts single key from selector like [size=sm]', () => {
-    const variantRules = {
-      '[size=sm]': { container: { paddingX: 2 } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size'])
-  })
-
-  test('extracts multiple keys from combined selector [size=sm][variant=accent]', () => {
-    const variantRules = {
-      '[size=sm][variant=accent]': { container: { paddingX: 2 } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size', 'variant'])
-  })
-
-  test('extracts keys from multiple selectors', () => {
-    const variantRules = {
-      '[size=sm]': { container: { paddingX: 2 } },
-      '[variant=accent]': { container: { bgColor: 'yellow' } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size', 'variant'])
-  })
-
-  test('skips $named$_ prefixed selectors', () => {
-    const variantRules = {
-      $named$_reusable: { container: { bgColor: 'red' } },
-      '[size=sm]': { container: { paddingX: 2 } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size'])
-  })
-
-  test('skips $NONE$ values', () => {
-    const variantRules = {
-      '[$NONE$=something]': { container: { paddingX: 2 } },
-      '[size=sm]': { container: { paddingX: 4 } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size'])
-  })
-
-  test('returns unique keys when same key appears in multiple selectors', () => {
-    const variantRules = {
-      '[size=sm]': { container: { paddingX: 2 } },
-      '[size=md]': { container: { paddingX: 4 } },
-      '[size=lg]': { container: { paddingX: 6 } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size'])
-  })
-
-  test('returns empty array for empty input', () => {
-    expect(extractOrderedKeys({})).toEqual([])
-  })
-
-  test('returns empty array when only named styles present', () => {
-    const variantRules = {
-      $named$_base: { container: { bgColor: 'blue' } },
-      $named$_accent: { container: { bgColor: 'yellow' } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual([])
-  })
-
-  test('handles wildcard values in selectors', () => {
-    const variantRules = {
-      '[size=sm][variant=*]': { container: { paddingX: 2 } },
-    }
-
-    expect(extractOrderedKeys(variantRules)).toEqual(['size', 'variant'])
   })
 })
 

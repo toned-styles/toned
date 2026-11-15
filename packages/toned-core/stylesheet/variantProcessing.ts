@@ -45,31 +45,6 @@ export function deepMerge(target: AnyValue, source: AnyValue): AnyValue {
 }
 
 /**
- * Extract ordered keys from a ModType for stable key generation
- * Note: TypeScript preserves key order for interface/type definitions
- */
-export function extractOrderedKeys(
-  // We need at least one variant call to infer the keys
-  variantRules: AnyValue,
-): string[] {
-  const keys = new Set<string>()
-
-  // Parse keys from variant selectors like "[size=m][variant=accent]"
-  for (const selector in variantRules) {
-    if (selector.startsWith('$named$_')) continue
-
-    const matches = selector.matchAll(/\[([^=\]]+)(?:=[^\]]+)?\]/g)
-    for (const match of matches) {
-      if (match[1] && match[1] !== '$NONE$') {
-        keys.add(match[1])
-      }
-    }
-  }
-
-  return Array.from(keys)
-}
-
-/**
  * Process variant rules from callback result
  * - Resolves $compose for named styles
  * - Resolves $compose for elements
