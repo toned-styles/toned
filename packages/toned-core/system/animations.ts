@@ -363,6 +363,10 @@ const resting = (frame: AnimationFrame | undefined, keyframes: string) =>
  */
 export function animationCss(
   animations: Readonly<Record<string, AnimationInput>>,
+  /** Whether a part can override a mode: the system registers the
+   *  `reducedMotion` token. Without it no variant can be named, so none is
+   *  emitted. */
+  overrides = true,
 ): string {
   let styles = ''
   let reduced = ''
@@ -389,7 +393,7 @@ export function animationCss(
       reduced += keyframesRule(`toned_${name}`, own)
       named.set(own, `toned_${name}`)
     }
-    for (const mode of overrideModes(entry, name)) {
+    for (const mode of overrides ? overrideModes(entry, name) : []) {
       const variant = resting(reducedMotionFrame(entry, mode, name), body)
       let keyframes = named.get(variant)
       if (!keyframes) {

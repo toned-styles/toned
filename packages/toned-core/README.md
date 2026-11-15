@@ -1315,7 +1315,8 @@ a single resting frame for `'end'` and `{ at }`, untouched for `'keep'`. The
 behaviour belongs to the keyframes name, which every spelling carries: a class,
 and the inline value an animation applied under a condition is written as. A
 part's override reads a variant only reduced motion defines
-(`animation-name: var(--toned_rm-pulse--keep, toned_pulse)`). Applications no
+(`animation-name: var(--toned_rm-pulse--keep, toned_pulse)`); a system that does
+not register the `reducedMotion` token cannot name one, so none is emitted. Applications no
 longer declare a `motionless` media condition for this. A resting frame shows
 while the animation runs; set `fillMode` to keep it after a finite animation ends.
 

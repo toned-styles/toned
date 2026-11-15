@@ -3,7 +3,7 @@ import {
   resolveConfiguredToken,
 } from '../core/resolve.ts'
 import { SHORTHANDS } from '../core/shorthands.ts'
-import { animationCss } from '../system/animations.ts'
+import { animationCss, animationTokens } from '../system/animations.ts'
 import { type Contexts, contextCss } from '../system/contexts.ts'
 import { namespaceCss } from '../system/namespace.ts'
 import { responsivePairs } from '../system/responsive.ts'
@@ -280,7 +280,11 @@ export function generate<const S extends TokenStyleDeclaration>(
   // Named animations and their reduced-motion behaviour, from the
   // declaration alone (system/animations.ts). The `.animation_<name>` classes
   // come from the `animation` token through the ordinary token loop below.
-  if (animations) styles += animationCss(animations)
+  // A part can name a reduced-motion variant only through the system's
+  // `reducedMotion` token; without it the variants (and the animation
+  // token's `name~mode` values below) are never used, so none is emitted.
+  const overrides = !!animationTokens(system, animations)
+  if (animations) styles += animationCss(animations, overrides)
 
   {
     // Interaction state toggles exist independently of viewport breakpoints.
@@ -457,8 +461,12 @@ export function generate<const S extends TokenStyleDeclaration>(
       }
     }
 
+    const animationToken =
+      (token as { animationRole?: string }).animationRole === 'animation'
     // oxlint-disable-next-line typescript/no-explicit-any -- token values are dynamically typed
     token.values.forEach((value: any) => {
+      // A `name~mode` override value exists only for the reducedMotion token.
+      if (animationToken && !overrides && String(value).includes('~')) return
       if (value instanceof Number || value instanceof String) {
         // Skip boxed primitives - these represent dynamic/runtime values
         // that cannot be statically generated into CSS
