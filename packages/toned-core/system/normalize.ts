@@ -1,4 +1,5 @@
 import type { BridgeConfig } from '../types/tokens.ts'
+import { type AnimationTokens, foldReducedMotion } from './animations.ts'
 import { fixedQueryWidth } from '../utils/conditions.ts'
 import { bridgeVarName } from '../utils/css.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
@@ -89,6 +90,9 @@ export type NormalizeOptions = {
   /** The system's declared contexts; `$context` markers are checked
    *  against them. Omitted only where no system is known. */
   contexts?: Contexts
+  /** The system's animation tokens; a part's `reducedMotion` override is
+   *  folded into its `animation` value (system/animations.ts). */
+  animations?: AnimationTokens
 }
 
 /** Canonicalize author-facing aliases once, before matcher compilation. */
@@ -97,22 +101,29 @@ export function normalizeDeclarations<T>(
   options?: NormalizeOptions,
 ): T {
   if (!isRecord(input)) return input
+  const block = options?.animations
+    ? foldReducedMotion(
+        input,
+        options.animations.keys,
+        options.animations.animations,
+      )
+    : input
   const bridges = options ? (options.bridges ?? {}) : undefined
   const contexts = options ? (options.contexts ?? {}) : undefined
   const out: Record<string, unknown> = {}
   if (
-    '$kind' in input &&
-    '$$type' in input &&
-    input['$kind'] !== input['$$type']
+    '$kind' in block &&
+    '$$type' in block &&
+    block['$kind'] !== block['$$type']
   )
     throw new Error('Toned: $kind and $$type must agree')
-  for (const key of Object.keys(input)) {
-    if (key.startsWith('@platform.') && `@platform ${key.slice(10)}` in input)
+  for (const key of Object.keys(block)) {
+    if (key.startsWith('@platform.') && `@platform ${key.slice(10)}` in block)
       throw new Error(
         `Toned: '@platform ${key.slice(10)}' and its alias '${key}' are both written here, and one would replace the other; merge them into one '@platform ${key.slice(10)}' block`,
       )
   }
-  for (const [key, value] of Object.entries(input)) {
+  for (const [key, value] of Object.entries(block)) {
     const canonical =
       key === '$kind'
         ? '$$type'

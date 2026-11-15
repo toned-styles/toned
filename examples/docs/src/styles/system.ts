@@ -11,6 +11,8 @@ const motion = defineAnimations({
     duration: 1800,
     easing: 'linear',
     iterations: 'infinite',
+    // The flow is decoration: reduced motion stops it.
+    reducedMotion: 'none',
   },
 })
 

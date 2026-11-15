@@ -73,6 +73,7 @@ import {
   mergeRules,
   processVariantRules,
 } from './variantProcessing.ts'
+import { animationTokens } from '../system/animations.ts'
 import { createVariantSelector } from './variantSelector.ts'
 
 // oxlint-disable-next-line typescript/no-explicit-any -- internal type alias for dynamic stylesheet values
@@ -332,6 +333,7 @@ export function createStylesheet<
   const declared = {
     bridges: ref.config?.bridges,
     contexts: ref.config?.contexts,
+    animations: animationTokens(ref.tokens, ref.config?.animations),
   }
   rules = normalizeDeclarations(rules, declared)
   variantRules = normalizeDeclarations(variantRules, declared)

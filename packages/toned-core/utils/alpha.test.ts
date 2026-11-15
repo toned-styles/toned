@@ -144,10 +144,16 @@ describe('alphaLiteral', () => {
 describe('defineAnimations', async () => {
   const { defineAnimations } = await import('../system/index.ts')
   const motion = defineAnimations({
-    'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
+    'fade-in': {
+      keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+      reducedMotion: 'end',
+    },
     'zoom-in-95': {
-      from: { opacity: 0, transform: 'scale(0.95)' },
-      to: { opacity: 1, transform: 'scale(1)' },
+      keyframes: {
+        from: { opacity: 0, transform: 'scale(0.95)' },
+        to: { opacity: 1, transform: 'scale(1)' },
+      },
+      reducedMotion: 'none',
     },
   })
   const animSystem = defineSystem(

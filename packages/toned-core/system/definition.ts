@@ -6,6 +6,7 @@ import type {
   BridgeConfig,
   ResponsiveTokens,
 } from '../types/index.ts'
+import type { NativeAnimations } from '../types/tokens.ts'
 import type { Target } from '../types/targets.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
@@ -140,6 +141,15 @@ export function fixedConditions<C extends SystemOptions>(
     ...(containers ? { containers } : {}),
   }) as C
 }
+/** On a native target, each animation's keyframes are the portable vocabulary. */
+type NativeAnimationCheck<C, T extends readonly Target[]> = [T] extends [never]
+  ? unknown
+  : 'native' extends T[number]
+    ? [C] extends [{ animations: infer A }]
+      ? { animations: NativeAnimations<A> }
+      : unknown
+    : unknown
+
 export type SystemDefinition<
   S,
   C,
@@ -163,6 +173,6 @@ export type SystemDefinition<
   externalCssVariables?: E
   layout?: LayoutContext
   tokens: S
-  conditions?: C & FixedConditions<C>
+  conditions?: C & FixedConditions<C> & NoInfer<NativeAnimationCheck<C, T>>
   themes?: Readonly<Record<string, SystemTheme<NoInfer<S>>>>
 }

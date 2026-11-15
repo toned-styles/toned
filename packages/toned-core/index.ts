@@ -77,6 +77,7 @@ export type {
   _symRef,
   AnimationDefinition,
   AnimationInput,
+  AnimationKeyframeOffset,
   AnimationKeyframes,
   AuthoredElementStyle,
   Breakpoints,

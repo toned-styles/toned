@@ -16,7 +16,7 @@ import {
 } from '../system/states.ts'
 import { declaredWidthAtoms } from '../system/widths.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { isAnimationDefinition } from '../types/index.ts'
+import { animationCss } from '../system/animations.ts'
 import {
   alphaVarName,
   alphaWrappable,
@@ -277,23 +277,10 @@ export function generate<const S extends TokenStyleDeclaration>(
     if (resets) styles += `${scope}:where(._) {${resets}}`
   }
 
-  // Named animations: enumerated and system-compiled, like the tokens. The
-  // matching `.animation_<name>` classes come from the `animation` token
-  // `defineAnimations` returns, through the ordinary token loop below.
-  if (animations) {
-    for (const [name, entry] of Object.entries(animations)) {
-      const frames = isAnimationDefinition(entry) ? entry.keyframes : entry
-      let body = ''
-      for (const [step, decl] of Object.entries(frames)) {
-        let rule = ''
-        for (const prop in decl) {
-          rule += `${camelToKebab(prop)}:${serializeCssValue(prop, decl[prop])};`
-        }
-        body += `${step} {${rule}}`
-      }
-      styles += `@keyframes toned_${name} {${body}}`
-    }
-  }
+  // Named animations and their reduced-motion behaviour, from the
+  // declaration alone (system/animations.ts). The `.animation_<name>` classes
+  // come from the `animation` token through the ordinary token loop below.
+  if (animations) styles += animationCss(animations)
 
   {
     // Interaction state toggles exist independently of viewport breakpoints.
