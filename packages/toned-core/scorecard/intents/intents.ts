@@ -43,8 +43,9 @@ export const intents: readonly Intent[] = [
     id: 'web-only-value',
     intent: 'Use a value only on web',
     canonical: {
-      spelling: "$style: { … } in a system declaring targets: ['web']",
-      note: "in a system with several targets, `'@platform web': { $style: { … } }`",
+      spelling:
+        "$style: { … } in a system declaring targets: ['web'], or a view of one: withTargets(system, ['web'])",
+      note: "in a sheet of a system with several targets, `'@platform web': { $style: { … } }`",
       source: 'readme',
     },
     aliases: [
@@ -57,7 +58,7 @@ export const intents: readonly Intent[] = [
       {
         spelling: '...web({ … })',
         status: 'app-helper',
-        note: "an app helper spread into a part; nine copies in two different types in HQ; replaced by `targets: ['web']`, pending the HQ migration",
+        note: "an app helper spread into a part; nine copies in two different types in HQ; replaced by `targets: ['web']`, and in HQ's own app by `withTargets(daylight, ['web'])`",
         source: review,
       },
     ],

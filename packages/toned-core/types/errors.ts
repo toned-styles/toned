@@ -137,7 +137,7 @@ export type StyleKeyError<
     ? TonedError<`Unknown CSS property '${K}'.${DidYouMean<K, Keys & string>}`>
     : // Rejected here, so a CSS property is one this host does not take.
       K extends keyof Properties | `--${string}`
-      ? TonedError<`'${K}' is web-only: put it under '@platform web': { $style: { ${K}: … } }, or use a token`>
+      ? TonedError<`'${K}' is web-only: put it under '@platform web': { $style: { ${K}: … } }, or use a token; code only the web renders can write it in $style through withTargets(system, ['web'])`>
       : TonedError<`Unknown ${Host} style property '${K}'.${DidYouMean<K, Keys & string>}`>
 
 /** States a key may name, split for the message. */

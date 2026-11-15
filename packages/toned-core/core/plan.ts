@@ -6,6 +6,7 @@ import {
   TOKEN_OPERATIONS,
   type TokenOperation,
 } from '../stylesheet/rule-protocol.ts'
+import { ownerOf } from '../system/owner.ts'
 import {
   type StateDeclaration,
   type StateRelation,
@@ -160,7 +161,7 @@ export function compilePlan(
   platform: 'web' | 'native',
 ): CompiledPlan {
   const declaration = getStylesheetPlan(sheet)
-  if (declaration.ref !== system)
+  if (declaration.ref !== ownerOf(system))
     throw new Error('Toned: stylesheet belongs to a different system')
   return compileRules(system, declaration.rules, platform)
 }

@@ -100,6 +100,31 @@ type errors too. Creating a renderer for a target the system did not declare
 throws, naming the declared targets. Without `targets` nothing changes: every
 renderer is allowed and the remaining checks happen at render time.
 
+#### A target view of a shared system: `withTargets`
+
+A system shared by a web app and a native one declares no targets (or both),
+so its sheets write web-only CSS in `'@platform web'`. Code that only the web
+renders (the web app's own sheets) can see the same system as web-only
+instead:
+
+```ts
+import { withTargets } from '@toned/core'
+
+export const daylightWeb = withTargets(daylight, ['web'])
+daylightWeb.stylesheet({ Root: { gap: 2, $style: { cursor: 'pointer' } } })
+```
+
+A view is not a second system. It shares the system's tokens, conditions, `q`
+and `t`, and its sheets belong to the system: the system's renderers render
+them, `buildStyles(view)` is `buildStyles(system)`, and the class names are the
+same, so one CSS output serves both. Only the style types narrow, as for a
+system declaring those `targets`, and a renderer made from the view refuses a
+target it did not declare. A view of a system that declares `targets` stays
+inside them (`withTargets(webAndNative, ['pdf'])` is a type error and throws).
+Sheets made through the system itself (and their `extend` overrides) keep the
+system's types, so a shared component's override still writes
+`'@platform web'`.
+
 ### Keyword values are checked
 
 csstype types most CSS properties as their keywords plus any string, so in web

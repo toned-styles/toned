@@ -9,7 +9,9 @@ import type { DefaultSystemKind } from '../types/stylesheet.ts'
 import {
   type SystemTargets,
   type Target,
+  type Targeted,
   TARGETS_LIST,
+  type TargetsOf,
 } from '../types/targets.ts'
 import type { NamespacedVariables } from '../types/variables.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
@@ -28,6 +30,7 @@ import type {
   StylesheetType,
   TokenAlphaConfig,
   TokenConfig,
+  TokenStyleDeclaration,
   TokenSystem,
   Tokens,
   TokenTypeConfig,
@@ -39,6 +42,7 @@ import { getConfig, resolveModes } from './config.ts'
 import { type Contexts, validateContexts } from './contexts.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
 import { normalizeDeclarations, validateDeclarations } from './normalize.ts'
+import { markView } from './owner.ts'
 import { createQueries } from './queries.ts'
 import { responsivePairs } from './responsive.ts'
 import { type StateDeclaration, validateStates } from './states.ts'
@@ -347,6 +351,47 @@ export function defineSystem<
   responsivePairs(ref.system as Parameters<typeof responsivePairs>[0])
 
   return ref
+}
+
+/** The targets a view of `S` may declare: inside the ones `S` declares, or any. */
+type ViewTarget<S> = [TargetsOf<S>] extends [never] ? Target : TargetsOf<S>
+
+/**
+ * The same system, seen by code that only the given renderers read. A web app
+ * sharing a web-and-native system writes web CSS in `$style` through
+ * `withTargets(system, ['web'])` instead of a `'@platform web'` block per part.
+ *
+ * The view shares everything with its system: tokens, conditions, `q`, `t` and
+ * the build. Its sheets belong to the system, so the system's renderers render
+ * them, `buildStyles` gives the same output, and the classes are the same. Only
+ * the style types narrow, and a renderer made from the view refuses a target
+ * it did not declare. A view of a system that declares `targets` stays inside
+ * them.
+ *
+ * @example
+ * ```ts
+ * export const daylightWeb = withTargets(daylight, ['web'])
+ * daylightWeb.stylesheet({ Root: { gap: 2, $style: { cursor: 'pointer' } } })
+ * ```
+ */
+export function withTargets<
+  S extends TokenStyleDeclaration,
+  C extends SystemOptions,
+  const T extends readonly ViewTarget<S>[],
+>(
+  system: TokenSystem<S, C>,
+  targets: T,
+): TokenSystem<S & Targeted<T[number]>, C> {
+  const declared = validateTargets(targets)
+  if (system.targets)
+    for (const target of declared)
+      if (!system.targets.includes(target))
+        throw new Error(
+          `Toned: withTargets: '${target}' is not a target of system '${system.id ?? 'legacy'}', which declares ${system.targets.map((t) => `'${t}'`).join(', ')}`,
+        )
+  return Object.freeze(
+    markView({ ...system, targets: declared }, system),
+  ) as unknown as TokenSystem<S & Targeted<T[number]>, C>
 }
 
 /** A declared target list: known names, each once, at least one; frozen. */

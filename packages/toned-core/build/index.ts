@@ -1,6 +1,7 @@
 import { assertThemeSides, generateThemes } from '../dom/themes.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
 import type { SystemOptions } from '../system/definition.ts'
+import { ownerOf } from '../system/owner.ts'
 import { assertDeclaredWidths } from '../system/widths.ts'
 import type { TokenStyleDeclaration, TokenSystem } from '../types/index.ts'
 import { resolvePlatformKeys } from '../utils/platform.ts'
@@ -68,7 +69,7 @@ export function buildStyles<S extends TokenStyleDeclaration>(
   const extensions = new Map<string, string>()
   for (const sheet of options.sheets ?? []) {
     const plan = getStylesheetPlan(sheet)
-    if (plan.ref !== (system as unknown))
+    if (plan.ref !== ownerOf(system))
       throw new Error('Toned build: stylesheet belongs to a different system')
     const rules = resolvePlatformKeys(plan.rules, 'web')
     for (const [name, css] of collectWebRules(
