@@ -536,7 +536,9 @@ The source comes from the same rule when present, otherwise from the sheet's bas
 part declarations. Derived sheets use their effective declared defaults, including
 prior overrides and null removals, when copying base parts. Explicitly typed parts can compose only from the same kind,
 so composition cannot move text-only styles or kind-restricted tokens into views.
-Legacy unspecified kinds retain their previous permissive behavior. Composition
+Legacy unspecified kinds retain their previous permissive behavior; in a legacy
+system a part's `$style` does not give it a kind, so moving its CSS out of a
+`'@platform web'` block (through `withTargets`) keeps what that block accepted. Composition
 copies styles, not the source part's `$kind`.
 
 Declared part names (and their `$Part` aliases) are also reserved as nested target

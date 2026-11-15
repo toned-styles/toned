@@ -168,6 +168,22 @@ webView.stylesheet({ Root: { gap: 7 } })
 // A legacy (id-less) system has views too.
 const legacyView = withTargets(defineSystem({ gap }, conditions), ['web'])
 legacyView.stylesheet({ Root: { $style: { cursor: 'pointer' } } })
+// Its parts keep their unspecified kind: writing $style does not make one a
+// view, so text CSS stays where '@platform web' accepted it.
+legacyView.stylesheet({
+  Root: { gap: 1, $style: { color: 'red', lineHeight: '1' } },
+  Label: { '@md': { $style: { fontSize: '1rem' } } },
+})
+defineSystem({ gap }, conditions).stylesheet({
+  Root: {
+    $style: { opacity: 0.5 },
+    '@platform web': { $style: { color: 'red' } },
+  },
+})
+legacyView.stylesheet({
+  // @ts-expect-error a part declared a view still takes no text properties
+  Root: { $kind: 'view', $style: { color: 'red' } },
+})
 // @ts-expect-error a view stays inside the targets the system declares
 withTargets(both, ['pdf'])
 // @ts-expect-error a native view of a web-only system

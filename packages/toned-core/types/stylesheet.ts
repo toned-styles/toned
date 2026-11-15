@@ -429,9 +429,7 @@ export type InferElementType<
     ? TT
     : T[K] extends { $$type: infer TT extends ElementType }
       ? TT
-      : T[K] extends { $style: unknown }
-        ? 'view'
-        : Default
+      : Default
   : undefined
 
 /** Extract element names from stylesheet input (excluding selectors) */
