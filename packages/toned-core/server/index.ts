@@ -20,6 +20,7 @@ import {
   resolvePlan,
 } from '../core/plan.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
+import { ownerOf } from '../system/owner.ts'
 import type { SystemTheme } from '../system/theme-types.ts'
 import { createTokenComposer } from '../system/token-composer.ts'
 import type {
@@ -176,7 +177,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
   const validate = (sheet: object) => {
     if (validated.has(sheet)) return
     const plan = getStylesheetPlan(sheet)
-    if (plan.ref !== (system as unknown))
+    if (plan.ref !== ownerOf(system))
       throw new Error(
         'Toned renderer: stylesheet belongs to a different system',
       )

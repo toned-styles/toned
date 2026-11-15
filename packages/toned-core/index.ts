@@ -58,6 +58,7 @@ export {
   defineUnit,
   getConfig,
   setConfig,
+  withTargets,
 } from './system/index.ts'
 export type { QueryBuilder } from './system/queries.ts'
 export type { QueryKey } from './system/query-key.ts'

@@ -4,7 +4,7 @@
  * cannot render is a type error, not a runtime rejection. `tsc` is the test.
  */
 import type { Variants } from '../index.ts'
-import { defineSystem, defineToken } from '../system/index.ts'
+import { defineSystem, defineToken, withTargets } from '../system/index.ts'
 import { webRules } from '../web/rules.ts'
 import type { TonedError } from './errors.ts'
 import type { StylesheetValidation } from './stylesheet.ts'
@@ -150,3 +150,44 @@ export const staticRootCondition: Has<
 
 // @ts-expect-error an unknown target
 defineSystem({ id: 'bad', targets: ['ios'], tokens: { gap } })
+
+// --- withTargets: a web view of a portable system -------------------------------
+
+const webView = withTargets(portable, ['web'])
+webView.stylesheet({
+  Root: {
+    gap: 1,
+    $style: { cursor: 'pointer', maxWidth: '42rem' },
+    '@md': { $style: { cursor: 'default' } },
+  },
+})
+// @ts-expect-error the system itself is still portable
+portable.stylesheet({ Root: { $style: { cursor: 'pointer' } } })
+// @ts-expect-error the view keeps the system's tokens and their values
+webView.stylesheet({ Root: { gap: 7 } })
+// A legacy (id-less) system has views too.
+const legacyView = withTargets(defineSystem({ gap }, conditions), ['web'])
+legacyView.stylesheet({ Root: { $style: { cursor: 'pointer' } } })
+// Its parts keep their unspecified kind: writing $style does not make one a
+// view, so text CSS stays where '@platform web' accepted it.
+legacyView.stylesheet({
+  Root: { gap: 1, $style: { color: 'red', lineHeight: '1' } },
+  Label: { '@md': { $style: { fontSize: '1rem' } } },
+})
+defineSystem({ gap }, conditions).stylesheet({
+  Root: {
+    $style: { opacity: 0.5 },
+    '@platform web': { $style: { color: 'red' } },
+  },
+})
+legacyView.stylesheet({
+  // @ts-expect-error a part declared a view still takes no text properties
+  Root: { $kind: 'view', $style: { color: 'red' } },
+})
+// @ts-expect-error a view stays inside the targets the system declares
+withTargets(both, ['pdf'])
+// @ts-expect-error a native view of a web-only system
+withTargets(web, ['native'])
+withTargets(both, ['native']).stylesheet({
+  Root: { $style: { elevation: 2 } },
+})

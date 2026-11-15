@@ -88,7 +88,7 @@ export const webOnly: Has<
   Rules<{
     Root: { $style: { cursor: 'pointer' } }
   }>['Root']['$style']['cursor'],
-  `'cursor' is web-only: put it under '@platform web': { $style: { cursor: … } }, or use a token`
+  `'cursor' is web-only: put it under '@platform web': { $style: { cursor: … } }, or use a token; code only the web renders can write it in $style through withTargets(system, ['web'])`
 > = true
 ui.stylesheet({
   // @ts-expect-error — cursor is web-only
