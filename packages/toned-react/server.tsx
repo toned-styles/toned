@@ -7,10 +7,7 @@
  * `with()` for extra host props. Nothing is interactive here; states declared
  * in the stylesheet apply through the built CSS.
  */
-import {
-  getStylesheetPlan,
-  stylesheetVariantAxes,
-} from '@toned/core/stylesheet'
+import { getStylesheetPlan, stylesheetVariants } from '@toned/core/stylesheet'
 import {
   cloneElement,
   createElement,
@@ -82,7 +79,7 @@ const VARIANTS = '$tonedVariants'
 
 export function createElements(sheet: object) {
   const plan = getStylesheetPlan(sheet)
-  const axes = stylesheetVariantAxes(sheet)
+  const axes = Object.keys(stylesheetVariants(sheet))
   for (const axis of axes)
     if (['children', 'key', 'ref'].includes(axis))
       throw new Error(

@@ -13,11 +13,18 @@
  * The outcome is `type-error` when the types refuse the pair, otherwise
  * `rejected` (with the runtime message) or `works`. `works` means the
  * target resolved the sheet without complaint; it is not a visual check.
+ *
+ * At runtime a stylesheet resolves in every combination of its variants
+ * (`stylesheetVariantCombinations`), each axis also left unset, so a value
+ * that one target cannot render rejects the cell; the type probe keeps the
+ * feature's own `options`.
  */
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
+import { getStylesheetPlan } from '../../stylesheet/plans.ts'
+import { stylesheetVariantCombinations } from '../../stylesheet/variants.ts'
 import { capture, compileDiagnostics } from '../probe.ts'
 
 const isDeprecation = (report: string) =>
@@ -27,7 +34,11 @@ export type Feature = {
   description: string
   /** Builds the feature's sheet for a target (most ignore the target). */
   sheet: (target: string) => unknown
-  /** Passed to the target as its second argument when present. */
+  /**
+   * Passed to the target as its second argument when present. For a
+   * stylesheet, its `variants` are the type probe's: the runtime replaces
+   * them with each variant combination of the sheet.
+   */
   options?: unknown
 }
 
@@ -110,17 +121,66 @@ function typeProbes(input: MatrixInput): Map<string, string | undefined> {
   }
 }
 
+const isStylesheet = (value: unknown): value is object => {
+  if (!value || typeof value !== 'object') return false
+  try {
+    getStylesheetPlan(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** The target calls one cell makes, each labelled by its variants. */
+function runsOf(
+  sheet: unknown,
+  definition: Feature,
+): { args: unknown[]; label?: string }[] {
+  const given = 'options' in definition
+  if (!isStylesheet(sheet)) return [{ args: given ? [definition.options] : [] }]
+  const { variants: _typed, ...rest } = (definition.options ?? {}) as Record<
+    string,
+    unknown
+  >
+  return stylesheetVariantCombinations(sheet).map((variants) => {
+    const label = Object.entries(variants)
+      .map(([axis, value]) => `${axis}=${value}`)
+      .join(' ')
+    if (label) return { args: [{ ...rest, variants }], label }
+    return { args: Object.keys(rest).length || given ? [rest] : [] }
+  })
+}
+
+async function runtimeReports(
+  definition: Feature,
+  target: string,
+  resolve: TargetFn,
+): Promise<string[]> {
+  let sheet: unknown
+  const reports = await capture(() => {
+    sheet = definition.sheet(target)
+  })
+  if (sheet === undefined) return reports
+  for (const { args, label } of runsOf(sheet, definition)) {
+    const seen = await capture(() =>
+      (resolve as (...all: unknown[]) => unknown)(sheet, ...args),
+    )
+    reports.push(
+      ...seen.map((report) =>
+        label ? `${report} (variants ${label})` : report,
+      ),
+    )
+  }
+  return reports
+}
+
 export async function buildMatrix(input: MatrixInput): Promise<Cell[]> {
   const types = typeProbes(input)
   const cells: Cell[] = []
   for (const [feature, definition] of Object.entries(input.features)) {
     for (const [target, resolve] of Object.entries(input.targets)) {
       const reports = (
-        await capture(() =>
-          'options' in definition
-            ? resolve(definition.sheet(target), definition.options)
-            : resolve(definition.sheet(target)),
-        )
+        await runtimeReports(definition, target, resolve)
       ).filter((report) => !isDeprecation(report))
       const typeError = types.get(`${feature}\u0000${target}`)
       const runtime = reports.length ? 'rejected' : 'works'

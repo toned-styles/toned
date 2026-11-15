@@ -10,7 +10,7 @@ import * as tonedCore from '@toned/core'
 import { buildStyles } from '@toned/core/build'
 import * as tonedServer from '@toned/core/server'
 import { createWebRenderer } from '@toned/core/server'
-import { getStylesheetPlan } from '@toned/core/stylesheet'
+import { getStylesheetPlan, stylesheetVariants } from '@toned/core/stylesheet'
 import * as tonedReact from '@toned/react'
 import * as tonedBase from '@toned/systems/base'
 import * as React from 'react'
@@ -178,27 +178,6 @@ function toVariantValue(raw: string): VariantValue {
   return raw
 }
 
-/** Axis values evidenced by the sheet's canonical `[axis=value]` rule keys. */
-function collectAxisValues(
-  rules: unknown,
-  axes: ReadonlySet<string>,
-  into: Map<string, Set<string>>,
-  depth = 0,
-) {
-  if (!rules || typeof rules !== 'object' || depth > 6) return
-  for (const [key, value] of Object.entries(rules)) {
-    for (const match of key.matchAll(/\[([\w-]+)=([^\]]+)\]/g)) {
-      const [, axis, raw] = match
-      if (axis && raw && axes.has(axis)) {
-        const values = into.get(axis) ?? new Set<string>()
-        values.add(raw)
-        into.set(axis, values)
-      }
-    }
-    collectAxisValues(value, axes, into, depth + 1)
-  }
-}
-
 let baseSystem: unknown
 function isBaseSystem(system: unknown) {
   baseSystem ??= getStylesheetPlan(tonedBase.stylesheet({ Root: {} })).ref
@@ -270,7 +249,7 @@ export async function compile(
           file,
           sheet: value as object,
           parts: plan.parts,
-          axes: plan.variantAxes,
+          axes: Object.keys(stylesheetVariants(value as object)),
           systemId: system.id ?? 'legacy',
         })
         systems.set(system, [...(systems.get(system) ?? []), value as object])
@@ -315,11 +294,13 @@ export async function compile(
         values.add(String(value))
         axisValues.set(axis, values)
       }
-      collectAxisValues(
-        getStylesheetPlan(entry.sheet).rules,
-        new Set(entry.axes),
-        axisValues,
-      )
+      for (const [axis, selected] of Object.entries(
+        stylesheetVariants(entry.sheet),
+      )) {
+        const values = axisValues.get(axis) ?? new Set<string>()
+        for (const value of selected ?? []) values.add(String(value))
+        axisValues.set(axis, values)
+      }
     }
     const axes: Axis[] = [...axisValues].map(([name, raw]) => {
       const values = [...raw].map(toVariantValue)

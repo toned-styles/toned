@@ -28,14 +28,17 @@ export {
   type OverrideSheetVariantRules,
   type OverrideVariantContext,
 } from './extension.ts'
-export {
-  getStylesheetPlan,
-  stylesheetParts,
-  stylesheetVariantAxes,
-} from './plans.ts'
+export { getStylesheetPlan, stylesheetParts } from './plans.ts'
 export { StyleMatcher } from './StyleMatcher.ts'
 export { Base, createStylesheet } from './StyleSheet.ts'
 export { unitlessNumbers } from './unitlessNumbers.ts'
+export {
+  type StylesheetVariants,
+  stylesheetVariantCombinations,
+  stylesheetVariants,
+  type VariantCombination,
+  type VariantCombinationOptions,
+} from './variants.ts'
 export {
   createVariantSelector,
   type ExtractNamedStyles,
