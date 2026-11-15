@@ -58,7 +58,9 @@ describe('a shorthand beside a conditional longhand', () => {
           (q) =>
             ({
               Root: {
-                '@platform web': { $style: { transition: 'var(--app-surface)' } },
+                '@platform web': {
+                  $style: { transition: 'var(--app-surface)' },
+                },
                 [q.state('open')]: {
                   '@platform web': {
                     $style: { transitionProperty: 'transform' },
@@ -73,7 +75,7 @@ describe('a shorthand beside a conditional longhand', () => {
     )
   })
 
-  it("names animationName: 'none' for the animation token beside a conditional animation: none", () => {
+  it("names the token's animation: 'none' beside a conditional animation: none", () => {
     expect(() =>
       root(
         ui.stylesheet({
@@ -83,10 +85,14 @@ describe('a shorthand beside a conditional longhand', () => {
           },
         } as never),
       ),
-    ).toThrow(/Write animationName: 'none' instead of 'animation: none'/)
+    ).toThrow(
+      /Write the animation token's animation: 'none' instead of a raw 'animation: none'/,
+    )
   })
 
   it('keeps static, unsplittable pairs as authored', () => {
+    // The fixture declares animations, so its types refuse the raw shorthand;
+    // the runtime still keeps one as written.
     const style = root(
       ui.stylesheet({
         Root: {
@@ -94,7 +100,7 @@ describe('a shorthand beside a conditional longhand', () => {
             $style: { animation: 'spin 1s', animationPlayState: 'paused' },
           },
         },
-      }),
+      } as never),
     )
     expect(style['animation']).toBe('spin 1s')
     expect(style['animationPlayState']).toBe('paused')

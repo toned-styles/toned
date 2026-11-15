@@ -4,12 +4,14 @@
  * @module types/tokens
  */
 import type { LayoutContext, LogicalLength } from '../core/values.ts'
+import type { MotionProperty } from '../motion/channels.ts'
 import type { TonedTypeRegistry } from '../registry.ts'
 import type { Contexts } from '../system/contexts.ts'
 import type { StateDeclaration } from '../system/states.ts'
 import type { DeclaredWidths } from '../system/widths.ts'
 import type { MediaCondition } from '../utils/media-query.ts'
 import type { Platform } from './config.ts'
+import type { TonedError } from './errors.ts'
 import type { StyleOf, StyleValue } from './targets.ts'
 
 /**
@@ -189,14 +191,52 @@ export type Containers = Record<
  */
 export type AnimationKeyframes = Record<string, Record<string, string | number>>
 
+/** Trims spaces around one keyframe selector of a comma list. */
+type TrimOffset<S extends string> = S extends ` ${infer R}`
+  ? TrimOffset<R>
+  : S extends `${infer R} `
+    ? TrimOffset<R>
+    : S
+type SplitOffsets<S extends string> = S extends `${infer A},${infer B}`
+  ? TrimOffset<A> | SplitOffsets<B>
+  : TrimOffset<S>
+type CanonicalOffset<S extends string> = S extends 'from'
+  ? '0%'
+  : S extends 'to'
+    ? '100%'
+    : S
+
 /**
- * A full animation: keyframes plus the timing that compiles into the
- * animation's class, so `animation: 'pulse'` is self-contained. Every field
- * maps to its CSS property; a bare keyframes record is accepted wherever this
- * is (name only, timing supplied by the consumer).
+ * The offsets an animation's keyframes declare, as percentages: `from` is
+ * `0%`, `to` is `100%`, and `'0%, 100%'` is both.
  */
-export type AnimationDefinition = {
-  keyframes: AnimationKeyframes
+export type AnimationKeyframeOffset<K> = CanonicalOffset<
+  SplitOffsets<keyof K & string>
+>
+
+/**
+ * What reduced motion does with an animation:
+ * - `'none'`: stop; the element shows its own style;
+ * - `'end'`: rest on the frame its last iteration finishes on;
+ * - `{ at: '<offset>%' }`: rest on that keyframe offset, read from the
+ *   keyframes (never a hand-copied value);
+ * - `'keep'`: keep running (a status indicator that means something).
+ */
+export type ReducedMotion<K = AnimationKeyframes> =
+  | 'none'
+  | 'end'
+  | 'keep'
+  | { readonly at: AnimationKeyframeOffset<K> }
+
+/**
+ * A system animation: keyframes, the timing that compiles into the
+ * animation's class (so `animation: 'pulse'` is self-contained), and what
+ * reduced motion does with it, which every animation must say. Every timing
+ * field maps to its CSS property; a part can override duration, easing and
+ * delay with the tokens `defineAnimations` returns.
+ */
+export type AnimationDefinition<K = AnimationKeyframes> = {
+  keyframes: K
   /** animation-duration — a number is milliseconds. */
   duration?: number | string
   /** animation-timing-function. */
@@ -209,9 +249,59 @@ export type AnimationDefinition = {
   direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse'
   /** animation-fill-mode. */
   fillMode?: 'none' | 'forwards' | 'backwards' | 'both'
+  /** What reduced motion does with it; required. See {@link ReducedMotion}. */
+  reducedMotion: ReducedMotion<NoInfer<K>>
 }
 
+/**
+ * The bare keyframes record a system declaration may still carry (a system
+ * built without `defineAnimations`); it has no reduced-motion behaviour, so
+ * `defineAnimations` refuses it.
+ */
 export type AnimationInput = AnimationKeyframes | AnimationDefinition
+
+/**
+ * What a system that declares animations makes of the raw CSS animation
+ * spellings in `$style`: one spelling per intent, the token.
+ */
+export type RawAnimationStyle = {
+  animationName?: TonedError<"Toned: this system declares its animations; write the animation token (animation: '<name>', or animation: 'none' to stop) instead of a raw animationName">
+  animation?: TonedError<"Toned: this system declares its animations; write the animation token (animation: '<name>' with duration, easing and delay beside it, or animation: 'none' to stop) instead of the animation shorthand">
+}
+
+/** `RawAnimationStyle` where the system declares animations. */
+type AnimationStyleCheck<S> = [S] extends [
+  { readonly animations: infer A extends Record<string, unknown> },
+]
+  ? string extends keyof A
+    ? unknown
+    : RawAnimationStyle
+  : unknown
+
+/** A keyframe property a native target cannot animate. */
+export type NativeKeyframeError<P extends string> =
+  TonedError<`Toned: keyframe property '${P}' cannot animate on native, and this system targets native; animate opacity, a length, a colour or translateX/translateY/rotate/scale, or keep the animation in a web-only system`>
+
+/**
+ * A system rendered on native plays its animations through
+ * `@toned/core/motion`, which animates the portable motion vocabulary only:
+ * every other keyframe property is a type error naming it.
+ */
+export type NativeAnimations<A> = {
+  [N in keyof A]: A[N] extends { keyframes: infer K }
+    ? Omit<A[N], 'keyframes'> & {
+        keyframes: {
+          [O in keyof K]: {
+            // Written out rather than through NativeKeyframeError, so the
+            // compiler prints the message instead of the alias name.
+            [P in keyof K[O]]: P extends MotionProperty
+              ? K[O][P]
+              : TonedError<`Toned: keyframe property '${P & string}' cannot animate on native, and this system targets native; animate opacity, a length, a colour or translateX/translateY/rotate/scale, or keep the animation in a web-only system`>
+          }
+        }
+      }
+    : A[N]
+}
 
 /**
  * A bridge: styling for a target CSS alone cannot reach from the element's
@@ -394,7 +484,7 @@ export type TokenStyle<
     style?: InlineStyle
     /** One style object, or a list merged in order (`[a, cond && b, { … }]`):
      *  the last entry wins, falsy entries are skipped, `null` unsets. */
-    $style?: StyleValue<StyleOf<S, ET, Host>>
+    $style?: StyleValue<StyleOf<S, ET, Host> & AnimationStyleCheck<S>>
     /** A declared bridge's parameters by bridge and property name
      *  (`$bridge: { placeholder: { color: 'red' } }`); core writes the
      *  `--toned-b-<bridge>-<property>` custom property the bridge reads. */

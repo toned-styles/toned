@@ -24,7 +24,8 @@ import {
 export type { SystemDefinition, SystemOptions } from './definition.ts'
 
 import type {
-  AnimationInput,
+  AnimationDefinition,
+  AnimationKeyframeOffset,
   ResolveContext,
   StylesheetInput,
   StylesheetType,
@@ -35,9 +36,17 @@ import type {
   Tokens,
   TokenTypeConfig,
 } from '../types/index.ts'
-import { isAnimationDefinition } from '../types/index.ts'
 import type { AnyDeclaration } from '../types/system.ts'
 import type { AnyTokenConfig } from '../types/tokens.ts'
+import {
+  type AnimationRole,
+  cssTime,
+  modeSlug,
+  overrideModes,
+  overrideValue,
+  overrideVariable,
+  validateAnimations,
+} from './animations.ts'
 import { getConfig, resolveModes } from './config.ts'
 import { type Contexts, validateContexts } from './contexts.ts'
 import { externalCssVariables, validateSystemId } from './namespace.ts'
@@ -109,66 +118,190 @@ export function defineToken(config: AnyTokenConfig): AnyTokenConfig {
   }
 }
 
+/** CSS easing keywords every `easing` token accepts beside the named ones. */
+const EASING_KEYWORDS = [
+  'linear',
+  'ease',
+  'ease-in',
+  'ease-out',
+  'ease-in-out',
+] as const
+
+/** Every offset any of the animations declares, for the override's type. */
+type AnyOffset<A> = {
+  [N in keyof A]: A[N] extends { keyframes: infer K }
+    ? AnimationKeyframeOffset<K>
+    : never
+}[keyof A]
+
+/** Each animation checked against its own keyframes. */
+type CheckedAnimations<A> = {
+  [N in keyof A]: A[N] extends { keyframes: infer K }
+    ? AnimationDefinition<K>
+    : AnimationDefinition
+}
+
 /**
- * Declare the system's named animations — the motion analogue of the token
- * set: an enumerated, system-compiled vocabulary rather than per-component
- * keyframes. `generate()` emits `@keyframes toned_<name>` for each, and the
- * returned `animation` token resolves a name to its `animation-name`, so a
- * stylesheet says `animation: 'fade-in'` (composable with duration/easing
- * however the host tokenizes them). Platforms without CSS map the same names
- * to their own motion backends.
+ * Declare the system's animations: composite tokens referenced by name, like
+ * typography. Each is keyframes plus the timing that compiles into its class,
+ * and what reduced motion does with it, which every animation must say:
+ * `'none'`, `'end'`, `{ at: '<offset>%' }` or `'keep'` (see `ReducedMotion`).
+ *
+ * The build emits `@keyframes` for each from the system alone, and redefines
+ * them under `prefers-reduced-motion: reduce` by mode. Native plays the same
+ * keyframes through `@toned/core/motion`.
+ *
+ * Returned tokens, gathered in `tokens`:
+ * - `animation`: a declared name, or `'none'` to stop one;
+ * - `reducedMotion`: a part's override of the animation's mode, written in the
+ *   same block as `animation`;
+ * - `duration` and `delay`: a named duration (`durations`) or milliseconds;
+ * - `easing`: a named easing (`easings`) or a CSS easing keyword.
+ *
+ * A part composes them, later fields overriding the animation's own timing:
+ * `{ animation: 'fade', duration: 'slow', easing: 'emphasized', delay: 120 }`.
  *
  * @example
  * ```ts
  * const motion = defineAnimations({
- *   'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
+ *   'fade-in': {
+ *     keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+ *     duration: 200,
+ *     reducedMotion: 'end',
+ *   },
  * })
  * const system = defineSystem({
  *   id: 'app',
- *   tokens: { ...tokens, animation: motion.animation },
+ *   tokens: { ...tokens, ...motion.tokens },
  *   conditions: { animations: motion.animations },
  * })
  * ```
  */
 export function defineAnimations<
-  const A extends Record<string, AnimationInput>,
->(animations: A) {
-  const ms = (v: number | string | undefined) =>
-    v === undefined ? undefined : typeof v === 'number' ? `${v}ms` : v
-  return {
-    animations,
-    animation: defineToken({
-      values: Object.keys(animations) as (keyof A & string)[],
-      resolve: (value) => {
-        const def = animations[value]
-        const timing =
-          def !== undefined && isAnimationDefinition(def) ? def : undefined
-        // Timing compiles INTO the animation's class, so `animation: 'pulse'`
-        // is self-contained; a consumer can still override any piece.
-        return {
-          animationName: `toned_${value}`,
-          ...(timing?.duration !== undefined && {
-            animationDuration: ms(timing.duration),
-          }),
-          ...(timing?.easing !== undefined && {
-            animationTimingFunction: timing.easing,
-          }),
-          ...(timing?.delay !== undefined && {
-            animationDelay: ms(timing.delay),
-          }),
-          ...(timing?.iterations !== undefined && {
-            animationIterationCount: String(timing.iterations),
-          }),
-          ...(timing?.direction !== undefined && {
-            animationDirection: timing.direction,
-          }),
-          ...(timing?.fillMode !== undefined && {
-            animationFillMode: timing.fillMode,
-          }),
-        }
-      },
+  // Loose, so each animation's own keyframes are inferred; CheckedAnimations
+  // then checks its reducedMotion against them.
+  // oxlint-disable-next-line typescript/no-explicit-any -- any keyframes shape
+  const A extends Record<string, AnimationDefinition<any>>,
+  const D extends Record<string, number> = {},
+  const E extends Record<string, string> = {},
+>(
+  animations: A & CheckedAnimations<A>,
+  options: { durations?: D; easings?: E } = {},
+) {
+  validateAnimations(animations)
+  const definitions = animations as Record<string, AnimationDefinition>
+  const durations = (options.durations ?? {}) as Record<string, number>
+  const easings = (options.easings ?? {}) as Record<string, string>
+  const names = Object.keys(animations)
+  // Runtime values also carry every override a part can fold in
+  // (`pulse~keep`); the type admits only the names and 'none'.
+  const folded = names.flatMap((name) =>
+    overrideModes(definitions[name]!, name).map((mode) =>
+      overrideValue(name, mode),
+    ),
+  )
+  const animation = defineToken({
+    values: [...names, 'none', ...folded] as unknown as readonly (
+      | (keyof A & string)
+      | 'none'
+    )[],
+    resolve: (value) => {
+      if (value === 'none') return { animationName: 'none' }
+      const [name, slug] = (value as string).split('~') as [string, string?]
+      const def = definitions[name]!
+      const mode = slug
+        ? overrideModes(def, name).find((m) => modeSlug(m) === slug)!
+        : undefined
+      return {
+        animationName: mode
+          ? `var(${overrideVariable(name, mode)}, toned_${name})`
+          : `toned_${name}`,
+        ...(def.duration !== undefined && {
+          animationDuration: cssTime(def.duration),
+        }),
+        ...(def.easing !== undefined && {
+          animationTimingFunction: def.easing,
+        }),
+        ...(def.delay !== undefined && {
+          animationDelay: cssTime(def.delay),
+        }),
+        ...(def.iterations !== undefined && {
+          animationIterationCount: String(def.iterations),
+        }),
+        ...(def.direction !== undefined && {
+          animationDirection: def.direction,
+        }),
+        ...(def.fillMode !== undefined && {
+          animationFillMode: def.fillMode,
+        }),
+      }
+    },
+  })
+  const reducedMotion = defineToken({
+    // A part's override is folded into `animation` when its sheet is built
+    // (foldReducedMotion), so the token itself never resolves.
+    values: [] as unknown as readonly (
+      | 'none'
+      | 'end'
+      | 'keep'
+      | { readonly at: AnyOffset<A> }
+    )[],
+    resolve: (value): Record<string, never> =>
+      fail(
+        `reducedMotion ${typeof value === 'string' ? `'${value}'` : JSON.stringify(value)} has no animation beside it; write it in the same block as animation: '<name>'`,
+      ),
+  })
+  const duration = defineToken({
+    values: Object.keys(durations) as unknown as readonly (
+      | (keyof D & string)
+      | number
+    )[],
+    dynamic: 'number',
+    resolve: (value) => ({
+      animationDuration: cssTime(
+        typeof value === 'number' ? value : durations[value]!,
+      )!,
     }),
+  })
+  const delay = defineToken({
+    values: Object.keys(durations) as unknown as readonly (
+      | (keyof D & string)
+      | number
+    )[],
+    dynamic: 'number',
+    resolve: (value) => ({
+      animationDelay: cssTime(
+        typeof value === 'number' ? value : durations[value]!,
+      )!,
+    }),
+  })
+  const easing = defineToken({
+    values: [...Object.keys(easings), ...EASING_KEYWORDS] as (
+      | (keyof E & string)
+      | (typeof EASING_KEYWORDS)[number]
+    )[],
+    resolve: (value) => ({
+      animationTimingFunction: easings[value] ?? value,
+    }),
+  })
+  const role = (token: object, animationRole: AnimationRole) =>
+    Object.assign(token, { animationRole })
+  role(animation, 'animation')
+  role(reducedMotion, 'reducedMotion')
+  return {
+    animations: animations as A,
+    animation,
+    reducedMotion,
+    duration,
+    delay,
+    easing,
+    /** Every animation token, to spread into a system's `tokens`. */
+    tokens: { animation, reducedMotion, duration, delay, easing },
   }
+}
+
+const fail = (message: string): never => {
+  throw new Error(`Toned: ${message}`)
 }
 
 /**
@@ -233,6 +366,16 @@ type DeclaredResponsivePairs<S, C> = C extends {
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},
+>(
+  system: S,
+  config?: C & NoInfer<DeclaredResponsivePairs<S, C>>,
+): TokenSystem<S & C, C>
+// The descriptor overload is last so that, when a descriptor is refused,
+// the compiler reports its error (it reports the last overload) rather than
+// the legacy signature's.
+export function defineSystem<
+  const S extends Record<string, AnyTokenConfig>,
+  const C extends SystemOptions = {},
   const T extends readonly Target[] = never,
   const E extends readonly string[] = readonly [],
 >(
@@ -241,13 +384,6 @@ export function defineSystem<
   S & C & DefaultSystemKind & SystemTargets<T> & NamespacedVariables<E[number]>,
   C
 >
-export function defineSystem<
-  const S extends Record<string, AnyTokenConfig>,
-  const C extends SystemOptions = {},
->(
-  system: S,
-  config?: C & NoInfer<DeclaredResponsivePairs<S, C>>,
-): TokenSystem<S & C, C>
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},

@@ -181,7 +181,7 @@ type ConflictMessage<C> = C extends `${infer S}|${infer L}`
   ? `Toned: '${S}' and its longhand '${L}' are set under different conditions; outside its condition the conditional one reverts the other. Write the longhands instead of '${S}', or set '${S}' in full in each condition`
   : never
 type TokenConflictMessage<C> = C extends `${infer S}|${infer L}`
-  ? `Toned: '${S}' in $style and the longhand '${L}' a token writes are set under different conditions; outside its condition the conditional one reverts the other. Write the longhand in $style instead of '${S}'${S extends 'animation' ? " (for animation: 'none', write animationName: 'none')" : ''}`
+  ? `Toned: '${S}' in $style and the longhand '${L}' a token writes are set under different conditions; outside its condition the conditional one reverts the other. Write the longhand in $style instead of '${S}'${S extends 'animation' ? " (to stop an animation, write the animation token's animation: 'none')" : ''}`
   : never
 type KeywordMessage<K> = K extends string
   ? `Toned: a CSS-wide keyword in '${K}' cannot apply under a condition; set the value it should take, or use $webRules: webRules({ '&:hover': { ${K}: … } })`

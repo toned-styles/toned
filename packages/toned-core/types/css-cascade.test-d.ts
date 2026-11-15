@@ -75,16 +75,17 @@ ui.stylesheet({
 
 // The `animation` token writes `animationName` (and its timing longhands); a
 // raw `animation` under a condition reverts them outside it, and the runtime
-// cannot split `animation: none`. The fix is the longhand.
+// cannot split `animation: none`. The fix is the token's own stop.
 const motion = defineAnimations({
   'fade-in': {
     keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
     duration: 200,
+    reducedMotion: 'end',
   },
 })
 const animated = defineSystem({
   id: 'animated',
-  tokens: { gap, animation: motion.animation },
+  tokens: { gap, ...motion.tokens },
   conditions: {
     animations: motion.animations,
     states: { open: '[data-open]' },
@@ -94,13 +95,13 @@ const animated = defineSystem({
 animated.stylesheet({
   Root: {
     animation: 'fade-in',
-    ':open': { '@platform web': { $style: { animationName: 'none' } } },
+    ':open': { animation: 'none' },
   },
 })
 animated.stylesheet({
-  // @ts-expect-error — `animation: 'none'` under a condition beside the token
   Root: {
     animation: 'fade-in',
+    // @ts-expect-error — `animation: 'none'` under a condition beside the token
     ':open': { '@platform web': { $style: { animation: 'none' } } },
   },
 })
@@ -114,7 +115,7 @@ type Messages = keyof PartCascadeCheck<
   Declaration
 >
 const message: Messages =
-  "Toned: 'animation' in $style and the longhand 'animationName' a token writes are set under different conditions; outside its condition the conditional one reverts the other. Write the longhand in $style instead of 'animation' (for animation: 'none', write animationName: 'none')"
+  "Toned: 'animation' in $style and the longhand 'animationName' a token writes are set under different conditions; outside its condition the conditional one reverts the other. Write the longhand in $style instead of 'animation' (to stop an animation, write the animation token's animation: 'none')"
 void message
 
 // A token whose `resolve` is typed loosely (a whole `CSSProperties`, as a

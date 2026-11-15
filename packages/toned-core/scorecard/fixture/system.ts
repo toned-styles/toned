@@ -55,6 +55,7 @@ const motion = defineAnimations({
   'fade-in': {
     keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
     duration: 200,
+    reducedMotion: 'end',
   },
 })
 

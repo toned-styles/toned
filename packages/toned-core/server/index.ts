@@ -20,10 +20,16 @@ import {
   resolvePlan,
 } from '../core/plan.ts'
 import { getStylesheetPlan } from '../stylesheet/plans.ts'
+import {
+  lowerNativeAnimation,
+  type NativeAnimation,
+  recordAnimation,
+} from '../system/animations.ts'
 import { ownerOf } from '../system/owner.ts'
 import type { SystemTheme } from '../system/theme-types.ts'
 import { createTokenComposer } from '../system/token-composer.ts'
 import type {
+  AnimationInput,
   TokenStyleDeclaration,
   TokenSystem,
   Tokens,
@@ -124,6 +130,9 @@ export function createRenderer<S extends TokenStyleDeclaration>(
     backend: OutputBackend
     manifest?: BuildManifest
     tokens: SystemTheme<NoInfer<S>>
+    /** Native: render each animated part's reduced-motion frame instead of
+     *  handing its keyframes to the motion player (see `animationOf`). */
+    reducedMotion?: boolean
   },
 ): PureRenderer<S> {
   const { target } = options.backend
@@ -173,6 +182,27 @@ export function createRenderer<S extends TokenStyleDeclaration>(
       'Toned renderer: build manifest has a different system definition; regenerate CSS',
     )
   const tokens = immutableSnapshot(options.tokens)
+  // Native receives no CSS animation fields: they lower to the static frame
+  // or to the animation the motion player plays (system/animations.ts).
+  const animations =
+    backend.platform === 'native'
+      ? (system.config as { animations?: Record<string, AnimationInput> })
+          ?.animations
+      : undefined
+  const lower = (
+    props: ResolvedProps,
+    played?: Record<string, NativeAnimation>,
+    part = 'Root',
+  ): ResolvedProps => {
+    if (!animations) return props
+    const lowered = lowerNativeAnimation(
+      props.style,
+      animations,
+      options.reducedMotion,
+    )
+    if (lowered.animation && played) played[part] = lowered.animation
+    return { ...props, style: lowered.style }
+  }
   const validated = new WeakSet<object>()
   const validate = (sheet: object) => {
     if (validated.has(sheet)) return
@@ -256,7 +286,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
           )['Root'] ?? []
         return backend.resolvePlan
           ? backend.resolvePlan(selected, { system, part: 'Root' })
-          : backend.resolve(foldOperations(selected))
+          : backend.resolve(lower(foldOperations(selected)))
       },
       true,
     ),
@@ -292,6 +322,7 @@ export function createRenderer<S extends TokenStyleDeclaration>(
       const known = memo?.get(key!)
       if (known) return known as SheetOutput<T>
       const result: Record<string, ResolvedProps> = {}
+      const played: Record<string, NativeAnimation> = {}
       if (backend.id !== 'css-vars') {
         const plan = compilePlan(system, sheet, backend.platform)
         const selected = resolvePlan(plan, system, activeTokens, facts, {
@@ -300,7 +331,9 @@ export function createRenderer<S extends TokenStyleDeclaration>(
         for (const part of plan.parts)
           result[part] = backend.resolvePlan
             ? backend.resolvePlan(selected[part]!, { system, part })
-            : backend.resolve(foldOperations(selected[part]!))
+            : backend.resolve(
+                lower(foldOperations(selected[part]!), played, part),
+              )
       } else {
         Object.assign(
           result,
@@ -313,6 +346,8 @@ export function createRenderer<S extends TokenStyleDeclaration>(
         )
       }
       const output = immutableSnapshot(result) as SheetOutput<T>
+      for (const [part, animation] of Object.entries(played))
+        recordAnimation((output as Record<string, object>)[part]!, animation)
       // Opaque outputs are not snapshots and stay unshared.
       if (memo && isImmutableSnapshot(output)) memo.set(key!, output)
       return output
@@ -334,7 +369,11 @@ export function createWebRenderer<S extends TokenStyleDeclaration>(
 }
 export function createNativeRenderer<S extends TokenStyleDeclaration>(
   system: TokenSystem<S>,
-  options: { tokens: SystemTheme<NoInfer<S>> },
+  options: {
+    tokens: SystemTheme<NoInfer<S>>
+    /** Render each animated part's reduced-motion frame (system/animations.ts). */
+    reducedMotion?: boolean
+  },
 ) {
   return createRenderer(system, { ...options, backend: nativeBackend })
 }

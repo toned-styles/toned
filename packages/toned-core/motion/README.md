@@ -2,8 +2,9 @@
 
 `@toned/core/motion` animates committed Toned host outputs through the existing
 differential writer. It does not create a second owner of native styles, DOM
-styles or classes. `defineAnimations` remains the CSS named-keyframe vocabulary;
-this module provides transitions between committed values on web and native.
+styles or classes. It provides transitions between committed values on web and
+native, and plays a system's animations (`defineAnimations`) on native; the web
+plays those from the generated CSS.
 
 ```ts
 import { attachMotion } from '@toned/core/motion'
@@ -179,3 +180,52 @@ host to animate. `defineMotion` is then a type error, and it also throws, naming
 the fix: show the end state with a variant. Passing `states` straight to
 `attachMotion` without `defineMotion` is a type error too, because no system is
 there to check the names.
+
+## System animations on native
+
+A system animation (`defineAnimations`, see the core README) is CSS keyframes on
+the web. On native the renderer removes the animation tokens' CSS fields and
+hands the part's animation to the motion player:
+
+```ts
+import {
+  animationOf,
+  attachAnimation,
+  createTestClock,
+} from '@toned/core/motion'
+
+const props = renderer.resolve(sheet).Dot // createNativeRenderer
+const player = attachAnimation(host, animationOf(props)!, {
+  clock,
+  reducedMotion: preference, // a boolean or a ReducedMotionSource
+})
+player.dispose()
+```
+
+`animationOf` returns the keyframes and the part's resolved timing: the
+animation's own, overridden by the part's `duration`, `delay` and `easing`
+tokens. The player follows CSS semantics where native can: the easing applies
+per keyframe segment and reverses on a reversed iteration, a property a keyframe
+leaves out takes the committed value at the ends (opacity rests at 1), and
+`fillMode` decides what shows before the delay and after the end. Easing is
+`linear`, a CSS keyword or `cubic-bezier()`; `steps()` is refused. Colours
+interpolate in premultiplied Oklab, as transitions do, so a midpoint can differ
+slightly from the browser's sRGB one.
+
+Keyframes on native use the vocabulary above (`opacity`, lengths, colours,
+`translateX`/`translateY`/`rotate`/`scale`/`scaleX`/`scaleY`); in a system that
+targets native, any other keyframe property is a type error, and the player
+diagnoses one at attach. The same keyframes compile to the CSS individual
+transforms on the web.
+
+Under reduced motion a resting mode (`'none'`, `'end'`, `{ at }`) writes its
+static frame and schedules nothing; `'keep'` keeps playing. Turning the
+preference off starts the animation again. A renderer that knows the preference
+up front can render the frame directly:
+`createNativeRenderer(system, { tokens, reducedMotion: true })` resolves each
+resting part to its frame and leaves only `'keep'` parts to play.
+
+The player runs on the JS thread through the host adapter's `patch`, like
+transitions; it does not claim UI-thread animation. A host has one motion
+controller: an animation or a transition. Attaching the player is the host's or
+binding's job (`@toned/react` does not attach it automatically yet).
