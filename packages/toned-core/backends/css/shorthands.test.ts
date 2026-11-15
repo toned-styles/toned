@@ -58,7 +58,9 @@ describe('a shorthand beside a conditional longhand', () => {
           (q) =>
             ({
               Root: {
-                '@platform web': { $style: { transition: 'var(--app-surface)' } },
+                '@platform web': {
+                  $style: { transition: 'var(--app-surface)' },
+                },
                 [q.state('open')]: {
                   '@platform web': {
                     $style: { transitionProperty: 'transform' },
@@ -83,7 +85,9 @@ describe('a shorthand beside a conditional longhand', () => {
           },
         } as never),
       ),
-    ).toThrow(/Write the animation token's animation: 'none' instead of a raw 'animation: none'/)
+    ).toThrow(
+      /Write the animation token's animation: 'none' instead of a raw 'animation: none'/,
+    )
   })
 
   it('keeps static, unsplittable pairs as authored', () => {

@@ -1,8 +1,8 @@
 import type { BridgeConfig } from '../types/tokens.ts'
-import { type AnimationTokens, foldReducedMotion } from './animations.ts'
 import { fixedQueryWidth } from '../utils/conditions.ts'
 import { bridgeVarName } from '../utils/css.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
+import { type AnimationTokens, foldReducedMotion } from './animations.ts'
 import {
   type Contexts,
   contextMarkers,

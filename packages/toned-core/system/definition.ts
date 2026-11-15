@@ -6,8 +6,8 @@ import type {
   BridgeConfig,
   ResponsiveTokens,
 } from '../types/index.ts'
-import type { NativeAnimations } from '../types/tokens.ts'
 import type { Target } from '../types/targets.ts'
+import type { NativeAnimations } from '../types/tokens.ts'
 import { immutableSnapshot } from '../utils/immutable.ts'
 import { isMediaCondition, type MediaCondition } from '../utils/media-query.ts'
 import type { Contexts } from './contexts.ts'

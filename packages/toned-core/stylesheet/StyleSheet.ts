@@ -13,6 +13,11 @@ import {
   eventState,
   type HostIntegration,
 } from '../hosts/index.ts'
+import {
+  animationTokens,
+  lowerNativeAnimation,
+  recordAnimation,
+} from '../system/animations.ts'
 import { getConfig } from '../system/config.ts'
 import { isWithinKey } from '../system/contexts.ts'
 import { assertDeclaredCssVariables } from '../system/css-variables.ts'
@@ -24,6 +29,7 @@ import {
 import type { StateDeclaration } from '../system/states.ts'
 import { assertDeclaredWidths } from '../system/widths.ts'
 import type {
+  AnimationInput,
   Config,
   ElementType,
   ExtractElements,
@@ -73,7 +79,6 @@ import {
   mergeRules,
   processVariantRules,
 } from './variantProcessing.ts'
-import { animationTokens } from '../system/animations.ts'
 import { createVariantSelector } from './variantSelector.ts'
 
 // oxlint-disable-next-line typescript/no-explicit-any -- internal type alias for dynamic stylesheet values
@@ -1353,6 +1358,16 @@ export class Base {
       }
       delete output.style.containerType
       delete output.style.containerName
+      // The animation tokens' CSS fields lower to the animation the motion
+      // player plays (system/animations.ts); native never receives them.
+      const lowered = lowerNativeAnimation(
+        output.style,
+        (this.ref.config as { animations?: Record<string, AnimationInput> })
+          ?.animations,
+      )
+      output.style = lowered.style
+      const props = backend ? { ...output, ...backend.resolve(output) } : output
+      return recordAnimation(props, lowered.animation)
     }
     return backend ? { ...output, ...backend.resolve(output) } : output
   }

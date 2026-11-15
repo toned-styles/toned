@@ -211,17 +211,17 @@ no vertical text layout. See [portable values and logical layout](core/README.md
 A condition is a string key. Write it directly; the compiler checks every name
 in it against the system's declarations:
 
-| Condition | Key |
-| --- | --- |
-| A state (built-in or declared) | `':hover'`, `':open'` |
-| Two states together | `':open:hover'` |
-| A declared media threshold | `'@md'` |
-| A fixed width | `'@>=768px'` |
-| A declared container step | `'@field/wide'` |
-| Media and container algebra | `'@md&!lg'`, `'@md\|field/wide'`, `'@!md'` |
-| A media condition and a state | nest them: `'@md': { ':hover': { … } }` |
-| Another part's state, at the sheet root | `'Trigger:open': { Chevron: { … } }` |
-| A platform block | `'@platform web'` |
+| Condition                               | Key                                        |
+| --------------------------------------- | ------------------------------------------ |
+| A state (built-in or declared)          | `':hover'`, `':open'`                      |
+| Two states together                     | `':open:hover'`                            |
+| A declared media threshold              | `'@md'`                                    |
+| A fixed width                           | `'@>=768px'`                               |
+| A declared container step               | `'@field/wide'`                            |
+| Media and container algebra             | `'@md&!lg'`, `'@md\|field/wide'`, `'@!md'` |
+| A media condition and a state           | nest them: `'@md': { ':hover': { … } }`    |
+| Another part's state, at the sheet root | `'Trigger:open': { Chevron: { … } }`       |
+| A platform block                        | `'@platform web'`                          |
 
 ```ts
 const emphasis = ui.stylesheet({
@@ -478,7 +478,7 @@ conditional field reads `var(--rule, <value at rest>)`. Two consequences:
   write the longhands, or set the whole shorthand in each condition. A longhand
   a token writes counts too: the `animation` token writes `animationName`, so
   a raw `animation: 'none'` under a condition beside it is a type error, and
-  the fix is `$style: { animationName: 'none' }`. Sheets the
+  the fix is the token's own stop, `animation: 'none'`. Sheets the
   types cannot see whole (`extend`, variants, untyped callers) are handled at
   resolve time: the shorthand is split into its longhands (`transition`,
   `overflow`, `outline`, `border` and its sides, `borderRadius`, `padding`,
@@ -1002,7 +1002,7 @@ what it says:
 | a DOM or ARIA fact (`&[aria-disabled=true]`, `&:checked`) | a declared state: `conditions.states: { disabled: '[aria-disabled=true]' }`, then `':disabled': { … }`                         |
 | a pseudo-element (`&::placeholder`)                       | a declared bridge (`conditions.bridges`) and a token whose resolver writes `bridgeVarName(…)`; `$bridge` where it is available |
 | a part in relation to another (`& > input:checked`)       | a registered-part relation: `[q.part('Root').has('Input', 'checked')]: { … }`                                                  |
-| a browser media feature (`(prefers-reduced-motion)`)      | a named media condition: `conditions.media: { still: '(prefers-reduced-motion: reduce)' }`                                     |
+| a browser media feature (`(prefers-reduced-motion)`)      | for a system animation, its `reducedMotion` ([System animations](#system-animations)); otherwise a named media condition       |
 
 Until migrated, use `$webRules: webRules({ '&::before': { content: '"*"' } })` inside an explicit
 `'@platform web'` block for CSS selectors or pseudo-elements. Styles use checked
@@ -1018,8 +1018,9 @@ a `$webRules` block is diagnosed. Use registered-part relations for semantics th
 must hold on every platform. Native, inline, PDF and Tailwind profiles reject
 CSS extensions.
 
-For browser-only media semantics, including rem breakpoints and reduced-motion
-preferences, pass explicit media groups. These do not change the fixed-pixel
+For browser-only media semantics, such as rem breakpoints, pass explicit media
+groups. A system animation's reduced-motion behaviour is its own `reducedMotion`,
+not a media group. These do not change the fixed-pixel
 contract of portable conditions:
 
 ```ts
@@ -1028,9 +1029,6 @@ webRules(
   {
     media: {
       '(min-width: 64rem)': webRules({ '&': { display: 'flex' } }),
-      '(prefers-reduced-motion: reduce)': webRules({
-        '&': { animation: 'none' },
-      }),
     },
   },
 )
@@ -1195,6 +1193,104 @@ const sticky = webToken({
 restrictions. An explicit output type describes the selected host vocabulary;
 backend capability validation still applies. Legacy `defineToken` retains its
 broad output contract for incremental migration.
+
+### System animations
+
+Animations are composite tokens referenced by name, like typography.
+`defineAnimations` declares them; every animation says what reduced motion does
+with it, and leaving `reducedMotion` out is a type error (and throws):
+
+```ts
+const motion = defineAnimations(
+  {
+    pulse: {
+      keyframes: { '50%': { opacity: 0.5 } },
+      duration: 2000,
+      easing: 'ease-in-out',
+      iterations: 'infinite',
+      reducedMotion: 'none', // stop: the element shows its own style
+    },
+    'fade-in': {
+      keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
+      duration: 200,
+      fillMode: 'both',
+      reducedMotion: 'end', // rest on the frame the last iteration ends on
+    },
+    halo: {
+      keyframes: {
+        '0%, 100%': { boxShadow: soft },
+        '50%': { boxShadow: bright },
+      },
+      duration: 4000,
+      iterations: 'infinite',
+      reducedMotion: { at: '0%' }, // rest on a keyframe offset it declares
+    },
+    live: {
+      keyframes: { '75%, 100%': { opacity: 0 } },
+      duration: 1000,
+      iterations: 'infinite',
+      reducedMotion: 'keep', // keeps running: it means something
+    },
+  },
+  {
+    durations: { fast: 150, slow: 400 },
+    easings: { emphasized: 'cubic-bezier(0.2, 0, 0, 1)' },
+  },
+)
+const ui = defineSystem({
+  id: 'app',
+  tokens: { ...tokens, ...motion.tokens },
+  conditions: { animations: motion.animations },
+})
+```
+
+`motion.tokens` holds `animation`, `reducedMotion`, `duration`, `delay` and
+`easing`. A part composes them like a local stylesheet, later fields overriding
+the animation's own timing, and can override the mode:
+
+```ts
+ui.stylesheet({
+  Card: {
+    animation: 'fade-in',
+    duration: 'slow',
+    easing: 'emphasized',
+    delay: 120,
+  },
+  Dot: { animation: 'pulse', reducedMotion: 'keep' },
+  Halo: { animation: 'halo', ':open': { animation: 'none' } },
+})
+```
+
+`{ at }` names an offset the keyframes declare (`from` is `0%`, `to` is
+`100%`); the frame is read from the keyframes, never copied by hand. A frame
+that would need an interpolated value (a property animated elsewhere but not
+declared at that offset) is refused. `'end'` follows the direction and
+iteration count. An override is written in the same block as its `animation`.
+`duration` and `delay` take a named duration or milliseconds; `easing` a named
+easing or a CSS keyword. New keyframes belong in the system, or a library's
+system extension, never in a part.
+
+In a system that declares animations, a raw `animationName` or `animation`
+shorthand in `$style` is a type error naming the token. Timing longhands such
+as `animationPlayState` stay available under `'@platform web'`.
+
+On the web the build emits each animation's `@keyframes` from the system alone,
+then one `@media (prefers-reduced-motion: reduce)` block, under a condition toned
+owns, that redefines each animation's keyframes by its mode: empty for `'none'`,
+a single resting frame for `'end'` and `{ at }`, untouched for `'keep'`. The
+behaviour belongs to the keyframes name, which every spelling carries: a class,
+and the inline value an animation applied under a condition is written as. A
+part's override reads a variant only reduced motion defines
+(`animation-name: var(--toned_rm-pulse--keep, toned_pulse)`). Applications no
+longer declare a `motionless` media condition for this. A resting frame shows
+while the animation runs; set `fillMode` to keep it after a finite animation ends.
+
+On native, the same keyframes play through `@toned/core/motion`'s
+`attachAnimation` ([motion contract](motion/README.md#system-animations-on-native)).
+In a system whose `targets` include `'native'`, a keyframe property native
+cannot animate is a type error naming it; a web-only system keeps full CSS
+keyframes. `createNativeRenderer(system, { tokens, reducedMotion: true })`
+renders each resting mode's frame as static style.
 
 ### Portable motion
 

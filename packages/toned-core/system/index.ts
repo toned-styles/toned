@@ -6,11 +6,12 @@
 
 export { alpha } from '../utils/alpha.ts'
 export {
+  animationOf,
   keyframeOffsets,
   REDUCED_MOTION_QUERY,
   reducedMotionFrame,
 } from './animations.ts'
-export type { AnimationFrame } from './animations.ts'
+export type { AnimationFrame, NativeAnimation } from './animations.ts'
 export { defineConfig, getConfig, setConfig } from './config.ts'
 export type { TokenSystem } from './definers.ts'
 export {

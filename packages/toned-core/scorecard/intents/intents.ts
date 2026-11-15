@@ -457,6 +457,69 @@ export const intents: readonly Intent[] = [
     ],
   },
   {
+    id: 'system-animation',
+    intent: 'Run a named animation (keyframes) on a part',
+    canonical: {
+      spelling: "animation: 'pulse'",
+      note: 'a composite token from `defineAnimations`; `duration`, `easing` and `delay` beside it override its timing',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "'@platform web': { $style: { animationName: 'toned_pulse' } }",
+        status: 'error',
+        note: 'a type error in a system that declares animations, naming the `animation` token',
+        source: 'probe',
+      },
+      {
+        spelling:
+          "'@platform web': { $style: { animation: 'pulse 2s infinite' } }",
+        status: 'error',
+        note: 'the shorthand, likewise',
+        source: 'probe',
+      },
+      {
+        spelling:
+          "'@platform web': { $style: { animationDelay: '1.2s' } } or an inline style",
+        status: 'compatible',
+        note: 'the timing longhands stay available on the web; `delay: 1200` is the portable spelling',
+        source: review,
+      },
+    ],
+  },
+  {
+    id: 'reduced-motion-animation',
+    intent: 'Say what an animation does under reduced motion',
+    canonical: {
+      spelling: "reducedMotion: 'none' | 'end' | { at: '50%' } | 'keep'",
+      note: 'required on every system animation; a part overrides it beside `animation`. The build emits the reduced-motion CSS; native rests on the frame',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling:
+          "media: { motionless: '(prefers-reduced-motion: reduce)' } + '@motionless': { $style: { animationName: 'none' } }",
+        status: 'error',
+        note: 'what the HQ sites wrote per part; the raw `animationName` is now a type error, and the stop belongs to the animation',
+        source: review,
+      },
+      {
+        spelling: "'@motionless': { $style: { boxShadow: stillHalo } }",
+        status: 'workaround',
+        note: 'a hand-copied resting value that can drift from the keyframes; `{ at }` reads it from them',
+        source: review,
+      },
+      {
+        spelling:
+          "webRules({}, { media: { '(prefers-reduced-motion: reduce)': … } })",
+        status: 'workaround',
+        note: 'web only and per part; deprecated with `$webRules`',
+        source: 'readme',
+      },
+    ],
+  },
+  {
     id: 'motion-clock',
     intent: 'Step motion time in a test or replay',
     canonical: {

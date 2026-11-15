@@ -48,12 +48,18 @@ const motion = defineAnimations(
       reducedMotion: 'end',
     },
   },
-  { durations: { slow: 400 }, easings: { emphasized: 'cubic-bezier(0.2, 0, 0, 1)' } },
+  {
+    durations: { slow: 400 },
+    easings: { emphasized: 'cubic-bezier(0.2, 0, 0, 1)' },
+  },
 )
 const ui = defineSystem({
   id: 'anim',
   tokens: { ...motion.tokens },
-  conditions: { animations: motion.animations, states: { open: '[data-open]' } },
+  conditions: {
+    animations: motion.animations,
+    states: { open: '[data-open]' },
+  },
 })
 const { css, manifest } = buildStyles(ui)
 const web = createWebRenderer(ui, { manifest })
@@ -70,17 +76,22 @@ describe('defineAnimations', () => {
     ).toThrow(
       "Toned: animation 'bare' has no reducedMotion; declare 'none', 'end', { at: '<offset>%' } or 'keep'",
     )
-    expect(() => defineAnimations({ bare: { to: { opacity: 1 } } } as never)).toThrow(
-      /animation 'bare' has no reducedMotion/,
-    )
+    expect(() =>
+      defineAnimations({ bare: { to: { opacity: 1 } } } as never),
+    ).toThrow(/animation 'bare' has no reducedMotion/)
   })
 
   test('refuses { at } on an offset the keyframes do not declare', () => {
     expect(() =>
       defineAnimations({
-        a: { keyframes: { '50%': { opacity: 0 } }, reducedMotion: { at: '30%' } },
+        a: {
+          keyframes: { '50%': { opacity: 0 } },
+          reducedMotion: { at: '30%' },
+        },
       } as never),
-    ).toThrow("Toned: animation 'a' rests at 30%, which its keyframes do not declare; its offsets: 50%")
+    ).toThrow(
+      "Toned: animation 'a' rests at 30%, which its keyframes do not declare; its offsets: 50%",
+    )
   })
 
   test('refuses a resting frame that would need an interpolated value', () => {
@@ -107,13 +118,21 @@ describe('defineAnimations', () => {
       defineAnimations({
         none: { keyframes: { to: { opacity: 1 } }, reducedMotion: 'none' },
       }),
-    ).toThrow("Toned: 'none' cannot name an animation; animation: 'none' stops one")
+    ).toThrow(
+      "Toned: 'none' cannot name an animation; animation: 'none' stops one",
+    )
   })
 })
 
 describe('the resting frame comes from the keyframes', () => {
-  const frame = (name: keyof typeof motion.animations, mode?: Parameters<typeof reducedMotionFrame>[1]) =>
-    reducedMotionFrame(motion.animations[name], mode ?? motion.animations[name].reducedMotion)
+  const frame = (
+    name: keyof typeof motion.animations,
+    mode?: Parameters<typeof reducedMotionFrame>[1],
+  ) =>
+    reducedMotionFrame(
+      motion.animations[name],
+      mode ?? motion.animations[name].reducedMotion,
+    )
 
   test('{ at } reads the declared offset, across a comma list', () => {
     expect(frame('glow')).toEqual({ boxShadow: '0 0 8px blue' })
@@ -123,7 +142,10 @@ describe('the resting frame comes from the keyframes', () => {
 
   test("'end' is the frame the last iteration finishes on", () => {
     expect(frame('fade')).toEqual({ opacity: 1 })
-    const ends = (direction: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse', iterations: number) =>
+    const ends = (
+      direction: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse',
+      iterations: number,
+    ) =>
       reducedMotionFrame(
         {
           keyframes: { from: { opacity: 0 }, to: { opacity: 1 } },
@@ -173,8 +195,12 @@ describe('CSS emission per mode', () => {
     // none: no frames, so the element shows its own style.
     expect(reduced).toContain('@keyframes anim-toned_pulse {}')
     // end and { at }: the resting frame for the whole timeline.
-    expect(reduced).toContain('@keyframes anim-toned_fade {0%, 100% {opacity:1;}}')
-    expect(reduced).toContain('@keyframes anim-toned_glow {0%, 100% {box-shadow:0 0 8px blue;}}')
+    expect(reduced).toContain(
+      '@keyframes anim-toned_fade {0%, 100% {opacity:1;}}',
+    )
+    expect(reduced).toContain(
+      '@keyframes anim-toned_glow {0%, 100% {box-shadow:0 0 8px blue;}}',
+    )
     // keep: not redefined.
     expect(reduced).not.toContain('@keyframes anim-toned_status ')
   })
@@ -190,11 +216,31 @@ describe('CSS emission per mode', () => {
     // Outside reduced motion the variable is unset and the animation is the
     // authored one; under it the variable names the variant.
     expect(Ping.className).toContain('anim--animation_pulse~keep')
-    expect(css).toContain('.anim--animation_pulse\\~keep{animation-name:var(--anim-toned_rm-pulse--keep, anim-toned_pulse);')
-    expect(reduced).toContain('--anim-toned_rm-pulse--keep: anim-toned_pulse__keep;')
-    expect(reduced).toContain('@keyframes anim-toned_pulse__keep {50% {opacity:0.5;}}')
+    expect(css).toContain(
+      '.anim--animation_pulse\\~keep{animation-name:var(--anim-toned_rm-pulse--keep, anim-toned_pulse);',
+    )
+    expect(reduced).toContain(
+      '--anim-toned_rm-pulse--keep: anim-toned_pulse__keep;',
+    )
+    expect(reduced).toContain(
+      '@keyframes anim-toned_pulse__keep {50% {opacity:0.5;}}',
+    )
     expect(Halo.className).toContain('anim--animation_glow~at-0')
-    expect(reduced).toContain('@keyframes anim-toned_glow__at-0 {0%, 100% {box-shadow:0 0 4px red;}}')
+    // A variant with the same frame as another names its keyframes: glow
+    // ends on 100%, and its 0% and 100% are one block, so 'end', 0% and 100%
+    // share one definition.
+    expect(reduced).toContain(
+      '@keyframes anim-toned_glow__end {0%, 100% {box-shadow:0 0 4px red;}}',
+    )
+    expect(reduced).toContain(
+      '--anim-toned_rm-glow--at-0: anim-toned_glow__end;',
+    )
+    expect(reduced).toContain(
+      '--anim-toned_rm-glow--at-100: anim-toned_glow__end;',
+    )
+    expect(reduced).not.toContain('@keyframes anim-toned_glow__at-')
+    // A variant equal to the default names the redefined animation itself.
+    expect(reduced).toContain('--anim-toned_rm-pulse--end: anim-toned_pulse;')
     // The default mode is no variant.
     expect(Plain.className).toContain('anim--animation_pulse')
     expect(Plain.className).not.toContain('~')
@@ -210,35 +256,55 @@ describe('composition in a part', () => {
   test('duration, easing and delay override the animation timing in order', () => {
     const { Root } = web.resolve(
       ui.stylesheet({
-        Root: { animation: 'fade', duration: 'slow', easing: 'emphasized', delay: 120 },
+        Root: {
+          animation: 'fade',
+          duration: 'slow',
+          easing: 'emphasized',
+          delay: 120,
+        },
       }),
     )
     // fade sets a duration, so the later duration overrides it inline; it
     // sets no easing, so the easing is its own class.
     expect(Root.className).toContain('anim--animation_fade')
     expect(Root.className).toContain('anim--easing_emphasized')
-    expect(css).toContain('.anim--easing_emphasized{animation-timing-function:cubic-bezier(0.2, 0, 0, 1);}')
-    expect(Root.style).toMatchObject({ animationDuration: '400ms', animationDelay: '120ms' })
+    expect(css).toContain(
+      '.anim--easing_emphasized{animation-timing-function:cubic-bezier(0.2, 0, 0, 1);}',
+    )
+    expect(Root.style).toMatchObject({
+      animationDuration: '400ms',
+      animationDelay: '120ms',
+    })
   })
 
   test("animation: 'none' stops an animation under a condition", () => {
     const { Root } = web.resolve(
-      ui.stylesheet({ Root: { animation: 'pulse', ':open': { animation: 'none' } } }),
+      ui.stylesheet({
+        Root: { animation: 'pulse', ':open': { animation: 'none' } },
+      }),
     )
     expect(Root.style?.['animationName']).toBe(
       'var(--anim-toned-rule-1-animationName, anim-toned_pulse)',
     )
-    expect(Object.values(Root.style ?? {})).toContain('var(--anim-toned_open) none')
+    expect(Object.values(Root.style ?? {})).toContain(
+      'var(--anim-toned_open) none',
+    )
   })
 
   test('a reducedMotion override needs its animation beside it', () => {
     expect(() =>
-      ui.stylesheet({ Root: { animation: 'pulse', ':open': { reducedMotion: 'keep' } } }),
+      ui.stylesheet({
+        Root: { animation: 'pulse', ':open': { reducedMotion: 'keep' } },
+      }),
     ).toThrow(
       "Toned: reducedMotion 'keep' has no animation beside it; write it in the same block as animation: '<name>'",
     )
     expect(() =>
-      ui.stylesheet({ Root: { animation: 'pulse', reducedMotion: { at: '30%' } as never } }),
-    ).toThrow("Toned: animation 'pulse' rests at 30%, which its keyframes do not declare; its offsets: 50%")
+      ui.stylesheet({
+        Root: { animation: 'pulse', reducedMotion: { at: '30%' } as never },
+      }),
+    ).toThrow(
+      "Toned: animation 'pulse' rests at 30%, which its keyframes do not declare; its offsets: 50%",
+    )
   })
 })

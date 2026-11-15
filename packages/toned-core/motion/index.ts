@@ -35,6 +35,10 @@ export type {
   TransformMotionProperty,
 } from './channels.ts'
 export { createTestClock, frameClock } from './clock.ts'
+export { attachAnimation, easingFunction } from './keyframes.ts'
+export type { AnimationController } from './keyframes.ts'
+export { animationOf } from '../system/animations.ts'
+export type { NativeAnimation } from '../system/animations.ts'
 export type { MotionClock, TestClock } from './clock.ts'
 export { defineMotion } from './define.ts'
 export type {

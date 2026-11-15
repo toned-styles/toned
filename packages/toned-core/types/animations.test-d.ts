@@ -89,7 +89,10 @@ void offsets
 const ui = defineSystem({
   id: 'animation-types',
   tokens: { ...motion.tokens },
-  conditions: { animations: motion.animations, states: { open: '[data-open]' } },
+  conditions: {
+    animations: motion.animations,
+    states: { open: '[data-open]' },
+  },
 })
 
 ui.stylesheet({
@@ -138,7 +141,8 @@ ui.stylesheet({
 })
 
 // The refusal names the token form.
-const named: RawAnimationStyle['animationName'] = undefined as unknown as TonedError<"Toned: this system declares its animations; write the animation token (animation: '<name>', or animation: 'none' to stop) instead of a raw animationName">
+const named: RawAnimationStyle['animationName'] =
+  undefined as unknown as TonedError<"Toned: this system declares its animations; write the animation token (animation: '<name>', or animation: 'none' to stop) instead of a raw animationName">
 void named
 
 // A system without animations keeps raw CSS animation.
@@ -188,5 +192,6 @@ defineSystem({
 })
 
 // The native refusal names the property.
-const nativeMessage: NativeKeyframeError<'boxShadow'> = undefined as unknown as TonedError<"Toned: keyframe property 'boxShadow' cannot animate on native, and this system targets native; animate opacity, a length, a colour or translateX/translateY/rotate/scale, or keep the animation in a web-only system">
+const nativeMessage: NativeKeyframeError<'boxShadow'> =
+  undefined as unknown as TonedError<"Toned: keyframe property 'boxShadow' cannot animate on native, and this system targets native; animate opacity, a length, a colour or translateX/translateY/rotate/scale, or keep the animation in a web-only system">
 void nativeMessage

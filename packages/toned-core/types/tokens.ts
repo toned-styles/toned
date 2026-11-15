@@ -292,9 +292,11 @@ export type NativeAnimations<A> = {
     ? Omit<A[N], 'keyframes'> & {
         keyframes: {
           [O in keyof K]: {
+            // Written out rather than through NativeKeyframeError, so the
+            // compiler prints the message instead of the alias name.
             [P in keyof K[O]]: P extends MotionProperty
               ? K[O][P]
-              : NativeKeyframeError<P & string>
+              : TonedError<`Toned: keyframe property '${P & string}' cannot animate on native, and this system targets native; animate opacity, a length, a colour or translateX/translateY/rotate/scale, or keep the animation in a web-only system`>
           }
         }
       }

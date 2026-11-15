@@ -1,3 +1,4 @@
+import { isTransform, writeStyle } from '../motion/channels.ts'
 /**
  * System animations: validation, the static frame each reduced-motion mode
  * rests on, and the CSS the build emits for them.
@@ -29,8 +30,8 @@ import type {
   ReducedMotion,
 } from '../types/tokens.ts'
 import { isAnimationDefinition } from '../types/tokens.ts'
-import { camelToKebab } from '../utils/css.ts'
 import { serializeCssValue } from '../utils/css-value.ts'
+import { camelToKebab } from '../utils/css.ts'
 
 /** The media condition toned owns for reduced motion. */
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
@@ -315,7 +316,11 @@ export function foldReducedMotion(
 export function frameCss(frame: AnimationFrame): string {
   let css = ''
   const px = (value: string | number | undefined) =>
-    value === undefined ? '0px' : typeof value === 'number' ? `${value}px` : value
+    value === undefined
+      ? '0px'
+      : typeof value === 'number'
+        ? `${value}px`
+        : value
   let translated = false
   let scaled = false
   for (const [property, value] of Object.entries(frame)) {
@@ -323,10 +328,7 @@ export function frameCss(frame: AnimationFrame): string {
       if (translated) continue
       translated = true
       css += `translate:${px(frame['translateX'])} ${px(frame['translateY'])};`
-    } else if (
-      (property === 'scaleX' || property === 'scaleY') &&
-      !scaled
-    ) {
+    } else if ((property === 'scaleX' || property === 'scaleY') && !scaled) {
       scaled = true
       const base = Number(frame['scale'] ?? 1)
       css += `scale:${base * Number(frame['scaleX'] ?? 1)} ${base * Number(frame['scaleY'] ?? 1)};`
@@ -335,7 +337,8 @@ export function frameCss(frame: AnimationFrame): string {
       continue
     else if (property === 'rotate' && typeof value === 'number')
       css += `rotate:${value}deg;`
-    else css += `${camelToKebab(property)}:${serializeCssValue(property, value)};`
+    else
+      css += `${camelToKebab(property)}:${serializeCssValue(property, value)};`
   }
   return css
 }
@@ -374,23 +377,179 @@ export function animationCss(
     const body = authored(entry.keyframes)
     styles += keyframesRule(`toned_${name}`, body)
     if (entry.reducedMotion === undefined) continue
-    if (entry.reducedMotion !== 'keep')
-      reduced += keyframesRule(
-        `toned_${name}`,
-        resting(reducedMotionFrame(entry, entry.reducedMotion, name), body),
+    // Under reduced motion each distinct body is defined once; a variant
+    // whose body another name already has (the default's, or `at-100`
+    // beside `end`) names that keyframes instead.
+    const named = new Map<string, string>()
+    if (entry.reducedMotion !== 'keep') {
+      const own = resting(
+        reducedMotionFrame(entry, entry.reducedMotion, name),
+        body,
       )
+      reduced += keyframesRule(`toned_${name}`, own)
+      named.set(own, `toned_${name}`)
+    }
     for (const mode of overrideModes(entry, name)) {
-      variables += `${overrideVariable(name, mode)}: ${variantName(name, mode)};`
-      reduced += keyframesRule(
-        variantName(name, mode),
-        resting(reducedMotionFrame(entry, mode, name), body),
-      )
+      const variant = resting(reducedMotionFrame(entry, mode, name), body)
+      let keyframes = named.get(variant)
+      if (!keyframes) {
+        keyframes = variantName(name, mode)
+        named.set(variant, keyframes)
+        reduced += keyframesRule(keyframes, variant)
+      }
+      variables += `${overrideVariable(name, mode)}: ${keyframes};`
     }
   }
   if (variables) reduced = `html {${variables}}${reduced}`
-  return reduced ? `${styles}@media ${REDUCED_MOTION_QUERY} {${reduced}}` : styles
+  return reduced
+    ? `${styles}@media ${REDUCED_MOTION_QUERY} {${reduced}}`
+    : styles
 }
 
 /** Milliseconds as CSS time; a string passes through. */
 export const cssTime = (value: number | string | undefined) =>
-  value === undefined ? undefined : typeof value === 'number' ? `${value}ms` : value
+  value === undefined
+    ? undefined
+    : typeof value === 'number'
+      ? `${value}ms`
+      : value
+
+/**
+ * A system animation as native plays it: the keyframes and the part's
+ * resolved timing, in milliseconds. `@toned/core/motion`'s
+ * `attachAnimation` plays it through the host writer.
+ */
+export type NativeAnimation = {
+  readonly name: string
+  readonly keyframes: AnimationKeyframes
+  readonly duration: number
+  readonly delay: number
+  readonly easing: string
+  readonly iterations: number
+  readonly direction: NonNullable<AnimationDefinition['direction']>
+  readonly fillMode: NonNullable<AnimationDefinition['fillMode']>
+  /** The mode in force: the animation's own, or the part's override. */
+  readonly reducedMotion: ReducedMotion
+}
+
+/** The CSS fields the animation tokens write, which native never receives. */
+const ANIMATION_FIELDS = [
+  'animationName',
+  'animationDuration',
+  'animationTimingFunction',
+  'animationDelay',
+  'animationIterationCount',
+  'animationDirection',
+  'animationFillMode',
+] as const
+
+// Resolved outputs are snapshots, which keep only their own enumerable
+// fields; the animation a native output plays is kept beside it instead.
+const played = new WeakMap<object, NativeAnimation>()
+
+/** The animation a native part plays, from its resolved props. */
+export const animationOf = (props: object): NativeAnimation | undefined =>
+  played.get(props)
+
+/** Records the animation a resolved native output plays. */
+export function recordAnimation<T extends object>(
+  props: T,
+  animation: NativeAnimation | undefined,
+): T {
+  if (animation) played.set(props, animation)
+  return props
+}
+
+/** `'400ms'`, `'1.5s'` or a number of milliseconds. */
+function milliseconds(value: unknown, field: string): number {
+  if (typeof value === 'number') return value
+  const match = /^(-?\d*\.?\d+)(ms|s)$/.exec(String(value).trim())
+  return match
+    ? Number(match[1]) * (match[2] === 's' ? 1000 : 1)
+    : fail(`${field} ${JSON.stringify(value)} is not a time native can play`)
+}
+
+const NAME = /^(?:[\w-]+?-)?toned_([\w-]+)$/
+const OVERRIDE =
+  /^var\(--(?:[\w-]+?-)?toned_rm-([\w-]+), (?:[\w-]+?-)?toned_([\w-]+)\)$/
+
+/**
+ * A frame as native style over the committed style: transform channels join
+ * the committed `transform` list as motion writes them, other values are
+ * written as declared.
+ */
+export function nativeFrameStyle(
+  style: Readonly<Record<string, unknown>>,
+  frame: AnimationFrame,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...style }
+  const channels: Record<string, number[]> = {}
+  for (const [property, value] of Object.entries(frame)) {
+    if (isTransform(property)) channels[property] = [Number(value)]
+    else out[property] = value
+  }
+  return writeStyle(out, channels, true)
+}
+
+/**
+ * Lowers the animation tokens' CSS fields for native: they are removed, and
+ * the animation is returned to play. Under reduced motion a resting mode's
+ * frame is written instead, and nothing is left to play.
+ */
+export function lowerNativeAnimation(
+  style: Readonly<Record<string, unknown>>,
+  animations: Readonly<Record<string, AnimationInput>> | undefined,
+  reducedMotion = false,
+): { style: Record<string, unknown>; animation?: NativeAnimation } {
+  if (!ANIMATION_FIELDS.some((field) => field in style))
+    return { style: style as Record<string, unknown> }
+  const rest: Record<string, unknown> = { ...style }
+  for (const field of ANIMATION_FIELDS) delete rest[field]
+  const written = String(style['animationName'] ?? 'none').trim()
+  if (written === 'none') return { style: rest }
+  const override = OVERRIDE.exec(written)
+  const name = override ? override[2]! : NAME.exec(written)?.[1]
+  const definition = name === undefined ? undefined : animations?.[name]
+  if (!name || !definition || !isAnimationDefinition(definition))
+    return fail(
+      `native plays system animations only; animationName ${JSON.stringify(written)} names none of this system's animations`,
+    )
+  const slug = override?.[1]?.slice(name.length + 2)
+  const mode =
+    (slug &&
+      overrideModes(definition, name).find((m) => modeSlug(m) === slug)) ||
+    definition.reducedMotion
+  const iterations =
+    style['animationIterationCount'] ?? definition.iterations ?? 1
+  const animation: NativeAnimation = Object.freeze({
+    name,
+    keyframes: definition.keyframes,
+    duration: milliseconds(
+      style['animationDuration'] ?? definition.duration ?? 0,
+      'animationDuration',
+    ),
+    delay: milliseconds(
+      style['animationDelay'] ?? definition.delay ?? 0,
+      'animationDelay',
+    ),
+    easing: String(
+      style['animationTimingFunction'] ?? definition.easing ?? 'ease',
+    ),
+    iterations: iterations === 'infinite' ? Infinity : Number(iterations),
+    direction: (style['animationDirection'] ??
+      definition.direction ??
+      'normal') as NativeAnimation['direction'],
+    fillMode: (style['animationFillMode'] ??
+      definition.fillMode ??
+      'none') as NativeAnimation['fillMode'],
+    reducedMotion: mode,
+  })
+  if (reducedMotion && mode !== 'keep')
+    return {
+      style: nativeFrameStyle(
+        rest,
+        reducedMotionFrame(definition, mode, name)!,
+      ),
+    }
+  return { style: rest, animation }
+}

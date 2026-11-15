@@ -3,6 +3,7 @@ import {
   resolveConfiguredToken,
 } from '../core/resolve.ts'
 import { SHORTHANDS } from '../core/shorthands.ts'
+import { animationCss } from '../system/animations.ts'
 import { type Contexts, contextCss } from '../system/contexts.ts'
 import { namespaceCss } from '../system/namespace.ts'
 import { responsivePairs } from '../system/responsive.ts'
@@ -16,7 +17,6 @@ import {
 } from '../system/states.ts'
 import { declaredWidthAtoms } from '../system/widths.ts'
 import type { TokenStyleDeclaration } from '../types/index.ts'
-import { animationCss } from '../system/animations.ts'
 import {
   alphaVarName,
   alphaWrappable,
