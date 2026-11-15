@@ -208,7 +208,7 @@ describe('bridges', async () => {
 
   test('pseudo-element bridges attach to the element', () => {
     expect(css).toContain(
-      '._::placeholder {color: var(--toned-b-placeholder-color, inherit);}',
+      '._::placeholder {color: var(--toned-b-placeholder-color, revert-layer);}',
     )
   })
 

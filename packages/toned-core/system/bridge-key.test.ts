@@ -49,7 +49,7 @@ describe('$bridge', () => {
     )
     // The bridge's own rule reads the same, unrenamed, name.
     expect(css).toContain(
-      '._::-webkit-scrollbar {display: var(--toned-b-scrollbar-display, initial);',
+      '._::-webkit-scrollbar {display: var(--toned-b-scrollbar-display, revert-layer);',
     )
     expect(css).not.toContain('--bridged-toned-b-')
   })
@@ -58,7 +58,7 @@ describe('$bridge', () => {
     const sheet = ui.stylesheet({ Root: { placeholderColor: 'muted' } })
     const { css } = buildStyles(ui, { sheets: [sheet] })
     expect(css).toContain('--toned-b-placeholder-color:#6b7280')
-    expect(css).toContain('var(--toned-b-placeholder-color, inherit)')
+    expect(css).toContain('var(--toned-b-placeholder-color, revert-layer)')
   })
 
   test('kebab-cases camelCase property names', () => {
