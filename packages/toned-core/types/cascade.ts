@@ -139,13 +139,18 @@ type Conflicts<B> = {
         : never
 }[keyof Table & string]
 
-type TokenPathsWith<T, Key> = T extends {
+/** The paths of token blocks writing one of `Key`'s longhands. A block whose
+ * token writes the shorthand `S` itself sets the same property, whichever
+ * wins, so it is no conflict. */
+type TokenPathsWith<T, Key, S = never> = T extends {
   path: infer Path
   tokenFields: infer Fields
 }
   ? [Extract<Fields, Key>] extends [never]
     ? never
-    : Path
+    : [Extract<Fields, S>] extends [never]
+      ? Path
+      : never
   : never
 type TokenFieldsIn<T, Key> = T extends { tokenFields: infer Fields }
   ? Extract<Fields, Key>
@@ -156,11 +161,11 @@ type TokenFieldsIn<T, Key> = T extends { tokenFields: infer Fields }
  * always split the shorthand: `animation: none` reads as a keyframes name. */
 type TokenConflicts<B, T> = {
   [S in KeysIn<B, keyof Table> & keyof Table]: [
-    TokenPathsWith<T, Table[S][number]>,
+    TokenPathsWith<T, Table[S][number], S>,
   ] extends [never]
     ? never
     : IsUnion<
-          PathsWith<B, S> | TokenPathsWith<T, Table[S][number]>
+          PathsWith<B, S> | TokenPathsWith<T, Table[S][number], S>
         > extends true
       ? `${S}|${TokenFieldsIn<T, Table[S][number]>}`
       : never

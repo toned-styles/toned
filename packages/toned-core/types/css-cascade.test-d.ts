@@ -166,3 +166,28 @@ bordered.stylesheet({
     ':open': { '@platform web': { $style: { borderTop: '1px solid red' } } },
   },
 })
+
+// The same shorthand on both sides is no conflict: a token writing
+// `borderRadius` and a conditional `$style` `borderRadius` set one property,
+// whichever wins. Only a different shorthand sharing a longhand conflicts.
+const radius = defineToken({
+  values: ['2xl'] as const,
+  resolve: () => ({ borderRadius: '1rem' }),
+})
+const rounded = defineSystem({
+  id: 'rounded',
+  tokens: { radius, borderColor },
+  conditions: { media: { md: 768 }, states: { open: '[data-open]' } },
+})
+rounded.stylesheet({
+  Root: {
+    radius: '2xl',
+    '@md': { '@platform web': { $style: { borderRadius: '1.5rem' } } },
+  },
+})
+rounded.stylesheet({
+  Root: {
+    borderColor: 'line',
+    ':open': { '@platform web': { $style: { borderColor: 'red' } } },
+  },
+})
