@@ -235,10 +235,9 @@ export function generate<const S extends TokenStyleDeclaration>(
   // order, keeps every setter class above every reset. An inline parameter
   // wins outright.
   //
-  // The unset fallback must preserve the property's pre-bridge behavior:
-  // INHERITED properties fall back to `inherit` (an icon with no iconColor
-  // keeps inheriting its parent's colour — `initial` would paint it black),
-  // everything else to `initial`.
+  // The unset fallback must preserve the property's pre-bridge behavior, so a
+  // pseudo-element rule falls back to `revert-layer`: the always-on rule
+  // steps aside and lower layers (an app reset) and the browser decide.
   // A var-name → (bridge, cssProp, selector) index for the token loop below:
   // DESCENDANT bridges compile class-scoped (the setter class carries the
   // descendant rule directly), because an always-on `._ <sel>` rule
@@ -253,19 +252,6 @@ export function generate<const S extends TokenStyleDeclaration>(
     { selector: string; cssProp: string }
   >()
   if (bridges) {
-    const INHERITED = new Set([
-      'color',
-      'fontFamily',
-      'fontSize',
-      'fontStyle',
-      'fontWeight',
-      'letterSpacing',
-      'lineHeight',
-      'textAlign',
-      'textTransform',
-      'visibility',
-      'cursor',
-    ])
     let resets = ''
     for (const [name, bridge] of Object.entries(bridges)) {
       if (!bridge.selector.startsWith(':')) {
@@ -281,8 +267,10 @@ export function generate<const S extends TokenStyleDeclaration>(
       for (const prop of bridge.properties) {
         const varName = bridgeVarName(name, prop)
         resets += `${varName}: initial;`
-        const fallback = INHERITED.has(prop) ? 'inherit' : 'initial'
-        rule += `${camelToKebab(prop)}: var(${varName}, ${fallback});`
+        // Unset, the declaration steps aside (`revert-layer`): the element
+        // keeps what lower layers and the browser give its pseudo-element
+        // (an app reset's placeholder colour), as if no bridge existed.
+        rule += `${camelToKebab(prop)}: var(${varName}, revert-layer);`
       }
       styles += `${scope}._${bridge.selector} {${rule}}`
     }
