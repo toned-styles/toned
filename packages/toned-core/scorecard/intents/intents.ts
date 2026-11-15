@@ -226,6 +226,29 @@ export const intents: readonly Intent[] = [
     ],
   },
   {
+    id: 'list-variants',
+    intent: "List a stylesheet's variant axes and their values",
+    canonical: {
+      spelling: 'stylesheetVariants(sheet)',
+      note: 'every axis, `.extend()` layers and defaults included; `stylesheetVariantCombinations(sheet, { cap })` iterates every combination',
+      source: 'readme',
+    },
+    aliases: [
+      {
+        spelling: 'stylesheetVariantAxes(sheet)',
+        status: 'removed',
+        note: 'names only, and missed axes an `.extend()` layer selects',
+        source: 'probe',
+      },
+      {
+        spelling: 'getStylesheetPlan(sheet).rules keys matched with a regex',
+        status: 'app-helper',
+        note: "HQ's `variantValues` in `lib/ui/toned/animated-parts.ts` (the websites' motion tests), which misses `.extend()` layers; its follow-up moves it onto `stylesheetVariants`",
+        source: 'probe',
+      },
+    ],
+  },
+  {
     id: 'subtree-restyle',
     intent: 'Restyle a component inside one subtree',
     canonical: {

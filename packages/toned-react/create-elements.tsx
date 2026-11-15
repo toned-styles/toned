@@ -2,7 +2,7 @@ import type { SYMBOL_INIT } from '@toned/core'
 import {
   type Base,
   stylesheetParts,
-  stylesheetVariantAxes,
+  stylesheetVariants,
 } from '@toned/core/stylesheet'
 import {
   createContext,
@@ -61,7 +61,7 @@ function useController(sheet: StylesheetLike, variants?: object): Base {
 /** Define a component family once. Only mounted providers/standalone parts own
  * controllers; render snapshots travel as context values, never mutable statics. */
 export function createElements(sheet: StylesheetLike) {
-  for (const axis of stylesheetVariantAxes(sheet))
+  for (const axis of Object.keys(stylesheetVariants(sheet)))
     if (['children', 'key', 'ref'].includes(axis))
       throw new Error(
         `Toned createElements: variant axis "${axis}" conflicts with React props; rename this axis or use useStyles`,

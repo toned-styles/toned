@@ -75,7 +75,6 @@ import { APPLY_OVERRIDE, RULE_LAYERS } from './rule-protocol.ts'
 import type { StyleMatcher } from './StyleMatcher.ts'
 import {
   deepMerge,
-  extractOrderedKeys,
   mergeRules,
   processVariantRules,
 } from './variantProcessing.ts'
@@ -513,12 +512,6 @@ export function createStylesheet<
     ref: ref as AnyValue,
     rules: mergedRules,
     parts: Object.freeze([...elementNamesOf(rules)]),
-    variantAxes: Object.freeze([
-      ...new Set([
-        ...extractOrderedKeys(variantRules),
-        ...Object.keys(defaults),
-      ]),
-    ]),
   })
   return stylesheet
 }

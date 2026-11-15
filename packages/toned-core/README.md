@@ -1069,6 +1069,40 @@ path before matching; it does not erase a separate variant declaration.
 `extend` restyles the parts a sheet has: naming a part it lacks is a type error
 and a runtime error, and a part's `$kind` cannot change.
 
+### Listing a sheet's variants
+
+`stylesheetVariants(sheet)` (from `@toned/core/stylesheet`) returns every
+variant axis of a sheet with the values it selects, read from what the matcher
+reads, so nothing is left to a regex over the rules:
+
+```ts
+import {
+  stylesheetVariantCombinations,
+  stylesheetVariants,
+} from '@toned/core/stylesheet'
+
+stylesheetVariants(button) // { tone: ['quiet', 'loud'], active: [false, true] }
+for (const variants of stylesheetVariantCombinations(button, { cap: 64 }))
+  web.resolve(button, { variants })
+```
+
+It counts every way a sheet declares a variant: `.variants()` (chained, and
+after `.extend()`), the variant rules and selector keys of an `.extend()`
+layer, selector keys inside a part or a condition, and declared defaults. A
+boolean axis is `[false, true]`, whichever value its rules select; other
+values are strings, in the order selectors first name them. A selector that a
+later layer removes with `null` does not count, and an axis only TypeScript
+knows (no rule selects it and it has no default) has no runtime
+representation, so the typed result's keys are optional. The result is frozen
+and cached per sheet.
+
+`stylesheetVariantCombinations(sheet, { cap, name })` lists every combination,
+each axis also left unset (its default or the base rules), starting with `{}`.
+A sheet with more than `cap` combinations (default 512) throws, naming the
+sheet (`name`, or its parts) and each axis's count, so a sheet that grows its
+axes is noticed rather than enumerated slowly. The target conformance
+scorecard resolves each stylesheet feature in every combination this way.
+
 ### Theme schemas in token authoring
 
 Bind a theme schema once with `defineTokenFor<Theme>()`; finite values and dynamic

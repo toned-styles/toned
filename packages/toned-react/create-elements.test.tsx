@@ -106,7 +106,7 @@ test.each([
 })
 
 test.each(['children', 'key', 'ref'] as const)(
-  'factory diagnoses reserved React variant axis %s from selectors and defaults',
+  'factory diagnoses reserved React variant axis %s from selectors, defaults and derivations',
   (axis) => {
     const base = system.stylesheet({ Root: { opacity: 0 } })
     const selected = base.variants(($: Variants<Record<string, 'on'>>) => ({
@@ -118,7 +118,11 @@ test.each(['children', 'key', 'ref'] as const)(
         defaults: { [axis]: 'on' },
       },
     )
-    for (const invalid of [selected, defaulted])
+    // An axis only a derivation layer selects is an axis of the family too.
+    const extended = base
+      .variants((_$: Variants<Record<string, 'on'>>) => ({}))
+      .extend({}, ($) => ({ [$[axis]!('on')]: { Root: { opacity: 1 } } }))
+    for (const invalid of [selected, defaulted, extended])
       expect(() => uncheckedCreateElements(invalid)).toThrow(
         `variant axis "${axis}" conflicts with React props`,
       )
