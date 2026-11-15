@@ -320,6 +320,13 @@ export function defineUnit<T>(
   return resolver
 }
 
+/** Each legacy token must be a token config; anything else (a descriptor's
+ *  `id`) fails the legacy overload, so a descriptor reaches its own. */
+type LegacyTokens<S> = {
+  [K in keyof S]: S[K] extends AnyTokenConfig ? unknown : never
+}
+type TokenRecord<S> = S extends Record<string, AnyTokenConfig> ? S : never
+
 /**
  * The record form of `responsiveTokens` names tokens of this system and
  * conditions it declares (system/responsive.ts); the legacy list is unchecked.
@@ -363,16 +370,15 @@ type DeclaredResponsivePairs<S, C> = C extends {
  * })
  * ```
  */
-export function defineSystem<
-  const S extends Record<string, AnyTokenConfig>,
-  const C extends SystemOptions = {},
->(
-  system: S,
+export function defineSystem<const S, const C extends SystemOptions = {}>(
+  system: S & LegacyTokens<S>,
   config?: C & NoInfer<DeclaredResponsivePairs<S, C>>,
-): TokenSystem<S & C, C>
+): TokenSystem<TokenRecord<S> & C, C>
 // The descriptor overload is last so that, when a descriptor is refused,
 // the compiler reports its error (it reports the last overload) rather than
-// the legacy signature's.
+// the legacy signature's. The legacy `S` is unconstrained, and checked by
+// `LegacyTokens` instead, so it gives an inline `defineToken` no contextual
+// type: a constraint of `AnyTokenConfig` would type each `resolve` value `any`.
 export function defineSystem<
   const S extends Record<string, AnyTokenConfig>,
   const C extends SystemOptions = {},

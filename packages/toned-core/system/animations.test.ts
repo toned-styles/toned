@@ -308,3 +308,32 @@ describe('composition in a part', () => {
     )
   })
 })
+
+describe('the build emits only the motion CSS a system can use', () => {
+  test('a system without animations emits no keyframes, reduced-motion block or variants', () => {
+    const plain = defineSystem({ id: 'anim-plain', tokens: {} })
+    const out = buildStyles(plain).css
+    expect(out).not.toContain('@keyframes')
+    expect(out).not.toContain('prefers-reduced-motion')
+    expect(out).not.toContain('toned_rm-')
+  })
+
+  test('without the reducedMotion token, no override variables, variants or classes', () => {
+    const bare = defineSystem({
+      id: 'anim-bare',
+      tokens: { animation: motion.animation },
+      conditions: { animations: motion.animations },
+    })
+    const out = buildStyles(bare).css
+    // The defaults are still emitted, per mode.
+    expect(out).toContain('@keyframes anim-bare-toned_pulse {}')
+    expect(out).not.toContain('toned_rm-')
+    expect(out).not.toMatch(/@keyframes anim-bare-toned_\w[\w-]*__/)
+    expect(out).not.toContain('\\~')
+  })
+
+  test('with it, the variants a part can name are emitted', () => {
+    expect(css).toContain('--anim-toned_rm-pulse--keep')
+    expect(css).toContain('.anim--animation_pulse\\~keep{')
+  })
+})
